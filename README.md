@@ -1,4 +1,3 @@
-# ARTEMIS
 Ab Initio Restructuring Tool Enabling Modelling of Interface Structures
 =========================================================================
 by Ned Thaddeus Taylor and Steven Paul Hepplestone
