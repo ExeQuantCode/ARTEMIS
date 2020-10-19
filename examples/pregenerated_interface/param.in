@@ -1,0 +1,24 @@
+SETTINGS
+  TASK        = 1
+  RESTART     = 1
+  STRUC1_FILE = POSCAR  ! lower structure/interface structure
+  IPRINT = -1
+END SETTINGS
+
+
+INTERFACES
+  LGEN_INTERFACES = T   ! generate interfaces
+  NINTF = 100           ! max number of interfaces
+
+  SHIFTDIR =  DSHIFT    ! shift directory name
+  ISHIFT = 4            ! shifting method
+  NSHIFT = 5            ! number of shifts to apply
+  C_SCALE = 1.D0        ! interface-separation scaling factor
+
+  SWAPDIR =  DSWAP      ! swap directory name
+  ISWAP = 2             ! swapping method
+  NSWAP = 5             ! number of swap structures generated per interface
+  SWAP_DENSITY = 5.D-2  ! intermixing area density
+  LMIRROR = F
+
+END INTERFACES

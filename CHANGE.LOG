@@ -1,0 +1,187 @@
+# Changelog
+All notable changes to ARTEMIS will be documnted in this file.
+
+Format is based on [Keep a Changelog] (https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Language to use:
+(Added)        - new features
+(Changed)      - changed in existing functionality
+(Depreciated)  - once-stable features removed in upcoming releases
+(Removed)      - depreciated features removed in this release
+(Fixed)        - any bug fixes
+(Security)     - invite users to upgrade in case of vulnerabilities
+
+## [Unreleased]
+
+
+
+## [Public release 1.0.1] - 2020-05-04
+
+### Added
+- added gen_group function into mod_misc_linalg.f90 to generate entire group from a subset of elements
+-- used in the updated version of the setup_ladder subroutine.
+
+### Fixed
+- setup_ladder subroutine
+-- now correctly identifies the separation between identical layers for systems with both mirrored and translation symmetries transforming between layers
+
+
+
+## [Public release 1.0.0] - 2020-02-26
+
+### Added
+- TOL_SYM
+-- user-defined symmetry precision/tolerance
+- ISWAP method 2
+-- method weights swapping based on distance from interface
+- Restart job prints out interface location for use by user
+- Optional user defined interface location - for restart
+- SWAP_DENSITY allows for consistency of swapping concentration over structures
+- User manual (doc/manual.pdf)
+- LMIRROR added for swapping
+-- says whether to maintain symmetry of interfaces or to perform swaps on one
+-- only listened to if interfaces are not symmetric
+- Added support email address to README and manual
+- Added date of compilation to code
+- Added date of execution of code to the output
+- Added make install to build ARTEMIS executable in $(HOME)/bin directory
+- Added make uninstall to remove ARTEMIS executable from $(HOME)/bin directory
+- Added help for OUTPUT_FILE tag in CELL_EDITS card
+- Added help for LSURF_GEN tag ino CELL_EDITS card
+- ISHIFT 4 method updated
+-- DON for upper parent crystal is now scaled appropriately the same as the lattice is
+-- reduces issue of DONs finding more bonds at the surface than in the bulk
+-- update appears in interfaces.f90 gen_interfaces subroutine
+- Added LAYER_SEP flag to CELL_EDITS card
+-- need to figure out solution for shared cards
+- Added help for LORTHO tag in CELL_EDITS and INTERFACES cards
+-- defines whether surface axis is orthogonal when using LSURF_GEN
+- Added example runs input/output files and input structures
+-- example for detecting pregenerated interfaces
+-- example for generating new interfaces
+-- example for surface generation
+
+### Changed
+- Makefile now defaults to compiling executable into user's home bin
+- LREDUCE default now FALSE
+- Changed io.f90 to io.F90 to allow for preprossing of file
+-- now includes date of compilation
+- Settings output file now contains more of the important tags
+- Changed make clean to remove bin/ and obj/ directories in ARTEMIS directory
+- f_scale and g_scale are now global variables in mod_shifting.f90 for ISHIFT=4
+- Changed OUTFILE tag to OUTPUT_FILE
+- Changed LSURF_GEN tag help description
+- STRUC2_FILE no longer a mandatory tag for all cases
+-- no longer required for LSURF_GEN = TRUE
+-- no longer required for TASK = 0
+
+### Removed
+- LSWAP replaced with ISWAP
+-- LSWAP = F is now ISWAP = 0
+-- LSWAP = T is now ISWAP = 1
+- NSWAP replaced with SWAP_DENSITY
+- NSWAP_OUT replaced with NSWAP
+- LSURF_INFO replaced with LSURF_GEN in INTERFACES card
+
+### Fixed
+- Unique termination identifier
+-- inversion symmetry matches
+-- reset symmetry list after each save
+- Layer identification
+- basis_map subroutine in mod_sym
+- Correctly print and define vector mismatch to be maximum mismatch of any one vector
+- Correctly convert symmetries to new lattice space for use in mod_plane_matching.f90 and mod_lat_compare.f90
+- Fixed area mismatch value printing
+- Works again with Intel fortran compiler ifort 17.0.4
+- Fixed denominator of ISHIFT g function
+-- now normalises to bond size
+- Corrected help function for LREDUCE default to FALSE
+- Fixed termination idenitifier again
+-- works correctly for slabs without mirror symmetry now with ladders
+- Fixed error in mod_plane_matching.f90
+-- did not correctly save the smallest area lattice match with the same symmetry
+- No longer makes DINTERFACES directory when not necessary
+-- e.g. does not make it when generating surfaces
+
+
+
+## [Beta 1.1.0] - 2019-12-18
+
+### Added
+- LW_SURFACE, UP_SURFACE
+-- user-defined surface terminations
+- LW_LAYERED, UP_LAYERED
+-- user defines whether material is layered
+
+
+
+## [Beta 1.0.0] - 2019-11-28
+
+### Added
+- IMATCH 3 and 4
+- ISHIFT 3 and 4
+- Help and search function
+
+### Changed
+- LREDUCE default changed from TRUE to FALSE
+
+
+
+## [Alpha 1.0.0] - 2019-05-31
+
+### Added
+- Changelog introduced
+- IMATCH 0, 1 and 2
+- ISHIFT 0, 1 and 2
+- Symmetry checks performed over matches
+
+### Changed
+- Source code moved to src/ and Makefile compiles from ./
+- Updated default infile that is generated to include new opptions
+
+### Fixed
+- Now uses correct definition of Miller planes
+
+
+
+## [pre-Alpha build] - 2018-08-14
+
+### Added
+- Merged InterfaceFinder and InterfaceMaker into ARTEMIS
+
+### Changed
+- Recoded flag functionality into FORTRAN
+
+### Removed
+- Removed shell frontend
+
+
+
+## [pre-Alpha build] - 2018-02-14
+
+### Added
+- Code can now take output of lattice match and put it into InterfaceMaker
+-- Codes can take output of one and goes into the input of the other
+-- Uses shell frontend
+
+### Changed
+- New method for identifying lattice matches
+-- Can now find matches over multiple Miller planes
+
+
+
+## [pre-Alpha build] - 2017-01-13
+
+### Added
+- Added shell frontend to handle more user requests and options
+
+### Changed
+- Can now ask user for further lattice matches
+
+
+
+## [pre-Alpha build] - 2016-11-28
+
+### Added
+- Recoded lattice match to find 10 best matches
