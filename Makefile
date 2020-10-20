@@ -38,7 +38,7 @@ OBJS := $(addprefix $(SRC_DIR)/,$(SRCS))
 ##########################################
 FFLAGS = -O2
 #PPFLAGS = -cpp
-FC = gfortran
+FC?=gfortran
 ifeq ($(FC),ifort)
 	MPIFLAG = -qopenmp
 	MODULEFLAG = -module
@@ -55,7 +55,7 @@ endif
 ##########################################
 # LAPACK SECTION
 ##########################################
-MKLROOT = "/usr/local/intel/parallel_studio_xe_2017/compilers_and_libraries_2017/linux/mkl/lib/intel64_lin"
+MKLROOT?="/usr/local/intel/parallel_studio_xe_2017/compilers_and_libraries_2017/linux/mkl/lib/intel64_lin"
 LLAPACK = $(MKLROOT)/libmkl_lapack95_lp64.a \
 	-Wl,--start-group \
 	$(MKLROOT)/libmkl_intel_lp64.a \
@@ -71,7 +71,7 @@ LLAPACK = $(MKLROOT)/libmkl_lapack95_lp64.a \
 ##########################################
 # COMPILATION SECTION
 ##########################################
-INSTALL_DIR := $(HOME)/bin
+INSTALL_DIR?=$(HOME)/bin
 ARTEMIS = artemis
 programs = $(BIN_DIR)/$(ARTEMIS)
 
