@@ -64,7 +64,6 @@ Wiki:    http://www.artemis-materials.co.uk/HRG
 Contact
 -------
 Please send bug-reports, ideas and questions to the following email address:
-
 support@artemis-materials.co.uk
 
 
