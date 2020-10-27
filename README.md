@@ -1,7 +1,7 @@
 Ab Initio Restructuring Tool Enabling Modelling of Interface Structures
 =========================================================================
 by Ned Thaddeus Taylor and Steven Paul Hepplestone  
-The ARTEMIS Research Group
+The ARTEMIS Research Group (Hepplestone Research Group)
 
 
 ARTEMIS is a software package for the generation and modelling of interfaces between materials.
