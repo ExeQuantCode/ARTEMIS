@@ -19,7 +19,7 @@ module plane_matching
   end type pm_tol_type
 
 
-!!!updated 2020/02/24
+!!!updated 2021/11/11
 
 
 contains
@@ -565,6 +565,7 @@ contains
        ntransforms,matched_tols,sym1,sym2)
     implicit none
     integer :: i,j,l,m,total_list_count,nvec1,nvec2
+    integer :: l_ref, m_ref
     real :: tol_up_ang,tol_dw_ang,tol_up_vec,tol_dw_vec
     double precision :: tiny
     double precision :: reference_mag,considered_mag
@@ -652,19 +653,23 @@ contains
 !!! set up the vectors on lower plane
 !!!------------------------------------------------------------------------
   nvec1=0
-  allocate(numstore_1((tol%maxsize+1)**2,2))
-  allocate(latstore_1((tol%maxsize+1)**2,3))
+  allocate(numstore_1((2*(tol%maxsize+1))**2,2))
+  allocate(latstore_1((2*(tol%maxsize+1))**2,3))
   vecmakeloop1: do l=0,tol%maxsize
-     vecmakeloop2: do m=0,tol%maxsize
-        if (l.eq.0 .and. m.eq.0) cycle vecmakeloop2
-        nvec1=nvec1+1
-        numstore_1(nvec1,:) = (/ l, m /)
-        latstore_1(nvec1,:) = dble(l) * lat1_veca + dble(m) * lat1_vecb
-        if(modu(latstore_1(nvec1,:)).gt.tol%maxlen)then
-           nvec1=nvec1-1
-           cycle vecmakeloop1
-        end if
-     end do vecmakeloop2
+     pmloop1: do i=1,-1,-2
+        vecmakeloop2: do m=0,tol%maxsize
+           if (l.eq.0 .and. m.eq.0) cycle vecmakeloop2
+           pmloop2: do j=1,-1,-2
+              nvec1=nvec1+1
+              numstore_1(nvec1,:) = (/ i*l, j*m /)
+              latstore_1(nvec1,:) = dble(i*l) * lat1_veca + dble(j*m) * lat1_vecb
+              if(abs(modu(latstore_1(nvec1,:))).gt.tol%maxlen)then
+                 nvec1=nvec1-1
+                 cycle pmloop1
+              end if
+           end do pmloop2
+        end do vecmakeloop2
+     end do pmloop1
   end do vecmakeloop1
   allocate(iarrtmp1(nvec1,2))
   allocate(darrtmp1(nvec1,3))
@@ -678,19 +683,23 @@ contains
 !!! set up the vectors on upper plane
 !!!------------------------------------------------------------------------
   nvec2=0
-  allocate(numstore_2((tol%maxsize+1)**2,2))
-  allocate(latstore_2((tol%maxsize+1)**2,3))
+  allocate(numstore_2((2*(tol%maxsize+1))**2,2))
+  allocate(latstore_2((2*(tol%maxsize+1))**2,3))
   vecmakeloop3: do l=0,tol%maxsize
-     vecmakeloop4: do m=0,tol%maxsize
-        if (l.eq.0 .and. m.eq.0) cycle vecmakeloop4
-        nvec2=nvec2+1
-        numstore_2(nvec2,:) = (/ l, m /)
-        latstore_2(nvec2,:) = dble(l) * lat2_veca + dble(m) * lat2_vecb
-        if(modu(latstore_2(nvec2,:)).gt.tol%maxlen)then
-           nvec2=nvec2-1
-           cycle vecmakeloop3
-        end if
-     end do vecmakeloop4
+     pmloop3: do i=1,-1,-2
+        vecmakeloop4: do m=0,tol%maxsize
+           if (l.eq.0 .and. m.eq.0) cycle vecmakeloop4
+           pmloop4: do j=1,-1,-2
+              nvec2=nvec2+1
+              numstore_2(nvec2,:) = (/ i*l, j*m /)
+              latstore_2(nvec2,:) = dble(i*l) * lat2_veca + dble(j*m) * lat2_vecb
+              if(modu(latstore_2(nvec2,:)).gt.tol%maxlen)then
+                 nvec2=nvec2-1
+                 cycle vecmakeloop3
+              end if
+           end do pmloop4
+        end do vecmakeloop4
+     end do pmloop3
   end do vecmakeloop3
   allocate(iarrtmp1(nvec2,2))
   allocate(darrtmp1(nvec2,3))
@@ -737,10 +746,8 @@ contains
         if(get_area(latstore_1(l,:),latstore_1(m,:)).gt.tol%maxarea) cycle MAINLOOP2
         if(all(cross(latstore_1(l,:),latstore_1(m,:)).eq.0.D0)) cycle MAINLOOP2
         reference_angle = get_angle(latstore_1(l,:),latstore_1(m,:))
-        if (abs(reference_angle) .lt. tiny) then
-           cycle MAINLOOP2 
-        end if
-
+        if (abs(reference_angle) .lt. tiny) cycle MAINLOOP2 
+        
         !!! CHANGE IT TO TAKE IN A 2x2 MATRIX LATER !!!
         if(modu(latstore_1(l,:)).gt.modu(latstore_1(m,:))) cycle MAINLOOP2
         if(dot_product(latstore_1(l,:),latstore_1(m,:)).gt.&
