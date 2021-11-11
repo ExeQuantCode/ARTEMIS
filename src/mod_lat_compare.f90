@@ -1210,7 +1210,7 @@ contains
 
 
           !!--------------------------------------------------------------------
-          !! Calls the function cell_match which matches the ab  plane for ...
+          !! Calls the function cell_match which matches the ab plane for ...
           !! ... two input lattices
           !!--------------------------------------------------------------------
           call cell_match(pm_tol,&
