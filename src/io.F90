@@ -10,7 +10,8 @@ module io
   
   private   !everything is private unless explicitly defined as public
 
-  character(25), public, parameter :: version="public release 1.0.1"
+  character(25), public, parameter :: version="development version 1.0.2a"
+  !character(25), public, parameter :: version="public release 1.0.1"
   !character(30), public, parameter :: &
   !     author(3) = [&
   !     "N. T. Taylor",&
@@ -45,7 +46,7 @@ module io
   public :: setup_input_fmt,setup_output_fmt
 
 
-!!!updated 2020/05/04
+!!!updated 2021/11/11
 
 
 contains
