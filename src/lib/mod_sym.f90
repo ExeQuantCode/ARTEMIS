@@ -91,7 +91,7 @@ module mod_sym
   public :: basmap_type,basis_map
 
 
-!!!updated 2020/05/04
+!!!updated 2021/11/09
 
 
 contains
@@ -1136,7 +1136,7 @@ contains
              nmirror = nmirror + 1
              mirror_mat(nmirror,:,1) = grp%sym(i,3:4,axis)
           end if
-       elseif(abs(grp%sym(i,4,axis)).gt.tol_sym)then
+       elseif(grp%sym(i,3,3).eq.1.D0 .and. abs(grp%sym(i,4,axis)).gt.tol_sym)then
           if(all(trans_mat(:ntrans,2,1).ne.grp%sym(i,4,axis)))then
              ntrans = ntrans + 1
              trans_mat(ntrans,:,1) = grp%sym(i,3:4,axis)
@@ -1154,9 +1154,10 @@ contains
     !!--------------------------------------------------------------------------
     !! Set up rungs
     !!--------------------------------------------------------------------------
+    if(ntrans+nmirror.eq.0) return
     allocate(subgroup(ntrans+nmirror,2,2))
-    subgroup(:ntrans,:,:) = trans_mat(:ntrans,:,:)
-    subgroup(ntrans+1:ntrans+nmirror,:,:) = mirror_mat(:nmirror,:,:)
+    if(size(trans_mat).gt.0) subgroup(:ntrans,:,:) = trans_mat(:ntrans,:,:)
+    if(size(mirror_mat).gt.0) subgroup(ntrans+1:ntrans+nmirror,:,:) = mirror_mat(:nmirror,:,:)
     mask = .false.
     mask(2,1) = .true.
     group = gen_group(subgroup,mask)
@@ -1172,6 +1173,10 @@ contains
     if(term%lmirror.and.abs(term%arr(1)%hmax-term%arr(1)%hmin).gt.tol_sym)&
          lexclude_translation = .true.
     term%nstep = 0
+    ! account for when there are no translational symmetries in the cell
+    if(size(subgroup) < 1)then
+       term%nstep = 1
+    end if
     group_loop: do i=1,size(group(:,1,1))
        if(any(ladder(:term%nstep).eq.group(i,2,1))) cycle group_loop
        if(lexclude_translation.and.&
@@ -1313,7 +1318,7 @@ contains
        if(dtmp1.le.tol)then
           term_arr(nterm)%hmax = bas_list(itmp1,axis)
        else
-          term_arr(nterm)%natom = itmp1 - min_loc + 1
+          term_arr(nterm)%natom = itmp1 - min_loc
           min_loc = itmp1
           nterm = nterm + 1
           term_arr(nterm)%hmin = bas_list(itmp1,axis)
@@ -1581,6 +1586,7 @@ contains
              istep = udef_thick - (ncells-1)*term%nstep
              dtmp1 = (ncells-1) + term%arr(i)%ladder(istep)
              dtmp1 = dtmp1/(ncells)
+             dtmp1 = dtmp1 + (term%arr(i)%hmax - term%arr(i)%hmin)
              tfmat(j,j) = dtmp1 + term%tol/8.D0
              if(.not.term%lmirror)then
                 tfmat(j,j) = tfmat(j,j) + (term%arr(i)%hmax - term%arr(i)%hmin)

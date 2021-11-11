@@ -30,7 +30,7 @@ module interface_subroutines
   type(bulk_DON_type), dimension(2) :: bulk_DON
 
 
-!!!updated  2020/05/04
+!!!updated  2021/11/09
 
 
 contains
@@ -328,7 +328,8 @@ contains
             tolerance,&
             inlw_lat,inup_lat,&
             inlw_bas,inup_bas,&
-            trim(abc),"abc",lprint_matches,ierror,imatch=imatch)
+            trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
+            nmiller=nmiller)
     end if
     if(min(tolerance%nstore,SAV%nfit).eq.0)then
        write(0,'("No matches found.")')
@@ -486,14 +487,14 @@ contains
                lw_list(:)%term.eq.lw_surf(2))
           lw_height = lw_height + vtmp1(itmp1) - lw_term%arr(lw_term_start)%hmin
 
+          lw_ncells = ceiling(lw_height)
+          lw_height = lw_height/dble(lw_ncells)
+
           if(.not.lw_term%lmirror)then
              dtmp1 = lw_term%arr(lw_surf(2))%hmax - lw_term%arr(lw_surf(2))%hmin
              if(dtmp1.lt.0.D0) dtmp1 = dtmp1 + 1.D0
              lw_height = lw_height + dtmp1
           end if
-
-          lw_ncells = ceiling(lw_height)
-          lw_height = lw_height/dble(lw_ncells)
        else
           lw_ncells = int((lw_thickness-1)/lw_term%nstep) + 1
        end if
@@ -675,6 +676,8 @@ contains
                    dtmp1 = (lw_ncells-1) + lw_term%arr(iterm)%ladder(istep)
                    dtmp1 = dtmp1/(lw_ncells)
                    tfmat(j,j) = dtmp1 + lw_term%tol/8.D0
+                   tfmat(j,j) = tfmat(j,j) + &
+                        (lw_term%arr(iterm)%hmax - lw_term%arr(iterm)%hmin)
                    !dtmp1 = dble(lw_thickness-1)+lw_term%arr(iterm)%add
                    !if(dtmp1.eq.0.D0) dtmp1=1.D0
                    !tfmat(j,j) = dtmp1 + lw_term%tol/8.D0 !tfmat(j,j)+(&
@@ -728,6 +731,8 @@ contains
                       dtmp1 = (up_ncells-1) + up_term%arr(jterm)%ladder(istep)
                       dtmp1 = dtmp1/(up_ncells)
                       tfmat(j,j) = dtmp1 + up_term%tol/8.D0
+                      tfmat(j,j) = tfmat(j,j) + &
+                           (up_term%arr(jterm)%hmax - up_term%arr(jterm)%hmin)
                       !dtmp1 = dble(up_thickness-1)+up_term%arr(jterm)%add
                       !if(dtmp1.eq.0.D0) dtmp1=1.D0
                       !tfmat(j,j) = dtmp1 + up_term%tol/8.D0 !tfmat(j,j)-(&

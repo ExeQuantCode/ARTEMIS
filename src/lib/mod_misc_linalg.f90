@@ -73,7 +73,7 @@ module misc_linalg
 
 
 
-!!!updated 2020/05/02
+!!!updated 2021/11/11
 
 
 contains
@@ -1012,8 +1012,8 @@ contains
     integer :: numer,denom
     integer :: a,b,c,gcd
 
-    a=numer
-    b=denom
+    a=abs(numer)
+    b=abs(denom)
     if(a.gt.b)then
        c=a
        a=b
@@ -1044,10 +1044,10 @@ contains
     integer, dimension(:),intent(in) :: vec
     integer, allocatable, dimension(:) :: in_vec
 
-    
+
     dim=size(vec,dim=1)
     allocate(in_vec(dim))
-    in_vec=vec
+    in_vec=abs(vec)
     do i=1,dim
        loc=maxloc(in_vec(i:dim),dim=1)+i-1
        itmp1=in_vec(i)
@@ -1068,7 +1068,7 @@ contains
     end do
     gcd=a
 
-
+    return
   end function gcd_vec
 !!!#####################################################
 
