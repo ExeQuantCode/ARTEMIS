@@ -5,7 +5,7 @@ module infile_print
   implicit none
 
 
-!!!updated 2020/02/26
+!!!updated 2021/10/12
 
 
 contains
@@ -27,7 +27,7 @@ contains
     write(UNIT,'(2X,"TASK        = 1")')
     write(UNIT,'(2X,"RESTART     = 0")')
     write(UNIT,'(2X,"STRUC1_FILE = POSCAR1  ! lower structure/interface structure")')
-    write(UNIT,'(2X,"STRUC2_FILE = POSCAR2  ! upper structure (not used if IRESTART > 0)")')
+    write(UNIT,'(2X,"STRUC2_FILE = POSCAR2  ! upper structure (not used if RESTART > 0)")')
     write(UNIT,'(2X,"MASTER_DIR  = DINTERFACES")')
     write(UNIT,'(2X,"SUBDIR_PREFIX = D")')
     write(UNIT,'(2X,"IPRINT = 0")')
