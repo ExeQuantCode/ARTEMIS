@@ -10,7 +10,7 @@ program artemis
   implicit none
 
 
-!!!updated 2020/02/05
+!!!updated 2021/11/12
  
 
 !!!-----------------------------------------------------------------------------
@@ -57,7 +57,7 @@ program artemis
         else
            write(6,'(1X,"Finding terminations for lower material.")')
            call gen_terminations(struc1_lat,struc1_bas,lw_mplane,axis,&
-                directory="DLW_TERMS",thickness=lw_thickness)
+                directory="DLW_TERMS",thickness=lw_thickness,udef_layer_sep=lw_layer_sep)
         end if
         if(all(up_mplane.eq.0))then
            write(6,'("No Miller plane defined for upper material.")')
@@ -65,7 +65,7 @@ program artemis
         else
            write(6,'(1X,"Finding terminations for upper material.")')
            call gen_terminations(struc2_lat,struc2_bas,up_mplane,axis,&
-                directory="DUP_TERMS",thickness=up_thickness)
+                directory="DUP_TERMS",thickness=up_thickness,udef_layer_sep=up_layer_sep)
         end if
         write(6,'(1X,"Terminations printed.",/,1X,"Exiting...")')
         stop

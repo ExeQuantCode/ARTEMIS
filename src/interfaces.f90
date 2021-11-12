@@ -30,14 +30,14 @@ module interface_subroutines
   type(bulk_DON_type), dimension(2) :: bulk_DON
 
 
-!!!updated  2021/11/09
+!!!updated  2021/11/12
 
 
 contains
 !!!#############################################################################
 !!! Generates and prints terminations parallel to the supplied miller plane
 !!!#############################################################################
-  subroutine gen_terminations(lat,bas,miller_plane,axis,directory,thickness)
+  subroutine gen_terminations(lat,bas,miller_plane,axis,directory,thickness,udef_layer_sep)
     implicit none
     character(len=200) :: dirname
     type(term_arr_type) :: term
@@ -49,6 +49,7 @@ contains
     double precision, dimension(3,3), intent(in) :: lat
 
     integer, optional, intent(in) :: thickness
+    double precision, optional, intent(in) :: udef_layer_sep
     character(len=*), optional, intent(in) :: directory
 
 
@@ -58,7 +59,11 @@ contains
     !call err_abort_print_struc(lat,bas,"check.vasp","stop")
 
 
-    term = get_terminations(lat,bas,axis,lprint=.true.,layer_sep=layer_sep)
+    if(present(udef_layer_sep)) then
+       term = get_terminations(lat,bas,axis,lprint=.true.,layer_sep=udef_layer_sep)
+    else
+       term = get_terminations(lat,bas,axis,lprint=.true.,layer_sep=layer_sep)
+    end if
     term%arr(:)%hmin = term%arr(:)%hmin - 1.D-8
     call setup_ladder(lat,bas,axis,term)
 
@@ -442,7 +447,7 @@ contains
        !!-----------------------------------------------------------------------
        if(allocated(lw_term%arr)) deallocate(lw_term%arr)
        lw_term=get_terminations(lw_lat,lw_bas,axis,&
-            lprint=lprint_terms,layer_sep=layer_sep)
+            lprint=lprint_terms,layer_sep=lw_layer_sep)
        lw_term%arr(:)%hmin = lw_term%arr(:)%hmin - 1.D-8
 
 
@@ -554,7 +559,7 @@ contains
        !!-----------------------------------------------------------------------
        if(allocated(up_term%arr)) deallocate(up_term%arr)
        up_term=get_terminations(up_lat,up_bas,axis,&
-            lprint=lprint_terms,layer_sep=layer_sep)
+            lprint=lprint_terms,layer_sep=up_layer_sep)
        up_term%arr(:)%hmin = up_term%arr(:)%hmin - 1.D-8
 
 

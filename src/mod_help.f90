@@ -26,20 +26,20 @@ module mod_help
   ! Cell_edits number of tags
   integer, parameter :: ntags_cell_edits=10
   ! Cell_edits tags
-  integer, parameter :: ishift_tag=1
-  integer, parameter :: ivacuum_tag=2
-  integer, parameter :: itfmat_tag=3
-  integer, parameter :: ishift_region_tag=4
-  integer, parameter :: iout_file_tag=5
-  integer, parameter :: ilsurf_gen_CE_tag=6
-  integer, parameter :: islab_thick_tag=7
-  integer, parameter :: imiller_tag=8
-  integer, parameter :: ilortho_CE_tag=9
-  integer, parameter :: ilayer_sep_CE_tag=10
+  integer, parameter :: iout_file_tag=1
+  integer, parameter :: ilsurf_gen_CE_tag=2
+  integer, parameter :: imiller_tag=3
+  integer, parameter :: islab_thick_tag=4
+  integer, parameter :: ishift_tag=5
+  integer, parameter :: ishift_region_tag=6
+  integer, parameter :: ivacuum_tag=7
+  integer, parameter :: itfmat_tag=8
+  integer, parameter :: ilayer_sep_CE_tag=9
+  integer, parameter :: ilortho_CE_tag=10
 
 
   ! Interface number of tags
-  integer, parameter :: ntags_interface=47
+  integer, parameter :: ntags_interface=49
   ! Interface tags
   integer, parameter :: inintf_tag=1
   integer, parameter :: iimatch_tag=2
@@ -81,13 +81,15 @@ module mod_help
   integer, parameter :: ilsurf_gen_tag=38
   integer, parameter :: iiintf_tag=39
   integer, parameter :: ilayer_sep_tag=40
-  integer, parameter :: interm_tag=41
-  integer, parameter :: imbond_maxlen_tag=42
-  integer, parameter :: iswap_sigma_tag=43
-  integer, parameter :: iswap_depth_tag=44
-  integer, parameter :: iintf_loc_tag=45
-  integer, parameter :: ilmirror_tag=46
-  integer, parameter :: ilortho_tag=47
+  integer, parameter :: ilw_layer_sep_tag=41
+  integer, parameter :: iup_layer_sep_tag=42
+  integer, parameter :: interm_tag=43
+  integer, parameter :: imbond_maxlen_tag=44
+  integer, parameter :: iswap_sigma_tag=45
+  integer, parameter :: iswap_depth_tag=46
+  integer, parameter :: iintf_loc_tag=47
+  integer, parameter :: ilmirror_tag=48
+  integer, parameter :: ilortho_tag=49
 
 
 
@@ -97,7 +99,7 @@ module mod_help
   public :: interface_help
 
 
-!!!updated 2020/02/26
+!!!updated 2021/11/12
 
 
 contains
@@ -514,7 +516,27 @@ contains
     tag(ilayer_sep_tag)%default = '1.0'
     tag(ilayer_sep_tag)%description = &
          'Defines the minimum size of gaps along the Miller direction that &
-         &distinguish between separate layers (in Å)'
+         &distinguish between separate layers (in Å).\n&
+         &This tag is ignored if LW_LAYER_SEP and UP_LAYER_SEP are defined.\n&
+         &If either LW_LAYER_SEP and UP_LAYER_SEP are undefined, then this value is used.'
+
+    tag(ilw_layer_sep_tag)%name    = 'LW_LAYER_SEP'
+    tag(ilw_layer_sep_tag)%type    = 'R'
+    tag(ilw_layer_sep_tag)%summary = 'Min size of gap between layers for lower structure'
+    tag(ilw_layer_sep_tag)%allowed = 'Any number greater than or equal to zero'
+    tag(ilw_layer_sep_tag)%default = '1.0'
+    tag(ilw_layer_sep_tag)%description = &
+         'Defines the minimum size of gaps along the Miller direction that &
+         &distinguish between separate layers (in Å) for the lower structure'
+
+    tag(iup_layer_sep_tag)%name    = 'UP_LAYER_SEP'
+    tag(iup_layer_sep_tag)%type    = 'R'
+    tag(iup_layer_sep_tag)%summary = 'Min size of gap between layers for upper structure'
+    tag(iup_layer_sep_tag)%allowed = 'Any number greater than or equal to zero'
+    tag(iup_layer_sep_tag)%default = '1.0'
+    tag(iup_layer_sep_tag)%description = &
+         'Defines the minimum size of gaps along the Miller direction that &
+         &distinguish between separate layers (in Å) for the upper structure'
 
     tag(ilprint_shifts_tag)%name    = 'LPRINT_SHIFTS'
     tag(ilprint_shifts_tag)%type    = 'L'

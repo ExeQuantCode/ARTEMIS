@@ -23,7 +23,7 @@ module inputs
   integer :: lw_thickness,up_thickness
   integer :: nshift,nterm,nintf,nswap,nmiller
   real :: max_bondlength,swap_sigma,swap_depth
-  double precision :: c_scale,intf_depth,layer_sep,swap_den,tol_sym
+  double precision :: c_scale,intf_depth,layer_sep,lw_layer_sep,up_layer_sep,swap_den,tol_sym
   character(len=20) :: input_fmt,output_fmt
   character(200) :: struc1_file,struc2_file,out_filename
   character(100) :: dirname,shiftdir,swapdir,subdir_prefix
@@ -44,7 +44,7 @@ module inputs
   double precision, dimension(3,3) :: struc1_lat,struc2_lat
 
 
-!!!updated  2020/02/26
+!!!updated  2021/11/12
 
 
 contains
@@ -84,6 +84,8 @@ contains
     idepth=0   !!! SWAP DEFAULT DEPTH METHOD !!!
     intf_depth=1.5D0
     layer_sep=1.D0
+    lw_layer_sep=0.D0
+    up_layer_sep=0.D0
     lortho = .true.
     lsurf_gen=.false.
     up_mplane=(/0,0,0/)
@@ -520,7 +522,7 @@ contains
     character(1024) :: buffer,tagname,store
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(9) :: readvar
+    integer, dimension(10) :: readvar
     logical, optional, intent(in) :: skip
     character(len=6), dimension(4) :: &
          tag_list = ["axis  ","loc   ","val   ","bounds"]
@@ -545,7 +547,7 @@ contains
        case("OUTPUT_FILE")
           call assign(buffer,out_filename,   readvar(1))
        case("LSURF_GEN")
-          call assign(buffer,lsurf_gen,      readvar(2))   !LSURF_GEN
+          call assign(buffer,lsurf_gen,      readvar(2))
        case("MILLER_PLANE")
           call assign_vec(buffer,lw_mplane,  readvar(3))
        case("SLAB_THICKNESS")
@@ -563,12 +565,12 @@ contains
              readvar(5) = readvar(5) + 1
              edits%list(edits%nedits)=1
           else
-             readvar(8) = readvar(8) + 1
+             readvar(6) = readvar(6) + 1
              edits%list(edits%nedits)=4
              edits%bounds(edits%nedits,:)=assign_listvec(store,tag_list,4)
           end if
        case("VACUUM")
-          readvar(6) = readvar(6) + 1
+          readvar(7) = readvar(7) + 1
           edits%nedits=edits%nedits+1
           edits%list(edits%nedits)=2
           store=buffer(index(buffer,"VACUUM")+len("VACUUM"):)
@@ -580,7 +582,7 @@ contains
           edits%bounds(edits%nedits,1)=assign_list(store,tag_list,2)
           edits%val(edits%nedits)=assign_list(store,tag_list,3)
        case("TFMAT")
-          readvar(7) = readvar(7) + 1
+          readvar(8) = readvar(8) + 1
           edits%nedits=edits%nedits+1
           edits%list(edits%nedits)=3
           store=''
@@ -588,9 +590,9 @@ contains
                line=count,string=store,rm_cmt=.true.)
           read(store,*) edits%tfmat(1,:),edits%tfmat(2,:),edits%tfmat(3,:)
        case("LAYER_SEP")
-          call assign(buffer,layer_sep,        readvar(8))
+          call assign(buffer,layer_sep,        readvar(9))
        case("LORTHO")
-          call assign(buffer,lortho,           readvar(9))
+          call assign(buffer,lortho,           readvar(10))
        case default
           write(6,'("NOTE: unable to assign variable on line ",I0)') count
        end select
@@ -621,14 +623,16 @@ contains
     integer :: Reason,j,iudef_nshift
     character(1024) :: store
     character(1024) :: buffer,tagname
-    logical :: ludef_offset
+    logical :: ludef_offset, ludef_lw_layer_sep, ludef_up_layer_sep
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(47) :: readvar
+    integer, dimension(49) :: readvar
     logical, optional, intent(in) :: skip
 
 
     ludef_offset=.false.
+    ludef_lw_layer_sep=.false.
+    ludef_up_layer_sep=.false.
     readvar=0
     interfaces_read: do
        count=count+1
@@ -766,18 +770,24 @@ contains
           call assign(buffer,iintf,            readvar(40))
        case("LAYER_SEP")
           call assign(buffer,layer_sep,        readvar(41))
+       case("LW_LAYER_SEP")
+          call assign(buffer,layer_sep,        readvar(42))
+          ludef_lw_layer_sep=.true.
+       case("UP_LAYER_SEP")
+          call assign(buffer,layer_sep,        readvar(43))
+          ludef_up_layer_sep=.true.
        case("MBOND_MAXLEN")
-          call assign(buffer,max_bondlength,   readvar(42))
+          call assign(buffer,max_bondlength,   readvar(44))
        case("SWAP_SIGMA")
-          call assign(buffer,swap_sigma,       readvar(43))
+          call assign(buffer,swap_sigma,       readvar(45))
        case("SWAP_DEPTH")
-          call assign(buffer,swap_depth,       readvar(44))
+          call assign(buffer,swap_depth,       readvar(46))
        case("INTF_LOC")
-          call assign_vec(buffer,udef_intf_loc,readvar(45))
+          call assign_vec(buffer,udef_intf_loc,readvar(47))
        case("LMIRROR")
-          call assign(buffer,lswap_mirror,     readvar(46))
+          call assign(buffer,lswap_mirror,     readvar(48))
        case("LORTHO")
-          call assign(buffer,lortho,           readvar(47))
+          call assign(buffer,lortho,           readvar(49))
        case default
           write(0,'("NOTE: unable to assign variable on line ",I0)') count
        end select
@@ -810,6 +820,10 @@ contains
        allocate(offset(1,3))
        offset(1,:)=(/-1.D0,-1.D0,-1.D0/)
     end if
+
+    ! set lw_ and up_layer_sep if not defined
+    if(.not.ludef_lw_layer_sep) lw_layer_sep = layer_sep
+    if(.not.ludef_up_layer_sep) up_layer_sep = layer_sep
 
 
     if(any(readvar.gt.1)) then
