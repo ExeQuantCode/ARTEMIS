@@ -47,7 +47,7 @@ module lat_compare
   end type tol_type
 
   
-!!!updated  2020/02/11
+!!!updated  2021/11/19
  
   
 contains
@@ -96,7 +96,7 @@ contains
                   plane1=plane1,nmiller=num_miller,&
                   lprint=lprint)
           end if
-       elseif(present(plane1))then
+       elseif(present(plane2))then
           call lattice_matching(&
                SAV,tol,bas1,bas2,&
                plane2=plane2,nmiller=num_miller,&
