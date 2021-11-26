@@ -1152,9 +1152,17 @@ contains
 
 
     !!--------------------------------------------------------------------------
+    !! Handle no symmetry situation
+    !!--------------------------------------------------------------------------
+    if(ntrans+nmirror.eq.0)then
+       term%nstep=1
+       return
+    end if
+
+
+    !!--------------------------------------------------------------------------
     !! Set up rungs
     !!--------------------------------------------------------------------------
-    if(ntrans+nmirror.eq.0) return
     allocate(subgroup(ntrans+nmirror,2,2))
     if(size(trans_mat).gt.0) subgroup(:ntrans,:,:) = trans_mat(:ntrans,:,:)
     if(size(mirror_mat).gt.0) subgroup(ntrans+1:ntrans+nmirror,:,:) = mirror_mat(:nmirror,:,:)
