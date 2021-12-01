@@ -517,12 +517,14 @@ contains
     if(present(c_scale)) res_shifts(:,3) = res_shifts(:,3) * c_scale
 
 
-    if(present(lprint).and.(lprint))then
-       write(6,'(1X,"Shifts to be applied (Å)")')
-       do is=1,nstore
-          write(6,*) res_shifts(is,1),res_shifts(is,2), &
-               res_shifts(is,3)*modu(lat(axis,:))
-       end do
+    if(present(lprint))then
+       if(lprint)then
+          write(6,'(1X,"Shifts to be applied (Å)")')
+          do is=1,nstore
+             write(6,*) res_shifts(is,1),res_shifts(is,2), &
+                  res_shifts(is,3)*modu(lat(axis,:))
+          end do
+       end if
     end if
 
 !!! 1st, get it to find best c axis shift to find the best shift.
@@ -748,7 +750,7 @@ contains
     real :: stepsize,max_sep,dist_max
     real :: rtmp1,rtmp2,rtmp3
     double precision :: bond,depth,cur_vac,c_shift,val,dtmp1,dtmp2
-    logical :: lbulk
+    logical :: lbulk, lpresent
     type(confine_type) :: confine
     integer, dimension(2) :: plane_loc
     integer, dimension(3) :: ngrid,nstep,ivtmp1
@@ -1051,9 +1053,14 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Defines grid size and equivalent step size
 !!!-----------------------------------------------------------------------------
-    if(present(offset).and.offset(axis).ge.0.D0)then
-       max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(lat(axis,:))
-    else
+    lpresent=.false.
+    if(present(offset))then
+       if(offset(axis).ge.0.D0)then
+          max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(lat(axis,:))
+          lpresent=.true.
+       end if
+    end if
+    if(.not.lpresent)then
        max_sep = 6.0
        add = 0.D0
     end if
@@ -1259,14 +1266,16 @@ contains
     if(present(c_scale)) res_shifts(:,axis) = res_shifts(:,axis)*c_scale
 
 
-    if(present(lprint).and.(lprint))then
-       write(6,'(1X,"Shifts to be applied (Å)")')
-       do i=1,nstore
-          write(6,'(I3,":",2X,3(2X,F7.4))') &
-               i,res_shifts(i,:2),res_shifts(i,3)*modu(lat(axis,:))
-       end do
+    if(present(lprint))then
+       if(lprint)then
+          write(6,'(1X,"Shifts to be applied (Å)")')
+          do i=1,nstore
+             write(6,'(I3,":",2X,3(2X,F7.4))') &
+                  i,res_shifts(i,:2),res_shifts(i,3)*modu(lat(axis,:))
+          end do
+       end if
     end if
-
+       
 
   end function get_shifts_DON
 !!!#############################################################################
