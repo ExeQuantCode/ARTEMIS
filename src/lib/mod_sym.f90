@@ -130,13 +130,15 @@ contains
        if(allocated(grp%sym)) deallocate(grp%sym)
     end if
 
-    if(present(predefined).and.predefined)then
-       call gen_fundam_sym_matrices(grp,lat)
-    else
-       call mksym(grp,lat)
+    if(present(predefined))then
+       if(predefined)then
+          call gen_fundam_sym_matrices(grp,lat)
+          goto 10
+       end if
     end if
+    call mksym(grp,lat)
 
-    if(allocated(savsym)) deallocate(savsym)
+10  if(allocated(savsym)) deallocate(savsym)
     if(allocated(symops_compare)) deallocate(symops_compare)
     if(allocated(wyckoff)) deallocate(wyckoff)
     if(allocated(tmpwyckoff)) deallocate(tmpwyckoff)
@@ -358,13 +360,15 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! allocates and saves the array savsym if the first time submitted
 !!!-----------------------------------------------------------------------------
-    if(present(lsave).and.lsave)then
-       if(allocated(savsym)) deallocate(savsym)
-       allocate(savsym(grp%nsymop,4,4))
-       savsym=0.D0
-       savsym(:grp%nsymop,:,:)=tmpsav(:grp%nsymop,:,:)
-       savsym(:,4,4)=1.D0
-       deallocate(tmpsav)
+    if(present(lsave))then
+       if(lsave)then
+          if(allocated(savsym)) deallocate(savsym)
+          allocate(savsym(grp%nsymop,4,4))
+          savsym=0.D0
+          savsym(:grp%nsymop,:,:)=tmpsav(:grp%nsymop,:,:)
+          savsym(:,4,4)=1.D0
+          deallocate(tmpsav)
+       end if
     end if
 
 
@@ -386,9 +390,11 @@ contains
     end if iperm_if
 
 
-    if(present(lsave).and.lsave)then
-       call move_alloc(savsym,grp%sym)
-       grp%nsym=grp%nsymop
+    if(present(lsave))then
+       if(lsave)then
+          call move_alloc(savsym,grp%sym)
+          grp%nsym=grp%nsymop
+       end if
     end if
 
 

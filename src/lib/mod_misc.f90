@@ -52,7 +52,9 @@ contains
     best=-huge(0.D0)
     do i=1,size(vec)
        dtmp1=vec(i)-val
-       if(present(optmask).and..not.optmask(i)) cycle
+       if(present(optmask))then
+          if(.not.optmask(i)) cycle
+       end if
        if(dtmp1.gt.best.and.dtmp1.lt.-1.D-8)then
           best=dtmp1
           int=i
@@ -78,7 +80,9 @@ contains
     best=huge(0.D0)
     do i=1,size(vec)
        dtmp1=vec(i)-val
-       if(present(optmask).and..not.optmask(i)) cycle
+       if(present(optmask))then
+          if(.not.optmask(i)) cycle
+       end if
        if(dtmp1.lt.best.and.dtmp1.gt.1.D-8)then
           best=dtmp1
           int=i

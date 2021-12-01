@@ -420,8 +420,9 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! initialise variables
 !!!-----------------------------------------------------------------------------
-    if(present(lprint).and.lprint) &
-         write(6,'(1X,"Determining axis perpendicular to interface")')
+    if(present(lprint))then
+       if(lprint) write(6,'(1X,"Determining axis perpendicular to interface")')
+    end if
     power=1.D0
     nstep=size(DOS(1)%atom(1,1,:))
     rdist_max=12.0
@@ -521,8 +522,8 @@ contains
 !!! defines the interface axis as the one with the greatest difference
 !!!-----------------------------------------------------------------------------
     axis=minloc(dir_disim,dim=1)
-    if(present(lprint).and.lprint) &
-         write(6,*) "Interface located along axis",axis
+    if(present(lprint))then
+       if(lprint) write(6,*) "Interface located along axis",axis
 
 
   end function get_intf_axis_DOS
@@ -774,10 +775,12 @@ contains
 !!!-----------------------------------------------------------------------------
     multiCADD=running_avg(multiCADD,window=9,lperiodic=.true.)
     multiCADD=abs(multiCADD)
-    if(present(lprint).and.lprint) then
-       do i=1,nstep
-          write(52,*) dist(i),multiCADD(i)
-       end do
+    if(present(lprint))then
+       if(lprint) then
+          do i=1,nstep
+             write(52,*) dist(i),multiCADD(i)
+          end do
+       end if
     end if
 
 

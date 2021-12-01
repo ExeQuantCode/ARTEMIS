@@ -163,21 +163,23 @@ contains
 
 
     !! sets up array dimensions of Gram-Schmidt basis
-    if(present(cmo).and.cmo)then
-       write(0,'("Column Major Order Gram-Schmidt &
-            &not yet set up")')
-       write(0,'("Stopping...")')
-       stop
-       num = size(basis(1,:),dim=1)
-       dim = size(basis(:,1),dim=1)
-       allocate(u(dim,num))
-    else
-       num = size(basis(:,1),dim=1)
-       dim = size(basis(1,:),dim=1)
-       allocate(u(num,dim))
+    if(present(cmo))then
+       if(cmo)then
+          write(0,'("Column Major Order Gram-Schmidt &
+               &not yet set up")')
+          write(0,'("Stopping...")')
+          stop
+          num = size(basis(1,:),dim=1)
+          dim = size(basis(:,1),dim=1)
+          allocate(u(dim,num))
+          goto 10
+       end if
     end if
-    allocate(vtmp(dim))
-
+    num = size(basis(:,1),dim=1)
+    dim = size(basis(1,:),dim=1)
+    allocate(u(num,dim))
+    
+10  allocate(vtmp(dim))
 
     !! Evaluates the Gram-Schmidt basis
     u(1,:) = basis(1,:)
@@ -191,10 +193,12 @@ contains
 
 
     !! Normalises new basis if required
-    if(present(normalise).and.normalise)then
-       do i=1,num
-          u(i,:) = u(i,:)/modu(u(i,:))
-       end do
+    if(present(normalise))then
+       if(normalise)then
+          do i=1,num
+             u(i,:) = u(i,:)/modu(u(i,:))
+          end do
+       end if
     end if
 
 

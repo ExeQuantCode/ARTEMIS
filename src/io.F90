@@ -140,7 +140,7 @@ contains
     character(len=13) :: warning
     character(len=200) :: fmt
     character(len=*) :: message
-    logical :: finished
+    logical :: finished,lpresent
     character(len=:), allocatable :: line
     integer, optional, intent(in) :: width
     logical, optional, intent(in) :: fmtd
@@ -204,11 +204,14 @@ contains
             whitespacel,length,whitespacer
        write(line,trim(fmt)) trim(adjustl(message(ipos:iend)))
 
-       if(present(fmtd).and.fmtd)then
-          call write_fmtd(unit,trim(line))
-       else
-          write(unit,'(A)') trim(line)
+       lpresent=.false.
+       if(present(fmtd))then
+          if(fmtd)then
+             call write_fmtd(unit,trim(line))
+             lpresent=.true.
+          end if
        end if
+       if(.not.lpresent) write(unit,'(A)') trim(line)
 
        if(finished) exit newline_loop
        if(inewline.ne.0) iend=iend+2
@@ -228,14 +231,18 @@ contains
   subroutine err_abort(message,fmtd)
     implicit none
     integer :: unit=0
+    logical :: lpresent
     character(len=*) :: message
     logical, optional, intent(in) :: fmtd
 
-    if(present(fmtd).and.fmtd)then
-       call write_fmtd(unit,trim(message))
-    else
-       write(unit,'(A)') trim(message)
+    lpresent=.false.
+    if(present(fmtd))then
+       if(fmtd)then
+          call write_fmtd(unit,trim(message))
+          lpresent=.true.
+       end if
     end if
+    if(.not.lpresent) write(unit,'(A)') trim(message)
     stop
 
   end subroutine err_abort
@@ -276,7 +283,7 @@ contains
     character(len=*), intent(in) :: helpword
     character(len=:), allocatable :: checkword
     character(len=200) :: title
-    logical :: found
+    logical :: found,lpresent
     logical, optional :: search
     type(tag_type), dimension(:), intent(in) :: tags
     
@@ -297,22 +304,27 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! search function
 !!!-----------------------------------------------------------------------------
-    if(present(search).and.search)then
-       tagloop1: do i=1,ntags
-          if(index(tags(i)%name,checkword).ne.0)then
-             found=.true.
+    lpresent=.false.
+    if(present(search))then
+       if(search)then
+          lpresent=.true.
+          tagloop1: do i=1,ntags
+             if(index(tags(i)%name,checkword).ne.0)then
+                found=.true.
 
-             write(unit,'(A,T33,A)') &
-                  trim(tags(i)%name),trim(tags(i)%summary)
-             
-          end if
-       end do tagloop1
-       if(.not.found) write(unit,'(3X,A)') 'No tag found'
-       return
+                write(unit,'(A,T33,A)') &
+                     trim(tags(i)%name),trim(tags(i)%summary)
+
+             end if
+          end do tagloop1
+          if(.not.found) write(unit,'(3X,A)') 'No tag found'
+          return
+       end if
+    end if
 !!!-----------------------------------------------------------------------------
 !!! help all function
 !!!-----------------------------------------------------------------------------
-    elseif(checkword.eq.'ALL')then
+    if(.not.lpresent.and.checkword.eq.'ALL')then
        tagloop2: do i=1,ntags
           write(unit,'(A,T33,A)') &
                trim(tags(i)%name),trim(tags(i)%summary)
@@ -324,7 +336,7 @@ contains
           end if
        end do tagloop2
        return
-       
+
     end if
 
 !!!-----------------------------------------------------------------------------

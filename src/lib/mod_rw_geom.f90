@@ -632,33 +632,41 @@ contains
 
 
    string_lat="CART"
-   if(present(labc).and.labc) string_lat="ABC"
+   if(present(labc))then
+      if(labc) string_lat="ABC"
+   end if
 
    string_bas="FRAC"
-   if(present(lcart).and.lcart)then
-      string_bas="ABS"
-      write(0,'("ERROR: Internal error in CASTEP_geom_write")')
-      write(0,'(2X,"Subroutine not yet set up to output cartesian coordinates")')
-      stop
+   if(present(lcart))then
+      if(lcart)then
+         string_bas="ABS"
+         write(0,'("ERROR: Internal error in CASTEP_geom_write")')
+         write(0,'(2X,"Subroutine not yet set up to output cartesian &
+              &coordinates")')
+         stop
+      end if
    end if
 
    write(UNIT,'("%block LATTICE_",A)') trim(string_lat)
    write(UNIT,'("ang")')
-   if(present(labc).and.labc)then
-      do i=1,3
-         abc(i)=modu(lat_write(i,:))
-      end do
-      angle(1) = dot_product(lat_write(2,:),lat_write(3,:))/(abc(2)*abc(3))
-      angle(2) = dot_product(lat_write(1,:),lat_write(3,:))/(abc(1)*abc(3))
-      angle(3) = dot_product(lat_write(1,:),lat_write(2,:))/(abc(1)*abc(2))
-      write(UNIT,'(3(F15.9))') abc
-      write(UNIT,'(3(F15.9))') angle
-   else
-      do i=1,3
-         write(UNIT,'(3(F15.9))') lat_write(i,:)
-      end do
+   if(present(labc))then
+      if(labc)then
+         do i=1,3
+            abc(i)=modu(lat_write(i,:))
+         end do
+         angle(1) = dot_product(lat_write(2,:),lat_write(3,:))/(abc(2)*abc(3))
+         angle(2) = dot_product(lat_write(1,:),lat_write(3,:))/(abc(1)*abc(3))
+         angle(3) = dot_product(lat_write(1,:),lat_write(2,:))/(abc(1)*abc(2))
+         write(UNIT,'(3(F15.9))') abc
+         write(UNIT,'(3(F15.9))') angle
+         goto 10
+      end if
    end if
-   write(UNIT,'("%endblock LATTICE_",A)') trim(string_lat)
+   do i=1,3
+      write(UNIT,'(3(F15.9))') lat_write(i,:)
+   end do
+
+10 write(UNIT,'("%endblock LATTICE_",A)') trim(string_lat)
 
    write(UNIT,*)
    write(UNIT,'("%block POSITIONS_",A)') trim(string_bas)
@@ -817,11 +825,10 @@ contains
    logical, optional, intent(in) :: radians
 
 
-   if(present(radians).and..not.radians) then
-      in_angle=angle*pi/180.D0
-   else
-      in_angle=angle*pi/180.D0
+   if(present(radians))then
+      if(.not.radians) in_angle=angle*pi/180.D0
    end if
+!      in_angle=angle*pi/180.D0 ! this looks wrong, check it
 
    out_lat=0.D0
 
@@ -864,7 +871,9 @@ contains
    abc_angle(2,3)=acos(dot_product(in_lat(1,:),in_lat(2,:))/&
         (abc_angle(1,1)*abc_angle(1,2)))
 
-   if(present(radians).and..not.radians) abc_angle(2,:)=abc_angle(2,:)*180.D0/pi
+   if(present(radians))then
+      if(.not.radians) abc_angle(2,:)=abc_angle(2,:)*180.D0/pi
+   end if
 
  end function convert_lat_to_abc
 !!!#############################################################################
