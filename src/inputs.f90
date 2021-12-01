@@ -454,7 +454,9 @@ contains
        if(trim(buffer).eq.'') cycle settings_read
        if(index(trim(buffer),"END").ne.0.and.&
             index(trim(buffer),"SETTINGS").ne.0) exit settings_read
-       if(present(skip).and.skip) cycle
+       if(present(skip))then
+          if(skip) cycle
+       end if
        tagname=trim(adjustl(buffer))
        if(scan(buffer,"=").ne.0) tagname=trim(tagname(:scan(tagname,"=")-1))
        select case(trim(tagname))
@@ -539,7 +541,9 @@ contains
        if(trim(buffer).eq.'') cycle cell_edits_read
        if(index(trim(buffer),"END").ne.0.and.&
             index(trim(buffer),"CELL_EDITS").ne.0) exit cell_edits_read
-       if(present(skip).and.skip) cycle
+       if(present(skip))then
+          if(skip) cycle
+       end if
        tagname=trim(adjustl(buffer))
        if(scan(buffer,"=").ne.0) tagname=trim(tagname(:scan(tagname,"=")-1))
        if(scan(trim(adjustl(tagname))," ").ne.0) read(tagname,*) tagname
@@ -642,7 +646,9 @@ contains
        if(trim(buffer).eq.'') cycle interfaces_read
        if(index(trim(buffer),"END").ne.0.and.&
             index(trim(buffer),"INTERFACES").ne.0) exit interfaces_read
-       if(present(skip).and.skip) cycle
+       if(present(skip))then
+          if(skip) cycle
+       end if
        tagname=trim(adjustl(buffer))
        if(scan(buffer,"=").ne.0) tagname=trim(tagname(:scan(tagname,"=")-1))
        select case(trim(tagname))
@@ -865,7 +871,9 @@ contains
        if(trim(buffer).eq.'') cycle defects_read
        if(index(trim(buffer),"END").ne.0.and.&
             index(trim(buffer),"DEFECTS").ne.0) exit defects_read
-       if(present(skip).and.skip) cycle
+       if(present(skip))then
+          if(skip) cycle
+       end if
        tagname=trim(adjustl(buffer))
        if(scan(buffer,"=").ne.0) tagname=trim(tagname(:scan(tagname,"=")-1))
       select case(trim(tagname))
