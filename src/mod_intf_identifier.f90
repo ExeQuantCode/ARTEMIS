@@ -524,6 +524,7 @@ contains
     axis=minloc(dir_disim,dim=1)
     if(present(lprint))then
        if(lprint) write(6,*) "Interface located along axis",axis
+    end if
 
 
   end function get_intf_axis_DOS
