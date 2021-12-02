@@ -125,9 +125,11 @@ contains
 
 
     if(present(tolerance)) call set_symmetry_tolerance(tolerance)
-    if(present(new_start).and.new_start)then
-       if(allocated(grp%op)) deallocate(grp%op)
-       if(allocated(grp%sym)) deallocate(grp%sym)
+    if(present(new_start))then
+       if(new_start)then
+          if(allocated(grp%op)) deallocate(grp%op)
+          if(allocated(grp%sym)) deallocate(grp%sym)
+       end if
     end if
 
     if(present(predefined))then
