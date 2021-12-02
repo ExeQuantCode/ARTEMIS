@@ -167,7 +167,7 @@ contains
 !!!#############################################################################
 !!! tfbas   : transformed basis
 !!!#############################################################################
-  subroutine check_sym(grp,bas1,iperm,tmpbas2,lsave)
+  subroutine check_sym(grp,bas1,iperm,tmpbas2,lsave,lcheck_all)
     implicit none
     integer :: i,j,k,iatom,jatom,ispec,itmp1
     integer :: is,isym,jsym,count,ntrans
@@ -181,7 +181,7 @@ contains
     double precision, allocatable, dimension(:,:,:) :: tmpsav
     integer, optional, intent(in) :: iperm
     type(bas_type), optional :: tmpbas2
-    logical, optional, intent(in) :: lsave
+    logical, optional, intent(in) :: lsave, lcheck_all
 
 
 204 format(4(F11.6),/,4(F11.6),/,4(F11.6),/,4(F11.6))
@@ -206,7 +206,11 @@ contains
 !!!-----------------------------------------------------------------------------
     if(present(tmpbas2)) then
        bas2=tmpbas2
-       lpresent=.true.
+       if(present(lcheck_all))then
+          lpresent=.not.lcheck_all
+       else
+          lpresent=.true.
+       end if
     else
        bas2=bas1
        lpresent=.false.
@@ -1346,10 +1350,17 @@ contains
           term_arr(nterm)%hmin = bas_list(itmp1,axis)
           term_arr(nterm)%hmax = bas_list(itmp1,axis)
        end if
-
+       
     end do term_loop1
     term_arr(:nterm)%hmin = term_arr(:nterm)%hmin + height
     term_arr(:nterm)%hmax = term_arr(:nterm)%hmax + height
+
+    !!! CHECKING !!!
+    do i=1,nterm
+       write(0,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+            i,term_arr(i)%hmin,term_arr(i)%hmax,term_arr(i)%natom
+
+    end do
 
 
 !!!-----------------------------------------------------------------------------
@@ -1445,8 +1456,17 @@ contains
        if(any(success(1:i-1).eq.itmp1)) cycle reject_loop1
        call clone_grp(grp_store,grp1)
        call check_sym(grp1,bas_arr(itmp1),&
-            tmpbas2=bas_arr_reject(i),iperm=-1,lsave=.true.)
-       !write(0,*) grp1%nsymop
+            tmpbas2=bas_arr_reject(i),iperm=-1,lsave=.true.,lcheck_all=.true.)
+
+       !! CHECK DETERMINANT OF ALL SYMMETRY OPERATIONS. IF THERE ARE ANY THAT ARE 1, THEN MOVE ON
+       !! This is because they are just rotations as can be captured through lattice matches.
+       !! Solely inversions are unique and must be captured.
+       do j=1,grp1%nsymop
+          !write(0,'(4(2X,F9.4))') savsym(j,:,:)
+          !write(0,*) det(savsym(j,:3,:3))
+          if(abs(det(savsym(j,:3,:3))-1.D0).le.tol_sym) cycle reject_loop1
+       end do
+       
        if(all(savsym(1,axis,:3).eq.vec_compare(:)).and.&
             all(savsym(1,:3,axis).eq.vec_compare(:)))then
           !write(0,*) savsym(:,4,axis)
