@@ -1233,7 +1233,7 @@ contains
     double precision, dimension(3) :: vec_compare
     type(bas_type),allocatable, dimension(:) :: bas_arr,bas_arr_reject
     type(term_type), allocatable, dimension(:) :: term_arr,term_arr_uniq
-    integer, allocatable, dimension(:) :: success
+    integer, allocatable, dimension(:) :: success,tmpop
     integer, allocatable, dimension(:,:) :: reject_match
     double precision, allocatable, dimension(:,:) :: bas_list
     double precision, allocatable, dimension(:,:,:) :: tmpsym
@@ -1377,6 +1377,7 @@ contains
     ireject=0
     grp_store%lspace=.true.
     call sym_setup(grp_store,lat)
+    call check_sym(grp_store,bas1=bas)
     allocate(term_arr_uniq(2*nterm))
     allocate(reject_match(nterm,2))
     if(ludef_print)&
@@ -1416,16 +1417,20 @@ contains
     !!--------------------------------------------------------------------------
     call sym_setup(grp_store,lat,predefined=.true.,new_start=.true.)
     allocate(tmpsym(count(grp_store%sym(:,3,3).eq.-1.D0),4,4))
+    allocate(tmpop(count(grp_store%sym(:,3,3).eq.-1.D0)))
     itmp1=0
     do i=1,grp_store%nsym
        if(grp_store%sym(i,3,3).eq.-1.D0)then
           itmp1=itmp1+1
           tmpsym(itmp1,:,:)=grp_store%sym(i,:,:)
+          tmpop(itmp1) = i
        end if
     end do
     grp_store%nsym=itmp1
     grp_store%nlatsym=itmp1
     call move_alloc(tmpsym,grp_store%sym)
+    allocate(grp_store%op(itmp1))
+    grp_store%op(:) = tmpop(:itmp1)
 
 
     !!--------------------------------------------------------------------------
