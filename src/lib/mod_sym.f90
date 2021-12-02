@@ -117,8 +117,10 @@ contains
 !!!#############################################################################
   subroutine sym_setup(grp,lat,predefined,new_start,tolerance)
     implicit none
+    logical :: lpresent
+    
     type(sym_type) :: grp
-
+       
     double precision, dimension(3,3), intent(in) :: lat
     double precision, optional, intent(in) :: tolerance
     logical, optional, intent(in) :: predefined,new_start
@@ -145,8 +147,12 @@ contains
     if(allocated(wyckoff)) deallocate(wyckoff)
     if(allocated(tmpwyckoff)) deallocate(tmpwyckoff)
     grp%nsymop=0
-    if(present(new_start).and.new_start.or..not.present(new_start).or.&
-         s_end.eq.0)then
+    
+    lpresent=.false.
+    if(present(new_start))then
+       if(new_start) lpresent=.true.
+    end if
+    if(.not.present(new_start).or.lpresent.or.s_end.eq.0)then
        s_end=grp%nsym
     end if
 
