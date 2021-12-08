@@ -37,7 +37,8 @@ contains
 !!!#############################################################################
 !!! Generates and prints terminations parallel to the supplied miller plane
 !!!#############################################################################
-  subroutine gen_terminations(lat,bas,miller_plane,axis,directory,thickness,udef_layer_sep)
+  subroutine gen_terminations(lat,bas,miller_plane,axis,directory,&
+       thickness,udef_layer_sep)
     implicit none
     character(len=200) :: dirname
     type(term_arr_type) :: term
@@ -73,7 +74,12 @@ contains
     else
        dirname = "DTERMINATIONS"
     end if
-    call print_terminations(term,lat,bas,trim(dirname),thickness,vacuum,lortho)
+    if(present(thickness))then
+       call print_terminations(term,lat,bas,trim(dirname),thickness,vacuum,&
+            lortho = lortho)
+    else
+       call print_terminations(term,lat,bas,trim(dirname),lortho = lortho)
+    end if
 
 
     return
