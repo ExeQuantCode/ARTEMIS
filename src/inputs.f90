@@ -576,13 +576,15 @@ contains
              edits%bounds(edits%nedits,:)=assign_listvec(store,tag_list,4)
           end if
        case("VACUUM")
-          call assign(buffer, vacuum,        readvar(7))
           edits%nedits=edits%nedits+1
           edits%list(edits%nedits)=2
           store=buffer(index(buffer,"VACUUM")+len("VACUUM"):)
           if(trim(store).eq.'')then
+             readvar(7) = readvar(7) + 1
              call cat(unit=unit,end_string="END",end_string2="VACUUM",&
                   line=count,string=store,rm_cmt=.true.)
+          else
+             call assign(buffer, vacuum,        readvar(7))
           end if
           edits%axis(edits%nedits)=assign_list(store,tag_list,1)
           edits%bounds(edits%nedits,1)=assign_list(store,tag_list,2)
