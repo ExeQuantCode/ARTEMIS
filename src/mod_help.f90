@@ -99,7 +99,7 @@ module mod_help
   public :: interface_help
 
 
-!!!updated 2021/11/12
+!!!updated 2021/12/08
 
 
 contains
@@ -240,9 +240,12 @@ contains
     tag(ivacuum_tag)%type    = 'B'
     tag(ivacuum_tag)%summary = 'Add/remove vacuum at a point in a cell'
     tag(ivacuum_tag)%allowed = ''
-    tag(ivacuum_tag)%default = ''
+    tag(ivacuum_tag)%default = '14'
     tag(ivacuum_tag)%description = &
-         'Example:\n&
+         'Vacuum gap (only applied for surface generation or when &
+         &user-defined).\n&
+         Example:\n&
+         &  VACUUM = 14 !(Å)\n&
          &  VACUUM\n&
          &    axis = 3\n&
          &    loc = 0.8\n&

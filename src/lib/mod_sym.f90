@@ -21,7 +21,7 @@
 !!!#############################################################################
 module mod_sym
   use constants,   only: pi
-  use misc,        only: sort1D,sort_col
+  use misc,        only: sort1D,sort_col,set
   use misc_linalg, only: modu,inverse_3x3,det,gcd,gen_group
   use rw_geom,     only: bas_type,geom_write
   use edit_geom,   only: transformer,vacuumer,set_vacuum,shifter,&
@@ -91,7 +91,7 @@ module mod_sym
   public :: basmap_type,basis_map
 
 
-!!!updated 2021/11/09
+!!!updated 2021/12/08
 
 
 contains
@@ -167,7 +167,7 @@ contains
 !!!#############################################################################
 !!! tfbas   : transformed basis
 !!!#############################################################################
-  subroutine check_sym(grp,bas1,iperm,tmpbas2,lsave)
+  subroutine check_sym(grp,bas1,iperm,tmpbas2,lsave,lcheck_all)
     implicit none
     integer :: i,j,k,iatom,jatom,ispec,itmp1
     integer :: is,isym,jsym,count,ntrans
@@ -181,7 +181,7 @@ contains
     double precision, allocatable, dimension(:,:,:) :: tmpsav
     integer, optional, intent(in) :: iperm
     type(bas_type), optional :: tmpbas2
-    logical, optional, intent(in) :: lsave
+    logical, optional, intent(in) :: lsave, lcheck_all
 
 
 204 format(4(F11.6),/,4(F11.6),/,4(F11.6),/,4(F11.6))
@@ -206,7 +206,11 @@ contains
 !!!-----------------------------------------------------------------------------
     if(present(tmpbas2)) then
        bas2=tmpbas2
-       lpresent=.true.
+       if(present(lcheck_all))then
+          lpresent=.not.lcheck_all
+       else
+          lpresent=.true.
+       end if
     else
        bas2=bas1
        lpresent=.false.
@@ -1110,7 +1114,7 @@ contains
     logical :: lexclude_translation
     logical, dimension(2,2) :: mask
     
-    double precision, allocatable, dimension(:) :: ladder
+    double precision, allocatable, dimension(:) :: ladder !, ladder2
     double precision, allocatable, dimension(:,:,:) :: subgroup,group
     double precision, allocatable, dimension(:,:,:) :: mirror_mat,trans_mat
 
@@ -1200,7 +1204,9 @@ contains
        term%nstep = 1
     end if
     group_loop: do i=1,size(group(:,1,1))
-       if(any(ladder(:term%nstep).eq.group(i,2,1))) cycle group_loop
+       if(any(abs(ladder(:term%nstep)-group(i,2,1)).lt.tol_sym)) cycle group_loop
+       if(any(abs(ladder(:term%nstep)-&
+            floor(ladder(:term%nstep)+tol_sym)-group(i,2,1)).lt.tol_sym)) cycle group_loop
        if(lexclude_translation.and.&
             abs(group(i,1,1)-1.D0).lt.tol_sym) cycle group_loop
        term%nstep = term%nstep + 1
@@ -1208,6 +1214,10 @@ contains
        if(abs(ladder(term%nstep)).lt.tol_sym) ladder(term%nstep) = 0.D0
     end do group_loop
     call sort1D(ladder(:term%nstep))
+    !call set(ladder2, tol_sym)
+    !allocate(ladder2(term%nstep))
+    !ladder2(:) = ladder(:term%nstep)
+    !term%nstep = size(ladder2)
     do i=1,term%nterm
        allocate(term%arr(i)%ladder(term%nstep))
        term%arr(i)%ladder(:) = ladder(:term%nstep)
@@ -1346,7 +1356,7 @@ contains
           term_arr(nterm)%hmin = bas_list(itmp1,axis)
           term_arr(nterm)%hmax = bas_list(itmp1,axis)
        end if
-
+       
     end do term_loop1
     term_arr(:nterm)%hmin = term_arr(:nterm)%hmin + height
     term_arr(:nterm)%hmax = term_arr(:nterm)%hmax + height
@@ -1445,8 +1455,17 @@ contains
        if(any(success(1:i-1).eq.itmp1)) cycle reject_loop1
        call clone_grp(grp_store,grp1)
        call check_sym(grp1,bas_arr(itmp1),&
-            tmpbas2=bas_arr_reject(i),iperm=-1,lsave=.true.)
-       !write(0,*) grp1%nsymop
+            tmpbas2=bas_arr_reject(i),iperm=-1,lsave=.true.,lcheck_all=.true.)
+
+       !! CHECK DETERMINANT OF ALL SYMMETRY OPERATIONS. IF THERE ARE ANY THAT ARE 1, THEN MOVE ON
+       !! This is because they are just rotations as can be captured through lattice matches.
+       !! Solely inversions are unique and must be captured.
+       do j=1,grp1%nsymop
+          !write(0,'(4(2X,F9.4))') savsym(j,:,:)
+          !write(0,*) det(savsym(j,:3,:3))
+          if(abs(det(savsym(j,:3,:3))-1.D0).le.tol_sym) cycle reject_loop1
+       end do
+       
        if(all(savsym(1,axis,:3).eq.vec_compare(:)).and.&
             all(savsym(1,:3,axis).eq.vec_compare(:)))then
           !write(0,*) savsym(:,4,axis)
@@ -1525,7 +1544,8 @@ contains
 !!!#############################################################################
 !!! prints the terminations to individual files
 !!!#############################################################################
-  subroutine print_terminations(term,inlat,inbas,dirname,thickness,lortho)
+  subroutine print_terminations(term,inlat,inbas,dirname,&
+       thickness,vacuum,lortho)
     implicit none
     integer :: unit,i,j,istep,ncells,udef_thick
     double precision :: vac,dtmp1
@@ -1540,6 +1560,7 @@ contains
     double precision, dimension(3,3), intent(in) :: inlat
 
     integer, optional, intent(in) :: thickness
+    double precision, optional, intent(in) :: vacuum
     character(*), optional, intent(in) :: dirname
     logical, optional, intent(in) :: lortho
 
@@ -1558,12 +1579,17 @@ contains
     else
        udef_thick = 2
     end if
+    
+    if(present(vacuum))then
+       vac = vacuum
+    else
+       vac = 14.D0
+    end if
 
 
     !!--------------------------------------------------------------------------
     !! Makes directory and enters
     !!--------------------------------------------------------------------------
-    vac=14.D0
     call clone_bas(inbas,bas)
     if(present(dirname))then
        call system('mkdir -p '//trim(adjustl(dirname)))
