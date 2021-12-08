@@ -1203,6 +1203,8 @@ contains
     ntot_elem = 0
     elem_loop1: do i=1,nelem
        cur_elem(:,:) = elem(i,:,:)
+       !write(0,*) "##########"
+       !write(0,*)
        !write(0,*) i
        !write(0,'(2(2X,F9.4))') cur_elem(:,:)
        !write(0,*)
@@ -1232,7 +1234,7 @@ contains
              tmp_elem(:,:) = matmul((apply_elem(:,:)),tmp_elem(:,:))
              if(present(mask))then
                 where(mask.and.(tmp_elem(:,:).lt.-tiny.or.tmp_elem(:,:).ge.1.D0-tiny))
-                   tmp_elem(:,:) = tmp_elem(:,:) - floor(tmp_elem(:,:))
+                   tmp_elem(:,:) = tmp_elem(:,:) - floor(tmp_elem(:,:)+tiny)
                 end where
              end if
              if(all(abs(cur_elem(:,:)-tmp_elem(:,:)).lt.tiny)) exit recursive_loop
