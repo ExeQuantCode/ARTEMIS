@@ -726,22 +726,24 @@ contains
        !!-----------------------------------------------------------------------
        !! Prints the mismatches for the current successful match
        !!-----------------------------------------------------------------------
-       if(present(lprint).and.lprint)then
-          write(6,'(/,A,I0,2X,A,I0)') &
-               "Fit number: ",SAV%nfit+1,&
-               "Area increase: ",&
-               nint(get_area(dble(tf1(1,:)),dble(tf1(2,:))))
-          write(6,'("   Transmat 1:    Transmat 2:")')
-          write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
-          write(6,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
-               tf1(1,1:3),tf2(1,1:3),&
-               tf1(2,1:3),tf2(2,1:3),&
-               tf1(3,1:3),tf2(3,1:3)
-          write(6,'(" vector mismatch (%) = ",F0.9)') diff*100.D0
-          write(6,'(" angle mismatch (°)  = ",F0.9)') abs(ang1-ang2)*180/pi
-          write(6,'(" area mismatch (%)   = ",F0.9)') (&
-               1-abs(t_area1/t_area2))*100.D0
-          write(6,*) "reduced:",SAV%lreduced
+       if(present(lprint))then
+          if(lprint)then
+             write(6,'(/,A,I0,2X,A,I0)') &
+                  "Fit number: ",SAV%nfit+1,&
+                  "Area increase: ",&
+                  nint(get_area(dble(tf1(1,:)),dble(tf1(2,:))))
+             write(6,'("   Transmat 1:    Transmat 2:")')
+             write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
+             write(6,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
+                  tf1(1,1:3),tf2(1,1:3),&
+                  tf1(2,1:3),tf2(2,1:3),&
+                  tf1(3,1:3),tf2(3,1:3)
+             write(6,'(" vector mismatch (%) = ",F0.9)') diff*100.D0
+             write(6,'(" angle mismatch (°)  = ",F0.9)') abs(ang1-ang2)*180/pi
+             write(6,'(" area mismatch (%)   = ",F0.9)') (&
+                  1-abs(t_area1/t_area2))*100.D0
+             write(6,*) "reduced:",SAV%lreduced
+          end if
        end if
        !!-----------------------------------------------------------------------
        !! Checks if best mismatch and saves accordingly
@@ -1126,20 +1128,22 @@ contains
        allocate(miller2(itmp1,3))
        miller2(:,:)=ivtmp1(:itmp1,:)
     end if
-    if(present(lprint).and.lprint)then
-       write(6,*)
-       write(6,'(1X,"Miller planes considered for lower material: ",I0)') &
-            size(miller1(:,1))
-       do i=1,size(miller1(:,1))
-          write(6,'(2X,I2,")",3X,3(3X,I0))') i,miller1(i,:)
-       end do
-       write(6,*)
-       write(6,'(1X,"Miller planes considered for upper material: ",I0)') &
-            size(miller2(:,1))
-       do i=1,size(miller2(:,1))
-          write(6,'(2X,I2,")",3X,3(3X,I0))') i,miller2(i,:)
-       end do
-       write(6,*)
+    if(present(lprint))then
+       if(lprint)then
+          write(6,*)
+          write(6,'(1X,"Miller planes considered for lower material: ",I0)') &
+               size(miller1(:,1))
+          do i=1,size(miller1(:,1))
+             write(6,'(2X,I2,")",3X,3(3X,I0))') i,miller1(i,:)
+          end do
+          write(6,*)
+          write(6,'(1X,"Miller planes considered for upper material: ",I0)') &
+               size(miller2(:,1))
+          do i=1,size(miller2(:,1))
+             write(6,'(2X,I2,")",3X,3(3X,I0))') i,miller2(i,:)
+          end do
+          write(6,*)
+       end if
     end if
 
 
@@ -1336,23 +1340,25 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Print the set of best matches
 !!!-----------------------------------------------------------------------------
-    if(present(lprint).and.lprint)then
-       do i=1,SAV%nfit
-          write(6,'(/,A,I0,2X,A,I0)') &
-               "Fit number: ",i,&
-               "Area increase: ",&
-               nint(get_area(dble(SAV%tf1(i,1,:)),dble(SAV%tf1(i,2,:))))
-          write(6,'("   Transmat 1:    Transmat 2:")')
-          write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
-          write(6,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
-               SAV%tf1(i,1,1:3),SAV%tf2(i,1,1:3),&
-               SAV%tf1(i,2,1:3),SAV%tf2(i,2,1:3),&
-               SAV%tf1(i,3,1:3),SAV%tf2(i,3,1:3)
-          write(6,'(" vector mismatch (%) = ",F0.9)') SAV%tol(i,1)
-          write(6,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(i,2)
-          write(6,*) "reduced:",lvec1(i)
-          write(6,*)
-       end do
+    if(present(lprint))then
+       if(lprint)then
+          do i=1,SAV%nfit
+             write(6,'(/,A,I0,2X,A,I0)') &
+                  "Fit number: ",i,&
+                  "Area increase: ",&
+                  nint(get_area(dble(SAV%tf1(i,1,:)),dble(SAV%tf1(i,2,:))))
+             write(6,'("   Transmat 1:    Transmat 2:")')
+             write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
+             write(6,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
+                  SAV%tf1(i,1,1:3),SAV%tf2(i,1,1:3),&
+                  SAV%tf1(i,2,1:3),SAV%tf2(i,2,1:3),&
+                  SAV%tf1(i,3,1:3),SAV%tf2(i,3,1:3)
+             write(6,'(" vector mismatch (%) = ",F0.9)') SAV%tol(i,1)
+             write(6,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(i,2)
+             write(6,*) "reduced:",lvec1(i)
+             write(6,*)
+          end do
+       end if
     end if
 
 

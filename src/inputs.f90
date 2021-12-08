@@ -23,7 +23,8 @@ module inputs
   integer :: lw_thickness,up_thickness
   integer :: nshift,nterm,nintf,nswap,nmiller
   real :: max_bondlength,swap_sigma,swap_depth
-  double precision :: c_scale,intf_depth,layer_sep,lw_layer_sep,up_layer_sep,swap_den,tol_sym
+  double precision :: c_scale,intf_depth,vacuum
+  double precision :: layer_sep,lw_layer_sep,up_layer_sep,swap_den,tol_sym
   character(len=20) :: input_fmt,output_fmt
   character(200) :: struc1_file,struc2_file,out_filename
   character(100) :: dirname,shiftdir,swapdir,subdir_prefix
@@ -44,7 +45,7 @@ module inputs
   double precision, dimension(3,3) :: struc1_lat,struc2_lat
 
 
-!!!updated  2021/11/12
+!!!updated  2021/12/08
 
 
 contains
@@ -93,6 +94,7 @@ contains
     axis=3
     lw_thickness=3
     up_thickness=3
+    vacuum=14.D0
     lw_surf=0
     up_surf=0
     c_scale=1.5D0
@@ -454,7 +456,9 @@ contains
        if(trim(buffer).eq.'') cycle settings_read
        if(index(trim(buffer),"END").ne.0.and.&
             index(trim(buffer),"SETTINGS").ne.0) exit settings_read
-       if(present(skip).and.skip) cycle
+       if(present(skip))then
+          if(skip) cycle
+       end if
        tagname=trim(adjustl(buffer))
        if(scan(buffer,"=").ne.0) tagname=trim(tagname(:scan(tagname,"=")-1))
        select case(trim(tagname))
@@ -539,7 +543,9 @@ contains
        if(trim(buffer).eq.'') cycle cell_edits_read
        if(index(trim(buffer),"END").ne.0.and.&
             index(trim(buffer),"CELL_EDITS").ne.0) exit cell_edits_read
-       if(present(skip).and.skip) cycle
+       if(present(skip))then
+          if(skip) cycle
+       end if
        tagname=trim(adjustl(buffer))
        if(scan(buffer,"=").ne.0) tagname=trim(tagname(:scan(tagname,"=")-1))
        if(scan(trim(adjustl(tagname))," ").ne.0) read(tagname,*) tagname
@@ -570,13 +576,15 @@ contains
              edits%bounds(edits%nedits,:)=assign_listvec(store,tag_list,4)
           end if
        case("VACUUM")
-          readvar(7) = readvar(7) + 1
           edits%nedits=edits%nedits+1
           edits%list(edits%nedits)=2
           store=buffer(index(buffer,"VACUUM")+len("VACUUM"):)
           if(trim(store).eq.'')then
+             readvar(7) = readvar(7) + 1
              call cat(unit=unit,end_string="END",end_string2="VACUUM",&
                   line=count,string=store,rm_cmt=.true.)
+          else
+             call assign(buffer, vacuum,        readvar(7))
           end if
           edits%axis(edits%nedits)=assign_list(store,tag_list,1)
           edits%bounds(edits%nedits,1)=assign_list(store,tag_list,2)
@@ -642,7 +650,9 @@ contains
        if(trim(buffer).eq.'') cycle interfaces_read
        if(index(trim(buffer),"END").ne.0.and.&
             index(trim(buffer),"INTERFACES").ne.0) exit interfaces_read
-       if(present(skip).and.skip) cycle
+       if(present(skip))then
+          if(skip) cycle
+       end if
        tagname=trim(adjustl(buffer))
        if(scan(buffer,"=").ne.0) tagname=trim(tagname(:scan(tagname,"=")-1))
        select case(trim(tagname))
@@ -865,7 +875,9 @@ contains
        if(trim(buffer).eq.'') cycle defects_read
        if(index(trim(buffer),"END").ne.0.and.&
             index(trim(buffer),"DEFECTS").ne.0) exit defects_read
-       if(present(skip).and.skip) cycle
+       if(present(skip))then
+          if(skip) cycle
+       end if
        tagname=trim(adjustl(buffer))
        if(scan(buffer,"=").ne.0) tagname=trim(tagname(:scan(tagname,"=")-1))
       select case(trim(tagname))

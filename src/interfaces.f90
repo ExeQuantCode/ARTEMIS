@@ -30,14 +30,15 @@ module interface_subroutines
   type(bulk_DON_type), dimension(2) :: bulk_DON
 
 
-!!!updated  2021/11/12
+!!!updated  2021/12/08
 
 
 contains
 !!!#############################################################################
 !!! Generates and prints terminations parallel to the supplied miller plane
 !!!#############################################################################
-  subroutine gen_terminations(lat,bas,miller_plane,axis,directory,thickness,udef_layer_sep)
+  subroutine gen_terminations(lat,bas,miller_plane,axis,directory,&
+       thickness,udef_layer_sep)
     implicit none
     character(len=200) :: dirname
     type(term_arr_type) :: term
@@ -74,7 +75,8 @@ contains
        dirname = "DTERMINATIONS"
     end if
     if(present(thickness))then
-       call print_terminations(term,lat,bas,trim(dirname),thickness,lortho)
+       call print_terminations(term,lat,bas,trim(dirname),thickness,vacuum,&
+            lortho = lortho)
     else
        call print_terminations(term,lat,bas,trim(dirname),lortho = lortho)
     end if

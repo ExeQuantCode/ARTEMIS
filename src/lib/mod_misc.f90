@@ -9,6 +9,7 @@
 !!! closest_above    (returns closest element above input number)
 !!! sort1D           (sort 1st col of array by size. Opt:sort 2nd array wrt 1st)
 !!! sort2D           (sort 1st two columns of an array by size)
+!!! set              (return the sorted set of unique elements)
 !!! sort_col         (sort array with respect to col column)
 !!! swap_i           (swap two integers around)
 !!! swap_d           (swap two doubles around)
@@ -33,8 +34,12 @@ module misc
      procedure isort1D,rsort1D,dsort1D
   end interface sort1D
 
+  interface set
+     procedure iset,rset,dset
+  end interface set
 
-!!!updated 2020/02/20
+
+!!!updated 2021/12/08
 
 
 contains
@@ -52,7 +57,9 @@ contains
     best=-huge(0.D0)
     do i=1,size(vec)
        dtmp1=vec(i)-val
-       if(present(optmask).and..not.optmask(i)) cycle
+       if(present(optmask))then
+          if(.not.optmask(i)) cycle
+       end if
        if(dtmp1.gt.best.and.dtmp1.lt.-1.D-8)then
           best=dtmp1
           int=i
@@ -78,7 +85,9 @@ contains
     best=huge(0.D0)
     do i=1,size(vec)
        dtmp1=vec(i)-val
-       if(present(optmask).and..not.optmask(i)) cycle
+       if(present(optmask))then
+          if(.not.optmask(i)) cycle
+       end if
        if(dtmp1.lt.best.and.dtmp1.gt.1.D-8)then
           best=dtmp1
           int=i
@@ -240,6 +249,92 @@ contains
 
     return
   end subroutine sort2D
+!!!#####################################################
+
+
+!!!#####################################################
+!!! return the sorted set of unique elements
+!!!#####################################################
+  subroutine iset(arr)
+    implicit none
+    integer :: i,n
+    integer, allocatable, dimension(:) :: tmp_arr
+    
+    integer, allocatable, dimension(:) :: arr
+
+    call sort1D(arr)
+    allocate(tmp_arr(size(arr)))
+
+    tmp_arr(1) = arr(1)
+    n=1
+    do i=2,size(arr)
+       if(arr(i)==tmp_arr(n)) cycle
+       n = n + 1
+       tmp_arr(n) = arr(i)
+    end do
+    call move_alloc(tmp_arr, arr)
+    
+  end subroutine iset
+!!!-----------------------------------------------------
+!!!-----------------------------------------------------
+  subroutine rset(arr, tol)
+    implicit none
+    integer :: i,n
+    real :: tiny
+    real, allocatable, dimension(:) :: tmp_arr
+    
+    real, allocatable, dimension(:) :: arr
+    real, optional :: tol
+
+    if(present(tol))then
+       tiny = tol
+    else
+       tiny = 1.D-4
+    end if
+    
+    call sort1D(arr)
+    allocate(tmp_arr(size(arr)))
+
+    tmp_arr(1) = arr(1)
+    n=1
+    do i=2,size(arr)
+       if(abs(arr(i)-tmp_arr(n)).lt.tiny) cycle
+       n = n + 1
+       tmp_arr(n) = arr(i)
+    end do
+    call move_alloc(tmp_arr, arr)
+    
+  end subroutine rset
+!!!-----------------------------------------------------
+!!!-----------------------------------------------------
+  subroutine dset(arr, tol)
+    implicit none
+    integer :: i,n
+    double precision :: tiny
+    double precision, allocatable, dimension(:) :: tmp_arr
+    
+    double precision, allocatable, dimension(:) :: arr
+    double precision, optional :: tol
+
+    if(present(tol))then
+       tiny = tol
+    else
+       tiny = 1.D-4
+    end if
+    
+    call sort1D(arr)
+    allocate(tmp_arr(size(arr)))
+
+    tmp_arr(1) = arr(1)
+    n=1
+    do i=2,size(arr)
+       if(abs(arr(i)-tmp_arr(n)).lt.tiny) cycle
+       n = n + 1
+       tmp_arr(n) = arr(i)
+    end do
+    call move_alloc(tmp_arr, arr)
+    
+  end subroutine dset
 !!!#####################################################
 
 
