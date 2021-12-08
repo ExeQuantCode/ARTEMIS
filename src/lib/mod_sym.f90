@@ -91,7 +91,7 @@ module mod_sym
   public :: basmap_type,basis_map
 
 
-!!!updated 2021/11/09
+!!!updated 2021/12/08
 
 
 contains
@@ -1545,7 +1545,8 @@ contains
 !!!#############################################################################
 !!! prints the terminations to individual files
 !!!#############################################################################
-  subroutine print_terminations(term,inlat,inbas,dirname,thickness,lortho)
+  subroutine print_terminations(term,inlat,inbas,dirname,&
+       thickness,vacuum,lortho)
     implicit none
     integer :: unit,i,j,istep,ncells,udef_thick
     double precision :: vac,dtmp1
@@ -1560,6 +1561,7 @@ contains
     double precision, dimension(3,3), intent(in) :: inlat
 
     integer, optional, intent(in) :: thickness
+    double precision, optional, intent(in) :: vacuum
     character(*), optional, intent(in) :: dirname
     logical, optional, intent(in) :: lortho
 
@@ -1578,12 +1580,17 @@ contains
     else
        udef_thick = 2
     end if
+    
+    if(present(vacuum))then
+       vac = vacuum
+    else
+       vac = 14.D0
+    end if
 
 
     !!--------------------------------------------------------------------------
     !! Makes directory and enters
     !!--------------------------------------------------------------------------
-    vac=14.D0
     call clone_bas(inbas,bas)
     if(present(dirname))then
        call system('mkdir -p '//trim(adjustl(dirname)))
@@ -1596,6 +1603,7 @@ contains
     !! Increases crystal to max number of required unit cells thick
     !!--------------------------------------------------------------------------
     ncells = int((udef_thick-1)/term%nstep)+1
+    write(0,*) ncells, udef_thick, term%nstep
     tfmat(:,:)=0.D0
     tfmat(1,1)=1.D0
     tfmat(2,2)=1.D0

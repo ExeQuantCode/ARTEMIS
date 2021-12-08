@@ -30,7 +30,7 @@ module interface_subroutines
   type(bulk_DON_type), dimension(2) :: bulk_DON
 
 
-!!!updated  2021/11/12
+!!!updated  2021/12/08
 
 
 contains
@@ -73,11 +73,7 @@ contains
     else
        dirname = "DTERMINATIONS"
     end if
-    if(present(thickness))then
-       call print_terminations(term,lat,bas,trim(dirname),thickness,lortho)
-    else
-       call print_terminations(term,lat,bas,trim(dirname),lortho = lortho)
-    end if
+    call print_terminations(term,lat,bas,trim(dirname),thickness,vacuum,lortho)
 
 
     return

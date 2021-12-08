@@ -23,7 +23,8 @@ module inputs
   integer :: lw_thickness,up_thickness
   integer :: nshift,nterm,nintf,nswap,nmiller
   real :: max_bondlength,swap_sigma,swap_depth
-  double precision :: c_scale,intf_depth,layer_sep,lw_layer_sep,up_layer_sep,swap_den,tol_sym
+  double precision :: c_scale,intf_depth,vacuum
+  double precision :: layer_sep,lw_layer_sep,up_layer_sep,swap_den,tol_sym
   character(len=20) :: input_fmt,output_fmt
   character(200) :: struc1_file,struc2_file,out_filename
   character(100) :: dirname,shiftdir,swapdir,subdir_prefix
@@ -44,7 +45,7 @@ module inputs
   double precision, dimension(3,3) :: struc1_lat,struc2_lat
 
 
-!!!updated  2021/11/12
+!!!updated  2021/12/08
 
 
 contains
@@ -93,6 +94,7 @@ contains
     axis=3
     lw_thickness=3
     up_thickness=3
+    vacuum=14.D0
     lw_surf=0
     up_surf=0
     c_scale=1.5D0
@@ -574,7 +576,7 @@ contains
              edits%bounds(edits%nedits,:)=assign_listvec(store,tag_list,4)
           end if
        case("VACUUM")
-          readvar(7) = readvar(7) + 1
+          call assign(buffer, vacuum,        readvar(7))
           edits%nedits=edits%nedits+1
           edits%list(edits%nedits)=2
           store=buffer(index(buffer,"VACUUM")+len("VACUUM"):)
