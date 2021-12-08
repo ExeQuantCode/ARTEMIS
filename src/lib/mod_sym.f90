@@ -21,7 +21,7 @@
 !!!#############################################################################
 module mod_sym
   use constants,   only: pi
-  use misc,        only: sort1D,sort_col
+  use misc,        only: sort1D,sort_col,set
   use misc_linalg, only: modu,inverse_3x3,det,gcd,gen_group
   use rw_geom,     only: bas_type,geom_write
   use edit_geom,   only: transformer,vacuumer,set_vacuum,shifter,&
@@ -1114,7 +1114,7 @@ contains
     logical :: lexclude_translation
     logical, dimension(2,2) :: mask
     
-    double precision, allocatable, dimension(:) :: ladder
+    double precision, allocatable, dimension(:) :: ladder !, ladder2
     double precision, allocatable, dimension(:,:,:) :: subgroup,group
     double precision, allocatable, dimension(:,:,:) :: mirror_mat,trans_mat
 
@@ -1204,7 +1204,9 @@ contains
        term%nstep = 1
     end if
     group_loop: do i=1,size(group(:,1,1))
-       if(any(ladder(:term%nstep).eq.group(i,2,1))) cycle group_loop
+       if(any(abs(ladder(:term%nstep)-group(i,2,1)).lt.tol_sym)) cycle group_loop
+       if(any(abs(ladder(:term%nstep)-&
+            floor(ladder(:term%nstep)+tol_sym)-group(i,2,1)).lt.tol_sym)) cycle group_loop
        if(lexclude_translation.and.&
             abs(group(i,1,1)-1.D0).lt.tol_sym) cycle group_loop
        term%nstep = term%nstep + 1
@@ -1212,6 +1214,10 @@ contains
        if(abs(ladder(term%nstep)).lt.tol_sym) ladder(term%nstep) = 0.D0
     end do group_loop
     call sort1D(ladder(:term%nstep))
+    !call set(ladder2, tol_sym)
+    !allocate(ladder2(term%nstep))
+    !ladder2(:) = ladder(:term%nstep)
+    !term%nstep = size(ladder2)
     do i=1,term%nterm
        allocate(term%arr(i)%ladder(term%nstep))
        term%arr(i)%ladder(:) = ladder(:term%nstep)
@@ -1354,13 +1360,6 @@ contains
     end do term_loop1
     term_arr(:nterm)%hmin = term_arr(:nterm)%hmin + height
     term_arr(:nterm)%hmax = term_arr(:nterm)%hmax + height
-
-    !!! CHECKING !!!
-    do i=1,nterm
-       write(0,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
-            i,term_arr(i)%hmin,term_arr(i)%hmax,term_arr(i)%natom
-
-    end do
 
 
 !!!-----------------------------------------------------------------------------
@@ -1603,7 +1602,6 @@ contains
     !! Increases crystal to max number of required unit cells thick
     !!--------------------------------------------------------------------------
     ncells = int((udef_thick-1)/term%nstep)+1
-    write(0,*) ncells, udef_thick, term%nstep
     tfmat(:,:)=0.D0
     tfmat(1,1)=1.D0
     tfmat(2,2)=1.D0
