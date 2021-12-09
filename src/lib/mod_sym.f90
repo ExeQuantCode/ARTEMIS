@@ -1107,6 +1107,7 @@ contains
     implicit none
     integer :: i,j
     integer :: nmirror,ntrans
+    double precision :: dtmp1
     type(sym_type) :: grp
     logical :: lexclude_translation
     logical, dimension(2,2) :: mask
@@ -1215,6 +1216,13 @@ contains
     !allocate(ladder2(term%nstep))
     !ladder2(:) = ladder(:term%nstep)
     !term%nstep = size(ladder2)
+    if(term%nterm.gt.1)then
+       dtmp1 = ladder(1)
+       do i=1,term%nstep-1
+          ladder(i)=ladder(i+1)
+       end do
+       ladder(term%nstep) = dtmp1+1
+    end if
     do i=1,term%nterm
        allocate(term%arr(i)%ladder(term%nstep))
        term%arr(i)%ladder(:) = ladder(:term%nstep)
@@ -1382,9 +1390,9 @@ contains
 !!!-----------------------------------------------------------------------------
     mterm=0
     ireject=0
-    grp_store%confine%l=.false.
-    grp_store%confine%laxis=.false.
-    !grp_store%confine%laxis(axis)=.true.
+    !grp_store%confine%l=.false.
+    !grp_store%confine%laxis=.false.
+    !!grp_store%confine%laxis(axis)=.true.
     grp_store%lspace=.true.
     call sym_setup(grp_store,lat)
     call check_sym(grp_store,bas1=bas)
@@ -1441,6 +1449,7 @@ contains
     call move_alloc(tmpsym,grp_store%sym)
     allocate(grp_store%op(itmp1))
     grp_store%op(:) = tmpop(:itmp1)
+    s_end = grp_store%nsym
 
 
     !!--------------------------------------------------------------------------
@@ -1613,7 +1622,6 @@ contains
 
     term%arr(:)%hmin = term%arr(:)%hmin/dble(ncells)
     term%arr(:)%hmax = term%arr(:)%hmax/dble(ncells)
-    !term%arr(:)%add = term%arr(:)%add/dble(ncells)
     term%tol = term%tol/dble(ncells)
     
 
