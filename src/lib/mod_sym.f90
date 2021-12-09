@@ -91,7 +91,7 @@ module mod_sym
   public :: basmap_type,basis_map
 
 
-!!!updated 2021/12/08
+!!!updated 2021/12/09
 
 
 contains
@@ -185,7 +185,7 @@ contains
 
 
 204 format(4(F11.6),/,4(F11.6),/,4(F11.6),/,4(F11.6))
-
+    
 
 !!!-----------------------------------------------------------------------------
 !!! allocated grp%op
@@ -372,15 +372,13 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! allocates and saves the array savsym if the first time submitted
 !!!-----------------------------------------------------------------------------
-    if(present(lsave))then
-       if(lsave)then
-          if(allocated(savsym)) deallocate(savsym)
-          allocate(savsym(grp%nsymop,4,4))
-          savsym=0.D0
-          savsym(:grp%nsymop,:,:)=tmpsav(:grp%nsymop,:,:)
-          savsym(:,4,4)=1.D0
-          deallocate(tmpsav)
-       end if
+    if(lsaving)then
+       if(allocated(savsym)) deallocate(savsym)
+       allocate(savsym(grp%nsymop,4,4))
+       savsym=0.D0
+       savsym(:grp%nsymop,:,:)=tmpsav(:grp%nsymop,:,:)
+       savsym(:,4,4)=1.D0
+       deallocate(tmpsav)
     end if
 
 
@@ -402,11 +400,9 @@ contains
     end if iperm_if
 
 
-    if(present(lsave))then
-       if(lsave)then
-          call move_alloc(savsym,grp%sym)
-          grp%nsym=grp%nsymop
-       end if
+    if(lsaving)then
+       call move_alloc(savsym,grp%sym)
+       grp%nsym=grp%nsymop
     end if
 
 
@@ -451,7 +447,7 @@ contains
        if(bas%spec(minspecloc)%num.eq.1) return
     end if
     allocate(sav_trans(bas%natom,3))
-
+    
 
 !!!-----------------------------------------------------------------------------
 !!! Cycles through each atom in transformed basis and finds translation ...
@@ -498,6 +494,7 @@ contains
                    cycle atmcyc2
                 end if
              end do atmcyc3
+             cycle trloop
           end do atmcyc2
           if (samecount.ne.bas%spec(ispec)%num)then
              cycle trloop
@@ -1186,7 +1183,7 @@ contains
     if(size(mirror_mat).gt.0) subgroup(ntrans+1:ntrans+nmirror,:,:) = mirror_mat(:nmirror,:,:)
     mask = .false.
     mask(2,1) = .true.
-    group = gen_group(subgroup,mask)
+    group = gen_group(subgroup,mask,tol_sym)
     !write(0,*) "-----------------"
     !do i=1,size(group(:,1,1))
     !   write(0,*) i
@@ -1385,6 +1382,9 @@ contains
 !!!-----------------------------------------------------------------------------
     mterm=0
     ireject=0
+    grp_store%confine%l=.false.
+    grp_store%confine%laxis=.false.
+    !grp_store%confine%laxis(axis)=.true.
     grp_store%lspace=.true.
     call sym_setup(grp_store,lat)
     call check_sym(grp_store,bas1=bas)
