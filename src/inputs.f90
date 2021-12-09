@@ -45,7 +45,7 @@ module inputs
   double precision, dimension(3,3) :: struc1_lat,struc2_lat
 
 
-!!!updated  2021/12/08
+!!!updated  2021/12/09
 
 
 contains
@@ -583,12 +583,12 @@ contains
              readvar(7) = readvar(7) + 1
              call cat(unit=unit,end_string="END",end_string2="VACUUM",&
                   line=count,string=store,rm_cmt=.true.)
+             edits%axis(edits%nedits)=assign_list(store,tag_list,1)
+             edits%bounds(edits%nedits,1)=assign_list(store,tag_list,2)
+             edits%val(edits%nedits)=assign_list(store,tag_list,3)
           else
              call assign(buffer, vacuum,        readvar(7))
           end if
-          edits%axis(edits%nedits)=assign_list(store,tag_list,1)
-          edits%bounds(edits%nedits,1)=assign_list(store,tag_list,2)
-          edits%val(edits%nedits)=assign_list(store,tag_list,3)
        case("TFMAT")
           readvar(8) = readvar(8) + 1
           edits%nedits=edits%nedits+1
