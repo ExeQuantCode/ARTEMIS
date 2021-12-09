@@ -73,7 +73,7 @@ module misc_linalg
 
 
 
-!!!updated 2021/11/11
+!!!updated 2021/12/09
 
 
 contains
@@ -1178,7 +1178,7 @@ contains
 !!!#####################################################
 !!! generate entire group from supplied elements
 !!!#####################################################
-  function gen_group(elem,mask) result(group)
+  function gen_group(elem,mask,tol) result(group)
     implicit none
     integer :: i,j,k,nelem,ntot_elem,dim1,dim2,iter
     double precision :: tiny
@@ -1188,9 +1188,14 @@ contains
     double precision, dimension(:,:,:), intent(in) :: elem
     logical, dimension(:,:), optional, intent(in) :: mask
     double precision, allocatable, dimension(:,:,:) :: group
+    double precision, optional, intent(in) :: tol
 
 
-    tiny = 1.D-5
+    if(present(tol))then
+       tiny = tol
+    else
+       tiny = 1.D-5
+    end if
     nelem = size(elem(:,1,1))
     dim1 = size(elem(1,:,1))
     dim2 = size(elem(1,1,:))
@@ -1210,7 +1215,7 @@ contains
        !write(0,*)
        if(present(mask))then
           where(mask.and.(cur_elem(:,:).lt.-tiny.or.cur_elem(:,:).ge.1.D0-tiny))
-             cur_elem(:,:) = cur_elem(:,:) - floor(cur_elem(:,:))
+             cur_elem(:,:) = cur_elem(:,:) - floor(cur_elem(:,:)+tiny)
           end where
        end if
        do k=1,ntot_elem
