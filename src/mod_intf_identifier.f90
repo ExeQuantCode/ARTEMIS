@@ -121,6 +121,9 @@ contains
        distance(i)=real(i)*rdist_max/real(nstep)
     end do
 
+    !! should now consider lattice vector addition for obtuse cells.
+    !! in obtuse cells, ncells may need to be larger than just individual
+    !! distance due to similar paths
     ncell = 0
     iloop1: do i=1,3
        ncell(i) = ceiling( rdist_max/modu(lat(i,:)) )
