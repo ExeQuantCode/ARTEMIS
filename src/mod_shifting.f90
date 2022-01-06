@@ -856,7 +856,7 @@ contains
        end do
     end do
     min_trans=abs(min_trans)
-    where(min_trans.eq.0.D0)
+    where(abs(min_trans).lt.1.D-5)
        min_trans=1.D0
     end where
     if(ierror.eq.1) write(6,*) "repeated_trans:",min_trans
@@ -987,6 +987,8 @@ contains
              elseif(itmp1.lt.0.and.lbulk)then
                 write(0,'("parent  species  atom  nmissing")')
                 write(0,'(2X,I2,6X,I2,4X,I4,4X,I4)') i,is,ia,itmp1
+                write(0,'("species  atom")')
+                write(0,'(2X,I2,4X,I4)') is, map(i)%spec(is,ia,2)
                 write(0,*) "Writing failed DON to output file &
                      &'full_broken_DON.dat'"
                 open(unit=13,file="full_broken_DON.dat")
@@ -1008,7 +1010,7 @@ contains
                         DON_missing(i,is)%atom(ia,j),&
                         bulk_DON(i)%spec(map(i)%spec(is,ia,1))%atom(map(i)%spec(is,ia,2),j)
                 end do
-                close(14)       
+                close(14)
                 call err_abort_print_struc(lat,splitbas(1),"lw_term.vasp",&
                      "",.false.)
                 call err_abort_print_struc(lat,splitbas(2),"up_term.vasp",&
