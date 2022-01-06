@@ -80,7 +80,7 @@ contains
   function gen_DOS(lat,bas,dist_max,scale_dist,norm) result(DOS)
     implicit none
     integer :: i,j,k,is,ia,js,ja,count1
-    integer :: nstep,nsize
+    integer :: nstep,nsize,itmp1
     real :: rdist_max
     logical :: lscale_dist,lnorm
     double precision :: gauss_tol,DON_sigma,dist
@@ -121,9 +121,16 @@ contains
        distance(i)=real(i)*rdist_max/real(nstep)
     end do
 
-    do i=1,3
+    ncell = 0
+    iloop1: do i=1,3
        ncell(i) = ceiling( rdist_max/modu(lat(i,:)) )
-    end do
+       jloop1: do j=i+1,3
+          if(i.eq.j) cycle
+          itmp1 = ceiling(rdist_max/dot_product(lat(i,:),lat(j,:)))
+          if(ncell(i).lt.itmp1) ncell(i) = itmp1
+          if(ncell(j).lt.itmp1) ncell(j) = itmp1
+       end do jloop1
+    end do iloop1
     nsize = bas%natom*(2*ncell(1)+1) * (2*ncell(2)+1) * (2*ncell(3)+1) - 1
     allocate(dist_list(nsize))
 
