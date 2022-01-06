@@ -395,22 +395,29 @@ contains
        !! Determines the cell change for the upper lattice to get the new DON
        !!-----------------------------------------------------------------------
        if(ishift.eq.4)then
-          do i=1,2
-             mtmp1(i,:) = &
-                  ( modu(lw_lat(i,:)) )*uvec(up_lat(i,:))
-          end do
-          mtmp1(3,:) = up_lat(3,:)
-          DONup_lat = matmul(mtmp1,inverse(dble(SAV%tf2(ifit,:,:))))
-          if(ierror.eq.1)then
-             write(0,*) "#####################################"
-             write(0,*) "ifit"
-             write(0,'(3(2X,F6.2))') (mtmp1(i,:),i=1,3)
-             write(0,*)
-             write(0,'(3(2X,F8.4))') (DONup_lat(i,:),i=1,3)
-             write(0,*)
-          end if
-          deallocate(bulk_DON(2)%spec)
-          bulk_DON(2)%spec=gen_DON(DONup_lat,inup_bas,&
+          !! Issue with using this method when large deformations result in large
+          !! angle changes. REMOVING IT FOR NOW AND RETURNING TO CALCULATING DONS
+          !! FOR THE SUPERCELL.
+          t1up_map=0 !TEMPORARY TO USE SUPERCELL DONS.
+          !do i=1,2
+          !   mtmp1(i,:) = &
+          !        ( modu(lw_lat(i,:)) )*uvec(up_lat(i,:))
+          !   write(0,*) modu(lw_lat(i,:)), modu(up_lat(i,:))
+          !end do
+          !mtmp1(3,:) = up_lat(3,:)
+          !DONup_lat = matmul(mtmp1,inverse(dble(SAV%tf2(ifit,:,:))))
+          !if(ierror.eq.1)then
+          !   write(0,*) "#####################################"
+          !   write(0,*) "ifit", ifit
+          !   write(0,*) "undeformed lattice"
+          !   write(0,'(3(2X,F6.2))') (mtmp1(i,:),i=1,3)
+          !   write(0,*)
+          !   write(0,*) "deformed lattice"
+          !   write(0,'(3(2X,F8.4))') (DONup_lat(i,:),i=1,3)
+          !   write(0,*)
+          !end if
+          !deallocate(bulk_DON(2)%spec)
+          bulk_DON(2)%spec=gen_DON(up_lat,up_bas,&
                dist_max=max_bondlength,&
                scale_dist=.false.,&
                norm=.true.)
