@@ -5,7 +5,7 @@
 !!!#############################################################################
 module interface_identifier
   use misc, only: swap_d,sort1D
-  use misc_linalg, only: modu,simeq,get_area
+  use misc_linalg, only: modu,simeq,get_area,uvec
   use misc_maths, only: gauss_array,get_turn_points,overlap_indiv_points,&
        running_avg,mean,median,mode
   use rw_geom
@@ -80,11 +80,12 @@ contains
   function gen_DOS(lat,bas,dist_max,scale_dist,norm) result(DOS)
     implicit none
     integer :: i,j,k,is,ia,js,ja,count1
-    integer :: nstep,nsize,itmp1
-    real :: rdist_max
+    integer :: nstep,nsize
+    real :: rdist_max,rtmp1,rtmp2
     logical :: lscale_dist,lnorm
     double precision :: gauss_tol,DON_sigma,dist
     integer, dimension(3) :: ncell
+    real, dimension(3) :: vrtmp1,vrtmp2
     double precision, dimension(3) :: vtmp1,vtmp2,vtmp3
     real, allocatable, dimension(:) :: distance
     type(den_of_spec_type), allocatable, dimension(:) :: DOS
@@ -124,16 +125,77 @@ contains
     !! should now consider lattice vector addition for obtuse cells.
     !! in obtuse cells, ncells may need to be larger than just individual
     !! distance due to similar paths
+    !ncell = 2
+    !i = -1
+    !rtmp1_old = 1E6
+    !ncell_loop1: do while ( i < 10 )
+    !   i = i + 1
+    !   j = -1
+    !   ncell_loop2: do while ( j < 10 )
+    !      j = j + 1
+    !      k = -1
+    !      ncell_loop3: do while ( k < 10 )
+    !         k = k + 1
+    !         if(i.eq.0.and.j.eq.0.and.k.eq.0) cycle ncell_loop3
+    !         rtmp1 = modu(i*lat(1,:) + j*lat(2,:) + k*lat(3,:))
+    !         if(rtmp1.gt.rtmp1_old)then
+    !            rtmp1_old = 1E6
+    !            exit ncell_loop3
+    !         end if
+    !         if(rtmp1.le.rdist_max)then
+    !            ncell(1) = max(ncell(1),i+1)
+    !            ncell(2) = max(ncell(2),j+1)
+    !            ncell(3) = max(ncell(3),k+1)
+    !         end if
+    !         rtmp1_old = rtmp1
+    !      end do ncell_loop3
+    !   end do ncell_loop2
+    !end do ncell_loop1
+
     ncell = 0
-    iloop1: do i=1,3
-       ncell(i) = ceiling( rdist_max/modu(lat(i,:)) )
-       jloop1: do j=i+1,3
+    ncell_loop1: do i=1,3
+       rtmp1 = modu(lat(i,:))
+       ncell(i) = max(ncell(i),ceiling(rdist_max/modu(lat(i,:))))!maxval(ceiling( rdist_max/abs(lat(i,:)) ))
+       do j=1,3
           if(i.eq.j) cycle
-          itmp1 = ceiling(rdist_max/dot_product(lat(i,:),lat(j,:)))
-          if(ncell(i).lt.itmp1) ncell(i) = itmp1
-          if(ncell(j).lt.itmp1) ncell(j) = itmp1
-       end do jloop1
-    end do iloop1
+          rtmp2 = dot_product(lat(i,:),lat(j,:))
+          if(sign(1.0,rtmp1).eq.sign(1.0,rtmp2)) cycle
+          !vrtmp1 = uvec(lat(i,:)) * dot_product(uvec(lat(i,:)),lat(j,:))
+          !vrtmp1 = uvec(lat(i,:)) * lat(j,:)
+          vrtmp1 = merge(lat(j,:), (/0.D0, 0.D0, 0.D0/), mask = abs(lat(i,:))>1.D-5)
+          rtmp1 = modu(vrtmp1)
+          if(abs(rtmp1).lt.1.D-5) cycle
+          k = 0
+          vrtmp2 = lat(i,:)
+          rtmp2 = modu(vrtmp2)
+          do while ( rtmp2 <= rtmp1)
+             k = k + 1
+             rtmp1 = rtmp2
+             vrtmp2 = lat(i,:) + real(k)*vrtmp1
+             rtmp2 = modu(vrtmp2)
+          end do
+          if(abs(rtmp1).lt.1.D-5) cycle
+          ncell(i) = max(ncell(i), ceiling(rdist_max/rtmp1))
+          ncell(j) = max(ncell(j), (k-1)*ceiling(rdist_max/rtmp1))
+          !ncell(i) = max(ncell(i),ceiling(rtmp2/(modu(lat(i,:))*rdist_max)))
+          !write(0,*) i, j, rtmp2/(modu(lat(i,:))*rdist_max), rtmp2/(modu(lat(i,:))), ncell(i)
+          !write(0,*) i, j, rtmp1,rtmp2
+          
+          !if(sign(1.0,rtmp1).ne.sign(1.0,rtmp2))then
+          !   ncell(i) = max(ncell(i), rtmp1
+          !end if
+       end do
+    end do ncell_loop1
+    !iloop1: do i=1,3
+    !   ncell(i) = ceiling( rdist_max/modu(lat(i,:)) )
+    !   jloop1: do j=i+1,3
+    !      if(i.eq.j) cycle
+    !      itmp1 = ceiling(rdist_max/dot_product(lat(i,:),lat(j,:)))
+    !      if(ncell(i).lt.itmp1) ncell(i) = itmp1
+    !      if(ncell(j).lt.itmp1) ncell(j) = itmp1
+    !   end do jloop1
+    !end do iloop1
+    write(0,*) "ncell",ncell
     nsize = bas%natom*(2*ncell(1)+1) * (2*ncell(2)+1) * (2*ncell(3)+1) - 1
     allocate(dist_list(nsize))
 
