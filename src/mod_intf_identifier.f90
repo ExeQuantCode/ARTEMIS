@@ -177,13 +177,6 @@ contains
           if(abs(rtmp1).lt.1.D-5) cycle
           ncell(i) = max(ncell(i), ceiling(rdist_max/rtmp1))
           ncell(j) = max(ncell(j), (k-1)*ceiling(rdist_max/rtmp1))
-          !ncell(i) = max(ncell(i),ceiling(rtmp2/(modu(lat(i,:))*rdist_max)))
-          !write(0,*) i, j, rtmp2/(modu(lat(i,:))*rdist_max), rtmp2/(modu(lat(i,:))), ncell(i)
-          !write(0,*) i, j, rtmp1,rtmp2
-          
-          !if(sign(1.0,rtmp1).ne.sign(1.0,rtmp2))then
-          !   ncell(i) = max(ncell(i), rtmp1
-          !end if
        end do
     end do ncell_loop1
     !iloop1: do i=1,3
@@ -195,7 +188,7 @@ contains
     !      if(ncell(j).lt.itmp1) ncell(j) = itmp1
     !   end do jloop1
     !end do iloop1
-    write(0,*) "ncell",ncell
+    !write(0,*) "ncell",ncell
     nsize = bas%natom*(2*ncell(1)+1) * (2*ncell(2)+1) * (2*ncell(3)+1) - 1
     allocate(dist_list(nsize))
 
