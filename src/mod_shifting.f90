@@ -1077,7 +1077,6 @@ contains
     gridsize(2) = stepsize/modu(lat(2,:))
     gridsize(3) = stepsize/modu(lat(3,:))
 
-    
     nstep(:2) = min_trans(:2)*ngrid(:2)
     nstep(3) = 0
     do jc=1,ngrid(3)

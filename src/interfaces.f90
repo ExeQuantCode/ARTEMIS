@@ -402,7 +402,6 @@ contains
           !do i=1,2
           !   mtmp1(i,:) = &
           !        ( modu(lw_lat(i,:)) )*uvec(up_lat(i,:))
-          !   write(0,*) modu(lw_lat(i,:)), modu(up_lat(i,:))
           !end do
           !mtmp1(3,:) = up_lat(3,:)
           !DONup_lat = matmul(mtmp1,inverse(dble(SAV%tf2(ifit,:,:))))
@@ -416,11 +415,13 @@ contains
           !   write(0,'(3(2X,F8.4))') (DONup_lat(i,:),i=1,3)
           !   write(0,*)
           !end if
-          !deallocate(bulk_DON(2)%spec)
+          deallocate(bulk_DON(2)%spec)
           bulk_DON(2)%spec=gen_DON(up_lat,up_bas,&
                dist_max=max_bondlength,&
                scale_dist=.false.,&
                norm=.true.)
+          !call err_abort_print_struc(DONup_lat,inup_bas,"bulk_up_term.vasp",&
+          !     "",.false.)
        end if
 
 
