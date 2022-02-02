@@ -995,7 +995,7 @@ contains
        if(.not.allocated(output_shifts)) allocate(output_shifts(1,3))
        output_shifts(:,:) = offset
        do iaxis=1,2
-          output_shifts(1,iaxis) = output_shifts(1,iaxis)/modu(lat(iaxis,:))
+          output_shifts(1,iaxis) = output_shifts(1,iaxis)!/modu(lat(iaxis,:))
        end do
     end select
     if(ishift.gt.0)then

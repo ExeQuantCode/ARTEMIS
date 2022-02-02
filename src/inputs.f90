@@ -711,6 +711,9 @@ contains
              case(3)
                 read(store,*) offset(1,:)
                 if(all(offset.ge.0.D0)) iudef_nshift=1
+             case default
+                call err_abort('ERROR: Invalid number of arguments provided to SHIFT&
+                     &\nValid number of arguments is 1 or 3.&')
              end select
           end if
        case("NSHIFT")
