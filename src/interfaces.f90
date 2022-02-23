@@ -12,7 +12,7 @@ module interface_subroutines
        get_interface,get_layered_axis,gen_DON
   use edit_geom,            only: planecutter,primitive_lat,ortho_axis,&
        shift_region,set_vacuum,transformer,shifter,&
-       get_min_bulk_bond,clone_bas,bas_lat_merge
+       get_min_bulk_bond,clone_bas,bas_lat_merge,get_shortest_bond,bond_type
   use mod_sym,              only: term_arr_type,confine_type,gldfnd,&
        get_terminations,print_terminations,setup_ladder
   use swapping,              only: rand_swapper
@@ -30,7 +30,7 @@ module interface_subroutines
   type(bulk_DON_type), dimension(2) :: bulk_DON
 
 
-!!!updated  2021/12/08
+!!!updated  2022/01/17
 
 
 contains
@@ -177,6 +177,7 @@ contains
     integer :: lw_layered_axis,up_layered_axis
     integer :: intf_start,intf_end
     integer :: lw_term_start,lw_term_end,up_term_start,up_term_end
+    integer :: natom_check
     double precision :: avg_min_bond,tmp_vac,dtmp1
     double precision :: lw_height,up_height
     character(3) :: abc
@@ -681,6 +682,7 @@ contains
           !!--------------------------------------------------------------------
           call shifter(tlw_bas,lw_term%axis,-lw_term%arr(iterm)%hmin,.true.)
           tfmat=0.D0
+          istep = 0
           do j=1,3
              tfmat(j,j)=1.D0
              if(j.eq.lw_term%axis)then
@@ -688,11 +690,13 @@ contains
                    tfmat(j,j) = lw_height + lw_term%tol/8.D0
                 elseif(lw_term%lmirror)then
                    istep = lw_thickness - (lw_ncells-1)*lw_term%nstep
-                   dtmp1 = (lw_ncells-1) + lw_term%arr(iterm)%ladder(istep)
-                   dtmp1 = dtmp1/(lw_ncells)
-                   tfmat(j,j) = dtmp1 + lw_term%tol/8.D0
-                   tfmat(j,j) = tfmat(j,j) + &
-                        (lw_term%arr(iterm)%hmax - lw_term%arr(iterm)%hmin)
+                   if(istep.ne.0)then
+                      dtmp1 = (lw_ncells-1) + lw_term%arr(iterm)%ladder(istep)
+                      dtmp1 = dtmp1/(lw_ncells)
+                      tfmat(j,j) = dtmp1 !+ lw_term%tol/8.D0
+                      tfmat(j,j) = tfmat(j,j) + &
+                           (lw_term%arr(iterm)%hmax - lw_term%arr(iterm)%hmin)
+                   end if
                    !dtmp1 = dble(lw_thickness-1)+lw_term%arr(iterm)%add
                    !if(dtmp1.eq.0.D0) dtmp1=1.D0
                    !tfmat(j,j) = dtmp1 + lw_term%tol/8.D0 !tfmat(j,j)+(&
@@ -707,7 +711,21 @@ contains
                 end if
              end if
           end do
+          natom_check = lw_bas%natom
+          if(iterm.lt.lw_term_end)then
+             do j=1,max(1,up_term%nstep-istep)
+                natom_check = natom_check - sum(lw_term%arr(:iterm)%natom)
+             end do
+          end if
           call transformer(tlw_lat,tlw_bas,tfmat,t2lw_map)
+          if(tlw_bas%natom.ne.natom_check)then
+             write(msg, '("NUMBER OF ATOMS IN LOWER SLAB! &
+                  &Expected ",I0," but generated ",I0," instead")') &
+                  natom_check,tlw_bas%natom
+             call err_abort(trim(msg),fmtd=.true.)
+                call err_abort_print_struc(tlw_lat,tlw_bas,"lw_term.vasp",&
+                     trim(msg),.true.)
+          end if
           !!--------------------------------------------------------------------
           !! Applied slab_cuber to orthogonalise lower material
           !!-------------------------------------------------------------------
@@ -730,6 +748,7 @@ contains
              if(allocated(t2up_map)) deallocate(t2up_map)
              allocate(t2up_map,source=t1up_map)
              tfmat=0.D0
+             istep=0
              !!-----------------------------------------------------------------
              !! Shifts upper material to specified termination
              !!-----------------------------------------------------------------
@@ -743,11 +762,13 @@ contains
                       tfmat(j,j) = up_height + up_term%tol/8.D0
                    elseif(up_term%lmirror)then
                       istep = up_thickness - (up_ncells-1)*up_term%nstep
-                      dtmp1 = (up_ncells-1) + up_term%arr(jterm)%ladder(istep)
-                      dtmp1 = dtmp1/(up_ncells)
-                      tfmat(j,j) = dtmp1 + up_term%tol/8.D0
-                      tfmat(j,j) = tfmat(j,j) + &
-                           (up_term%arr(jterm)%hmax - up_term%arr(jterm)%hmin)
+                      if(istep.ne.0)then
+                         dtmp1 = (up_ncells-1) + up_term%arr(jterm)%ladder(istep)
+                         dtmp1 = dtmp1/(up_ncells)
+                         tfmat(j,j) = dtmp1 + up_term%tol/8.D0
+                         tfmat(j,j) = tfmat(j,j) + &
+                              (up_term%arr(jterm)%hmax - up_term%arr(jterm)%hmin)
+                      end if
                       !dtmp1 = dble(up_thickness-1)+up_term%arr(jterm)%add
                       !if(dtmp1.eq.0.D0) dtmp1=1.D0
                       !tfmat(j,j) = dtmp1 + up_term%tol/8.D0 !tfmat(j,j)-(&
@@ -763,7 +784,21 @@ contains
                    end if
                 end if
              end do
+             natom_check = up_bas%natom
+             if(jterm.lt.up_term_end)then
+                do j=1,max(1,up_term%nstep-istep)
+                   natom_check = natom_check - sum(up_term%arr(:jterm)%natom)
+                end do
+             end if
              call transformer(tup_lat,tup_bas,tfmat,t2up_map)
+             if(tup_bas%natom.ne.natom_check)then
+                write(msg, '("NUMBER OF ATOMS IN UPPER SLAB! &
+                     &Expected ",I0," but generated ",I0," instead")') &
+                     natom_check,tup_bas%natom
+                !call err_abort(trim(msg),fmtd=.true.)
+                call err_abort_print_struc(tup_lat,tup_bas,"up_term.vasp",&
+                     trim(msg),.true.)
+             end if
              !!-----------------------------------------------------------------
              !! Applied slab_cuber to orthogonalise upper material
              !!-----------------------------------------------------------------
@@ -775,7 +810,7 @@ contains
              end do ortho_check2
              call ortho_axis(tup_lat,tup_bas,axis)
              call set_vacuum(tup_lat,tup_bas,up_term%axis,1.D0,tmp_vac)
-             
+ 
              
              !!-----------------------------------------------------------------
              !! Checks stoichiometry
@@ -899,7 +934,8 @@ contains
     integer :: ngen_swaps,nswaps_per_cell
     double precision :: dtmp1
     type(bas_type) :: tbas
-    character(1024) :: filename,dirpath,pwd1,pwd2
+    type(bond_type) :: min_bond
+    character(1024) :: filename,dirpath,pwd1,pwd2,msg
     integer, dimension(3) :: abc
     double precision, dimension(2) :: intf_loc
     double precision, dimension(3) :: toffset
@@ -1040,6 +1076,14 @@ contains
             lat=tlat,bas=tbas,&
             axis=axis,loc=dtmp1,&
             vac=toffset(axis))
+       min_bond = get_shortest_bond(tlat,tbas)
+       if(min_bond%length.le.1.5D0)then
+          write(msg,'("Smallest bond in the interface structure is\nless than 1.5 Å.")')
+          call print_warning(trim(msg))
+          write(6,'(2X,"bond length: ",F9.6)') min_bond%length
+          write(6,'(2X,"atom 1:",I4,2X,I4)') min_bond%atoms(1,:)
+          write(6,'(2X,"atom 2:",I4,2X,I4)') min_bond%atoms(2,:)
+       end if
 
 
        !!-----------------------------------------------------------------------
