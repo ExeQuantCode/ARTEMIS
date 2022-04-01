@@ -31,6 +31,7 @@
 !!! get_bulk
 !!! get_centre_atom
 !!! get_wyckoff      (returns an array of the similar atoms)
+!!! get_shortest_bond
 !!!#############################################################################
 module edit_geom
   use rw_geom, only: bas_type,geom_write,convert_bas,clone_bas
@@ -46,6 +47,10 @@ module edit_geom
   type wyck_spec_type
      type(wyck_atom_type), allocatable, dimension(:) :: spec
   end type wyck_spec_type
+  type bond_type
+     double precision :: length
+     integer, dimension(2,2) :: atoms
+  end type bond_type
 
   
   interface get_closest_atom
@@ -53,7 +58,7 @@ module edit_geom
   end interface get_closest_atom
 
 
-!!!updated 2020/02/25
+!!!updated 2021/01/17
 
 
 contains
@@ -2146,6 +2151,51 @@ contains
 
 
   end function get_wyckoff
+!!!#############################################################################
+
+
+!!!#############################################################################
+!!! identify the shortest bond in the crystal, takes in crystal basis
+!!!#############################################################################
+  function get_shortest_bond(lat,bas) result(bond)
+    implicit none
+    integer :: is,js,ia,ja,ja_start
+    double precision :: dist,min_bond
+    type(bas_type), intent(in) :: bas
+    type(bond_type) :: bond
+    double precision, dimension(3) :: vec
+    integer, dimension(2,2) :: atoms
+    double precision, dimension(3,3) :: lat
+    
+    min_bond = 100.D0
+    atoms = 0
+    do is=1,bas%nspec
+       do js=is,bas%nspec
+          do ia=1,bas%spec(is)%num
+             if(is.eq.js)then
+                ja_start = ia+1
+             else
+                ja_start = 1
+             end if
+             do ja=ja_start,bas%spec(js)%num
+                vec = bas%spec(is)%atom(ia,:3) - bas%spec(js)%atom(ja,:3)
+                vec = vec - ceiling(vec - 0.5D0)
+                vec = matmul(vec,lat)
+                dist = modu(vec)
+                if(dist.lt.min_bond)then
+                   min_bond = dist
+                   atoms(1,:) = (/is, ia/)
+                   atoms(2,:) = (/js, ja/)
+                end if
+             end do
+          end do
+       end do
+    end do
+    bond%length = min_bond
+    bond%atoms = atoms
+
+
+  end function get_shortest_bond
 !!!#############################################################################
 
 end module edit_geom
