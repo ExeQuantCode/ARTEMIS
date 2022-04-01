@@ -916,9 +916,9 @@ contains
        write(UNIT,'(2X,"NINTF = ",I0)') nintf
        write(UNIT,'(2X,"IMATCH = ",I0)') imatch
        write(UNIT,'(2X,"NMATCH = ",I0)') tolerance%nstore
-       write(UNIT,'(2X,"TOL_VEC = ",F0.7)') tolerance%vec
-       write(UNIT,'(2X,"TOL_ANG = ",F0.7)') tolerance%ang
-       write(UNIT,'(2X,"TOL_AREA = ",F0.7)') tolerance%area
+       write(UNIT,'(2X,"TOL_VEC = ",F0.7)') tolerance%vec*100
+       write(UNIT,'(2X,"TOL_ANG = ",F0.7)') tolerance%ang*360/(2*pi)
+       write(UNIT,'(2X,"TOL_AREA = ",F0.7)') tolerance%area*100
        write(UNIT,*)
        write(UNIT,'(2X,"NMILLER  = ",3(I0,1X))') nmiller
        write(UNIT,'(2X,"LW_MILLER_PLANE  = ",3(I0,1X))') lw_mplane
