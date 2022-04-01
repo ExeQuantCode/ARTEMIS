@@ -837,6 +837,12 @@ contains
 
              
              !!-----------------------------------------------------------------
+             !! Writes information of current match to file in save directory
+             !!-----------------------------------------------------------------
+             call  output_intf_data(SAV, ifit, lw_term, iterm, up_term, jterm)
+
+
+             !!-----------------------------------------------------------------
              !! Generates shifts and swaps and prints the subsequent structures
              !!-----------------------------------------------------------------
              call gen_shifts_and_swaps(slat,sbas,axis,intf_loc,avg_min_bond,&
@@ -1140,6 +1146,49 @@ contains
 
 
   end function get_term_list
+!!!#############################################################################
+
+  
+!!!#############################################################################
+!!! write structure data in each structure directory
+!!!#############################################################################
+  subroutine output_intf_data(SAV, ifit, lw_term, ilw_term, up_term, iup_term)
+    implicit none
+    integer :: unit
+
+    integer, intent(in) :: ifit, ilw_term, iup_term
+    type(term_arr_type), intent(in) :: lw_term, up_term
+    type(latmatch_type), intent(in) :: SAV
+
+    
+    unit=99
+    open(unit=unit, file="struc_dat.txt")
+    write(unit,*) 
+    write(unit,'((/,1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
+         SAV%abc,SAV%abc,&
+         SAV%tf1(ifit,1,1:3),SAV%tf2(ifit,1,1:3),&
+         SAV%tf1(ifit,2,1:3),SAV%tf2(ifit,2,1:3),&
+         SAV%tf1(ifit,3,1:3),SAV%tf2(ifit,3,1:3)
+    write(unit,'(" vector mismatch (%) = ",F0.9)') SAV%tol(ifit,1)
+    write(unit,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(ifit,2)
+    write(unit,'(" area mismatch (%)   = ",F0.9)') SAV%tol(ifit,3)
+    write(unit,*)
+    write(unit,'(" Lower crystal Miller plane: ",3(I3," "))') SAV%tf1(ifit,3,1:3)
+    write(unit,'(" Lower termination")')
+    write(unit,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
+    write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+            ilw_term,lw_term%arr(ilw_term)%hmin,lw_term%arr(ilw_term)%hmax,lw_term%arr(ilw_term)%natom
+    write(unit,*)
+    write(unit,'(" Upper crystal Miller plane: ",3(I3," "))') SAV%tf2(ifit,3,1:3)
+    write(unit,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
+    write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+            iup_term,up_term%arr(iup_term)%hmin,up_term%arr(iup_term)%hmax,up_term%arr(iup_term)%natom
+    write(unit,'(" Upper termination")')
+    write(unit,*)
+    close(unit)
+    
+    return
+  end subroutine output_intf_data
 !!!#############################################################################
 
 
