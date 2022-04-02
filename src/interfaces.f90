@@ -693,7 +693,7 @@ contains
                    if(istep.ne.0)then
                       dtmp1 = (lw_ncells-1) + lw_term%arr(iterm)%ladder(istep)
                       dtmp1 = dtmp1/(lw_ncells)
-                      tfmat(j,j) = dtmp1 !+ lw_term%tol/8.D0
+                      tfmat(j,j) = dtmp1 + lw_term%tol/8.D0
                       tfmat(j,j) = tfmat(j,j) + &
                            (lw_term%arr(iterm)%hmax - lw_term%arr(iterm)%hmin)
                    end if
@@ -780,7 +780,7 @@ contains
                    else
                       tfmat(j,j)=tfmat(j,j)+(&
                            up_term%arr(jterm)%hmax-&
-                           up_term%arr(jterm)%hmin)+up_term%tol/4.D0
+                           up_term%arr(jterm)%hmin)+up_term%tol/8.D0
                    end if
                 end if
              end do
