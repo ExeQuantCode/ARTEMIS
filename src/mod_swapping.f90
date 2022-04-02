@@ -582,9 +582,7 @@ end function rand_swapper
     integer :: i,loc1,loc2
     integer :: nbelow,nabove
     integer :: lw_mirror,up_mirror
-    integer :: nfail !,nperm
     real :: r_rand1,r_rand2
-    type(sym_type) :: grp
     integer, allocatable, dimension(:) :: lw_convert,up_convert
     integer, allocatable, dimension(:,:) :: swap_list
     real, allocatable, dimension(:) :: tlw_weight_list,tup_weight_list

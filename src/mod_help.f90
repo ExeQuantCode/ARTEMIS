@@ -139,7 +139,7 @@ contains
     tag(is1file_tag)%default = 'POSCAR'
     tag(is1file_tag)%description = &
          'Name of the input structure file.\n&
-         If generating an interface, it is be taken as the lower crystal'
+         &If generating an interface, it is be taken as the lower crystal'
 
     tag(is2file_tag)%name    = 'STRUC2_FILE'
     tag(is2file_tag)%type    = 'S'
@@ -244,7 +244,7 @@ contains
     tag(ivacuum_tag)%description = &
          'Vacuum gap (only applied for surface generation or when &
          &user-defined).\n&
-         Example:\n&
+         &Example:\n&
          &  VACUUM = 14 !(Å)\n&
          &  VACUUM\n&
          &    axis = 3\n&
@@ -411,7 +411,7 @@ contains
          interfaces along.\n&
          &NOTE: this does not change the interfaces generated, simply whether &
          &a generated interface will lie along a, b or c in the generated &
-         output structure file'
+         &output structure file'
 
     tag(iintf_loc_tag)%name    = 'INTF_LOC'
     tag(iintf_loc_tag)%type    = 'V'
@@ -525,7 +525,8 @@ contains
 
     tag(ilw_layer_sep_tag)%name    = 'LW_LAYER_SEP'
     tag(ilw_layer_sep_tag)%type    = 'R'
-    tag(ilw_layer_sep_tag)%summary = 'Min size of gap between layers for lower structure'
+    tag(ilw_layer_sep_tag)%summary = 'Min size of gap between layers for lower &
+         &structure'
     tag(ilw_layer_sep_tag)%allowed = 'Any number greater than or equal to zero'
     tag(ilw_layer_sep_tag)%default = '1.0'
     tag(ilw_layer_sep_tag)%description = &
@@ -534,7 +535,8 @@ contains
 
     tag(iup_layer_sep_tag)%name    = 'UP_LAYER_SEP'
     tag(iup_layer_sep_tag)%type    = 'R'
-    tag(iup_layer_sep_tag)%summary = 'Min size of gap between layers for upper structure'
+    tag(iup_layer_sep_tag)%summary = 'Min size of gap between layers for upper &
+         &structure'
     tag(iup_layer_sep_tag)%allowed = 'Any number greater than or equal to zero'
     tag(iup_layer_sep_tag)%default = '1.0'
     tag(iup_layer_sep_tag)%description = &
@@ -610,7 +612,7 @@ contains
          &    0.0 0.0 1.0 !(direct, direct, Å)\n&
          &    0.0 0.0 2.0 !(direct, direct, Å)\n&
          &    0.0 0.0 3.0 !(direct, direct, Å)\n&
-         &  ENDSHIFT\n&'
+         &  ENDSHIFT\n'
 
     tag(iidepth_tag)%name    = 'IDEPTH'
     tag(iidepth_tag)%type    = 'I'
@@ -774,8 +776,10 @@ contains
          'Prints the surface terminations of a Miller plane in DTERMINATIONS &
          &directory.\n&
          &Prints surfaces for crystals that have had their Miller planes supplied using the "LW_MILLER" and "UP_MILLER" tags\n&
-         &Inside DTERMINATIONS, populates directory DLW_TERMS with lower parent structure surfaces.&
-         &Inside DTERMINATIONS, populates directory DUP_TERMS with upper parent structure surfaces.'
+         &Inside DTERMINATIONS, populates directory DLW_TERMS with lower &
+         parent structure surfaces.\n&
+         &Inside DTERMINATIONS, populates directory DUP_TERMS with upper &
+         parent structure surfaces.'
 
     tag(ilortho_tag)%name    = 'LORTHO'
     tag(ilortho_tag)%type    = 'L'

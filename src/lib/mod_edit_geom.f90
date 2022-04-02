@@ -891,7 +891,7 @@ contains
     count=0
     limit=100
     lreduced=.false.
-    tiny=1E-5*(get_vol(lat))**(1/3)
+    tiny=1E-5*(get_vol(lat))**(1.E0/3.E0)
     pi=4.D0*atan(1.D0)
     pi2=2.D0*atan(1.D0)
     transmat=0.D0
@@ -1162,12 +1162,10 @@ contains
   function planecutter(inlat,invec) result(tfmat)
     implicit none
     integer :: i,j,itmp1
-    integer :: count
-    double precision :: A1,B1,C1,tol
-    double precision :: delta
+    double precision :: tol
     integer, dimension(3) :: order
     double precision, dimension(3) :: vec,tvec1
-    double precision, dimension(3,3) :: u,lat,b,tfmat,invlat,reclat
+    double precision, dimension(3,3) :: lat,b,tfmat,invlat,reclat
     double precision, dimension(3), intent(in) :: invec
     double precision, dimension(3,3), intent(in) :: inlat
 
@@ -1256,25 +1254,7 @@ contains
     end if
 
     !b = matmul(b,lat)
-
-
-!!!-----------------------------------------------------------------------------
-!!! Generate the new lattice in cartesian coordinates
-!!!-----------------------------------------------------------------------------
-!    b(3,:)=matmul(vec,lat(:,:))
-!
-!    A1=dot_product(vec,lat(1,:))!:,1))
-!    B1=dot_product(vec,lat(2,:))!:,2))
-!    C1=dot_product(vec,lat(3,:))!:,3))
-!    !    b(1,:)=(/-B1/A1,1.D0,0.D0/)
-!    !    b(2,:)=(/-C1/A1,0.D0,1.D0/)
-!    b(1,:)=lat(2,:)-B1/A1*lat(1,:)
-!    b(2,:)=lat(3,:)-C1/A1*lat(1,:)
-!    !    do i=1,2
-!    !       if(all(abs(b(i,:)).lt.tol)) b(i,:)=lat(i+1,:)
-!    !    end do
-!    b(3,:)=cross(b(1,:),b(2,:))
-
+    
 
 !!!-----------------------------------------------------------------------------
 !!! Fix normal vector and lattice
@@ -1671,7 +1651,7 @@ contains
 !!!#############################################################################
   subroutine get_bulk(lat,bas,axis,bulk_lat,bulk_bas)
     implicit none
-    integer :: i,is,ia,ja,len,itmp1
+    integer :: is,ia,ja,len,itmp1
     integer :: minspecloc,minatomloc,nxtatomloc
     double precision, dimension(3) :: transvec
     double precision, dimension(2,2) :: regions
@@ -1873,13 +1853,12 @@ contains
   end function get_closest_atom_1D
 !!!-----------------------------------------------------
 !!!-----------------------------------------------------
-  function get_closest_atom_3D(lat,bas,axis,loc,species) result(atom)
+  function get_closest_atom_3D(lat,bas,loc,species) result(atom)
     implicit none
     integer :: is,ia
     integer :: is_start,is_end
     double precision :: dtmp1,dtmp2
     double precision, dimension(3) :: vtmp1
-    integer, intent(in) :: axis
     double precision, dimension(3), intent(in) :: loc
     double precision, dimension(3,3), intent(in) :: lat
     integer, dimension(2) :: atom
@@ -1923,8 +1902,8 @@ contains
     implicit none
     integer :: is,ia,ja,itmp1,itmp2!ref_atom
     integer :: minspecloc,minatomloc,nxtatomloc
-    double precision :: scale,up_loc,lw_loc,up_loc2,lw_loc2
-    double precision, dimension(3) :: ref_loc,transvec,tmp_vec1,tmp_vec2,tmp_vec3,tvec
+    double precision :: up_loc,lw_loc,up_loc2,lw_loc2
+    double precision, dimension(3) :: transvec,tmp_vec1,tmp_vec2,tmp_vec3,tvec
     logical, allocatable, dimension(:) :: atom_mask
     type(wyck_spec_type) :: wyckoff
     integer, intent(in) :: axis

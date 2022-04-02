@@ -1105,7 +1105,7 @@ contains
 !!!#############################################################################
   subroutine setup_ladder(lat,bas,axis,term)
     implicit none
-    integer :: i,j
+    integer :: i
     integer :: nmirror,ntrans
     double precision :: dtmp1
     type(sym_type) :: grp
@@ -1239,10 +1239,10 @@ contains
 !!!#############################################################################
   function get_terminations(lat,bas,axis,lprint,layer_sep) result(term)
     implicit none
-    integer :: i,j,is,ia,nterm,mterm,dim,ireject
+    integer :: i,j,is,nterm,mterm,dim,ireject
     integer :: itmp1,init,min_loc
     logical :: ludef_print
-    double precision :: dtmp1,tol,hmin,height,max_sep
+    double precision :: dtmp1,tol,height,max_sep
     type(sym_type) :: grp1,grp_store
     type(term_arr_type) :: term
     double precision, dimension(3) :: vec_compare
