@@ -854,9 +854,6 @@ contains
              intf_loc(2) = ( modu(tlw_lat(axis,:)) + modu(tup_lat(axis,:)) + &
                   1.5D0*init_offset(axis) - 2.D0*tmp_vac )/modu(slat(axis,:))
              if(ierror.ge.1)then
-                write(0,*) &
-                     modu(tlw_lat(axis,:)),modu(tup_lat(axis,:)),&
-                     modu(slat(axis,:)),init_offset(axis),tmp_vac
                 write(0,*) "interface:",intf_loc
                 if(ierror.eq.1.and.iunique.eq.icheck_intf-1)then
                    call chdir(intf_dir)
@@ -881,7 +878,7 @@ contains
                 iunique=iunique+1
                 if(ishift.gt.0.and.nshift.gt.1) &
                      write(6,'(1X,"Generating shifts for unique interface ",&
-                     I0,":")') iunique
+                     &I0,":")') iunique
                 write(dirpath,'(A,I0.2)') trim(adjustl(subdir_prefix)),iunique
                 call system('mkdir -p '//trim(adjustl(dirpath)))
              else
@@ -1227,8 +1224,8 @@ contains
     
     unit=99
     open(unit=unit, file="struc_dat.txt")
-    write(unit,*) 
-    write(unit,'((/,1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
+    write(unit,'("Lattice match:")')
+    write(unit,'((1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
          SAV%abc,SAV%abc,&
          SAV%tf1(ifit,1,1:3),SAV%tf2(ifit,1,1:3),&
          SAV%tf1(ifit,2,1:3),SAV%tf2(ifit,2,1:3),&
@@ -1244,10 +1241,10 @@ contains
             ilw_term,lw_term%arr(ilw_term)%hmin,lw_term%arr(ilw_term)%hmax,lw_term%arr(ilw_term)%natom
     write(unit,*)
     write(unit,'(" Upper crystal Miller plane: ",3(I3," "))') SAV%tf2(ifit,3,1:3)
+    write(unit,'(" Upper termination")')
     write(unit,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
     write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
             iup_term,up_term%arr(iup_term)%hmin,up_term%arr(iup_term)%hmax,up_term%arr(iup_term)%natom
-    write(unit,'(" Upper termination")')
     write(unit,*)
     close(unit)
     

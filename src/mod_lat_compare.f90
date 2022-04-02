@@ -712,7 +712,7 @@ contains
        else
           tvec=tf2(1,:)
           tf2(1,:)=tf2(2,:)
-          tf2(2,:)=-tvec
+          tf2(2,:)=-nint(tvec)
           diff=max(&
                abs((mag_mat1(1)-mag_mat2(2))/mag_mat1(1)),&
                abs((mag_mat1(2)-mag_mat2(1))/mag_mat1(2)))
@@ -852,7 +852,7 @@ contains
              converted(i,j)=n(i,j)
           else
              converted(i,j)=&
-                  floor(abs(1.0+(n(i,j)-1.0)/2.0))*((-1.0)**(n(i,j)-1.0))
+                  nint(floor(abs(1.0+(n(i,j)-1.0)/2.0))*((-1.0)**(n(i,j)-1.0)))
           end if
        end do
     end do
@@ -984,6 +984,10 @@ contains
 
     integer, dimension(3,3) :: tmat1,tmat2
     integer, dimension(3,3) :: transform1,transform2 !The transformations output by planecutter.
+
+    real, dimension(3) :: rvec1, rvec2
+    real, dimension(3,3) :: rmat1
+    
     double precision, allocatable, dimension(:,:,:) :: tmpsym1,tmpsym2,tmpsym
     double precision, allocatable, dimension(:,:,:) :: transform1_saved,transform2_saved !The transformations output by plane cutter
 
@@ -1012,8 +1016,10 @@ contains
     allocate(transform2_saved(tol%nstore,3,3))
     allocate(Tsaved_1(tol%nstore,2,2))
     allocate(Tsaved_2(tol%nstore,2,2))
-    Tsaved_1 = 0
-    Tsaved_2 = 0
+    transform1_saved = 0.D0
+    transform2_saved = 0.D0
+    Tsaved_1 = 0.D0
+    Tsaved_2 = 0.D0
     allocate(tolerances(tol%nstore,3))
     allocate(saved_tolerances(tol%nstore,3))
     saved_tolerances = INF
@@ -1167,17 +1173,37 @@ contains
        nsym1=0
        tmpsym1=0.D0
 !!! IS THIS REASONABLE TO DO IT THIS WAY? OR DO WE NEED TO CHANGE sym TO BE IN THE NEW LAT?
+!!! Wait, should it be instead that the cross product of the a-b plane is always consistent?
+       rvec1=real(cross(templat1(1,:),templat1(2,:)))
        do i=1,grp1%nsym
-          if(all(&
-               abs( templat1(3,:) - matmul(templat1(3,:),tmpsym(i,:3,:3)) )&
-               .lt.1.D-8).or.&
-               all(&
-               abs( templat2(3,:) + matmul(templat2(3,:),tmpsym(i,:3,:3)) )&
-               .lt.1.D-8))then
+          rmat1=real(matmul(tmpsym(i,:3,:3),templat1(:,:)))
+          rvec2=cross(rmat1(1,:),rmat1(2,:))
+          if(all(abs( rvec1(:) - rvec2(:) ).lt.1.D-8).or.&
+               all(abs( rvec1(:) + rvec2(:) ).lt.1.D-8))then
              nsym1=nsym1+1
              tmpsym1(nsym1,:3,:3) = tmpsym(i,:3,:3)
+          else
+             cycle
           end if
+          ! redundant if a-b plane works instead.
+          !if(all(&
+          !     abs( templat1(3,:) - matmul(templat1(3,:),tmpsym(i,:3,:3)) )&
+          !     .lt.1.D-8).or.&
+          !     all(&
+          !     abs( templat1(3,:) + matmul(templat1(3,:),tmpsym(i,:3,:3)) )&
+          !     .lt.1.D-8))then
+          !   nsym1=nsym1+1
+          !   tmpsym1(nsym1,:3,:3) = tmpsym(i,:3,:3)
+          !end if
+          !write(0,*) "################################"
+          !write(0,*) i
+          !write(0,'(3(2X,F7.2))') tmpsym(i,:3,:3)
+          !write(0,*)
+          !write(0,'(3(2X,F7.2))') rvec1!(templat1(j,:),j=1,3)!(grp1%sym(i,j,:3),j=1,3) !tmpsym(i,:3,:3)
+          !write(0,*)
+          !write(0,'(3(2X,F7.2))') rvec2!matmul(templat1(3,:),tmpsym(i,:3,:3))!(tmpsym(i,j,:3),j=1,3)
        end do
+       !stop
 
 
        MAINLOOP2: do m2=1,size(miller2(:,1),dim=1)
@@ -1235,8 +1261,8 @@ contains
                 temp_mat1(:,:) = dble(Tcellmatch_1(i,:,:))
                 temp_mat2(:,:) = dble(Tcellmatch_2(i,:,:))
                 IF102: if (.not.is_duplicate(&
-                     dble(Tsaved_1),dble(Tsaved_2),&
-                     dble(temp_mat1),dble(temp_mat2),&
+                     (Tsaved_1),(Tsaved_2),&
+                     (temp_mat1),(temp_mat2),&
                      tmpsym1,tmpsym2) ) then
                    saved_tolerances(tol%nstore,:) = tolerances(i,:)
                    Tsaved_1(tol%nstore,:,:) = temp_mat1(:,:)
@@ -1269,8 +1295,8 @@ contains
        big_T_2(i,3,3) = 1
     end do loop101
     loop103: do i=1,tol%nstore
-       big_T_1(i,:2,:2) = dble(Tsaved_1(i,:,:))
-       big_T_2(i,:2,:2) = dble(Tsaved_2(i,:,:))
+       big_T_1(i,:2,:2) = (Tsaved_1(i,:,:))
+       big_T_2(i,:2,:2) = (Tsaved_2(i,:,:))
     end do loop103
 
 
