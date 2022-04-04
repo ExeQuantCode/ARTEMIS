@@ -46,7 +46,7 @@ module inputs
   double precision, dimension(3,3) :: struc1_lat,struc2_lat
 
 
-!!!updated  2021/12/09
+!!!updated  2022/04/04
 
 
 contains

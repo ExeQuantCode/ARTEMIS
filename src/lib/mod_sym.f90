@@ -93,7 +93,7 @@ module mod_sym
   public :: basmap_type,basis_map
 
 
-!!!updated 2021/12/09
+!!!updated 2022/04/04
 
 
 contains

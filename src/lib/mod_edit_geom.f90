@@ -58,7 +58,7 @@ module edit_geom
   end interface get_closest_atom
 
 
-!!!updated 2021/01/17
+!!!updated 2022/04/04
 
 
 contains
