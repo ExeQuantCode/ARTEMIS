@@ -832,13 +832,15 @@ contains
          -0.5D0, sqrt(3.D0)/2.D0, 0.D0,&
          0.D0, 0.D0, 1.0D0/), shape(lat) ) )
     special(3,:,:) = transpose( reshape( (/&
-         0.0D0, 0.5D0, 0.5D0,&
-         0.5D0, 0.0D0, 0.5D0,&
-         0.5D0, 0.5D0, 0.0D0/), shape(lat) ) )
+         0.0D0, 1.D0, 1.D0,&
+         1.D0, 0.0D0, 1.D0,&
+         1.D0, 1.D0, 0.0D0/), shape(lat) ) )
+    special(3,:,:) = special(3,:,:)/sqrt(2.D0)
     special(4,:,:) = transpose( reshape( (/&
-         -0.5D0,  0.5D0,  0.5D0,&
-         0.5D0, -0.5D0,  0.5D0,&
-         0.5D0,  0.5D0, -0.5D0/), shape(lat) ) )
+         -1.D0,  1.D0,  1.D0,&
+         1.D0, -1.D0,  1.D0,&
+         1.D0,  1.D0, -1.D0/), shape(lat) ) )
+    special(4,:,:) = special(4,:,:)/sqrt(3.D0)
 
 
     !!---------------------------------------------------------------
