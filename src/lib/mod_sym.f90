@@ -25,7 +25,7 @@ module mod_sym
   use misc_linalg, only: modu,inverse_3x3,det,gcd,gen_group
   use rw_geom,     only: bas_type,geom_write
   use edit_geom,   only: transformer,vacuumer,set_vacuum,shifter,&
-       clone_bas,get_closest_atom,ortho_axis,reducer
+       clone_bas,get_closest_atom,ortho_axis,reducer,primitive_lat
   implicit none
   integer :: ierror_sym=0
   integer :: s_start=1,s_end=0
@@ -962,14 +962,25 @@ contains
     type(bas_type) :: bas,pbas
     double precision, dimension(3,3) :: lat
 
+    
+    !!-----------------------------------------------------------------------
+    !! Allocate and initialise
+    !!-----------------------------------------------------------------------
     ntrans = 0
     dmat1=0.D0
     allocate(trans(minval(bas%spec(:)%num+2),3)); trans=0.D0
+
     
+    !!-----------------------------------------------------------------------
+    !! Find the translation vectors in the cell
+    !!-----------------------------------------------------------------------
     call gldfnd(confine,bas,bas,trans,ntrans,.false.)
     len=size(bas%spec(1)%atom,dim=2)
 
     
+    !!-----------------------------------------------------------------------
+    !! For each translation, reduce the basis
+    !!-----------------------------------------------------------------------
     if(ntrans.ge.1)then
        do i=ntrans+1,ntrans+3
           trans(i,:)=0.D0
@@ -985,27 +996,37 @@ contains
           itmp1=0
           allocate(atom_store(nint(scale*bas%spec(is)%num),len))
           atcheck: do ia=1,bas%spec(is)%num
+             !!-----------------------------------------------------------------
+             !! Reduce the basis
+             !!-----------------------------------------------------------------
              bas%spec(is)%atom(ia,1:3)=&
                   matmul(bas%spec(is)%atom(ia,1:3),lat(1:3,1:3))
              bas%spec(is)%atom(ia,1:3)=&
                   matmul(transpose(invlat(1:3,1:3)),bas%spec(is)%atom(ia,1:3))
-             !                matmul(invlat(1:3,1:3),bstore%spec(is)%atom(ia,1:3))
              do j=1,3
                 bas%spec(is)%atom(ia,j)=&
                      bas%spec(is)%atom(ia,j)-floor(bas%spec(is)%atom(ia,j))
                 if(bas%spec(is)%atom(ia,j).gt.1.D0-tol_sym) &
                      bas%spec(is)%atom(ia,j)=0.D0
              end do
+             !!-----------------------------------------------------------------
+             !! Check for duplicates in the cell
+             !!-----------------------------------------------------------------
              do ja=1,ia-1
                 if(all(abs(bas%spec(is)%atom(ia,1:3)-atom_store(ja,1:3)).lt.&
                      (/tol_sym,tol_sym,tol_sym/))) cycle atcheck
              end do
              itmp1=itmp1+1
              atom_store(itmp1,:)=bas%spec(is)%atom(ia,:)
+             !!-----------------------------------------------------------------
+             !! Check to ensure correct number of atoms remain after reduction
+             !!-----------------------------------------------------------------
              if(itmp1.gt.size(atom_store,dim=1))then
-                write(0,*) "ERROR! Primitive cell subroutine retained too many atoms from supercell!"
+                write(0,*) "ERROR! Primitive cell subroutine retained too &
+                     &many atoms from supercell!"
                 call exit()
              end if
+             !!-----------------------------------------------------------------
           end do atcheck
           deallocate(bas%spec(is)%atom)
           call move_alloc(atom_store,bas%spec(is)%atom)
@@ -1013,11 +1034,23 @@ contains
           !deallocate(atom_store)
        end do
     end if
+    
 
+    !!-----------------------------------------------------------------------
+    !! Reduce the lattice
+    !!-----------------------------------------------------------------------
     bas%natom=sum(bas%spec(:)%num)
     lat=dmat1
+
+    
+    !!-----------------------------------------------------------------------
+    !! Reduce the lattice to symmetry definition
+    !!-----------------------------------------------------------------------
     call reducer(lat, bas)
-    !! after reduction, apply primitive_lat (or reducer)
+    !! next line necessary as FCC and BCC do not conform to Niggli reduced ...
+    !! ... cell definitions.
+    lat = primitive_lat(lat) 
+
     
   end subroutine get_primitive_cell
 !!!#############################################################################

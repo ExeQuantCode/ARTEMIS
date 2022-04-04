@@ -11,7 +11,7 @@ module interface_subroutines
   use interface_identifier, only: intf_info_type,&
        get_interface,get_layered_axis,gen_DON
   use edit_geom,            only: planecutter,primitive_lat,ortho_axis,&
-       shift_region,set_vacuum,transformer,shifter,&
+       shift_region,set_vacuum,transformer,shifter,reducer,&
        get_min_bulk_bond,clone_bas,bas_lat_merge,get_shortest_bond,bond_type
   use mod_sym,              only: term_arr_type,confine_type,gldfnd,&
        get_terminations,print_terminations,setup_ladder,get_primitive_cell
@@ -30,7 +30,7 @@ module interface_subroutines
   type(bulk_DON_type), dimension(2) :: bulk_DON
 
 
-!!!updated  2022/01/17
+!!!updated  2022/04/04
 
 
 contains
@@ -207,10 +207,17 @@ contains
 !!!-----------------------------------------------------------------------------
     if(lw_use_pricel)then
        call get_primitive_cell(inlw_lat,inlw_bas)
+    else
+       call reducer(inlw_lat,inlw_bas)
+       inlw_lat=primitive_lat(inlw_lat)
     end if
     if(up_use_pricel)then
        call get_primitive_cell(inup_lat,inup_bas)
+    else
+       call reducer(inup_lat,inup_bas)
+       inup_lat=primitive_lat(inup_lat)
     end if
+    
 
     
 !!!-----------------------------------------------------------------------------
@@ -316,8 +323,6 @@ contains
     old_intf = -1
     intf=0
     abc="abc"
-    inlw_lat=primitive_lat(inlw_lat)
-    inup_lat=primitive_lat(inup_lat)
     if(any(lw_mplane.ne.0))then
        if(imatch.ne.0)then
           abc="ab"
@@ -496,9 +501,6 @@ contains
        if(all(lw_surf.ne.0))then
           ludef_lw_surf = .true.
           lw_list=get_term_list(lw_term)
-          !do iterm=1,size(lw_list)
-          !   write(0,*) lw_list(iterm)
-          !end do
           lw_term_start = lw_surf(1)
           lw_term_end = lw_surf(1)
 

@@ -5,7 +5,7 @@ module infile_print
   implicit none
 
 
-!!!updated 2021/10/12
+!!!updated 2022/04/04
 
 
 contains
@@ -52,6 +52,9 @@ contains
     write(UNIT,'(2X,"TOL_AREA = 10.D0      ! max area tolerance (in percent %)")')
     write(UNIT,'(2X,"TOL_MAXFIND = 100     ! max number of good fits to find per plane")')
     write(UNIT,'(2X,"TOL_MAXSIZE = 10      ! max increase of any lattice vector")')
+    write(UNIT,'(2X,"LW_USE_PRICEL = T     ! extract and use the primitive cell of lower")')
+    write(UNIT,'(2X,"UP_USE_PRICEL = T     ! extract and use the primitive cell of upper")')
+    write(UNIT,*)
     write(UNIT,'(2X,"NMILLER = 10          ! number of Miller planes to consider")')
     write(UNIT,'(2X,"LW_MILLER =           ! written as a miller plane, e.g. 0 0 1")')
     write(UNIT,'(2X,"UP_MILLER =           ! written as a miller plane, e.g. 0 0 1")')
