@@ -21,11 +21,11 @@
 !!!#############################################################################
 module mod_sym
   use constants,   only: pi
-  use misc,        only: sort1D,sort_col,set
+  use misc,        only: sort1D,sort2D,sort_col,set
   use misc_linalg, only: modu,inverse_3x3,det,gcd,gen_group
   use rw_geom,     only: bas_type,geom_write
   use edit_geom,   only: transformer,vacuumer,set_vacuum,shifter,&
-       clone_bas,get_closest_atom,ortho_axis
+       clone_bas,get_closest_atom,ortho_axis,reducer
   implicit none
   integer :: ierror_sym=0
   integer :: s_start=1,s_end=0
@@ -84,6 +84,8 @@ module mod_sym
   public :: sym_type
   public :: sym_setup,check_sym,gldfnd
 
+  public :: get_primitive_cell
+  
   public :: setup_ladder
   public :: term_arr_type,confine_type
   public :: get_terminations,print_terminations
@@ -941,6 +943,83 @@ contains
     outgrp = ingrp
 
   end subroutine clone_grp
+!!!#############################################################################
+ 
+
+!!!#############################################################################
+!!! returns the primitive cell from a supercell
+!!!#############################################################################
+  subroutine get_primitive_cell(lat,bas)
+    implicit none
+    integer :: is,ia,ja,i,j,itmp1
+    integer :: ntrans,len
+    double precision :: scale
+    type(confine_type) :: confine
+    double precision, dimension(3,3) :: dmat1, invlat
+    double precision, allocatable, dimension(:,:) :: trans,atom_store
+    
+    type(sym_type) :: grp
+    type(bas_type) :: bas,pbas
+    double precision, dimension(3,3) :: lat
+
+    ntrans = 0
+    dmat1=0.D0
+    allocate(trans(minval(bas%spec(:)%num+2),3)); trans=0.D0
+    
+    call gldfnd(confine,bas,bas,trans,ntrans,.false.)
+    len=size(bas%spec(1)%atom,dim=2)
+
+    
+    if(ntrans.ge.1)then
+       do i=ntrans+1,ntrans+3
+          trans(i,:)=0.D0
+          trans(i,i-ntrans)=1.D0
+       end do
+       !  trans=matmul(trans(1:ntrans,1:3),lat)
+       call sort2D(trans(1:ntrans+3,:),ntrans+3)
+       dmat1=trans(1:3,1:3)
+       scale=det(dmat1)
+       dmat1=matmul(dmat1,lat)
+       invlat=inverse_3x3(dmat1)
+       do is=1,bas%nspec
+          itmp1=0
+          allocate(atom_store(nint(scale*bas%spec(is)%num),len))
+          atcheck: do ia=1,bas%spec(is)%num
+             bas%spec(is)%atom(ia,1:3)=&
+                  matmul(bas%spec(is)%atom(ia,1:3),lat(1:3,1:3))
+             bas%spec(is)%atom(ia,1:3)=&
+                  matmul(transpose(invlat(1:3,1:3)),bas%spec(is)%atom(ia,1:3))
+             !                matmul(invlat(1:3,1:3),bstore%spec(is)%atom(ia,1:3))
+             do j=1,3
+                bas%spec(is)%atom(ia,j)=&
+                     bas%spec(is)%atom(ia,j)-floor(bas%spec(is)%atom(ia,j))
+                if(bas%spec(is)%atom(ia,j).gt.1.D0-tol_sym) &
+                     bas%spec(is)%atom(ia,j)=0.D0
+             end do
+             do ja=1,ia-1
+                if(all(abs(bas%spec(is)%atom(ia,1:3)-atom_store(ja,1:3)).lt.&
+                     (/tol_sym,tol_sym,tol_sym/))) cycle atcheck
+             end do
+             itmp1=itmp1+1
+             atom_store(itmp1,:)=bas%spec(is)%atom(ia,:)
+             if(itmp1.gt.size(atom_store,dim=1))then
+                write(0,*) "ERROR! Primitive cell subroutine retained too many atoms from supercell!"
+                call exit()
+             end if
+          end do atcheck
+          deallocate(bas%spec(is)%atom)
+          call move_alloc(atom_store,bas%spec(is)%atom)
+          bas%spec(is)%num=size(bas%spec(is)%atom,dim=1)
+          !deallocate(atom_store)
+       end do
+    end if
+
+    bas%natom=sum(bas%spec(:)%num)
+    lat=dmat1
+    call reducer(lat, bas)
+    !! after reduction, apply primitive_lat (or reducer)
+    
+  end subroutine get_primitive_cell
 !!!#############################################################################
 
 

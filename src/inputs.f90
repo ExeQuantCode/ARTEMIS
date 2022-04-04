@@ -29,6 +29,7 @@ module inputs
   character(200) :: struc1_file,struc2_file,out_filename
   character(100) :: dirname,shiftdir,swapdir,subdir_prefix
   logical :: lsurf_gen,lprint_matches,lprint_terms,lgen_interfaces,lprint_shifts
+  logical :: lw_use_pricel, up_use_pricel
   logical :: lw_layered,up_layered
   logical :: lortho
   logical :: ludef_lw_layered,ludef_up_layered,ludef_axis
@@ -133,6 +134,8 @@ contains
     iintf=-1
     tol_sym = 1.D-6
     udef_intf_loc = [ -1.D0, -1.D0 ]
+    lw_use_pricel=.true.
+    up_use_pricel=.true.
 
 
 !!!-----------------------------------------------------------------------------
@@ -634,7 +637,7 @@ contains
     logical :: ludef_offset, ludef_lw_layer_sep, ludef_up_layer_sep
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(49) :: readvar
+    integer, dimension(51) :: readvar
     logical, optional, intent(in) :: skip
 
 
@@ -801,6 +804,10 @@ contains
           call assign(buffer,lswap_mirror,     readvar(48))
        case("LORTHO")
           call assign(buffer,lortho,           readvar(49))
+       case("LW_USE_PRICEL")
+          call assign(buffer,lw_use_pricel,    readvar(50))
+       case("UP_USE_PRICEL")
+          call assign(buffer,up_use_pricel,    readvar(51))
        case default
           write(0,'("NOTE: unable to assign variable on line ",I0)') count
        end select

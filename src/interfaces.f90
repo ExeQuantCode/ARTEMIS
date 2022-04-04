@@ -14,7 +14,7 @@ module interface_subroutines
        shift_region,set_vacuum,transformer,shifter,&
        get_min_bulk_bond,clone_bas,bas_lat_merge,get_shortest_bond,bond_type
   use mod_sym,              only: term_arr_type,confine_type,gldfnd,&
-       get_terminations,print_terminations,setup_ladder
+       get_terminations,print_terminations,setup_ladder,get_primitive_cell
   use swapping,              only: rand_swapper
   use shifting !!! CHANGE TO SHIFTER?
   implicit none
@@ -201,7 +201,18 @@ contains
     double precision, allocatable, dimension(:,:) :: trans
     type(term_list_type), allocatable, dimension(:) :: lw_list,up_list
 
+    
+!!!-----------------------------------------------------------------------------
+!!! determines the primitive and niggli reduced cell for each bulk
+!!!-----------------------------------------------------------------------------
+    if(lw_use_pricel)then
+       call get_primitive_cell(inlw_lat,inlw_bas)
+    end if
+    if(up_use_pricel)then
+       call get_primitive_cell(inup_lat,inup_bas)
+    end if
 
+    
 !!!-----------------------------------------------------------------------------
 !!! investigates individual bulks and their bondlengths
 !!!-----------------------------------------------------------------------------
@@ -211,7 +222,7 @@ contains
     write(6,'(1X,"Avg min bulk bond: ",F0.3," Å")') avg_min_bond
     write(6,'(1X,"Trans-interfacial scaling factor:",F0.3)') c_scale
     if(ishift.eq.-1) nshift=1
-
+    
 
 !!!-----------------------------------------------------------------------------
 !!! gets bulk DONs, if ISHIFT = 4
@@ -227,6 +238,14 @@ contains
        if(all(abs(bulk_DON(1)%spec(1)%atom(:,:)).lt.1.D0))then
           call err_abort("ISSUE WITH THE LOWER BULK DON!!!")
        end if
+       open(unit=13,file="lw_DON.dat")
+       do j=1,1000
+          write(13,*) &
+               (j-1)*max_bondlength/1000,&
+               bulk_DON(1)%spec(1)%atom(1,j)
+       end do
+       close(13)
+       !call exit()
        up_map=0
        bulk_DON(2)%spec=gen_DON(inup_lat,inup_bas,&
             dist_max=max_bondlength,&

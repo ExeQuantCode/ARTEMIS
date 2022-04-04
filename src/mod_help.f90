@@ -39,7 +39,7 @@ module mod_help
 
 
   ! Interface number of tags
-  integer, parameter :: ntags_interface=49
+  integer, parameter :: ntags_interface=51
   ! Interface tags
   integer, parameter :: inintf_tag=1
   integer, parameter :: iimatch_tag=2
@@ -90,6 +90,8 @@ module mod_help
   integer, parameter :: iintf_loc_tag=47
   integer, parameter :: ilmirror_tag=48
   integer, parameter :: ilortho_tag=49
+  integer, parameter :: ilw_use_pricel=50
+  integer, parameter :: iup_use_pricel=51
 
 
 
@@ -462,7 +464,10 @@ contains
     tag(ilw_miller_tag)%allowed = 'Three integer numbers'
     tag(ilw_miller_tag)%default = '(empty)'
     tag(ilw_miller_tag)%description = &
-         'Confines the lower crystal to this Miller plane for lattice matching'
+         'Confines the lower crystal to this Miller plane for lattice matching.\n&
+         &NOTE: Miller indices used in ARTEMIS are defined for the cell in &
+         &use. Experimental Miller indices are presented with respect to the &
+         & primitive cell. To use proper Miller indices, ensure LW_USE_PRICEL=T.'
 
     tag(iup_miller_tag)%name    = 'UP_MILLER'
     tag(iup_miller_tag)%type    = 'U'
@@ -470,7 +475,10 @@ contains
     tag(iup_miller_tag)%allowed = 'Three integer numbers'
     tag(iup_miller_tag)%default = '(empty)'
     tag(iup_miller_tag)%description = &
-         'Confines the upper crystal to this Miller plane for lattice matching'
+         'Confines the upper crystal to this Miller plane for lattice matching..\n&
+         &NOTE: Miller indices used in ARTEMIS are defined for the cell in &
+         &use. Experimental Miller indices are presented with respect to the &
+         & primitive cell. To use proper Miller indices, ensure UP_USE_PRICEL=T.'
 
     tag(inmiller_tag)%name    = 'NMILLER'
     tag(inmiller_tag)%type    = 'I'
@@ -789,6 +797,24 @@ contains
     tag(ilortho_tag)%description = &
          'Defines whether to generate surfaces with the surface axis &
          &perpendicular to the surface'
+
+    tag(ilw_use_pricel)%name    = 'LW_USE_PRICEL'
+    tag(ilw_use_pricel)%type    = 'L'
+    tag(ilw_use_pricel)%summary = 'Use lower primitive cell'
+    tag(ilw_use_pricel)%allowed = 'TRUE or FALSE'
+    tag(ilw_use_pricel)%default = 'TRUE'
+    tag(ilw_use_pricel)%description = &
+         'Defines whether to generate and use the primitive unit cell &
+         &for the lower crystal'
+
+    tag(iup_use_pricel)%name    = 'UP_USE_PRICEL'
+    tag(iup_use_pricel)%type    = 'L'
+    tag(iup_use_pricel)%summary = 'Use upper primitive cell'
+    tag(iup_use_pricel)%allowed = 'TRUE or FALSE'
+    tag(iup_use_pricel)%default = 'TRUE'
+    tag(iup_use_pricel)%description = &
+         'Defines whether to generate and use the primitive unit cell &
+         &for the upper crystal'
 
 
   end function setup_interface_tags
