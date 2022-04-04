@@ -205,18 +205,24 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! determines the primitive and niggli reduced cell for each bulk
 !!!-----------------------------------------------------------------------------
+    write(6,*)
     if(lw_use_pricel)then
+       write(6,'(1X,"Using primitive cell for lower material")')
        call get_primitive_cell(inlw_lat,inlw_bas)
     else
+       write(6,'(1X,"Using supplied cell for lower material")')
        call reducer(inlw_lat,inlw_bas)
        inlw_lat=primitive_lat(inlw_lat)
     end if
     if(up_use_pricel)then
+       write(6,'(1X,"Using primitive cell for upper material")')
        call get_primitive_cell(inup_lat,inup_bas)
     else
+       write(6,'(1X,"Using supplied cell for upper material")')
        call reducer(inup_lat,inup_bas)
        inup_lat=primitive_lat(inup_lat)
     end if
+    write(6,*)
     
 
     
@@ -227,7 +233,7 @@ contains
          ( get_min_bulk_bond(inlw_lat,inlw_bas) + &
          get_min_bulk_bond(inup_lat,inup_bas) )/2.D0
     write(6,'(1X,"Avg min bulk bond: ",F0.3," Å")') avg_min_bond
-    write(6,'(1X,"Trans-interfacial scaling factor:",F0.3)') c_scale
+    write(6,'(1X,"Trans-interfacial scaling factor: ",F0.3)') c_scale
     if(ishift.eq.-1) nshift=1
     
 
@@ -912,7 +918,8 @@ contains
              !!-----------------------------------------------------------------
              !! Writes information of current match to file in save directory
              !!-----------------------------------------------------------------
-             call  output_intf_data(SAV, ifit, lw_term, iterm, up_term, jterm)
+             call  output_intf_data(SAV, ifit, lw_term, iterm, up_term, jterm,&
+                  lw_use_pricel,up_use_pricel)
 
 
              !!-----------------------------------------------------------------
@@ -1234,17 +1241,22 @@ contains
 !!!#############################################################################
 !!! write structure data in each structure directory
 !!!#############################################################################
-  subroutine output_intf_data(SAV, ifit, lw_term, ilw_term, up_term, iup_term)
+  subroutine output_intf_data(SAV, ifit, lw_term, ilw_term, up_term, iup_term, lw_pricel,up_pricel)
     implicit none
     integer :: unit
 
     integer, intent(in) :: ifit, ilw_term, iup_term
+    logical, intent(in) :: lw_pricel,up_pricel
     type(term_arr_type), intent(in) :: lw_term, up_term
     type(latmatch_type), intent(in) :: SAV
+
 
     
     unit=99
     open(unit=unit, file="struc_dat.txt")
+    write(unit,'("Lower material primitive cell used: ",L1)') lw_pricel
+    write(unit,'("Upper material primitive cell used: ",L1)') lw_pricel
+    write(unit,*)
     write(unit,'("Lattice match:")')
     write(unit,'((1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
          SAV%abc,SAV%abc,&
