@@ -23,6 +23,7 @@ module inputs
   integer :: lw_thickness,up_thickness
   integer :: nshift,nterm,nintf,nswap,nmiller
   real :: max_bondlength,swap_sigma,swap_depth
+  double precision :: lw_bulk_modulus, up_bulk_modulus
   double precision :: c_scale,intf_depth,vacuum
   double precision :: layer_sep,lw_layer_sep,up_layer_sep,swap_den,tol_sym
   character(len=20) :: input_fmt,output_fmt
@@ -46,7 +47,7 @@ module inputs
   double precision, dimension(3,3) :: struc1_lat,struc2_lat
 
 
-!!!updated  2022/04/04
+!!!updated  2022/04/11
 
 
 contains
@@ -136,6 +137,9 @@ contains
     udef_intf_loc = [ -1.D0, -1.D0 ]
     lw_use_pricel=.true.
     up_use_pricel=.true.
+
+    lw_bulk_modulus=0.E0
+    up_bulk_modulus=0.E0
 
 
 !!!-----------------------------------------------------------------------------
@@ -637,7 +641,7 @@ contains
     logical :: ludef_offset, ludef_lw_layer_sep, ludef_up_layer_sep
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(51) :: readvar
+    integer, dimension(53) :: readvar
     logical, optional, intent(in) :: skip
 
 
@@ -808,6 +812,10 @@ contains
           call assign(buffer,lw_use_pricel,    readvar(50))
        case("UP_USE_PRICEL")
           call assign(buffer,up_use_pricel,    readvar(51))
+       case("LW_BULK_MODULUS")
+          call assign(buffer,lw_bulk_modulus,  readvar(52))
+       case("UP_BULK_MODULUS")
+          call assign(buffer,up_bulk_modulus,  readvar(53))
        case default
           write(0,'("NOTE: unable to assign variable on line ",I0)') count
        end select

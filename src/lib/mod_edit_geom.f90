@@ -2179,4 +2179,36 @@ contains
   end function get_shortest_bond
 !!!#############################################################################
 
+  
+!!!#############################################################################
+!!! shares strain between two lattices
+!!!#############################################################################
+  subroutine share_strain(lat1,lat2,bulk_mod1,bulk_mod2,axis)
+    implicit none
+    integer :: i
+    integer :: iaxis
+    double precision :: ratio
+    double precision, dimension(3) :: strain
+
+    double precision, intent(in) :: bulk_mod1,bulk_mod2
+    double precision, dimension(3,3), intent(inout) :: lat1,lat2
+
+    integer, optional, intent(in) :: axis
+
+    iaxis=3
+    if(present(axis)) iaxis=axis
+
+    do i=1,3
+       if(i.eq.iaxis) cycle
+       strain(:) = lat1(i,:)-lat2(i,:)
+       ratio = bulk_mod1/(bulk_mod1+bulk_mod2) !how much strain the 1st lattice will take
+       lat1(i,:) = lat1(i,:) + ratio * strain
+       lat2(i,:) = lat1(i,:)
+       !lat2(i,:) = lat1(i,:) + (1.D0 - ratio) * strain
+    end do
+    
+
+  end subroutine share_strain
+!!!#############################################################################
+
 end module edit_geom

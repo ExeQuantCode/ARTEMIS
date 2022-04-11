@@ -39,7 +39,7 @@ module mod_help
 
 
   ! Interface number of tags
-  integer, parameter :: ntags_interface=51
+  integer, parameter :: ntags_interface=53
   ! Interface tags
   integer, parameter :: inintf_tag=1
   integer, parameter :: iimatch_tag=2
@@ -90,8 +90,10 @@ module mod_help
   integer, parameter :: iintf_loc_tag=47
   integer, parameter :: ilmirror_tag=48
   integer, parameter :: ilortho_tag=49
-  integer, parameter :: ilw_use_pricel=50
-  integer, parameter :: iup_use_pricel=51
+  integer, parameter :: ilw_use_pricel_tag=50
+  integer, parameter :: iup_use_pricel_tag=51
+  integer, parameter :: ilw_bulk_modulus_tag=52
+  integer, parameter :: iup_bulk_modulus_tag=53
 
 
 
@@ -798,23 +800,45 @@ contains
          'Defines whether to generate surfaces with the surface axis &
          &perpendicular to the surface'
 
-    tag(ilw_use_pricel)%name    = 'LW_USE_PRICEL'
-    tag(ilw_use_pricel)%type    = 'L'
-    tag(ilw_use_pricel)%summary = 'Use lower primitive cell'
-    tag(ilw_use_pricel)%allowed = 'TRUE or FALSE'
-    tag(ilw_use_pricel)%default = 'TRUE'
-    tag(ilw_use_pricel)%description = &
+    tag(ilw_use_pricel_tag)%name    = 'LW_USE_PRICEL'
+    tag(ilw_use_pricel_tag)%type    = 'L'
+    tag(ilw_use_pricel_tag)%summary = 'Use lower primitive cell'
+    tag(ilw_use_pricel_tag)%allowed = 'TRUE or FALSE'
+    tag(ilw_use_pricel_tag)%default = 'TRUE'
+    tag(ilw_use_pricel_tag)%description = &
          'Defines whether to generate and use the primitive unit cell &
          &for the lower crystal'
 
-    tag(iup_use_pricel)%name    = 'UP_USE_PRICEL'
-    tag(iup_use_pricel)%type    = 'L'
-    tag(iup_use_pricel)%summary = 'Use upper primitive cell'
-    tag(iup_use_pricel)%allowed = 'TRUE or FALSE'
-    tag(iup_use_pricel)%default = 'TRUE'
-    tag(iup_use_pricel)%description = &
+    tag(iup_use_pricel_tag)%name    = 'UP_USE_PRICEL'
+    tag(iup_use_pricel_tag)%type    = 'L'
+    tag(iup_use_pricel_tag)%summary = 'Use upper primitive cell'
+    tag(iup_use_pricel_tag)%allowed = 'TRUE or FALSE'
+    tag(iup_use_pricel_tag)%default = 'TRUE'
+    tag(iup_use_pricel_tag)%description = &
          'Defines whether to generate and use the primitive unit cell &
          &for the upper crystal'
+
+    tag(ilw_bulk_modulus_tag)%name    = 'LW_BULK_MODULUS'
+    tag(ilw_bulk_modulus_tag)%type    = 'R'
+    tag(ilw_bulk_modulus_tag)%summary = 'Bulk modulus of lower material'
+    tag(ilw_bulk_modulus_tag)%allowed = 'Any positive real number'
+    tag(ilw_bulk_modulus_tag)%default = '(empty)'
+    tag(ilw_bulk_modulus_tag)%description = &
+         'The bulk modulus of the upper material (units=GPa).\n&
+         &If LW_ and UP_ not defined, bulk modulus is ignored and upper &
+         &material takes all of the strain.\n&
+         &NOTE: Units are not important, as long as LW_ and UP_ have the same units.'
+
+    tag(iup_bulk_modulus_tag)%name    = 'UP_BULK_MODULUS'
+    tag(iup_bulk_modulus_tag)%type    = 'R'
+    tag(iup_bulk_modulus_tag)%summary = 'Bulk modulus of upper material'
+    tag(iup_bulk_modulus_tag)%allowed = 'Any positive real number'
+    tag(iup_bulk_modulus_tag)%default = '(empty)'
+    tag(iup_bulk_modulus_tag)%description = &
+         'The bulk modulus of the upper material (units=GPa).\n&
+         &If LW_ and UP_ not defined, bulk modulus is ignored and upper &
+         &material takes all of the strain.\n&
+         &NOTE: Units are not important, as long as LW_ and UP_ have the same units.'
 
 
   end function setup_interface_tags

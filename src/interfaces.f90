@@ -12,7 +12,8 @@ module interface_subroutines
        get_interface,get_layered_axis,gen_DON
   use edit_geom,            only: planecutter,primitive_lat,ortho_axis,&
        shift_region,set_vacuum,transformer,shifter,reducer,&
-       get_min_bulk_bond,clone_bas,bas_lat_merge,get_shortest_bond,bond_type
+       get_min_bulk_bond,clone_bas,bas_lat_merge,get_shortest_bond,bond_type,&
+       share_strain
   use mod_sym,              only: term_arr_type,confine_type,gldfnd,&
        get_terminations,print_terminations,setup_ladder,get_primitive_cell
   use swapping,              only: rand_swapper
@@ -867,6 +868,14 @@ contains
                 end if
              end if
 
+
+             !!-----------------------------------------------------------------
+             !! Use the bulk moduli to determine the strain sharing
+             !!-----------------------------------------------------------------
+             if(lw_bulk_modulus.ne.0.E0.and.up_bulk_modulus.ne.0.E0)then
+                call share_strain(tlw_lat,tup_lat,lw_bulk_modulus,up_bulk_modulus)
+             end if
+             
 
              !!-----------------------------------------------------------------
              !! Merge the two bases and lattices and define the interface loc
