@@ -1391,4 +1391,144 @@ contains
   end subroutine lattice_matching
 !!!#############################################################################
 
+  
+!!!#############################################################################
+!!! Apply the elastic constants to determine strain energy
+!!!#############################################################################
+!!! elastic tensor form (Voight notation):
+!!!  C1111  C1122  C1133  C1123  C1113  C1112
+!!!         C2222  C2233  C2223  C2213  C2212
+!!!                C3333  C3323  C3313  C3312
+!!!                       C2323  C2313  C2312
+!!!                              C1313  C1312
+!!!                                     C1212
+!!! (VASP swaps the final three columns to 12 23 13
+  function compensate_strains(tfmat,w_elastic_tensor,up_elastic_tensor)
+    implicit none
+    integer :: i
+    double precision, dimension(3) :: strain_vec
+
+    integer, intent(in) :: axis
+    double precision, dimension(3,3), intent(in) :: lat1,lat2
+    double precision, dimension(6,6), intent(in) :: elastic_tensor
+
+    
+    ident = 0.D0
+    do i=1,3
+       ident(i,i) = 1.D0
+    end do
+
+    do i=1,3
+       strain_ratio(i) = sum(lw_elastic_tensor(i,:))/sum(up_elastic_tensor(i,:))
+    end do
+    do i=1,3
+       strain_ratio(3+i) = sum(lw_elastic_tensor(i,4:))/sum(up_elastic_tensor(i,4:))
+    end do
+
+    
+
+    
+    
+  end function compensate_strains
+!!!#############################################################################
+
+  
+!!!#############################################################################
+!!! Apply the elastic constants to determine strain energy
+!!!#############################################################################
+!!! elastic tensor form (Voight notation):
+!!!  C1111  C1122  C1133  C1123  C1113  C1112
+!!!         C2222  C2233  C2223  C2213  C2212
+!!!                C3333  C3323  C3313  C3312
+!!!                       C2323  C2313  C2312
+!!!                              C1313  C1312
+!!!                                     C1212
+!!! (VASP swaps the final three columns to 12 23 13
+  function tester(lw_lat,up_lat,lw_tfmat,up_tfmat,lw_elastic,up_elastic) result(stress_vec)
+    implicit none
+    integer :: i
+    double precision, dimension(6) :: strain_vec, stress_vec
+
+    integer, intent(in) :: axis
+    double precision, dimension(2,3), intent(in) :: lw_tfmat,up_tfmat
+    double precision, dimension(3,3), intent(in) :: lw_lat,up_lat
+    double precision, dimension(6,6), intent(in) :: lw_elastic,up_elastic
+
+
+    ! turn lw_elastic and up_elastic into 3x3x3x3 matrices
+    ! apply the lw_tfmat to lw_elastic and same for up
+    ! ... this should reduce them to a WHAT? sized matrix
+    ! ... this can then be reduced to the Voigt notation, to reduce size and number of variables
+    ! apply transformations to lw_lat and up_lat
+    ! ... then determine the transformation matrix between lw_lat and up_lat.
+    ! now compare the two sets of elements and make them equal.
+    ! apply this to one of the stress matrices. Then we have their ratio timesed by the tfmat already, so we have the amount one will expand or compress. The inverse should be the other.
+
+
+    lw_tflat = matmul(lw_lat,lw_tfmat)
+    up_tflat = matmul(up_lat,up_tfmat)
+    
+    ident = 0.D0
+    do i=1,3
+       ident(i,i) = 1.D0
+    end do
+    
+    strain_mat = matmul(lat1,inverse(lat2))-ident
+    do i=1,3
+       strain_vec(i) = strain_mat(i,i)
+    end do
+    strain_vec(4) = 2.D0*strain_mat(2,3)
+    strain_vec(5) = 2.D0*strain_mat(3,1)
+    strain_vec(6) = 2.D0*strain_mat(1,2)
+
+    stress_vec = matmul(strain_vec,elastic_tensor)
+
+    
+    
+  end function tester
+!!!#############################################################################
+
+  
+!!!#############################################################################
+!!! Apply the elastic constants to determine strain energy
+!!!#############################################################################
+!!! elastic tensor form (Voight notation):
+!!!  C1111  C1122  C1133  C1123  C1113  C1112
+!!!         C2222  C2233  C2223  C2213  C2212
+!!!                C3333  C3323  C3313  C3312
+!!!                       C2323  C2313  C2312
+!!!                              C1313  C1312
+!!!                                     C1212
+!!! (VASP swaps the final three columns to 12 23 13
+  function get_stress(lat1,lat2,axis,elastic_tensor) result(stress_vec)
+    implicit none
+    integer :: i
+    double precision, dimension(6) :: strain_vec, stress_vec
+
+    integer, intent(in) :: axis
+    double precision, dimension(3,3), intent(in) :: lat1,lat2
+    double precision, dimension(6,6), intent(in) :: elastic_tensor
+
+    
+    ident = 0.D0
+    do i=1,3
+       ident(i,i) = 1.D0
+    end do
+    
+    strain_mat = matmul(lat1,inverse(lat2))-ident
+    do i=1,3
+       strain_vec(i) = strain_mat(i,i)
+    end do
+    strain_vec(4) = 2.D0*strain_mat(2,3)
+    strain_vec(5) = 2.D0*strain_mat(3,1)
+    strain_vec(6) = 2.D0*strain_mat(1,2)
+
+    stress_vec = matmul(strain_vec,elastic_tensor)
+
+    
+    
+  end function get_stress
+!!!#############################################################################
+
+  
 end module lat_compare
