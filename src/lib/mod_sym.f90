@@ -1033,14 +1033,12 @@ contains
           bas%spec(is)%num=size(bas%spec(is)%atom,dim=1)
           !deallocate(atom_store)
        end do
+       !!-----------------------------------------------------------------------
+       !! Reduce the lattice
+       !!-----------------------------------------------------------------------
+       bas%natom=sum(bas%spec(:)%num)
+       lat=dmat1
     end if
-    
-
-    !!-----------------------------------------------------------------------
-    !! Reduce the lattice
-    !!-----------------------------------------------------------------------
-    bas%natom=sum(bas%spec(:)%num)
-    lat=dmat1
 
     
     !!-----------------------------------------------------------------------
@@ -1049,8 +1047,7 @@ contains
     call reducer(lat, bas)
     !! next line necessary as FCC and BCC do not conform to Niggli reduced ...
     !! ... cell definitions.
-    lat = primitive_lat(lat) 
-
+    lat = primitive_lat(lat)
     
   end subroutine get_primitive_cell
 !!!#############################################################################
