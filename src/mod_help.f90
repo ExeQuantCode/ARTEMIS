@@ -39,7 +39,7 @@ module mod_help
 
 
   ! Interface number of tags
-  integer, parameter :: ntags_interface=53
+  integer, parameter :: ntags_interface=54
   ! Interface tags
   integer, parameter :: inintf_tag=1
   integer, parameter :: iimatch_tag=2
@@ -94,6 +94,7 @@ module mod_help
   integer, parameter :: iup_use_pricel_tag=51
   integer, parameter :: ilw_bulk_modulus_tag=52
   integer, parameter :: iup_bulk_modulus_tag=53
+  integer, parameter :: ilc_fix_tag=54
 
 
 
@@ -839,6 +840,17 @@ contains
          &If LW_ and UP_ not defined, bulk modulus is ignored and upper &
          &material takes all of the strain.\n&
          &NOTE: Units are not important, as long as LW_ and UP_ have the same units.'
+
+    tag(ilc_fix_tag)%name    = 'LC_FIX'
+    tag(ilc_fix_tag)%type    = 'L'
+    tag(ilc_fix_tag)%summary = 'Fix the c axis of each material'
+    tag(ilc_fix_tag)%allowed = 'TRUE or FALSE'
+    tag(ilc_fix_tag)%default = 'TRUE'
+    tag(ilc_fix_tag)%description = &
+         'The c axis (axis perpendicular to the interface plane) &
+         & can be fixed (strained) or changed (unstrained) to compensate for interfacial strains.\n&
+         &  TRUE  = fix the c axis\n&
+         &  FALSE = extend/compress c axis to compensate for strain.'
 
 
   end function setup_interface_tags

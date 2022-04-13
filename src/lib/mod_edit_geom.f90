@@ -2183,30 +2183,44 @@ contains
 !!!#############################################################################
 !!! shares strain between two lattices
 !!!#############################################################################
-  subroutine share_strain(lat1,lat2,bulk_mod1,bulk_mod2,axis)
+  subroutine share_strain(lat1,lat2,bulk_mod1,bulk_mod2,axis,lcompensate)
     implicit none
     integer :: i
     integer :: iaxis
-    double precision :: ratio
+    double precision :: area1,area2,delta1,delta2
+    integer, dimension(3) :: abc=(/1,2,3/)
     double precision, dimension(3) :: strain
 
     double precision, intent(in) :: bulk_mod1,bulk_mod2
     double precision, dimension(3,3), intent(inout) :: lat1,lat2
 
     integer, optional, intent(in) :: axis
+    logical, optional, intent(in) :: lcompensate
 
     iaxis=3
     if(present(axis)) iaxis=axis
-
+ 
+    abc=cshift(abc,3-iaxis)
+    area1 = modu(cross(lat1(abc(1),:),lat1(abc(2),:)))
+    area2 = modu(cross(lat2(abc(1),:),lat2(abc(2),:)))
+    delta1 = - (1.D0 - area2/area1)/(1.D0 + (area2/area1)*(bulk_mod1/bulk_mod2))
+    delta2 = - (1.D0 - area1/area2)/(1.D0 + (area1/area2)*(bulk_mod2/bulk_mod1))
+    write(0,*) "areas", area1,area2
+    write(0,*) "deltas", delta1,delta2
+    write(0,*) "modulus", bulk_mod1,bulk_mod2
     do i=1,3
        if(i.eq.iaxis) cycle
        strain(:) = lat1(i,:)-lat2(i,:)
-       ratio = bulk_mod1/(bulk_mod1+bulk_mod2) !how much strain the 1st lattice will take
-       lat1(i,:) = lat1(i,:) + ratio * strain
+       lat1(i,:) = lat1(i,:) * (1.D0 + delta1)
        lat2(i,:) = lat1(i,:)
-       !lat2(i,:) = lat1(i,:) + (1.D0 - ratio) * strain
     end do
     
+    if(present(lcompensate))then
+       if(lcompensate)then
+          lat1(abc(3),:) =  lat1(abc(3),:) * (1.D0 - delta1/(1.D0 + delta1))  
+          lat2(abc(3),:) =  lat2(abc(3),:) * (1.D0 - delta2/(1.D0 + delta2))
+       end if
+    end if
 
   end subroutine share_strain
 !!!#############################################################################

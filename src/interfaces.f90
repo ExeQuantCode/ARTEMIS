@@ -873,7 +873,8 @@ contains
              !! Use the bulk moduli to determine the strain sharing
              !!-----------------------------------------------------------------
              if(lw_bulk_modulus.ne.0.E0.and.up_bulk_modulus.ne.0.E0)then
-                call share_strain(tlw_lat,tup_lat,lw_bulk_modulus,up_bulk_modulus)
+                call share_strain(tlw_lat,tup_lat,&
+                     lw_bulk_modulus,up_bulk_modulus,lcompensate=.not.lc_fix)
              end if
              
 

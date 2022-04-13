@@ -36,6 +36,7 @@ module inputs
   logical :: ludef_lw_layered,ludef_up_layered,ludef_axis
   logical :: lpresent_struc2
   logical :: lswap_mirror
+  logical :: lc_fix
   type(bas_type) :: struc1_bas,struc2_bas
   type(tol_type) :: tolerance
   type(aspect_type) :: edits
@@ -140,6 +141,7 @@ contains
 
     lw_bulk_modulus=0.E0
     up_bulk_modulus=0.E0
+    lc_fix=.true.
 
 
 !!!-----------------------------------------------------------------------------
@@ -641,7 +643,7 @@ contains
     logical :: ludef_offset, ludef_lw_layer_sep, ludef_up_layer_sep
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(53) :: readvar
+    integer, dimension(54) :: readvar
     logical, optional, intent(in) :: skip
 
 
@@ -816,6 +818,8 @@ contains
           call assign(buffer,lw_bulk_modulus,  readvar(52))
        case("UP_BULK_MODULUS")
           call assign(buffer,up_bulk_modulus,  readvar(53))
+       case("LC_FIX")
+          call assign(buffer,lc_fix,           readvar(54))
        case default
           write(0,'("NOTE: unable to assign variable on line ",I0)') count
        end select
