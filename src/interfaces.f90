@@ -20,6 +20,7 @@ module interface_subroutines
   use shifting !!! CHANGE TO SHIFTER?
   implicit none
   integer, private :: intf=0
+  double precision, private, parameter :: tmp_vac = 14.D0
 
   
   type term_list_type
@@ -179,11 +180,11 @@ contains
     integer :: intf_start,intf_end
     integer :: lw_term_start,lw_term_end,up_term_start,up_term_end
     integer :: natom_check
-    double precision :: avg_min_bond,tmp_vac,dtmp1
+    double precision :: avg_min_bond,dtmp1
     double precision :: lw_height,up_height
     character(3) :: abc
     character(1024) :: pwd,intf_dir,dirpath,msg
-    logical :: ludef_lw_surf,ludef_up_surf
+    logical :: ludef_lw_surf,ludef_up_surf,lcycle
     type(bas_type) :: sbas
     type(bas_type) :: inlw_bas,inup_bas
     type(bas_type) :: lw_bas,up_bas,tlw_bas,tup_bas
@@ -325,7 +326,6 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Finds and stores the best matches between the materials
 !!!-----------------------------------------------------------------------------
-    tmp_vac=14.D0
     call getcwd(pwd)
     old_intf = -1
     intf=0
@@ -490,7 +490,8 @@ contains
        if(allocated(lw_term%arr)) deallocate(lw_term%arr)
        lw_term=get_terminations(lw_lat,lw_bas,axis,&
             lprint=lprint_terms,layer_sep=lw_layer_sep)
-       lw_term%arr(:)%hmin = lw_term%arr(:)%hmin - 1.D-8
+       lw_term%arr(:)%hmin = lw_term%arr(:)%hmin - lw_term%tol !- 1.D-8
+       !lw_term%arr(:)%hmax = lw_term%arr(:)%hmax + lw_term%tol !+ 1.D-8
 
 
        !!-----------------------------------------------------------------------
@@ -509,7 +510,7 @@ contains
           ludef_lw_surf = .true.
           lw_list=get_term_list(lw_term)
           lw_term_start = lw_surf(1)
-          lw_term_end = lw_surf(1)
+          lw_term_end = lw_surf(2)
 
           if(allocated(vtmp1)) deallocate(vtmp1)
           allocate(vtmp1(size(lw_list)))
@@ -550,6 +551,7 @@ contains
        tfmat(:,:)=0.D0
        tfmat(1,1)=1.D0
        tfmat(2,2)=1.D0
+       lw_ncells = int((lw_thickness-1)/lw_term%nstep)+1
        tfmat(3,3)=lw_ncells
        call transformer(lw_lat,lw_bas,tfmat,t1lw_map)
        if(mod(real(old_natom*lw_ncells)/real(lw_bas%natom),1.0).gt.1.D-5)then
@@ -599,7 +601,8 @@ contains
        if(allocated(up_term%arr)) deallocate(up_term%arr)
        up_term=get_terminations(up_lat,up_bas,axis,&
             lprint=lprint_terms,layer_sep=up_layer_sep)
-       up_term%arr(:)%hmin = up_term%arr(:)%hmin - 1.D-8
+       up_term%arr(:)%hmin = up_term%arr(:)%hmin - up_term%tol !- 1.D-8
+       !up_term%arr(:)%hmax = up_term%arr(:)%hmax + up_term%tol !+ 1.D-8
 
 
        !!-----------------------------------------------------------------------
@@ -621,7 +624,7 @@ contains
           !   write(0,*) up_list(iterm)
           !end do
           up_term_start = up_surf(1)
-          up_term_end = up_surf(1)
+          up_term_end = up_surf(2)
 
           if(allocated(vtmp1)) deallocate(vtmp1)
           allocate(vtmp1(size(up_list)))
@@ -643,14 +646,14 @@ contains
                up_list(:)%term.eq.up_surf(2))
           up_height = up_height + vtmp1(itmp1) - up_term%arr(up_term_start)%hmin
 
+          up_ncells = ceiling(up_height)
+          up_height = up_height/dble(up_ncells)
+
           if(.not.up_term%lmirror)then
              dtmp1 = up_term%arr(up_surf(2))%hmax - up_term%arr(up_surf(2))%hmin
              if(dtmp1.lt.0.D0) dtmp1 = dtmp1 + 1.D0
              up_height = up_height + dtmp1
           end if
-
-          up_ncells = ceiling(up_height)
-          up_height = up_height/dble(up_ncells)
        else
           up_ncells = int((up_thickness-1)/up_term%nstep) + 1
        end if
@@ -694,6 +697,8 @@ contains
        up_term%arr(:)%hmax = up_term%arr(:)%hmax/dble(up_ncells)
        !up_term%arr(:)%add = up_term%arr(:)%add/dble(up_ncells)
        up_term%tol = up_term%tol/dble(up_ncells)
+
+
        write(6,'(1X,"Number of unique terminations: ",I0,2X,I0)') &
             lw_term%nterm,up_term%nterm
 
@@ -708,64 +713,10 @@ contains
           !!--------------------------------------------------------------------
           !! Shifts lower material to specified termination
           !!--------------------------------------------------------------------
-          call shifter(tlw_bas,lw_term%axis,-lw_term%arr(iterm)%hmin,.true.)
-          tfmat=0.D0
-          istep = 0
-          do j=1,3
-             tfmat(j,j)=1.D0
-             if(j.eq.lw_term%axis)then
-                if(ludef_lw_surf)then
-                   tfmat(j,j) = lw_height + lw_term%tol/8.D0
-                elseif(lw_term%lmirror)then
-                   istep = lw_thickness - (lw_ncells-1)*lw_term%nstep
-                   if(istep.ne.0)then
-                      dtmp1 = (lw_ncells-1) + lw_term%arr(iterm)%ladder(istep)
-                      dtmp1 = dtmp1/(lw_ncells)
-                      tfmat(j,j) = dtmp1 + lw_term%tol/8.D0
-                      tfmat(j,j) = tfmat(j,j) + &
-                           (lw_term%arr(iterm)%hmax - lw_term%arr(iterm)%hmin)
-                   end if
-                   !dtmp1 = dble(lw_thickness-1)+lw_term%arr(iterm)%add
-                   !if(dtmp1.eq.0.D0) dtmp1=1.D0
-                   !tfmat(j,j) = dtmp1 + lw_term%tol/8.D0 !tfmat(j,j)+(&
-                   !!tfmat(j,j) = tfmat(j,j) + (&
-                   !!     !lw_term%arr(iterm)%hmax-&
-                   !!     !lw_term%arr(iterm)%hmin+&
-                   !!     lw_term%arr(iterm)%add)+lw_term%tol/8.D0
-                else
-                   tfmat(j,j)=tfmat(j,j)+(&
-                        lw_term%arr(iterm)%hmax-&
-                        lw_term%arr(iterm)%hmin)+lw_term%tol/8.D0
-                end if
-             end if
-          end do
-          natom_check = lw_bas%natom
-          if(iterm.lt.lw_term_end)then
-             do j=1,max(1,up_term%nstep-istep)
-                natom_check = natom_check - sum(lw_term%arr(:iterm)%natom)
-             end do
-          end if
-          call transformer(tlw_lat,tlw_bas,tfmat,t2lw_map)
-          if(tlw_bas%natom.ne.natom_check)then
-             write(msg, '("NUMBER OF ATOMS IN LOWER SLAB! &
-                  &Expected ",I0," but generated ",I0," instead")') &
-                  natom_check,tlw_bas%natom
-             call err_abort(trim(msg),fmtd=.true.)
-                call err_abort_print_struc(tlw_lat,tlw_bas,"lw_term.vasp",&
-                     trim(msg),.true.)
-          end if
-          !!--------------------------------------------------------------------
-          !! Applied slab_cuber to orthogonalise lower material
-          !!-------------------------------------------------------------------
-          ortho_check1: do j=1,2 !! MAKE THIS GLOBAL, NOT JUST FOR AXIS 3!!!
-             if(abs(dot_product(tlw_lat(j,:),tlw_lat(3,:))).gt.1.D-5)then
-                call ortho_axis(tlw_lat,tlw_bas,axis)
-                exit ortho_check1
-             end if
-          end do ortho_check1
-          call set_vacuum(tlw_lat,tlw_bas,lw_term%axis,1.D0,tmp_vac)
-          !call err_abort_print_struc(tlw_lat,tlw_bas,"check.vasp","stop")
-
+          call prepare_slab(tlw_lat,tlw_bas,t2lw_map,lw_term,iterm,&
+               lw_thickness,lw_ncells,lw_height,ludef_lw_surf,lw_term_end,&
+               "lw",lcycle)
+          if(lcycle) cycle lw_term_loop
 
           
           !!--------------------------------------------------------------------
@@ -775,70 +726,11 @@ contains
              call clone_bas(up_bas,tup_bas,up_lat,tup_lat)
              if(allocated(t2up_map)) deallocate(t2up_map)
              allocate(t2up_map,source=t1up_map)
-             tfmat=0.D0
-             istep=0
-             !!-----------------------------------------------------------------
-             !! Shifts upper material to specified termination
-             !!-----------------------------------------------------------------
-             call shifter(tup_bas,up_term%axis,-up_term%arr(jterm)%hmin,.true.)
-             !! NEED TO SORT OUT LAYER MIN AND MAX, ISSUES OF ROUNDING !!
-             !! COULD USE THE CHECK NEAREST ATOM CODE AND USE THAT VALUE !!
-             do j=1,3
-                tfmat(j,j)=1.D0
-                if(j.eq.up_term%axis)then
-                   if(ludef_up_surf)then
-                      tfmat(j,j) = up_height + up_term%tol/8.D0
-                   elseif(up_term%lmirror)then
-                      istep = up_thickness - (up_ncells-1)*up_term%nstep
-                      if(istep.ne.0)then
-                         dtmp1 = (up_ncells-1) + up_term%arr(jterm)%ladder(istep)
-                         dtmp1 = dtmp1/(up_ncells)
-                         tfmat(j,j) = dtmp1 + up_term%tol/8.D0
-                         tfmat(j,j) = tfmat(j,j) + &
-                              (up_term%arr(jterm)%hmax - up_term%arr(jterm)%hmin)
-                      end if
-                      !dtmp1 = dble(up_thickness-1)+up_term%arr(jterm)%add
-                      !if(dtmp1.eq.0.D0) dtmp1=1.D0
-                      !tfmat(j,j) = dtmp1 + up_term%tol/8.D0 !tfmat(j,j)-(&
-                      !!tfmat(j,j) = tfmat(j,j) + (&
-                      !!     !up_term%arr(jterm)%hmax-&
-                      !!     !up_term%arr(jterm)%hmin+&
-                      !!     up_term%arr(jterm)%add)+up_term%tol/8.D0
-                      !!     !up_mirror%loc)!+up_term%tol/4.D0
-                   else
-                      tfmat(j,j)=tfmat(j,j)+(&
-                           up_term%arr(jterm)%hmax-&
-                           up_term%arr(jterm)%hmin)+up_term%tol/8.D0
-                   end if
-                end if
-             end do
-             natom_check = up_bas%natom
-             if(jterm.lt.up_term_end)then
-                do j=1,max(1,up_term%nstep-istep)
-                   natom_check = natom_check - sum(up_term%arr(:jterm)%natom)
-                end do
-             end if
-             call transformer(tup_lat,tup_bas,tfmat,t2up_map)
-             if(tup_bas%natom.ne.natom_check)then
-                write(msg, '("NUMBER OF ATOMS IN UPPER SLAB! &
-                     &Expected ",I0," but generated ",I0," instead")') &
-                     natom_check,tup_bas%natom
-                !call err_abort(trim(msg),fmtd=.true.)
-                call err_abort_print_struc(tup_lat,tup_bas,"up_term.vasp",&
-                     trim(msg),.true.)
-             end if
-             !!-----------------------------------------------------------------
-             !! Applied slab_cuber to orthogonalise upper material
-             !!-----------------------------------------------------------------
-             ortho_check2: do j=1,2 !! MAKE THIS GLOBAL, NOT JUST FOR AXIS 3!!!
-                if(abs(dot_product(tup_lat(j,:),tup_lat(3,:))).gt.1.D-5)then
-                   call ortho_axis(tup_lat,tup_bas,axis)
-                   exit ortho_check2
-                end if
-             end do ortho_check2
-             call ortho_axis(tup_lat,tup_bas,axis)
-             call set_vacuum(tup_lat,tup_bas,up_term%axis,1.D0,tmp_vac)
- 
+             call prepare_slab(tup_lat,tup_bas,t2up_map,up_term,jterm,&
+                  up_thickness,up_ncells,up_height,ludef_up_surf,up_term_end,&
+                  "up",lcycle)
+             if(lcycle) cycle up_term_loop
+
              
              !!-----------------------------------------------------------------
              !! Checks stoichiometry
@@ -943,7 +835,9 @@ contains
              !call chdir(dirname)
              call chdir(intf_dir)
 
+             if(ludef_up_surf) exit up_term_loop
           end do up_term_loop
+          if(ludef_lw_surf) exit lw_term_loop
        end do lw_term_loop
        !!-----------------------------------------------------------------------
        !! Returns to working directory
@@ -1247,7 +1141,118 @@ contains
   end function get_term_list
 !!!#############################################################################
 
-  
+
+!!!#############################################################################
+!!! Prepares lattice and basis to specified termination
+!!!#############################################################################
+!!! Supply a supercell that can be cut down to the size of the slab ...
+!!! ... i.e. the input structure must be larger or equal to the desired output
+  subroutine prepare_slab(lat, bas, map, term, iterm, thickness, ncells, &
+       height, ludef_surf, udef_top_iterm, lwup, lcycle)
+    implicit none
+    integer :: j,j_start,istep,natom_check
+    double precision :: dtmp1
+    character(1024) :: msg
+    integer, dimension(3) :: abc=(/1,2,3/)
+    double precision, dimension(3,3) :: tfmat
+    integer, allocatable, dimension(:) :: iterm_list
+
+    integer, intent(in) :: iterm, udef_top_iterm, thickness, ncells
+    double precision, intent(in) :: height
+    character(2), intent(in) :: lwup
+    logical, intent(in) :: ludef_surf
+    logical, intent(out) :: lcycle
+    type(bas_type), intent(inout) :: bas
+    type(term_arr_type), intent(in) :: term
+    double precision, dimension(3,3), intent(inout) :: lat
+
+    integer, allocatable, dimension(:,:,:), intent(inout) :: map
+
+
+    lcycle = .false.
+    tfmat=0.D0
+    istep = thickness - (ncells-1)*term%nstep
+    natom_check = bas%natom
+    allocate(iterm_list(term%nterm))
+    do j=1,term%nterm
+       iterm_list(j) = j
+    end do
+    iterm_list=cshift(iterm_list,term%nterm-iterm+1)
+    if(ludef_surf)then
+       j_start = udef_top_iterm - iterm + 1
+       if(j_start.le.0) j_start = j_start + term%nterm
+       j_start = j_start + 1
+    else
+       j_start = 2
+    end if
+
+
+    !!--------------------------------------------------------------------
+    !! Shifts lower material to specified termination
+    !!--------------------------------------------------------------------
+    call shifter(bas,term%axis,-term%arr(iterm)%hmin,.true.)
+    do j=1,3
+       tfmat(j,j)=1.D0
+       if(j.eq.term%axis)then
+          if(ludef_surf)then
+             tfmat(j,j) = height + term%tol*2.D0!/8.D0
+          elseif(term%lmirror)then
+             if(istep.ne.0)then
+                dtmp1 = (ncells-1) + term%arr(iterm)%ladder(istep)
+                dtmp1 = dtmp1/(ncells)
+                tfmat(j,j) = dtmp1 + term%tol*2.D0!/8.D0
+                tfmat(j,j) = tfmat(j,j) + &
+                     (term%arr(iterm)%hmax - term%arr(iterm)%hmin)
+             end if
+             !dtmp1 = dble(thickness-1)+term%arr(iterm)%add
+             !if(dtmp1.eq.0.D0) dtmp1=1.D0
+             !tfmat(j,j) = dtmp1 + term%tol/8.D0 !tfmat(j,j)+(&
+             !!tfmat(j,j) = tfmat(j,j) + (&
+             !!     !term%arr(iterm)%hmax-&
+             !!     !term%arr(iterm)%hmin+&
+             !!     term%arr(iterm)%add)+term%tol/8.D0
+          else
+             tfmat(j,j)=tfmat(j,j)+(&
+                  term%arr(iterm)%hmax-&
+                  term%arr(iterm)%hmin) + term%tol*2.D0!/8.D0
+          end if
+       end if
+    end do
+    if(term%nterm.gt.1.or.term%nstep.gt.1)then
+       do j=1,max(0,term%nstep-istep),1
+          natom_check = natom_check - sum(term%arr(:)%natom)
+       end do
+       do j=j_start,term%nterm,1
+          natom_check = natom_check - term%arr(iterm_list(j))%natom
+       end do
+    end if
+    call transformer(lat,bas,tfmat,map)
+    if(bas%natom.ne.natom_check)then
+       write(msg, '("NUMBER OF ATOMS IN '//to_upper(lwup)//' SLAB! &
+            &Expected ",I0," but generated ",I0," instead")') &
+            natom_check,bas%natom
+       !call err_abort(trim(msg),fmtd=.true.)
+       call err_abort_print_struc(lat,bas,to_lower(lwup)//"_term.vasp",&
+            trim(msg),.true.)
+       lcycle = .true.
+    end if
+    !!--------------------------------------------------------------------
+    !! Apply slab_cuber to orthogonalise lower material
+    !!-------------------------------------------------------------------
+    abc=cshift(abc,3-term%axis)
+    ortho_check: do j=1,2
+       if(abs(dot_product(lat(abc(j),:),lat(axis,:))).gt.1.D-5)then
+          call ortho_axis(lat,bas,term%axis)
+          exit ortho_check
+       end if
+    end do ortho_check
+    call set_vacuum(lat,bas,term%axis,1.D0,tmp_vac)
+    !call err_abort_print_struc(lat,bas,"check.vasp","stop")
+
+  end subroutine prepare_slab
+!!!#############################################################################
+
+
 !!!#############################################################################
 !!! write structure data in each structure directory
 !!!#############################################################################

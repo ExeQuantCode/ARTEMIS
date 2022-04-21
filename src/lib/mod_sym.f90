@@ -22,7 +22,7 @@
 module mod_sym
   use constants,   only: pi
   use misc,        only: sort1D,sort2D,sort_col,set
-  use misc_linalg, only: modu,inverse_3x3,det,gcd,gen_group
+  use misc_linalg, only: modu,inverse_3x3,det,gcd,gen_group,cross,uvec
   use rw_geom,     only: bas_type,geom_write
   use edit_geom,   only: transformer,vacuumer,set_vacuum,shifter,&
        clone_bas,get_closest_atom,ortho_axis,reducer,primitive_lat
@@ -1301,13 +1301,14 @@ contains
     !   write(0,*)
     !end do
     allocate(ladder(size(group(:,1,1))))
+    ladder = 0.D0
 
     lexclude_translation = .false.
     if(term%lmirror.and.abs(term%arr(1)%hmax-term%arr(1)%hmin).gt.tol_sym)&
          lexclude_translation = .true.
     term%nstep = 0
     ! account for when there are no translational symmetries in the cell
-    if(size(subgroup) < 1)then
+    if(size(subgroup).lt.1)then
        term%nstep = 1
     end if
     group_loop: do i=1,size(group(:,1,1))
@@ -1318,19 +1319,23 @@ contains
             abs(group(i,1,1)-1.D0).lt.tol_sym) cycle group_loop
        term%nstep = term%nstep + 1
        ladder(term%nstep) = group(i,2,1)
-       if(abs(ladder(term%nstep)).lt.tol_sym) ladder(term%nstep) = 0.D0
+       !if(abs(ladder(term%nstep)).lt.tol_sym) &
+       !     ladder(term%nstep) = 0.D0
+       if(abs(ladder(term%nstep)-nint(ladder(term%nstep))).lt.tol_sym) &
+            ladder(term%nstep) = 0.D0
     end do group_loop
     call sort1D(ladder(:term%nstep))
     !call set(ladder2, tol_sym)
     !allocate(ladder2(term%nstep))
     !ladder2(:) = ladder(:term%nstep)
     !term%nstep = size(ladder2)
-    if(term%nterm.gt.1)then
+
+    if(term%nstep.gt.1)then
        dtmp1 = ladder(1)
-       do i=1,term%nstep-1
+       do i=1,term%nstep-1,1
           ladder(i)=ladder(i+1)
        end do
-       ladder(term%nstep) = dtmp1+1
+       ladder(term%nstep) = dtmp1+1.D0
     end if
     do i=1,term%nterm
        allocate(term%arr(i)%ladder(term%nstep))
@@ -1351,9 +1356,10 @@ contains
     integer :: i,j,is,nterm,mterm,dim,ireject
     integer :: itmp1,init,min_loc
     logical :: ludef_print
-    double precision :: dtmp1,tol,height,max_sep
+    double precision :: dtmp1,tol,height,max_sep,c_along
     type(sym_type) :: grp1,grp_store
     type(term_arr_type) :: term
+    integer, dimension(3) :: abc=(/1,2,3/)
     double precision, dimension(3) :: vec_compare
     type(bas_type),allocatable, dimension(:) :: bas_arr,bas_arr_reject
     type(term_type), allocatable, dimension(:) :: term_arr,term_arr_uniq
@@ -1375,7 +1381,7 @@ contains
 !!! E.G. (1 0 1)
     
     s_end=0
-    grp_store%confine%l=.true.
+    grp_store%confine%l=.false.
     grp_store%confine%axis=axis
     grp_store%confine%laxis=.false.
     grp_store%confine%laxis(axis)=.true.
@@ -1397,7 +1403,12 @@ contains
     else
        tol = 1.D0  !!!tolerance of 1 Å for defining a layer
     end if
-    tol = tol/modu(lat(axis,1:3))
+
+    abc=cshift(abc,3-axis)
+    c_along = abs(dot_product(lat(axis,:),&
+         uvec(cross(lat(abc(1),:),lat(abc(2),:)))))
+    tol = tol / c_along
+    !tol = tol/modu(lat(axis,1:3))
 
 
 !!!-----------------------------------------------------------------------------
@@ -1499,9 +1510,6 @@ contains
 !!!-----------------------------------------------------------------------------
     mterm=0
     ireject=0
-    !grp_store%confine%l=.false.
-    !grp_store%confine%laxis=.false.
-    !!grp_store%confine%laxis(axis)=.true.
     grp_store%lspace=.true.
     call sym_setup(grp_store,lat)
     call check_sym(grp_store,bas1=bas)
@@ -1651,6 +1659,16 @@ contains
     term%nterm=mterm
     term%arr(:mterm)=term_arr_uniq(:mterm)
 
+    do i=1,term%nterm
+       if(i.eq.1)then
+          dtmp1 = abs(term%arr(i)%hmin-term%arr(term%nterm)%hmax)/4.D0
+       else
+          dtmp1 = abs(term%arr(i)%hmin-term%arr(i-1)%hmax)/4.D0
+       end if
+       if(dtmp1.lt.term%tol)then
+          term%tol = dtmp1
+       end if
+    end do
 !!! THERE IS NO CLEAR TERMINATION PLANE
 !!! DO THIS IF ANY TERMINATION IS LARGER THAN A CERTAIN SIZE, 
 
@@ -1794,6 +1812,7 @@ contains
        call geom_write(unit,lat,bas)
        close(unit)
     end do
+    
 
     
     !!--------------------------------------------------------------------------
