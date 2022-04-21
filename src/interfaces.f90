@@ -490,14 +490,14 @@ contains
        if(allocated(lw_term%arr)) deallocate(lw_term%arr)
        lw_term=get_terminations(lw_lat,lw_bas,axis,&
             lprint=lprint_terms,layer_sep=lw_layer_sep)
-       lw_term%arr(:)%hmin = lw_term%arr(:)%hmin - lw_term%tol !- 1.D-8
-       !lw_term%arr(:)%hmax = lw_term%arr(:)%hmax + lw_term%tol !+ 1.D-8
 
 
        !!-----------------------------------------------------------------------
        !! Sort out ladder rungs (checks whether the material is centrosymmetric)
        !!-----------------------------------------------------------------------
        call setup_ladder(lw_lat,lw_bas,axis,lw_term)
+       lw_term%arr(:)%hmin = lw_term%arr(:)%hmin - lw_term%tol !- 1.D-8
+       !lw_term%arr(:)%hmax = lw_term%arr(:)%hmax + lw_term%tol !+ 1.D-8
 
 
        !!-----------------------------------------------------------------------
@@ -601,14 +601,14 @@ contains
        if(allocated(up_term%arr)) deallocate(up_term%arr)
        up_term=get_terminations(up_lat,up_bas,axis,&
             lprint=lprint_terms,layer_sep=up_layer_sep)
-       up_term%arr(:)%hmin = up_term%arr(:)%hmin - up_term%tol !- 1.D-8
-       !up_term%arr(:)%hmax = up_term%arr(:)%hmax + up_term%tol !+ 1.D-8
 
 
        !!-----------------------------------------------------------------------
        !! Sort out ladder rungs (checks whether the material is centrosymmetric)
        !!-----------------------------------------------------------------------
        call setup_ladder(up_lat,up_bas,axis,up_term)
+       up_term%arr(:)%hmin = up_term%arr(:)%hmin - up_term%tol !- 1.D-8
+       !up_term%arr(:)%hmax = up_term%arr(:)%hmax + up_term%tol !+ 1.D-8
 
 
        !!-----------------------------------------------------------------------
@@ -666,6 +666,7 @@ contains
        tfmat(1,1)=1.D0
        tfmat(2,2)=1.D0
        up_ncells = int((up_thickness-1)/up_term%nstep)+1
+       write(0,*) "HERE NED", up_ncells, up_term%nstep, up_thickness
        tfmat(3,3)=up_ncells
        call transformer(up_lat,up_bas,tfmat,t1up_map)
        if(mod(real(old_natom*up_ncells)/real(up_bas%natom),1.0).gt.1.D-5)then
@@ -1170,6 +1171,7 @@ contains
 
 
     lcycle = .false.
+    dtmp1=0.D0
     tfmat=0.D0
     istep = thickness - (ncells-1)*term%nstep
     natom_check = bas%natom
@@ -1183,14 +1185,19 @@ contains
        if(j_start.le.0) j_start = j_start + term%nterm
        j_start = j_start + 1
     else
-       j_start = 2
+       !!! NEEDS TO HANDLE LADDERS WHERE STEPS ARE EQUIVALENT
+       j_start = 2 + (istep-1)*term%nterm/term%nstep
     end if
-
+    write(0,*) iterm_list
+    write(0,*) "ladder", term%arr(iterm)%ladder
 
     !!--------------------------------------------------------------------
     !! Shifts lower material to specified termination
     !!--------------------------------------------------------------------
     call shifter(bas,term%axis,-term%arr(iterm)%hmin,.true.)
+    open(20,file="test.vasp")
+    call geom_write(20,lat,bas)
+    close(20)
     do j=1,3
        tfmat(j,j)=1.D0
        if(j.eq.term%axis)then
@@ -1218,10 +1225,13 @@ contains
           end if
        end if
     end do
+    write(0,*) dtmp1, tfmat(term%axis,term%axis)
+    write(0,*) "natom check", natom_check, iterm, term%nterm, istep, term%nstep
     if(term%nterm.gt.1.or.term%nstep.gt.1)then
        do j=1,max(0,term%nstep-istep),1
           natom_check = natom_check - sum(term%arr(:)%natom)
        end do
+       write(0,*) j_start, term%nterm
        do j=j_start,term%nterm,1
           natom_check = natom_check - term%arr(iterm_list(j))%natom
        end do
@@ -1231,6 +1241,10 @@ contains
        write(msg, '("NUMBER OF ATOMS IN '//to_upper(lwup)//' SLAB! &
             &Expected ",I0," but generated ",I0," instead")') &
             natom_check,bas%natom
+       if(tfmat(term%axis,term%axis).gt.1.D0)then
+          write(0,'("THE TRANSFORMATION IS GREATER THAN ONE ",F0.9)') &
+               tfmat(term%axis,term%axis)
+       end if
        !call err_abort(trim(msg),fmtd=.true.)
        call err_abort_print_struc(lat,bas,to_lower(lwup)//"_term.vasp",&
             trim(msg),.true.)
@@ -1248,6 +1262,7 @@ contains
     end do ortho_check
     call set_vacuum(lat,bas,term%axis,1.D0,tmp_vac)
     !call err_abort_print_struc(lat,bas,"check.vasp","stop")
+
 
   end subroutine prepare_slab
 !!!#############################################################################

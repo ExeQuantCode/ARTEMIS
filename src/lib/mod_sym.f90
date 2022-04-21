@@ -1214,7 +1214,7 @@ contains
 !!!#############################################################################
   subroutine setup_ladder(lat,bas,axis,term)
     implicit none
-    integer :: i
+    integer :: i,j
     integer :: nmirror,ntrans
     double precision :: dtmp1
     type(sym_type) :: grp
@@ -1307,16 +1307,29 @@ contains
     if(term%lmirror.and.abs(term%arr(1)%hmax-term%arr(1)%hmin).gt.tol_sym)&
          lexclude_translation = .true.
     term%nstep = 0
-    ! account for when there are no translational symmetries in the cell
+    !! account for when there are no translational symmetries in the cell
     if(size(subgroup).lt.1)then
        term%nstep = 1
     end if
     group_loop: do i=1,size(group(:,1,1))
+       !! account for equivalent symmetries along layer axis
        if(any(abs(ladder(:term%nstep)-group(i,2,1)).lt.tol_sym)) cycle group_loop
        if(any(abs(ladder(:term%nstep)-&
             floor(ladder(:term%nstep)+tol_sym)-group(i,2,1)).lt.tol_sym)) cycle group_loop
        if(lexclude_translation.and.&
             abs(group(i,1,1)-1.D0).lt.tol_sym) cycle group_loop
+
+       !! account for mirrors that map a layer back onto the same location
+       check_map_back: if(.true.)then
+          do j=1,term%nterm
+             dtmp1 = group(i,2,1)+term%arr(j)%hmin*group(i,1,1)-term%arr(j)%hmax
+             !if(abs(dtmp1).lt.tol_sym) cycle group_loop
+             !if(abs(dtmp1-floor(dtmp1)).lt.tol_sym) cycle group_loop
+             if(abs(dtmp1).ge.tol_sym) exit check_map_back
+             if(abs(dtmp1-floor(dtmp1)).ge.tol_sym) exit check_map_back
+          end do
+          cycle group_loop
+       end if check_map_back
        term%nstep = term%nstep + 1
        ladder(term%nstep) = group(i,2,1)
        !if(abs(ladder(term%nstep)).lt.tol_sym) &
@@ -1324,19 +1337,20 @@ contains
        if(abs(ladder(term%nstep)-nint(ladder(term%nstep))).lt.tol_sym) &
             ladder(term%nstep) = 0.D0
     end do group_loop
+    if(term%nstep.eq.0) term%nstep=1
     call sort1D(ladder(:term%nstep))
     !call set(ladder2, tol_sym)
     !allocate(ladder2(term%nstep))
     !ladder2(:) = ladder(:term%nstep)
     !term%nstep = size(ladder2)
 
-    if(term%nstep.gt.1)then
-       dtmp1 = ladder(1)
-       do i=1,term%nstep-1,1
-          ladder(i)=ladder(i+1)
-       end do
-       ladder(term%nstep) = dtmp1+1.D0
-    end if
+    !if(term%nstep.gt.1)then
+    !   dtmp1 = ladder(1)
+    !   do i=1,term%nstep-1,1
+    !      ladder(i)=ladder(i+1)
+    !   end do
+    !   ladder(term%nstep) = dtmp1+1.D0
+    !end if
     do i=1,term%nterm
        allocate(term%arr(i)%ladder(term%nstep))
        term%arr(i)%ladder(:) = ladder(:term%nstep)
@@ -1669,6 +1683,9 @@ contains
           term%tol = dtmp1
        end if
     end do
+    !open(13,file="TESTER.vasp")
+    !call geom_write(13,lat,bas)
+    !close(13)
 !!! THERE IS NO CLEAR TERMINATION PLANE
 !!! DO THIS IF ANY TERMINATION IS LARGER THAN A CERTAIN SIZE, 
 
