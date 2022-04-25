@@ -68,7 +68,7 @@ contains
        term = get_terminations(lat,bas,axis,lprint=.true.,layer_sep=layer_sep)
     end if
     term%arr(:)%hmin = term%arr(:)%hmin - 1.D-8
-    call setup_ladder(lat,bas,axis,term)
+    !call setup_ladder(lat,bas,axis,term)
 
 
     if(present(directory))then
@@ -179,8 +179,7 @@ contains
     integer :: lw_layered_axis,up_layered_axis
     integer :: intf_start,intf_end
     integer :: lw_term_start,lw_term_end,up_term_start,up_term_end
-    integer :: natom_check
-    double precision :: avg_min_bond,dtmp1
+    double precision :: avg_min_bond
     double precision :: lw_height,up_height
     character(3) :: abc
     character(1024) :: pwd,intf_dir,dirpath,msg
@@ -195,13 +194,12 @@ contains
     integer, dimension(3) :: ivtmp1
     double precision, dimension(2) :: intf_loc
     double precision, dimension(3) :: init_offset=[0.D0,0.D0,2.D0]
-    double precision, dimension(3,3) :: mtmp1,DONup_lat
+    !double precision, dimension(3,3) :: mtmp1,DONup_lat
     double precision, dimension(3,3) :: tfmat,slat,inlw_lat,inup_lat
     double precision, dimension(3,3) :: lw_lat,up_lat,tlw_lat,tup_lat
-    double precision, allocatable, dimension(:) :: vtmp1
-    integer, allocatable, dimension(:,:,:) :: lw_map,up_map,t1lw_map,t1up_map,t2lw_map,t2up_map
+    integer, allocatable, dimension(:,:,:) :: lw_map,t1lw_map,t2lw_map
+    integer, allocatable, dimension(:,:,:) :: up_map,t1up_map,t2up_map
     double precision, allocatable, dimension(:,:) :: trans
-    type(term_list_type), allocatable, dimension(:) :: lw_list,up_list
 
     
 !!!-----------------------------------------------------------------------------
@@ -490,12 +488,19 @@ contains
        if(allocated(lw_term%arr)) deallocate(lw_term%arr)
        lw_term=get_terminations(lw_lat,lw_bas,axis,&
             lprint=lprint_terms,layer_sep=lw_layer_sep)
+write(0,*) 
 
 
        !!-----------------------------------------------------------------------
        !! Sort out ladder rungs (checks whether the material is centrosymmetric)
        !!-----------------------------------------------------------------------
-       call setup_ladder(lw_lat,lw_bas,axis,lw_term)
+       !call setup_ladder(lw_lat,lw_bas,axis,lw_term)
+       if(sum(lw_term%arr(:)%natom)*lw_term%nstep.ne.lw_bas%natom)then
+          write(msg, '("ERROR: Number of atoms in lower layers not correct: "&
+               &I0,2X,I0)') sum(lw_term%arr(:)%natom)*lw_term%nstep,lw_bas%natom
+          call err_abort(trim(msg),fmtd=.true.)
+       end if
+       call set_layer_tol(lw_term)
        lw_term%arr(:)%hmin = lw_term%arr(:)%hmin - lw_term%tol !- 1.D-8
        !lw_term%arr(:)%hmax = lw_term%arr(:)%hmax + lw_term%tol !+ 1.D-8
 
@@ -503,78 +508,16 @@ contains
        !!-----------------------------------------------------------------------
        !! Defines height of lower slab from user-defined values
        !!-----------------------------------------------------------------------
-       ludef_lw_surf = .false.
-       lw_term_start = 1
-       lw_term_end = min(lw_term%nterm,nterm)
-       if(all(lw_surf.ne.0))then
-          ludef_lw_surf = .true.
-          lw_list=get_term_list(lw_term)
-          lw_term_start = lw_surf(1)
-          lw_term_end = lw_surf(2)
-
-          if(allocated(vtmp1)) deallocate(vtmp1)
-          allocate(vtmp1(size(lw_list)))
-          lw_height = lw_term%arr(lw_term_start)%hmin
-          do i=lw_thickness,2,-1
-             vtmp1 = lw_list(:)%loc - lw_height
-             vtmp1 = vtmp1 - ceiling( vtmp1 - 1.D0 )
-             itmp1 = minloc( vtmp1(:), dim=1,&
-                  mask=&
-                  vtmp1(:).gt.0.and.&
-                  lw_list(:)%term.eq.lw_surf(1))
-             lw_height = lw_height + vtmp1(itmp1)
-          end do
-          vtmp1 = lw_list(:)%loc - lw_height
-          vtmp1 = vtmp1 - ceiling( vtmp1 - 1.D0 )
-          itmp1 = minloc( vtmp1(:), dim=1,&
-               mask=&
-               vtmp1(:).gt.0.and.&
-               lw_list(:)%term.eq.lw_surf(2))
-          lw_height = lw_height + vtmp1(itmp1) - lw_term%arr(lw_term_start)%hmin
-
-          lw_ncells = ceiling(lw_height)
-          lw_height = lw_height/dble(lw_ncells)
-
-          if(.not.lw_term%lmirror)then
-             dtmp1 = lw_term%arr(lw_surf(2))%hmax - lw_term%arr(lw_surf(2))%hmin
-             if(dtmp1.lt.0.D0) dtmp1 = dtmp1 + 1.D0
-             lw_height = lw_height + dtmp1
-          end if
-       else
-          lw_ncells = int((lw_thickness-1)/lw_term%nstep) + 1
-       end if
-
-
-       !!-----------------------------------------------------------------------
-       !! Extends lower slab to user-defined thickness
-       !!-----------------------------------------------------------------------
-       tfmat(:,:)=0.D0
-       tfmat(1,1)=1.D0
-       tfmat(2,2)=1.D0
-       lw_ncells = int((lw_thickness-1)/lw_term%nstep)+1
-       tfmat(3,3)=lw_ncells
-       call transformer(lw_lat,lw_bas,tfmat,t1lw_map)
-       if(mod(real(old_natom*lw_ncells)/real(lw_bas%natom),1.0).gt.1.D-5)then
-          write(0,'(1X,"ERROR: Internal error in interfaces subroutine")')
-          write(0,'(2X,"gldfnd subroutine did not reproduce a sensible &
-               &primitive cell for lower crystal")')
-          write(0,'(2X,"Generated ",I0," atoms, from the original ",&
-               &I0," atoms")') &
-               lw_bas%natom/itmp1,old_natom
-          if(ierror.eq.1)then
-             call chdir(intf_dir)
-             call err_abort_print_struc(lw_lat,lw_bas,&
-                  "broken_primitive.vasp",&
-                  "As IPRINT = 1, code is now exiting...")
-          end if
-          write(0,'(2X,"Skipping this lattice match...")')
-          cycle intf_loop
-       end if
+       call set_slab_height(lw_lat,lw_bas,t1lw_map,lw_term,lw_surf, old_natom,&
+            lw_height,lw_thickness,lw_ncells,&
+            lw_term_start,lw_term_end,ludef_lw_surf,&
+            intf_dir,"lw",lcycle)
+       if(lcycle) cycle intf_loop
 
 
        !!-----------------------------------------------------------------------
        !! Finds smallest thickness of the upper slab and increases to ...
-       !! user-defined thickness
+       !! ... user-defined thickness
        !! SHOULD MAKE IT LATER MAKE DIFFERENT SETS OF THICKNESSES
        !!-----------------------------------------------------------------------
        old_natom=up_bas%natom
@@ -606,7 +549,14 @@ contains
        !!-----------------------------------------------------------------------
        !! Sort out ladder rungs (checks whether the material is centrosymmetric)
        !!-----------------------------------------------------------------------
-       call setup_ladder(up_lat,up_bas,axis,up_term)
+       !call setup_ladder(up_lat,up_bas,axis,up_term)
+       if(sum(up_term%arr(:)%natom)*up_term%nstep.ne.up_bas%natom)then
+          write(msg, '("ERROR: Number of atoms in upper layers not correct: "&
+               &I0,2X,I0)') sum(up_term%arr(:)%natom)*up_term%nstep,up_bas%natom
+          write(0,*) up_term%arr(1)%ladder
+       !   call err_abort(trim(msg),fmtd=.true.)
+       end if
+       call set_layer_tol(up_term)
        up_term%arr(:)%hmin = up_term%arr(:)%hmin - up_term%tol !- 1.D-8
        !up_term%arr(:)%hmax = up_term%arr(:)%hmax + up_term%tol !+ 1.D-8
 
@@ -614,77 +564,11 @@ contains
        !!-----------------------------------------------------------------------
        !! Defines height of upper slab from user-defined values
        !!-----------------------------------------------------------------------
-       ludef_up_surf = .false.
-       up_term_start = 1
-       up_term_end = min(up_term%nterm,nterm)
-       if(all(up_surf.ne.0))then
-          ludef_up_surf = .true.
-          up_list=get_term_list(up_term)
-          !do iterm=1,size(up_list)
-          !   write(0,*) up_list(iterm)
-          !end do
-          up_term_start = up_surf(1)
-          up_term_end = up_surf(2)
-
-          if(allocated(vtmp1)) deallocate(vtmp1)
-          allocate(vtmp1(size(up_list)))
-          up_height = up_term%arr(up_term_start)%hmin
-          do i=up_thickness,2,-1
-             vtmp1 = up_list(:)%loc - up_height
-             vtmp1 = vtmp1 - ceiling( vtmp1 - 1.D0 )
-             itmp1 = minloc( vtmp1(:), dim=1,&
-                  mask=&
-                  vtmp1(:).gt.0.and.&
-                  up_list(:)%term.eq.up_surf(1))
-             up_height = up_height + vtmp1(itmp1)
-          end do
-          vtmp1 = up_list(:)%loc - up_height
-          vtmp1 = vtmp1 - ceiling( vtmp1 - 1.D0 )
-          itmp1 = minloc( vtmp1(:), dim=1,&
-               mask=&
-               vtmp1(:).gt.0.and.&
-               up_list(:)%term.eq.up_surf(2))
-          up_height = up_height + vtmp1(itmp1) - up_term%arr(up_term_start)%hmin
-
-          up_ncells = ceiling(up_height)
-          up_height = up_height/dble(up_ncells)
-
-          if(.not.up_term%lmirror)then
-             dtmp1 = up_term%arr(up_surf(2))%hmax - up_term%arr(up_surf(2))%hmin
-             if(dtmp1.lt.0.D0) dtmp1 = dtmp1 + 1.D0
-             up_height = up_height + dtmp1
-          end if
-       else
-          up_ncells = int((up_thickness-1)/up_term%nstep) + 1
-       end if
-
-
-       !!-----------------------------------------------------------------------
-       !! Extends upper slab to user-defined thickness
-       !!-----------------------------------------------------------------------
-       tfmat(:,:)=0.D0
-       tfmat(1,1)=1.D0
-       tfmat(2,2)=1.D0
-       up_ncells = int((up_thickness-1)/up_term%nstep)+1
-       write(0,*) "HERE NED", up_ncells, up_term%nstep, up_thickness
-       tfmat(3,3)=up_ncells
-       call transformer(up_lat,up_bas,tfmat,t1up_map)
-       if(mod(real(old_natom*up_ncells)/real(up_bas%natom),1.0).gt.1.D-5)then
-          write(0,'(1X,"ERROR: Internal error in interfaces subroutine")')
-          write(0,'(2X,"gldfnd subroutine did not reproduce a sensible &
-               &primitive cell for upper crystal")')
-          write(0,'(2X,"Generated ",I0," atoms, from the original ",&
-               &I0," atoms")') &
-               up_bas%natom/up_thickness,old_natom
-          write(0,'(2X,"Skipping this lattice match...")')
-          if(ierror.eq.1)then
-             call chdir(intf_dir)
-             call err_abort_print_struc(up_lat,up_bas,&
-                  "broken_primitive.vasp",&
-                  "As IPRINT = 1, code is now exiting...")
-          end if
-          cycle intf_loop
-       end if
+       call set_slab_height(up_lat,up_bas,t1up_map,up_term,up_surf, old_natom,&
+            up_height,up_thickness,up_ncells,&
+            up_term_start,up_term_end,ludef_up_surf,&
+            intf_dir,"up",lcycle)
+       if(lcycle) cycle intf_loop
 
 
        !!-----------------------------------------------------------------------
@@ -1144,15 +1028,169 @@ contains
 
 
 !!!#############################################################################
+!!! sets the maximum height of the slab
+!!!#############################################################################
+  subroutine set_slab_height(lat, bas, map, term, surf, old_natom,&
+       height, thickness, ncells,&
+       term_start, term_end, ludef_surf,&
+       intf_dir, lwup_in, lcycle)
+    implicit none
+    integer :: i,itmp1
+    double precision :: dtmp1
+    character(2) :: lwup
+    character(5) :: lowerupper
+    character(1024) :: msg
+    double precision, dimension(3,3) :: tfmat
+    double precision, allocatable, dimension(:) :: vtmp1
+    type(term_list_type), allocatable, dimension(:) :: list
+
+    integer, intent(in) :: thickness, old_natom
+    integer, intent(inout) :: term_start, term_end, ncells
+    double precision, intent(inout) :: height
+    character(2), intent(in) :: lwup_in
+    character(1024), intent(in) :: intf_dir
+    logical, intent(inout) :: ludef_surf
+    logical, intent(out) :: lcycle
+    type(bas_type), intent(inout) :: bas
+    type(term_arr_type), intent(in) :: term
+    integer, dimension(2), intent(in) :: surf
+    double precision, dimension(3,3), intent(inout) :: lat
+
+    integer, allocatable, dimension(:,:,:), intent(inout) :: map
+    
+
+    !!--------------------------------------------------------------------
+    !! Initialise variables
+    !!--------------------------------------------------------------------
+    lwup=to_lower(lwup_in)
+    if(lwup.eq."lw") lowerupper="LOWER"
+    if(lwup.eq."up") lowerupper="UPPER"
+
+    lcycle = .false.
+    height = 0.D0
+
+
+    !!-----------------------------------------------------------------------
+    !! Defines height of lower slab from user-defined values
+    !!-----------------------------------------------------------------------
+    ludef_surf = .false.
+    term_start = 1
+    term_end = min(term%nterm,nterm)
+    if(all(surf.ne.0))then
+       if(any(surf.gt.term%nterm))then
+          write(msg, '(A2,"_SURFACE VALUES INVALID!\nOne or more value &
+               &exceeds the maximum number of terminations in the &
+               structure.\n&
+               &  Supplied values: ",I0,1X,I0,"\n&
+               &  Maximum allowed: ",I0)') lwup, surf, term%nterm
+          call err_abort(trim(msg),fmtd=.true.)
+       end if
+       ludef_surf = .true.
+       list = get_term_list(term)
+       term_start = surf(1)
+       term_end = surf(2)
+
+       allocate(vtmp1(size(list)))
+       height = term%arr(term_start)%hmin
+       do i=thickness,2,-1
+          vtmp1 = list(:)%loc - height
+          vtmp1 = vtmp1 - ceiling( vtmp1 - 1.D0 )
+          itmp1 = minloc( vtmp1(:), dim=1,&
+               mask=&
+               vtmp1(:).gt.0.and.&
+               list(:)%term.eq.surf(1))
+          height = height + vtmp1(itmp1)
+       end do
+       vtmp1 = list(:)%loc - height
+       vtmp1 = vtmp1 - ceiling( vtmp1 - 1.D0 )
+       itmp1 = minloc( vtmp1(:), dim=1,&
+            mask=&
+            vtmp1(:).gt.0.and.&
+            list(:)%term.eq.surf(2))
+       height = height + vtmp1(itmp1) - term%arr(term_start)%hmin
+
+       ncells = ceiling(height)
+       height = height/dble(ncells)
+
+       if(.not.term%lmirror)then
+          dtmp1 = term%arr(surf(2))%hmax - term%arr(surf(2))%hmin
+          if(dtmp1.lt.0.D0) dtmp1 = dtmp1 + 1.D0
+          height = height + dtmp1
+       end if
+    end if
+
+    
+    !!-----------------------------------------------------------------------
+    !! Extends lower slab to user-defined thickness
+    !!-----------------------------------------------------------------------
+    ncells = int((thickness-1)/term%nstep)+1
+    tfmat(:,:)=0.D0
+    tfmat(1,1)=1.D0
+    tfmat(2,2)=1.D0
+    tfmat(3,3)=ncells
+    call transformer(lat,bas,tfmat,map)
+    if(mod(real(old_natom*ncells)/real(bas%natom),1.0).gt.1.D-5)then
+       write(0,'(1X,"ERROR: Internal error in interfaces subroutine")')
+       write(0,'(2X,"gldfnd subroutine did not reproduce a sensible &
+            &primitive cell for ",A5," crystal")') lowerupper
+       write(0,'(2X,"Generated ",I0," atoms, from the original ",&
+            &I0," atoms")') &
+            bas%natom/itmp1,old_natom
+       if(ierror.eq.1)then
+          call chdir(intf_dir)
+          call err_abort_print_struc(lat,bas,&
+               "broken_primitive.vasp",&
+               "As IPRINT = 1, code is now exiting...")
+       end if
+       write(0,'(2X,"Skipping this lattice match...")')
+       lcycle=.true.
+    end if
+
+  end subroutine set_slab_height
+!!!#############################################################################
+
+
+!!!#############################################################################
+!!! Set the tolerance for layer definitions
+!!!#############################################################################
+  subroutine set_layer_tol(term)
+    implicit none
+    integer :: i
+    double precision :: dtmp1
+
+    type(term_arr_type), intent(inout) :: term
+    
+
+    do i=1,term%nterm
+       if(i.eq.1)then
+          dtmp1 = abs(term%arr(i)%hmin - &
+               (term%arr(term%nterm)%hmax+term%arr(i)%ladder(term%nstep)-1.D0)&
+               )/4.D0
+       else
+          dtmp1 = abs(term%arr(i)%hmin-term%arr(i-1)%hmax)/4.D0
+       end if
+       if(dtmp1.lt.term%tol)then
+          term%tol = dtmp1
+       end if
+    end do
+
+
+  end subroutine set_layer_tol
+!!!#############################################################################
+
+
+!!!#############################################################################
 !!! Prepares lattice and basis to specified termination
 !!!#############################################################################
 !!! Supply a supercell that can be cut down to the size of the slab ...
 !!! ... i.e. the input structure must be larger or equal to the desired output
   subroutine prepare_slab(lat, bas, map, term, iterm, thickness, ncells, &
-       height, ludef_surf, udef_top_iterm, lwup, lcycle)
+       height, ludef_surf, udef_top_iterm, lwup_in, lcycle)
     implicit none
     integer :: j,j_start,istep,natom_check
     double precision :: dtmp1
+    character(2) :: lwup
+    character(5) :: lowerupper
     character(1024) :: msg
     integer, dimension(3) :: abc=(/1,2,3/)
     double precision, dimension(3,3) :: tfmat
@@ -1160,7 +1198,7 @@ contains
 
     integer, intent(in) :: iterm, udef_top_iterm, thickness, ncells
     double precision, intent(in) :: height
-    character(2), intent(in) :: lwup
+    character(2), intent(in) :: lwup_in
     logical, intent(in) :: ludef_surf
     logical, intent(out) :: lcycle
     type(bas_type), intent(inout) :: bas
@@ -1170,11 +1208,24 @@ contains
     integer, allocatable, dimension(:,:,:), intent(inout) :: map
 
 
+    !!--------------------------------------------------------------------
+    !! Initialise variables
+    !!--------------------------------------------------------------------
+    lwup=to_lower(lwup_in)
+    if(lwup.eq."lw") lowerupper="LOWER"
+    if(lwup.eq."up") lowerupper="UPPER"
     lcycle = .false.
     dtmp1=0.D0
     tfmat=0.D0
     istep = thickness - (ncells-1)*term%nstep
     natom_check = bas%natom
+    !write(0,*) "ladder", term%arr(iterm)%ladder
+    !write(0,*) "istep", istep, thickness, ncells, term%nstep
+
+
+    !!--------------------------------------------------------------------
+    !! Set up list for checking expected number of atoms
+    !!--------------------------------------------------------------------
     allocate(iterm_list(term%nterm))
     do j=1,term%nterm
        iterm_list(j) = j
@@ -1183,62 +1234,64 @@ contains
     if(ludef_surf)then
        j_start = udef_top_iterm - iterm + 1
        if(j_start.le.0) j_start = j_start + term%nterm
-       j_start = j_start + 1
+       j_start = j_start + 1 !+ (istep-1)*term%nterm/term%nstep
     else
-       !!! NEEDS TO HANDLE LADDERS WHERE STEPS ARE EQUIVALENT
-       j_start = 2 + (istep-1)*term%nterm/term%nstep
+       !! handle ladder steps that are equivalent
+       j_start = 2 !+ (istep-1)*term%nterm/term%nstep
     end if
-    write(0,*) iterm_list
-    write(0,*) "ladder", term%arr(iterm)%ladder
+
 
     !!--------------------------------------------------------------------
-    !! Shifts lower material to specified termination
+    !! Shift lower material to specified termination
     !!--------------------------------------------------------------------
     call shifter(bas,term%axis,-term%arr(iterm)%hmin,.true.)
-    open(20,file="test.vasp")
-    call geom_write(20,lat,bas)
-    close(20)
+    !open(20,file="test.vasp")
+    !call geom_write(20,lat,bas)
+    !close(20)
+
+
+    !!--------------------------------------------------------------------
+    !! Determine cell reduction to specified termination
+    !!--------------------------------------------------------------------
     do j=1,3
        tfmat(j,j)=1.D0
        if(j.eq.term%axis)then
           if(ludef_surf)then
-             tfmat(j,j) = height + term%tol*2.D0!/8.D0
-          elseif(term%lmirror)then
+             tfmat(j,j) = height + term%tol*2.D0
+          else!if(term%lmirror)then
              if(istep.ne.0)then
                 dtmp1 = (ncells-1) + term%arr(iterm)%ladder(istep)
                 dtmp1 = dtmp1/(ncells)
-                tfmat(j,j) = dtmp1 + term%tol*2.D0!/8.D0
+                tfmat(j,j) = dtmp1 + term%tol*2.D0
                 tfmat(j,j) = tfmat(j,j) + &
                      (term%arr(iterm)%hmax - term%arr(iterm)%hmin)
              end if
-             !dtmp1 = dble(thickness-1)+term%arr(iterm)%add
-             !if(dtmp1.eq.0.D0) dtmp1=1.D0
-             !tfmat(j,j) = dtmp1 + term%tol/8.D0 !tfmat(j,j)+(&
-             !!tfmat(j,j) = tfmat(j,j) + (&
-             !!     !term%arr(iterm)%hmax-&
-             !!     !term%arr(iterm)%hmin+&
-             !!     term%arr(iterm)%add)+term%tol/8.D0
-          else
-             tfmat(j,j)=tfmat(j,j)+(&
-                  term%arr(iterm)%hmax-&
-                  term%arr(iterm)%hmin) + term%tol*2.D0!/8.D0
+          !else
+          !   tfmat(j,j) = tfmat(j,j) + (&
+          !        term%arr(iterm)%hmax - &
+          !        term%arr(iterm)%hmin) + term%tol*2.D0
           end if
        end if
     end do
-    write(0,*) dtmp1, tfmat(term%axis,term%axis)
-    write(0,*) "natom check", natom_check, iterm, term%nterm, istep, term%nstep
+    call transformer(lat,bas,tfmat,map)
+    !write(0,*) "test",dtmp1, tfmat(term%axis,term%axis), term%tol
+    !write(0,*) term%arr(iterm)%hmax, term%arr(iterm)%hmin
+
+
+    !!--------------------------------------------------------------------
+    !! Check number of atoms is expected
+    !!--------------------------------------------------------------------
     if(term%nterm.gt.1.or.term%nstep.gt.1)then
+       !write(0,*) "look",lwup, j_start, term%nterm, term%nstep, natom_check
        do j=1,max(0,term%nstep-istep),1
           natom_check = natom_check - sum(term%arr(:)%natom)
        end do
-       write(0,*) j_start, term%nterm
        do j=j_start,term%nterm,1
           natom_check = natom_check - term%arr(iterm_list(j))%natom
        end do
     end if
-    call transformer(lat,bas,tfmat,map)
     if(bas%natom.ne.natom_check)then
-       write(msg, '("NUMBER OF ATOMS IN '//to_upper(lwup)//' SLAB! &
+       write(msg, '("NUMBER OF ATOMS IN '//to_upper(lowerupper)//' SLAB! &
             &Expected ",I0," but generated ",I0," instead")') &
             natom_check,bas%natom
        if(tfmat(term%axis,term%axis).gt.1.D0)then
@@ -1246,13 +1299,15 @@ contains
                tfmat(term%axis,term%axis)
        end if
        !call err_abort(trim(msg),fmtd=.true.)
-       call err_abort_print_struc(lat,bas,to_lower(lwup)//"_term.vasp",&
+       call err_abort_print_struc(lat,bas,lwup//"_term.vasp",&
             trim(msg),.true.)
        lcycle = .true.
     end if
+
+
     !!--------------------------------------------------------------------
     !! Apply slab_cuber to orthogonalise lower material
-    !!-------------------------------------------------------------------
+    !!--------------------------------------------------------------------
     abc=cshift(abc,3-term%axis)
     ortho_check: do j=1,2
        if(abs(dot_product(lat(abc(j),:),lat(axis,:))).gt.1.D-5)then
