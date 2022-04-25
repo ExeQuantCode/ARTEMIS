@@ -960,9 +960,9 @@ contains
     implicit none
     integer :: is,ia,ja,i,j,itmp1
     integer :: ntrans,len
-    double precision :: scale
+    double precision :: scale,proj,dtmp1
     type(confine_type) :: confine
-    double precision, dimension(3,3) :: dmat1, invlat
+    double precision, dimension(3,3) :: dmat1,invlat
     double precision, allocatable, dimension(:,:) :: trans,atom_store
     
     type(sym_type) :: grp
@@ -995,7 +995,21 @@ contains
        end do
        !  trans=matmul(trans(1:ntrans,1:3),lat)
        call sort2D(trans(1:ntrans+3,:),ntrans+3)
-       dmat1=trans(1:3,1:3)
+       !! for each lattice vector, determine the shortest translation ...
+       !! ... vector that has a non-zero projection along that lattice vector.
+       do i=1,3
+          proj=1.D2
+          trans_loop: do j=1,ntrans+3
+             dtmp1 = dot_product(trans(j,:),trans(ntrans+i,:))
+             if(dtmp1.lt.tol_sym) cycle trans_loop
+             dtmp1 = modu(trans(j,:))
+             if(dtmp1.lt.proj)then
+                proj=dtmp1
+                dmat1(i,:) = trans(j,:)
+             end if
+          end do trans_loop
+       end do
+       !dmat1=trans(1:3,1:3)
        scale=det(dmat1)
        dmat1=matmul(dmat1,lat)
        invlat=inverse_3x3(dmat1)
@@ -1030,7 +1044,7 @@ contains
              !!-----------------------------------------------------------------
              if(itmp1.gt.size(atom_store,dim=1))then
                 write(0,*) "ERROR! Primitive cell subroutine retained too &
-                     &many atoms from supercell!"
+                     &many atoms from supercell!", itmp1, size(atom_store,dim=1)
                 call exit()
              end if
              !!-----------------------------------------------------------------
@@ -1055,6 +1069,12 @@ contains
     !! next line necessary as FCC and BCC do not conform to Niggli reduced ...
     !! ... cell definitions.
     lat = primitive_lat(lat)
+
+    open(13,file="pricel.vasp")
+    call geom_write(13,lat,bas)
+    close(13)
+
+
     
   end subroutine get_primitive_cell
 !!!#############################################################################
