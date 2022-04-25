@@ -1070,10 +1070,6 @@ contains
     !! ... cell definitions.
     lat = primitive_lat(lat)
 
-    open(13,file="pricel.vasp")
-    call geom_write(13,lat,bas)
-    close(13)
-
 
     
   end subroutine get_primitive_cell
