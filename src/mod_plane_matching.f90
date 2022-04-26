@@ -8,6 +8,8 @@ module plane_matching
   use misc_linalg, only: cross,modu,get_angle,get_area,find_tf,&
        reduce_vec_gcd,gcd
   implicit none
+  !! importance of vector, angle, and area
+  double precision, dimension(3) :: vaa_weighting=(/1.D0,5.D0,2.5D0/)
 
   type :: pm_tol_type
      integer :: maxsize,maxfit,nstore
@@ -119,7 +121,9 @@ contains
     list_out = list_in
     do i=1,len
        do j=i+1,len
-          if( all(tol_out(j,:) .le. tol_out(i,:) ) )then
+          !if( all(tol_out(j,:) .le. tol_out(i,:) ) )then
+          if( dot_product(tol_out(j,:),vaa_weighting).le.&
+               dot_product(tol_out(i,:),vaa_weighting) )then
              vtmp1 = tol_out(i,:)
              tol_out(i,:) = tol_out(j,:)
              tol_out(j,:) = vtmp1
@@ -155,7 +159,9 @@ contains
 
     do i=1,len
        do j=i+1,len,1
-          if( all(tol(j,:) .le. tol(i,:) ) )then
+          !if( all(tol(j,:) .le. tol(i,:) ) )then
+          if( dot_product(tol(j,:),vaa_weighting).le.&
+               dot_product(tol(i,:),vaa_weighting) )then
              vtmp1=tol(i,:)
              tol(i,:)=tol(j,:)
              tol(j,:)=vtmp1
@@ -822,9 +828,9 @@ contains
                       max(list_1a(i,3),list_1b(j,3))
                  tmp_tolerances(len_list_final,2) = &
                       abs(considered_angle-reference_angle)
-                 tmp_tolerances(len_list_final,3) = &
+                 tmp_tolerances(len_list_final,3) = abs(1.D0 - &
                       get_area(considered_vectors(1,:),considered_vectors(2,:))&
-                      /get_area(latstore_1(l,:),latstore_1(m,:))
+                      /get_area(latstore_1(l,:),latstore_1(m,:)))
                  list_angle_fits(len_list_final,5) = &
                       tol%ang_weight * abs(considered_angle-reference_angle) + &
                       list_1a(i,3) + list_1b(i,3) + &

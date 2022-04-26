@@ -25,7 +25,6 @@ module lat_compare
   logical :: lreduce=.true.
   integer, private :: match_method=0
 
-
   type latmatch_type
      integer :: nfit
      logical :: lreduced
@@ -1027,7 +1026,7 @@ contains
     lat2 = SAV%lat2
     pm_tol%maxsize=tol%maxsize
     pm_tol%maxfit=tol%maxfit
-    pm_tol%maxfit=tol%nstore
+    pm_tol%nstore=tol%nstore
     pm_tol%vec=tol%vec
     pm_tol%ang=tol%ang
     pm_tol%area=tol%area
@@ -1256,8 +1255,8 @@ contains
           !! Find the (tol%nstore) best matches overall
           !!--------------------------------------------------------------------
           loop110: do i=1,num_of_transforms
-             IF101: if ( all( tolerances(i,:).le.&
-                  saved_tolerances(tol%nstore,:) ) )then
+             IF101: if ( dot_product(tolerances(i,:),vaa_weighting).le.&
+                  dot_product(saved_tolerances(tol%nstore,:),vaa_weighting) )then
                 temp_mat1(:,:) = dble(Tcellmatch_1(i,:,:))
                 temp_mat2(:,:) = dble(Tcellmatch_2(i,:,:))
                 IF102: if (.not.is_duplicate(&
@@ -1360,6 +1359,7 @@ contains
        SAV%tf2(i,:,:) = nint(comb_trans_2(i,:,:))
     end do OUTLOOP
     SAV%tol(:,1) = SAV%tol(:,1)*100.D0
+    SAV%tol(:,3) = SAV%tol(:,3)*100.D0
     write(6,*) "Total number of matches saved:",SAV%nfit
 
 
@@ -1381,6 +1381,7 @@ contains
                   SAV%tf1(i,3,1:3),SAV%tf2(i,3,1:3)
              write(6,'(" vector mismatch (%) = ",F0.9)') SAV%tol(i,1)
              write(6,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(i,2)
+             write(6,'(" area mismatch (%)   = ",F0.9)') SAV%tol(i,3)
              write(6,*) "reduced:",lvec1(i)
              write(6,*)
           end do
