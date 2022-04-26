@@ -25,7 +25,7 @@ module mod_sym
   use misc_linalg, only: modu,inverse_3x3,det,gcd,gen_group,cross,uvec
   use rw_geom,     only: bas_type,geom_write
   use edit_geom,   only: transformer,vacuumer,set_vacuum,shifter,&
-       clone_bas,get_closest_atom,ortho_axis,reducer,primitive_lat
+       clone_bas,get_closest_atom,ortho_axis,reducer,primitive_lat,get_min_dist
   implicit none
   integer :: ierror_sym=0
   integer :: s_start=1,s_end=0
@@ -1428,7 +1428,7 @@ contains
     type(sym_type) :: grp1,grp_store
     type(term_arr_type) :: term
     integer, dimension(3) :: abc=(/1,2,3/)
-    double precision, dimension(3) :: vec_compare
+    double precision, dimension(3) :: vec_compare,vtmp1
     double precision, dimension(3,3) :: inv_mat
     type(bas_type),allocatable, dimension(:) :: bas_arr,bas_arr_reject
     type(term_type), allocatable, dimension(:) :: term_arr,term_arr_uniq
@@ -1535,8 +1535,15 @@ contains
     term_arr(1)%hmin=bas_list(1,axis)
     term_arr(1)%hmax=bas_list(1,axis)
     min_loc = 1
+    itmp1 = 1
     term_loop1: do
 
+       !! get the atom at that height.
+       !vtmp1 = get_min_dist(lat,bas,bas_list(itmp1,:3),.true.,axis,.true.,.false.)
+       !itmp1 = minloc(bas_list(:,axis) - vtmp1(axis), dim=1, &
+       !     mask = abs(bas_list(:,axis) - (bas_list(itmp1,axis) + vtmp1(axis))&
+       !     ).lt.tol_sym)
+       
        itmp1 = minloc(bas_list(:,axis) - term_arr(nterm)%hmax, dim=1, &
             mask = bas_list(:,axis) - term_arr(nterm)%hmax.gt.0.D0)
        if(itmp1.gt.bas%natom.or.itmp1.le.0)then
@@ -1544,6 +1551,7 @@ contains
           exit term_loop1
        end if
 
+       !dtmp1 = modu(matmul(vtmp1,lat))
        dtmp1 = bas_list(itmp1,axis) - term_arr(nterm)%hmax
        if(dtmp1.le.tol)then
           term_arr(nterm)%hmax = bas_list(itmp1,axis)
@@ -1635,6 +1643,9 @@ contains
        call shifter(bas_arr(mterm),axis,1-centre,.true.)
        sym_if: if(i.ne.1)then
           sym_loop1:do j=1,mterm-1
+             if(abs(abs(term_arr(i)%hmax-term_arr(i)%hmin) - &
+                  abs(term_arr_uniq(j)%hmax-term_arr_uniq(j)%hmin)).gt.tol_sym) &
+                  cycle sym_loop1
              call clone_grp(grp_store,grp1)
              call check_sym(grp1,bas1=bas_arr(mterm),&
                   iperm=-1,tmpbas2=bas_arr(j),lsave=.true.)

@@ -203,6 +203,160 @@ contains
 
 
 !!!#############################################################################
+!!! returns minimum bond for a specified atom
+!!!#############################################################################
+  function get_min_bond(lat,bas,is,ia,axis,labove,tol) result(vsave)
+    implicit none
+    integer :: js,ja
+    integer :: iaxis
+    double precision :: dtmp1,min_bond,dtol
+    logical :: ludef_above
+    double precision, dimension(3) :: vdtmp1, vsave
+
+    integer, intent(in) :: is,ia
+    type(bas_type), intent(in) :: bas
+    double precision, dimension(3,3), intent(in) :: lat
+
+    integer, intent(in), optional :: axis
+    double precision, intent(in), optional :: tol
+    logical, intent(in), optional :: labove
+
+    if(present(tol))then
+       dtol = tol
+    else
+       dtol = 1.D-5
+    end if
+
+    if(present(labove))then
+       ludef_above=labove
+    else
+       ludef_above=.false.
+    end if
+
+    if(present(axis))then
+       iaxis=axis
+    else
+       iaxis=0
+    end if
+
+    min_bond=huge(0.D0)
+    
+    do js=1,bas%nspec
+       atmloop: do ja=1,bas%spec(js)%num
+          if(is.eq.js.and.ia.eq.ja) cycle atmloop
+          vdtmp1 = bas%spec(js)%atom(ja,:3) - bas%spec(is)%atom(ia,:3)
+          if(iaxis.gt.0)then
+             if(abs(vdtmp1(iaxis)).lt.dtol) cycle atmloop
+             if(ludef_above)then
+                vdtmp1(iaxis) = 1.D0 + vdtmp1(iaxis)
+             else
+                vdtmp1(iaxis) = vdtmp1(iaxis) - 1.D0
+             end if
+          end if
+          vdtmp1 = &
+               vdtmp1(1)*lat(1,:3) + &
+               vdtmp1(2)*lat(2,:3) + &
+               vdtmp1(3)*lat(3,:3)
+          dtmp1 = modu(vdtmp1)
+          if(dtmp1.lt.min_bond)then
+             min_bond = dtmp1
+             vsave = vdtmp1
+          end if
+       end do atmloop
+    end do
+
+
+  end function get_min_bond
+!!!#############################################################################
+
+
+!!!#############################################################################
+!!! returns minimum bond for a specified atom
+!!!#############################################################################
+  function get_min_dist(lat,bas,loc,lignore_close,axis,labove,lreal,tol) &
+       result(vsave)
+    implicit none
+    integer :: js,ja
+    integer :: iaxis
+    double precision :: dtmp1,min_bond,dtol
+    logical :: ludef_above,ludef_real
+    double precision, dimension(3) :: vdtmp1,vdtmp2,vsave
+
+    logical, intent(in) :: lignore_close
+    type(bas_type), intent(in) :: bas
+    double precision, dimension(3), intent(in) :: loc
+    double precision, dimension(3,3), intent(in) :: lat
+
+    integer, intent(in), optional :: axis
+    double precision, intent(in), optional :: tol
+    logical, intent(in), optional :: labove, lreal
+
+    !! CORRECT tol TO ACCOUNT FOR LATTICE SIZE
+    if(present(tol))then
+       dtol = tol
+    else
+       dtol = 1.D-5
+    end if
+
+    if(present(labove))then
+       ludef_above=labove
+    else
+       ludef_above=.false.
+    end if
+
+    if(present(lreal))then
+       ludef_real=lreal
+    else
+       ludef_real=.true.
+    end if
+
+    if(present(axis))then
+       iaxis=axis
+    else
+       iaxis=0
+    end if
+
+    min_bond=huge(0.D0)
+    vsave = 0.D0
+    write(0,*) "tester"
+    do js=1,bas%nspec
+       atmloop: do ja=1,bas%spec(js)%num
+          vdtmp1 = bas%spec(js)%atom(ja,:3) - loc
+          write(0,*) js,ja, vdtmp1
+          if(lignore_close.and.modu(vdtmp1).lt.dtol) cycle atmloop
+          if(iaxis.gt.0)then
+             if(abs(vdtmp1(iaxis)).lt.dtol) cycle atmloop
+             if(ludef_above)then
+                vdtmp1(iaxis) = 1.D0 + vdtmp1(iaxis)
+             else
+                vdtmp1(iaxis) = vdtmp1(iaxis) - 1.D0
+             end if
+          end if
+          write(0,*) js,ja, vdtmp1
+          vdtmp2 = &
+               vdtmp1(1)*lat(1,:3) + &
+               vdtmp1(2)*lat(2,:3) + &
+               vdtmp1(3)*lat(3,:3)
+          dtmp1 = modu(vdtmp2)
+          write(0,*) dtmp1,min_bond
+          if(dtmp1.lt.min_bond)then
+             write(0,*) dtmp1.lt.min_bond
+             min_bond = dtmp1
+             if(ludef_real)then
+                vsave = vdtmp1
+             else
+                vsave = vdtmp2
+             end if
+          end if
+       end do atmloop
+    end do
+
+
+  end function get_min_dist
+!!!#############################################################################
+
+
+!!!#############################################################################
 !!! Shifts the basis along a, b or c by amount 'shift'
 !!!#############################################################################
   subroutine shifter(bas,axis,shift,ltmp)
