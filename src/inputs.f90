@@ -9,7 +9,7 @@
 !!! MAYBE HAVE FINDSYM IN HERE IN ORDER TO EDIT TOLSYM?
 module inputs
   use constants, only: ierror,pi
-  use misc, only: flagmaker,file_check
+  use misc, only: flagmaker,file_check,to_lower,to_upper
   use rw_geom, only: bas_type,geom_read,geom_write
   use io
   use aspect, only: aspect_type, edit_structure
@@ -793,10 +793,10 @@ contains
        case("LAYER_SEP")
           call assign(buffer,layer_sep,        readvar(41))
        case("LW_LAYER_SEP")
-          call assign(buffer,layer_sep,        readvar(42))
+          call assign(buffer,lw_layer_sep,     readvar(42))
           ludef_lw_layer_sep=.true.
        case("UP_LAYER_SEP")
-          call assign(buffer,layer_sep,        readvar(43))
+          call assign(buffer,up_layer_sep,     readvar(43))
           ludef_up_layer_sep=.true.
        case("MBOND_MAXLEN")
           call assign(buffer,max_bondlength,   readvar(44))
