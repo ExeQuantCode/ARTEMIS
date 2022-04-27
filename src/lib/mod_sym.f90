@@ -1006,6 +1006,7 @@ contains
              if(dtmp1.lt.proj)then
                 proj=dtmp1
                 dmat1(i,:) = trans(j,:)
+                trans(j,:) = 0.D0
              end if
           end do trans_loop
        end do
