@@ -1424,7 +1424,7 @@ contains
     implicit none
     integer :: i,j,is,nterm,mterm,dim,ireject
     integer :: itmp1,itmp2,init,min_loc
-    logical :: ludef_print,lcheck,lmirror
+    logical :: ludef_print,lunique,ltmp1,lmirror
     double precision :: dtmp1,tol,height,max_sep,c_along,centre
     type(sym_type) :: grp1,grp_store
     type(term_arr_type) :: term
@@ -1712,74 +1712,48 @@ contains
     allocate(success(ireject))
     success=0
     reject_loop1: do i=1,ireject
-       lcheck=.true.
+       lunique=.true.
        itmp1=reject_match(i,1)
        itmp2=reject_match(i,2)
-       if(any(success(1:i-1).eq.itmp2)) lcheck=.false.!cycle reject_loop1
-       call clone_grp(grp_store,grp1)
-       call check_sym(grp1,bas_arr(itmp2),&
-            tmpbas2=bas_arr_reject(i),iperm=-1,lsave=.true.,lcheck_all=.true.)
+       !! Check if comparison termination has already been compared successfully
+       prior_check: if(any(success(1:i-1).eq.itmp2))then
+          lunique=.false.
+       else
+          call clone_grp(grp_store,grp1)
+          call check_sym(grp1,bas_arr(itmp2),&
+               iperm=-1,lsave=.true.,lcheck_all=.true.)
+          ltmp1=.false.
+          !! Check if inversions are present in comparison termination
+          do j=1,grp1%nsymop
+             if(abs(det(savsym(j,:3,:3))+1.D0).le.tol_sym) ltmp1=.true.
+          end do
+          !! If they are not, then no point comparing. It is a new termination
+          if(.not.ltmp1) exit prior_check 
 
-       !! CHECK DET OF ALL SYMMETRY OPERATIONS. IF ANY ARE 1, MOVE ON
-       !! This is because they are just rotations as can be captured ...
-       !! ... through lattice matches.
-       !! Solely inversions are unique and must be captured.
-       do j=1,grp1%nsymop
-          !write(0,'(4(2X,F9.4))') savsym(j,:,:)
-          !write(0,*) det(savsym(j,:3,:3))
-          if(abs(det(savsym(j,:3,:3))-1.D0).le.tol_sym) lcheck=.false.!cycle reject_loop1
-       end do
-       if(savsym(1,4,axis).eq.&
-            2.D0*min(term_arr_uniq(itmp2)%hmin,0.5D0-term_arr_uniq(itmp2)%hmin))then
-          lcheck=.false.
-       end if
+          call clone_grp(grp_store,grp1)
+          call check_sym(grp1,bas_arr(itmp2),&
+               tmpbas2=bas_arr_reject(i),iperm=-1,lsave=.true.,lcheck_all=.true.)
 
-       if(lcheck.and.all(savsym(1,axis,:3).eq.vec_compare(:)).and.&
-            all(savsym(1,:3,axis).eq.vec_compare(:)))then
-          !write(0,*) savsym(:,4,axis)
-          !write(0,*) "test0",savsym(1,4,axis),2.D0*min(term_arr_uniq(itmp2)%hmin,0.5D0-term_arr_uniq(itmp2)%hmin)
-          !write(0,*) "test1",term_arr_uniq(itmp2)%hmin,0.5D0-term_arr_uniq(itmp2)%hmin
-          !write(0,*) "test2",term_arr_uniq(itmp2)%hmin,term_arr_uniq(itmp2)%hmax
-          !write(0,*) "test3",term_arr(reject_match(i,1))%hmin
-          !if(savsym(1,4,axis).eq.0.D0.and.&
-          !     abs(term_arr_uniq(itmp2)%hmin-term_arr_uniq(itmp2)%hmax).lt.tol_sym)then
-          !   cycle reject_loop1
+          !! Check det of all symmetry operations. If any are 1, move on
+          !! This is because they are just rotations as can be captured ...
+          !! ... through lattice matches.
+          !! Solely inversions are unique and must be captured.
+          do j=1,grp1%nsymop
+             !write(0,'(4(2X,F9.4))') savsym(j,:,:)
+             !write(0,*) det(savsym(j,:3,:3))
+             if(abs(det(savsym(j,:3,:3))-1.D0).le.tol_sym) lunique=.false.
+          end do
+          if(savsym(1,4,axis).eq.&
+               2.D0*min(term_arr_uniq(itmp2)%hmin,0.5D0-term_arr_uniq(itmp2)%hmin))then
+             lunique=.false.
+          end if
 
-          !dtmp1 = term_arr(reject_match(i,1))%hmin
-          !if(dtmp1.gt.0.5D0)then
-          !   dtmp1 = 0.5D0 - dtmp1
-          !end if
-          !dtmp1 = dtmp1 + savsym(1,4,axis)
-          !write(0,*) "here",dtmp1,term_arr_uniq(itmp2)%hmin
-          !if(abs(dtmp1 - term_arr_uniq(itmp2)%hmin).lt.tol_sym)then
-          !   cycle reject_loop1
-          !end if
-          !
-          !
-          !! REMOVE THE j SYM_LOOP2 LOOP !!!
-          !! IT IS UNECESSARY AS ALL INVERSION SYMS WILL HAVE SAME TRANSLATION !!!
-          !reject_loop2: do j=1,i-1!count(reject_match(:,2).eq.reject_match(i,2))
-          !   if(itmp2.eq.reject_match(j,2))then
-          !      itmp2=reject_match(j,1)
-          !      write(0,*) i,j,itmp2
-          !      write(0,*) "min",term_arr(itmp2)%hmin,0.5D0-term_arr(itmp2)%hmin,&
-          !           term_arr_uniq(itmp2)%hmin,term_arr(reject_match(i,1))%hmin
-          !      dtmp1 = term_arr(reject_match(i,1))%hmin
-          !      if(dtmp1.gt.0.5D0)then
-          !         dtmp1 = 0.5D0 - dtmp1
-          !      end if
-          !      dtmp1 = dtmp1 + savsym(1,4,axis)
-          !      if(abs(dtmp1 - term_arr(itmp2)%hmin).lt.tol_sym)then
-          !         cycle reject_loop1
-          !      end if
-!         !       if(savsym(1,4,axis).eq.&
-!         !            2.D0*min(term_arr(itmp2)%hmin,0.5D0-term_arr(itmp2)%hmin))then
-!         !          cycle reject_loop1
-!         !       end if
-          !   end if
-          !end do reject_loop2
-!!! CYCLES ONE NOW SUCCESSFUL !!!
-!!! PROBABLY SAVE itmp2 AND STOP LOOKING AT THOSE !!!
+          if(.not.(all(savsym(1,axis,:3).eq.vec_compare(:)).and.&
+               all(savsym(1,:3,axis).eq.vec_compare(:)))) lunique=.false.
+          
+       end if prior_check
+
+       if(lunique)then
           mterm=mterm+1
           success(i)=itmp2
           term_arr_uniq(mterm)=term_arr(reject_match(i,1))

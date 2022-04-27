@@ -553,8 +553,7 @@ write(0,*)
        if(sum(up_term%arr(:)%natom)*up_term%nstep.ne.up_bas%natom)then
           write(msg, '("ERROR: Number of atoms in upper layers not correct: "&
                &I0,2X,I0)') sum(up_term%arr(:)%natom)*up_term%nstep,up_bas%natom
-          write(0,*) up_term%arr(1)%ladder
-       !   call err_abort(trim(msg),fmtd=.true.)
+          call err_abort(trim(msg),fmtd=.true.)
        end if
        call set_layer_tol(up_term)
        up_term%arr(:)%hmin = up_term%arr(:)%hmin - up_term%tol !- 1.D-8
@@ -1219,8 +1218,6 @@ write(0,*)
     tfmat=0.D0
     istep = thickness - (ncells-1)*term%nstep
     natom_check = bas%natom
-    !write(0,*) "ladder", term%arr(iterm)%ladder
-    !write(0,*) "istep", istep, thickness, ncells, term%nstep
 
 
     !!--------------------------------------------------------------------
@@ -1274,15 +1271,12 @@ write(0,*)
        end if
     end do
     call transformer(lat,bas,tfmat,map)
-    !write(0,*) "test",dtmp1, tfmat(term%axis,term%axis), term%tol
-    !write(0,*) term%arr(iterm)%hmax, term%arr(iterm)%hmin
 
 
     !!--------------------------------------------------------------------
     !! Check number of atoms is expected
     !!--------------------------------------------------------------------
     if(term%nterm.gt.1.or.term%nstep.gt.1)then
-       !write(0,*) "look",lwup, j_start, term%nterm, term%nstep, natom_check
        do j=1,max(0,term%nstep-istep),1
           natom_check = natom_check - sum(term%arr(:)%natom)
        end do
