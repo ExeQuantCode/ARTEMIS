@@ -958,7 +958,7 @@ contains
 !!!#############################################################################
   subroutine get_primitive_cell(lat,bas)
     implicit none
-    integer :: is,ia,ja,i,j,itmp1
+    integer :: is,ia,ja,i,j,k,itmp1
     integer :: ntrans,len
     double precision :: scale,proj,dtmp1
     type(confine_type) :: confine
@@ -1002,6 +1002,11 @@ contains
           trans_loop: do j=1,ntrans+3
              dtmp1 = dot_product(trans(j,:),trans(ntrans+i,:))
              if(dtmp1.lt.tol_sym) cycle trans_loop
+
+             do k=1,i-1,1
+                if(modu(abs(cross(trans(j,:),dmat1(k,:)))).lt.1.D-8) cycle trans_loop
+             end do
+
              dtmp1 = modu(trans(j,:))
              if(dtmp1.lt.proj)then
                 proj=dtmp1
