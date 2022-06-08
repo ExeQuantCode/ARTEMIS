@@ -1632,10 +1632,9 @@ contains
     !!--------------------------------------------------------------------------
     grp_store%confine%l=.true.
     grp_store%confine%laxis(axis)=.true.
+    write(0,*) "HELLO", nterm
     allocate(term_arr_uniq(2*nterm))
     allocate(reject_match(nterm,2))
-    if(ludef_print)&
-         write(6,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
     shift_loop1:do i=1,nterm
        mterm = mterm + 1
 
@@ -1670,12 +1669,12 @@ contains
              end if
           end do sym_loop1
        end if sym_if
-       if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
-            mterm,term_arr(i)%hmin,term_arr(i)%hmax,term_arr(i)%natom
-       term_arr_uniq(mterm) = term_arr(i)
-       term_arr_uniq(i)%nstep = 1
-       allocate(term_arr_uniq(mterm)%ladder(nterm))
-       term_arr_uniq(i)%ladder(1) = 0.D0
+       !if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+       !     mterm,term_arr(i)%hmin,term_arr(i)%hmax,term_arr(i)%natom
+       term_arr_uniq(mterm) = term_arr(i) !what does this line do?
+       term_arr_uniq(mterm)%nstep = 1 !MTERM or i? It was i
+       allocate(term_arr_uniq(mterm)%ladder(nterm)) !MTERM or i? it was mterm
+       term_arr_uniq(mterm)%ladder(1) = 0.D0 !MTERM or i? it was i
        !open(100+mterm)
        !call geom_write(100+mterm,lat,bas_arr(mterm))
        !close(100+mterm)
@@ -1757,10 +1756,10 @@ contains
           mterm=mterm+1
           success(i)=itmp2
           term_arr_uniq(mterm)=term_arr(reject_match(i,1))
-          if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
-               mterm,&
-               term_arr_uniq(mterm)%hmin,&
-               term_arr_uniq(mterm)%hmax,term_arr_uniq(mterm)%natom
+          !if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+          !     mterm,&
+          !     term_arr_uniq(mterm)%hmin,&
+          !     term_arr_uniq(mterm)%hmax,term_arr_uniq(mterm)%natom
           reject_match(i,2)=0
           term_arr_uniq(mterm)%nstep = 1
           allocate(term_arr_uniq(mterm)%ladder(ireject+1))
@@ -1781,13 +1780,22 @@ contains
     term%axis=axis
     term%nterm=mterm
     term%lmirror = lmirror
+    if(ludef_print)&
+         write(6,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
+    dtmp1 = term_arr_uniq(1)%hmin-1.D-6
+    itmp1 = 1
     do i=1,mterm
        allocate(term%arr(i)%ladder(term_arr_uniq(i)%nstep))
-       term%arr(i)%hmin = term_arr_uniq(i)%hmin
-       term%arr(i)%hmax = term_arr_uniq(i)%hmax
-       term%arr(i)%natom = term_arr_uniq(i)%natom
-       term%arr(i)%nstep = term_arr_uniq(i)%nstep
+       term%arr(i)%hmin = term_arr_uniq(itmp1)%hmin
+       term%arr(i)%hmax = term_arr_uniq(itmp1)%hmax
+       term%arr(i)%natom = term_arr_uniq(itmp1)%natom
+       term%arr(i)%nstep = term_arr_uniq(itmp1)%nstep
        term%arr(i)%ladder(:term%arr(i)%nstep) = term_arr_uniq(i)%ladder(:term%arr(i)%nstep)
+       if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+            i,term%arr(i)%hmin,term%arr(i)%hmax,term%arr(i)%natom
+       itmp1 = minloc(term_arr_uniq(:)%hmin,&
+            mask=term_arr_uniq(:)%hmin.gt.dtmp1+tol,dim=1)
+       dtmp1 = term_arr_uniq(itmp1)%hmin
     end do
     term%nstep = maxval(term%arr(:)%nstep)
 
