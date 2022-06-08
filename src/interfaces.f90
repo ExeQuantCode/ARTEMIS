@@ -175,6 +175,7 @@ contains
   subroutine gen_interfaces(tolerance,inlw_lat,inup_lat,inlw_bas,inup_bas)
     implicit none
     integer :: i,j,iterm,jterm,ntrans,ifit,iunique,old_natom,itmp1,old_intf
+    integer :: iterm_step,jterm_step
     integer :: lw_ncells,up_ncells,istep
     integer :: lw_layered_axis,up_layered_axis
     integer :: intf_start,intf_end
@@ -510,7 +511,7 @@ write(0,*)
        !!-----------------------------------------------------------------------
        call set_slab_height(lw_lat,lw_bas,t1lw_map,lw_term,lw_surf, old_natom,&
             lw_height,lw_thickness,lw_ncells,&
-            lw_term_start,lw_term_end,ludef_lw_surf,&
+            lw_term_start,lw_term_end,iterm_step,ludef_lw_surf,&
             intf_dir,"lw",lcycle)
        if(lcycle) cycle intf_loop
 
@@ -565,7 +566,7 @@ write(0,*)
        !!-----------------------------------------------------------------------
        call set_slab_height(up_lat,up_bas,t1up_map,up_term,up_surf, old_natom,&
             up_height,up_thickness,up_ncells,&
-            up_term_start,up_term_end,ludef_up_surf,&
+            up_term_start,up_term_end,jterm_step,ludef_up_surf,&
             intf_dir,"up",lcycle)
        if(lcycle) cycle intf_loop
 
@@ -590,7 +591,7 @@ write(0,*)
        !! Cycle over terminations of both materials and generates interfaces ...
        !! ... composed of all of the possible combinations of the two
        !!-----------------------------------------------------------------------
-       lw_term_loop: do iterm=lw_term_start,lw_term_end
+       lw_term_loop: do iterm=lw_term_start,lw_term_end,iterm_step
           call clone_bas(lw_bas,tlw_bas,lw_lat,tlw_lat)
           if(allocated(t2lw_map)) deallocate(t2lw_map)
           allocate(t2lw_map,source=t1lw_map)
@@ -606,7 +607,7 @@ write(0,*)
           !!--------------------------------------------------------------------
           !! Cycles over terminations of upper material
           !!--------------------------------------------------------------------
-          up_term_loop: do jterm=up_term_start,up_term_end
+          up_term_loop: do jterm=up_term_start,up_term_end,jterm_step
              call clone_bas(up_bas,tup_bas,up_lat,tup_lat)
              if(allocated(t2up_map)) deallocate(t2up_map)
              allocate(t2up_map,source=t1up_map)
@@ -1031,7 +1032,7 @@ write(0,*)
 !!!#############################################################################
   subroutine set_slab_height(lat, bas, map, term, surf, old_natom,&
        height, thickness, ncells,&
-       term_start, term_end, ludef_surf,&
+       term_start, term_end, term_step, ludef_surf,&
        intf_dir, lwup_in, lcycle)
     implicit none
     integer :: i,itmp1
@@ -1045,6 +1046,7 @@ write(0,*)
 
     integer, intent(in) :: thickness, old_natom
     integer, intent(inout) :: term_start, term_end, ncells
+    integer, intent(out) :: term_step
     double precision, intent(inout) :: height
     character(2), intent(in) :: lwup_in
     character(1024), intent(in) :: intf_dir
@@ -1116,6 +1118,16 @@ write(0,*)
           if(dtmp1.lt.0.D0) dtmp1 = dtmp1 + 1.D0
           height = height + dtmp1
        end if
+    end if
+
+    
+    !!-----------------------------------------------------------------------
+    !! Define termination iteration counter
+    !!-----------------------------------------------------------------------
+    if(term_end.lt.term_start)then
+       term_step = -1
+    else
+       term_step = 1
     end if
 
     
