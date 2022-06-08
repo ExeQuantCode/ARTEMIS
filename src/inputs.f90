@@ -9,7 +9,7 @@
 !!! MAYBE HAVE FINDSYM IN HERE IN ORDER TO EDIT TOLSYM?
 module inputs
   use constants, only: ierror,pi
-  use misc, only: flagmaker,file_check
+  use misc, only: flagmaker,file_check,to_lower,to_upper
   use rw_geom, only: bas_type,geom_read,geom_write
   use io
   use aspect, only: aspect_type, edit_structure
@@ -23,6 +23,7 @@ module inputs
   integer :: lw_thickness,up_thickness
   integer :: nshift,nterm,nintf,nswap,nmiller
   real :: max_bondlength,swap_sigma,swap_depth
+  double precision :: lw_bulk_modulus, up_bulk_modulus
   double precision :: c_scale,intf_depth,vacuum
   double precision :: layer_sep,lw_layer_sep,up_layer_sep,swap_den,tol_sym
   character(len=20) :: input_fmt,output_fmt
@@ -35,6 +36,7 @@ module inputs
   logical :: ludef_lw_layered,ludef_up_layered,ludef_axis
   logical :: lpresent_struc2
   logical :: lswap_mirror
+  logical :: lc_fix
   type(bas_type) :: struc1_bas,struc2_bas
   type(tol_type) :: tolerance
   type(aspect_type) :: edits
@@ -46,7 +48,7 @@ module inputs
   double precision, dimension(3,3) :: struc1_lat,struc2_lat
 
 
-!!!updated  2022/04/04
+!!!updated  2022/04/11
 
 
 contains
@@ -136,6 +138,10 @@ contains
     udef_intf_loc = [ -1.D0, -1.D0 ]
     lw_use_pricel=.true.
     up_use_pricel=.true.
+
+    lw_bulk_modulus=0.E0
+    up_bulk_modulus=0.E0
+    lc_fix=.true.
 
 
 !!!-----------------------------------------------------------------------------
@@ -637,7 +643,7 @@ contains
     logical :: ludef_offset, ludef_lw_layer_sep, ludef_up_layer_sep
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(51) :: readvar
+    integer, dimension(54) :: readvar
     logical, optional, intent(in) :: skip
 
 
@@ -787,10 +793,10 @@ contains
        case("LAYER_SEP")
           call assign(buffer,layer_sep,        readvar(41))
        case("LW_LAYER_SEP")
-          call assign(buffer,layer_sep,        readvar(42))
+          call assign(buffer,lw_layer_sep,     readvar(42))
           ludef_lw_layer_sep=.true.
        case("UP_LAYER_SEP")
-          call assign(buffer,layer_sep,        readvar(43))
+          call assign(buffer,up_layer_sep,     readvar(43))
           ludef_up_layer_sep=.true.
        case("MBOND_MAXLEN")
           call assign(buffer,max_bondlength,   readvar(44))
@@ -808,6 +814,12 @@ contains
           call assign(buffer,lw_use_pricel,    readvar(50))
        case("UP_USE_PRICEL")
           call assign(buffer,up_use_pricel,    readvar(51))
+       case("LW_BULK_MODULUS")
+          call assign(buffer,lw_bulk_modulus,  readvar(52))
+       case("UP_BULK_MODULUS")
+          call assign(buffer,up_bulk_modulus,  readvar(53))
+       case("LC_FIX")
+          call assign(buffer,lc_fix,           readvar(54))
        case default
           write(0,'("NOTE: unable to assign variable on line ",I0)') count
        end select
