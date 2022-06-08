@@ -142,7 +142,7 @@ contains
 !!!-----------------------------------------------------
   subroutine rsort1D(arr1,arr2,reverse)
     implicit none
-    integer :: i,dim,loc
+    integer :: i,dim,loc,ibuff
     real :: rbuff
     logical :: udef_reverse
     real, dimension(:) :: arr1
@@ -167,9 +167,9 @@ contains
        arr1(loc)=rbuff
 
        if(present(arr2)) then
-          rbuff=arr2(i)
+          ibuff=arr2(i)
           arr2(i)=arr2(loc)
-          arr2(loc)=rbuff
+          arr2(loc)=ibuff
        end if
     end do
 
@@ -179,8 +179,8 @@ contains
 !!!-----------------------------------------------------
   subroutine dsort1D(arr1,arr2,reverse)
     implicit none
-    integer :: i,dim,loc
-    double precision :: rbuff
+    integer :: i,dim,loc,ibuff
+    double precision :: dbuff
     logical :: udef_reverse
     double precision, dimension(:) :: arr1
     integer, dimension(:),intent(inout),optional :: arr2
@@ -199,14 +199,14 @@ contains
        else
           loc=minloc(arr1(i:dim),dim=1)+i-1
        end if
-       rbuff=arr1(i)
+       dbuff=arr1(i)
        arr1(i)=arr1(loc)
-       arr1(loc)=rbuff
+       arr1(loc)=dbuff
 
        if(present(arr2)) then
-          rbuff=arr2(i)
+          ibuff=arr2(i)
           arr2(i)=arr2(loc)
-          arr2(loc)=rbuff
+          arr2(loc)=ibuff
        end if
     end do
 
@@ -289,7 +289,7 @@ contains
     if(present(tol))then
        tiny = tol
     else
-       tiny = 1.D-4
+       tiny = 1.E-4
     end if
     
     call sort1D(arr)
@@ -590,7 +590,7 @@ contains
   subroutine loadbar(count,div,loaded)
     implicit none
     integer :: count,div !div=10
-    real :: tiny=1.D-5
+    real :: tiny=1.E-5
     character(1) :: yn,creturn = achar(13)
     character(1), optional :: loaded
 

@@ -8,6 +8,8 @@ module plane_matching
   use misc_linalg, only: cross,modu,get_angle,get_area,find_tf,&
        reduce_vec_gcd,gcd
   implicit none
+  !! importance of vector, angle, and area
+  double precision, dimension(3) :: vaa_weighting=(/1.D0,5.D0,2.5D0/)
 
   type :: pm_tol_type
      integer :: maxsize,maxfit,nstore
@@ -119,7 +121,9 @@ contains
     list_out = list_in
     do i=1,len
        do j=i+1,len
-          if( all(tol_out(j,:) .le. tol_out(i,:) ) )then
+          !if( all(tol_out(j,:) .le. tol_out(i,:) ) )then
+          if( dot_product(tol_out(j,:),vaa_weighting).le.&
+               dot_product(tol_out(i,:),vaa_weighting) )then
              vtmp1 = tol_out(i,:)
              tol_out(i,:) = tol_out(j,:)
              tol_out(j,:) = vtmp1
@@ -140,53 +144,47 @@ contains
 !!! Subroutine that sorts saved_tolerances into ascending order based on ...
 !!! ... total tolerance size  
 !!!#############################################################################
-  subroutine datasortmain_tols(tol_in,mat1_in,mat2_in,trans1_in,trans2_in)
+  subroutine datasortmain_tols(tol,mat1,mat2,trans1,trans2)
     implicit none
     integer :: i,j,len
     double precision, dimension(3) :: vtmp1
-    double precision, dimension(:,:,:) :: mat1_in,mat2_in
-    double precision, allocatable, dimension(:,:,:) :: mat1_out,mat2_out
-    double precision, dimension(:,:,:) :: trans1_in,trans2_in
-    double precision, allocatable, dimension(:,:,:) :: trans1_out,trans2_out
-    double precision, dimension(:,:) :: tol_in
-    double precision, allocatable, dimension(:,:) :: tol_out
+    double precision, dimension(2,2) :: dmat1
+    double precision, dimension(3,3) :: dmat2
+    double precision, dimension(:,:,:) :: mat1,mat2
+    double precision, dimension(:,:,:) :: trans1,trans2
+    double precision, dimension(:,:) :: tol
 
 
-    len=size(tol_in(:,1))
-    allocate(mat1_out(len,size(mat1_in(1,:,1)),size(mat1_in(1,1,:))))
-    allocate(mat2_out(len,size(mat2_in(1,:,1)),size(mat2_in(1,1,:))))
-    allocate(trans1_out(len,size(trans1_in(1,:,1)),size(trans1_in(1,1,:))))
-    allocate(trans2_out(len,size(trans2_in(1,:,1)),size(trans2_in(1,1,:))))
-    allocate(tol_out(len,3)) 
+    len=size(tol,dim=1)
 
-    tol_out = tol_in
-    mat1_out = mat1_in
-    mat2_out = mat2_in
-    trans1_out = trans1_in
-    trans2_out = trans2_in
     do i=1,len
-       do j=i+1,len
-          if( all(tol_out(j,:) .le. tol_out(i,:) ) )then
-             vtmp1=tol_out(i,:)
-             tol_out(i,:)=tol_out(j,:)
-             tol_out(j,:)=vtmp1
-             mat1_out(i,:,:) = mat1_in(j,:,:)
-             mat1_out(j,:,:) = mat1_in(i,:,:)
-             mat2_out(i,:,:) = mat2_in(j,:,:)
-             mat2_out(j,:,:) = mat2_in(i,:,:)
-             trans1_out(i,:,:) = trans1_in(j,:,:)
-             trans1_out(j,:,:) = trans1_in(i,:,:)
-             trans2_out(i,:,:) = trans2_in(j,:,:)
-             trans2_out(j,:,:) = trans2_in(i,:,:)
+       do j=i+1,len,1
+          !if( all(tol(j,:) .le. tol(i,:) ) )then
+          if( dot_product(tol(j,:),vaa_weighting).le.&
+               dot_product(tol(i,:),vaa_weighting) )then
+             vtmp1=tol(i,:)
+             tol(i,:)=tol(j,:)
+             tol(j,:)=vtmp1
+             
+             dmat1 = mat1(j,:,:)
+             mat1(j,:,:) = mat1(i,:,:)
+             mat1(i,:,:) = dmat1
+             
+             dmat1 = mat2(j,:,:)
+             mat2(j,:,:) = mat2(i,:,:)
+             mat2(i,:,:) = dmat1
+             
+             dmat2 = trans1(j,:,:)
+             trans1(j,:,:) = trans1(i,:,:)
+             trans1(i,:,:) = dmat2
+             
+             dmat2 = trans2(j,:,:)
+             trans2(j,:,:) = trans2(i,:,:)
+             trans2(i,:,:) = dmat2
           end if
        end do
     end do
 
-    mat1_in = mat1_out
-    mat2_in = mat2_out
-    tol_in = tol_out
-    trans1_in = trans1_out
-    trans2_in = trans2_out
 
   end subroutine datasortmain_tols
 !!!#############################################################################
@@ -314,7 +312,8 @@ contains
 !!!   1 0     or    0 1
 !!!   0 1           1 0
 !!!#############################################################################
-  function is_unique_set(inmat,mat_checklist,sym) result(outval)
+!!! WARNING!!! NOT CURRENTLY USED, CHECK USE OF IT
+  function is_unique_set(vec1,vec2,sym) result(outval)
     implicit none
     integer :: i,j
     double precision :: tol
@@ -323,8 +322,6 @@ contains
     double precision, dimension(:,:,:) :: sym
     logical :: outval
     
-    double precision, dimension(2,3), intent(in) :: inmat
-    double precision, dimension(:,:), intent(in) :: mat_checklist
 
     tol=1.D-5
     outval=.true.
@@ -395,6 +392,12 @@ contains
     double precision, dimension(:,:,:), intent(inout), optional :: test_list
     double precision, dimension(4), optional, intent(in) :: lw_check,up_check
     double precision, dimension(:,:), optional, intent(inout) :: up_list
+
+    !logical :: ltest_print
+    !logical, optional, intent(in) :: ltest
+
+    !ltest_print=.false.
+    !if(present(ltest)) ltest_print=ltest
     
     !! test set
     !double precision, dimension(2,2) :: test1,test2
@@ -467,8 +470,9 @@ contains
           !mat2 = matmul(inmat(:2,3:4),transpose(sym2(jsym,:2,:2)))
           mat2 = matmul(inmat(:2,3:4),(sym2(jsym,:2,:2)))
           tf = find_tf(mat1,transpose(mat2))
-          !if(any(ISNAN(tf)))then
-          !if(all(abs(inmat(:2,:2)-test1).lt.tol))then
+          !if(ltest_print)then
+          !!if(any(ISNAN(tf)))then
+          !!if(all(abs(inmat(:2,:2)-test1).lt.tol))then
           !   !if(all(abs(inmat(:2,:2)-test1).lt.tol).and.&
           !   !      all(abs(inmat(:2,3:4)-test2).lt.tol))then
           !   write(0,*) isym,jsym
@@ -484,15 +488,16 @@ contains
           !   write(0,'(2(2X,F7.3))') tf
           !   write(0,*)
           !
-          !   !if(isym.eq.1) stop
-          !   !if(jsym.eq.size(sym2(:,1,1))) stop
-          !   !if(isym.eq.size(sym1(:,1,1))) stop
-          !   !stop
+          !!   !if(isym.eq.1) stop
+          !!   !if(jsym.eq.size(sym2(:,1,1))) stop
+          !!   !if(isym.eq.size(sym1(:,1,1))) stop
+          !!   !stop
           !end if
 
           do i=1,nlist
-             !if(all(abs(inmat(:2,:2)-test1).lt.tol).and.&
-             !     all(abs(inmat(:2,3:4)-test2).lt.tol))then
+             !if(ltest_print)then
+             !!if(all(abs(inmat(:2,:2)-test1).lt.tol).and.&
+             !!     all(abs(inmat(:2,3:4)-test2).lt.tol))then
              !   if(i.eq.1)then
              !      write(0,*) "#############################"
              !      write(0,*) "check",i
@@ -564,8 +569,7 @@ contains
        transforms1,transforms2,&
        ntransforms,matched_tols,sym1,sym2)
     implicit none
-    integer :: i,j,l,m,total_list_count,nvec1,nvec2
-    integer :: l_ref, m_ref
+    integer :: i,j,l,m,total_list_count,nvec1,nvec2, k
     real :: tol_up_ang,tol_dw_ang,tol_up_vec,tol_dw_vec
     double precision :: tiny
     double precision :: reference_mag,considered_mag
@@ -620,15 +624,14 @@ contains
   ! Last Component (5); Total weighted tolerance on everything
 
 
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Setting up tolerances !!! 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   tiny = 1.D-5
-  tol_up_ang = 1.D0 + tol%ang/(2.D0*pi)
-  tol_dw_ang = 1.D0 - tol%ang/(2.D0*pi)
-  tol_up_vec = 1.D0 + tol%vec!/100.D0
-  tol_dw_vec = 1.D0 - tol%vec!/100.D0
+  tol_up_ang = 1.E0 + real(tol%ang)/(2.E0*pi)
+  tol_dw_ang = 1.E0 - real(tol%ang)/(2.E0*pi)
+  tol_up_vec = 1.E0 + real(tol%vec)!/100.D0
+  tol_dw_vec = 1.E0 - real(tol%vec)!/100.D0
 
   if(allocated(matched_tols)) deallocate(matched_tols)
   allocate(matched_tols(tol%maxfit,3))
@@ -782,7 +785,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
         len_list_final = 0
         loop109: do i=1, len_list_1a
-           tmpmat(1,3:4) = list_1a(i,:2)
+           tmpmat(1,3:4) = nint(list_1a(i,:2))
            loop110: do j=1, len_list_1b
               if(len_list_final.ge.1000) exit loop109
               considered_vectors(1,:) = list_1a(i,1)*lat2_veca + list_1a(i,2)*lat2_vecb
@@ -800,21 +803,23 @@ contains
               else if (considered_angle .gt. tol_up_ang*reference_angle) then
                  cycle loop110
               else
-                 tmpmat(2,3:4) = list_1b(j,:2)
-                 !write(0,'(A,4X,"[",I3,I3,",",I3,I3,"]",6X,"[",I3,I3,",",I3,I3,"]")') &
-                 !     "HERE",numstore_1(l,:2),numstore_1(m,:2),nint(list_1a(i,:2)),nint(list_1b(j,:2))
+                 tmpmat(2,3:4) = nint(list_1b(j,:2))
+                 !write(0,'(A,4X,"[",I3,I3,",",I3,I3,"]",6X,"[",I3,I3,",",I3,I3,"]",4X,I2,2X,I2,2X,F0.3)') &
+                 !     "HERE",numstore_1(l,:2),numstore_1(m,:2),nint(list_1a(i,:2)),nint(list_1b(j,:2)),&
+                 !     total_list_count,len_list_final, considered_angle
                  if(total_list_count.ne.0)then
                     if(.not.is_unique_match( sym1, sym2, &
                          check_set = dble(tmpmat),&
-                         test_list = MAIN_LOOP_LIST(:total_list_count,:2,:4) ))&
+                         test_list = MAIN_LOOP_LIST(:total_list_count,:2,:4)))&
                          cycle loop110
                  end if
                  if(len_list_final.ne.0)then
                     if(.not.is_unique_match( sym1, sym2, &
                          check_set = dble(tmpmat),&
-                         up_list = list_angle_fits(:len_list_final,:4) ))&
+                         up_list = list_angle_fits(:len_list_final,:4)))&
                          cycle loop110
                  end if
+                 !write(0,*) "PAST HERE", list_angle_fits(len_list_final,:)
 
                  len_list_final = len_list_final + 1
                  list_angle_fits(len_list_final,1:2) = list_1a(i,1:2)
@@ -823,9 +828,9 @@ contains
                       max(list_1a(i,3),list_1b(j,3))
                  tmp_tolerances(len_list_final,2) = &
                       abs(considered_angle-reference_angle)
-                 tmp_tolerances(len_list_final,3) = &
+                 tmp_tolerances(len_list_final,3) = abs(1.D0 - &
                       get_area(considered_vectors(1,:),considered_vectors(2,:))&
-                      /get_area(latstore_1(l,:),latstore_1(m,:))
+                      /get_area(latstore_1(l,:),latstore_1(m,:)))
                  list_angle_fits(len_list_final,5) = &
                       tol%ang_weight * abs(considered_angle-reference_angle) + &
                       list_1a(i,3) + list_1b(i,3) + &

@@ -209,29 +209,27 @@ contains
 !!!#####################################################
 !!! cross product
 !!!#####################################################
-  function rcross(a,b)
+  pure function rcross(a,b) result(cross)
     implicit none
-    real, dimension(3) :: rcross
+    real, dimension(3) :: cross
     real, dimension(3), intent(in) :: a,b
 
-    rcross(1) = a(2)*b(3) - a(3)*b(2)
-    rcross(2) = a(3)*b(1) - a(1)*b(3)
-    rcross(3) = a(1)*b(2) - a(2)*b(1)
+    cross(1) = a(2)*b(3) - a(3)*b(2)
+    cross(2) = a(3)*b(1) - a(1)*b(3)
+    cross(3) = a(1)*b(2) - a(2)*b(1)
 
-    return
   end function rcross
 !!!-----------------------------------------------------
 !!!-----------------------------------------------------
-  function dcross(a,b)
+  pure function dcross(a,b) result(cross)
     implicit none
-    double precision, dimension(3) :: dcross
+    double precision, dimension(3) :: cross
     double precision, dimension(3), intent(in) :: a,b
 
-    dcross(1) = a(2)*b(3) - a(3)*b(2)
-    dcross(2) = a(3)*b(1) - a(1)*b(3)
-    dcross(3) = a(1)*b(2) - a(2)*b(1)
+    cross(1) = a(2)*b(3) - a(3)*b(2)
+    cross(2) = a(3)*b(1) - a(1)*b(3)
+    cross(3) = a(1)*b(2) - a(2)*b(1)
 
-    return
   end function dcross
 !!!#####################################################
 
@@ -548,13 +546,13 @@ contains
     if(n.eq.1) then
        res = a(1,1)
     else
-       res = 0
+       res = 0.D0
        sign = 1
        do i=1, n
           tmp(:,:(i-1))=a(2:,:i-1)
           tmp(:,i:)=a(2:,i+1:)
           res=res+sign*a(1,i)*rec_det(tmp,n-1)
-          sign=-1.D0*sign
+          sign=-1*sign
        end do
     end if
 
@@ -1153,7 +1151,7 @@ contains
           if(abs(div).lt.tol) div=min(abs(vec(i)),old_div)
        end do
     else
-       a=vec(1)
+       a=nint(vec(1))
        do i=2,size(vec)
           if(a.eq.0.and.int(vec(i)).eq.0) cycle
           a=gcd(a,int(vec(i)))
@@ -1166,6 +1164,7 @@ contains
     end if
 
     if(div.eq.0.D0) return
+    allocate(tvec(size(invec)))
     tvec=vec/div
     if(any(abs(tvec(:)-nint(tvec(:))).gt.tol)) return
     vec=tvec

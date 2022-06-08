@@ -47,8 +47,8 @@ ifeq ($(FC),ifort)
 else
 	MPIFLAG = -fopenmp
 	MODULEFLAG = -J
-	DEVFLAGS = -g -fbacktrace -fcheck=all  #-g -static -ffpe-trap=invalid
-	DEBUGFLAGS = -fbounds-check
+	DEVFLAGS = -g -fbacktrace -fcheck=all #-g -static -ffpe-trap=invalid
+	DEBUGFLAGS = -fbounds-check -Wall -Wno-maybe-uninitialized
 endif
 
 

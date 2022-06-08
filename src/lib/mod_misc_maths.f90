@@ -94,7 +94,7 @@ contains
     else
        udef_tol=16.D0
     end if
-    x=(pos-centre)**2.D0/(2.D0*sigma)
+    x=(pos-centre)**2.E0/(2.E0*sigma)
     if(abs(x).lt.udef_tol) then
        gauss=exp(-(x))
     else
@@ -543,8 +543,8 @@ contains
 !!! MAKE IT CHECK THE TURNING POINT IS SUSTAINED ACROSS THE WINDOW
   function get_turn_points(invec,lperiodic,window) result(resvec)
     implicit none
-    integer :: i,j,nturn,itmp1
-    double precision :: dtmp1,l_grad,r_grad
+    integer :: i,j,nturn,itmp1,itmp2
+    double precision :: l_grad,r_grad
     double precision, dimension(:), intent(in) :: invec
     integer, allocatable, dimension(:) :: tvec1,resvec
     integer, optional :: window
@@ -609,9 +609,9 @@ contains
     resvec(:nturn)=tvec1(:nturn)
     do i=1,nturn
        itmp1=minloc((/  (invec(resvec(j)),j=i,nturn)  /),dim=1)+i-1
-       dtmp1=resvec(i)
+       itmp2=resvec(i)
        resvec(i)=resvec(itmp1)
-       resvec(itmp1)=dtmp1
+       resvec(itmp1)=itmp2
     end do
 
     

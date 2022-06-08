@@ -58,7 +58,7 @@ module edit_geom
   end interface get_closest_atom
 
 
-!!!updated 2021/01/17
+!!!updated 2022/04/04
 
 
 contains
@@ -199,6 +199,160 @@ contains
 
 
   end function get_min_bulk_bond
+!!!#############################################################################
+
+
+!!!#############################################################################
+!!! returns minimum bond for a specified atom
+!!!#############################################################################
+  function get_min_bond(lat,bas,is,ia,axis,labove,tol) result(vsave)
+    implicit none
+    integer :: js,ja
+    integer :: iaxis
+    double precision :: dtmp1,min_bond,dtol
+    logical :: ludef_above
+    double precision, dimension(3) :: vdtmp1, vsave
+
+    integer, intent(in) :: is,ia
+    type(bas_type), intent(in) :: bas
+    double precision, dimension(3,3), intent(in) :: lat
+
+    integer, intent(in), optional :: axis
+    double precision, intent(in), optional :: tol
+    logical, intent(in), optional :: labove
+
+    if(present(tol))then
+       dtol = tol
+    else
+       dtol = 1.D-5
+    end if
+
+    if(present(labove))then
+       ludef_above=labove
+    else
+       ludef_above=.false.
+    end if
+
+    if(present(axis))then
+       iaxis=axis
+    else
+       iaxis=0
+    end if
+
+    min_bond=huge(0.D0)
+    
+    do js=1,bas%nspec
+       atmloop: do ja=1,bas%spec(js)%num
+          if(is.eq.js.and.ia.eq.ja) cycle atmloop
+          vdtmp1 = bas%spec(js)%atom(ja,:3) - bas%spec(is)%atom(ia,:3)
+          if(iaxis.gt.0)then
+             if(abs(vdtmp1(iaxis)).lt.dtol) cycle atmloop
+             if(ludef_above)then
+                vdtmp1(iaxis) = 1.D0 + vdtmp1(iaxis)
+             else
+                vdtmp1(iaxis) = vdtmp1(iaxis) - 1.D0
+             end if
+          end if
+          vdtmp1 = &
+               vdtmp1(1)*lat(1,:3) + &
+               vdtmp1(2)*lat(2,:3) + &
+               vdtmp1(3)*lat(3,:3)
+          dtmp1 = modu(vdtmp1)
+          if(dtmp1.lt.min_bond)then
+             min_bond = dtmp1
+             vsave = vdtmp1
+          end if
+       end do atmloop
+    end do
+
+
+  end function get_min_bond
+!!!#############################################################################
+
+
+!!!#############################################################################
+!!! returns minimum bond for a specified atom
+!!!#############################################################################
+  function get_min_dist(lat,bas,loc,lignore_close,axis,labove,lreal,tol) &
+       result(vsave)
+    implicit none
+    integer :: js,ja
+    integer :: iaxis
+    double precision :: dtmp1,min_bond,dtol
+    logical :: ludef_above,ludef_real
+    double precision, dimension(3) :: vdtmp1,vdtmp2,vsave
+
+    logical, intent(in) :: lignore_close
+    type(bas_type), intent(in) :: bas
+    double precision, dimension(3), intent(in) :: loc
+    double precision, dimension(3,3), intent(in) :: lat
+
+    integer, intent(in), optional :: axis
+    double precision, intent(in), optional :: tol
+    logical, intent(in), optional :: labove, lreal
+
+    !! CORRECT tol TO ACCOUNT FOR LATTICE SIZE
+    if(present(tol))then
+       dtol = tol
+    else
+       dtol = 1.D-5
+    end if
+
+    if(present(labove))then
+       ludef_above=labove
+    else
+       ludef_above=.false.
+    end if
+
+    if(present(lreal))then
+       ludef_real=lreal
+    else
+       ludef_real=.true.
+    end if
+
+    if(present(axis))then
+       iaxis=axis
+    else
+       iaxis=0
+    end if
+
+    min_bond=huge(0.D0)
+    vsave = 0.D0
+    write(0,*) "tester"
+    do js=1,bas%nspec
+       atmloop: do ja=1,bas%spec(js)%num
+          vdtmp1 = bas%spec(js)%atom(ja,:3) - loc
+          write(0,*) js,ja, vdtmp1
+          if(lignore_close.and.modu(vdtmp1).lt.dtol) cycle atmloop
+          if(iaxis.gt.0)then
+             if(abs(vdtmp1(iaxis)).lt.dtol) cycle atmloop
+             if(ludef_above)then
+                vdtmp1(iaxis) = 1.D0 + vdtmp1(iaxis)
+             else
+                vdtmp1(iaxis) = vdtmp1(iaxis) - 1.D0
+             end if
+          end if
+          write(0,*) js,ja, vdtmp1
+          vdtmp2 = &
+               vdtmp1(1)*lat(1,:3) + &
+               vdtmp1(2)*lat(2,:3) + &
+               vdtmp1(3)*lat(3,:3)
+          dtmp1 = modu(vdtmp2)
+          write(0,*) dtmp1,min_bond
+          if(dtmp1.lt.min_bond)then
+             write(0,*) dtmp1.lt.min_bond
+             min_bond = dtmp1
+             if(ludef_real)then
+                vsave = vdtmp1
+             else
+                vsave = vdtmp2
+             end if
+          end if
+       end do atmloop
+    end do
+
+
+  end function get_min_dist
 !!!#############################################################################
 
 
@@ -832,13 +986,15 @@ contains
          -0.5D0, sqrt(3.D0)/2.D0, 0.D0,&
          0.D0, 0.D0, 1.0D0/), shape(lat) ) )
     special(3,:,:) = transpose( reshape( (/&
-         0.0D0, 0.5D0, 0.5D0,&
-         0.5D0, 0.0D0, 0.5D0,&
-         0.5D0, 0.5D0, 0.0D0/), shape(lat) ) )
+         0.0D0, 1.D0, 1.D0,&
+         1.D0, 0.0D0, 1.D0,&
+         1.D0, 1.D0, 0.0D0/), shape(lat) ) )
+    special(3,:,:) = special(3,:,:)/sqrt(2.D0)
     special(4,:,:) = transpose( reshape( (/&
-         -0.5D0,  0.5D0,  0.5D0,&
-         0.5D0, -0.5D0,  0.5D0,&
-         0.5D0,  0.5D0, -0.5D0/), shape(lat) ) )
+         -1.D0,  1.D0,  1.D0,&
+         1.D0, -1.D0,  1.D0,&
+         1.D0,  1.D0, -1.D0/), shape(lat) ) )
+    special(4,:,:) = special(4,:,:)/sqrt(3.D0)
 
 
     !!---------------------------------------------------------------
@@ -891,7 +1047,7 @@ contains
     count=0
     limit=100
     lreduced=.false.
-    tiny=1E-5*(get_vol(lat))**(1/3)
+    tiny=1E-5*(get_vol(lat))**(1.E0/3.E0)
     pi=4.D0*atan(1.D0)
     pi2=2.D0*atan(1.D0)
     transmat=0.D0
@@ -1162,12 +1318,10 @@ contains
   function planecutter(inlat,invec) result(tfmat)
     implicit none
     integer :: i,j,itmp1
-    integer :: count
-    double precision :: A1,B1,C1,tol
-    double precision :: delta
+    double precision :: tol
     integer, dimension(3) :: order
     double precision, dimension(3) :: vec,tvec1
-    double precision, dimension(3,3) :: u,lat,b,tfmat,invlat,reclat
+    double precision, dimension(3,3) :: lat,b,tfmat,invlat,reclat
     double precision, dimension(3), intent(in) :: invec
     double precision, dimension(3,3), intent(in) :: inlat
 
@@ -1256,25 +1410,7 @@ contains
     end if
 
     !b = matmul(b,lat)
-
-
-!!!-----------------------------------------------------------------------------
-!!! Generate the new lattice in cartesian coordinates
-!!!-----------------------------------------------------------------------------
-!    b(3,:)=matmul(vec,lat(:,:))
-!
-!    A1=dot_product(vec,lat(1,:))!:,1))
-!    B1=dot_product(vec,lat(2,:))!:,2))
-!    C1=dot_product(vec,lat(3,:))!:,3))
-!    !    b(1,:)=(/-B1/A1,1.D0,0.D0/)
-!    !    b(2,:)=(/-C1/A1,0.D0,1.D0/)
-!    b(1,:)=lat(2,:)-B1/A1*lat(1,:)
-!    b(2,:)=lat(3,:)-C1/A1*lat(1,:)
-!    !    do i=1,2
-!    !       if(all(abs(b(i,:)).lt.tol)) b(i,:)=lat(i+1,:)
-!    !    end do
-!    b(3,:)=cross(b(1,:),b(2,:))
-
+    
 
 !!!-----------------------------------------------------------------------------
 !!! Fix normal vector and lattice
@@ -1671,7 +1807,7 @@ contains
 !!!#############################################################################
   subroutine get_bulk(lat,bas,axis,bulk_lat,bulk_bas)
     implicit none
-    integer :: i,is,ia,ja,len,itmp1
+    integer :: is,ia,ja,len,itmp1
     integer :: minspecloc,minatomloc,nxtatomloc
     double precision, dimension(3) :: transvec
     double precision, dimension(2,2) :: regions
@@ -1873,13 +2009,12 @@ contains
   end function get_closest_atom_1D
 !!!-----------------------------------------------------
 !!!-----------------------------------------------------
-  function get_closest_atom_3D(lat,bas,axis,loc,species) result(atom)
+  function get_closest_atom_3D(lat,bas,loc,species) result(atom)
     implicit none
     integer :: is,ia
     integer :: is_start,is_end
     double precision :: dtmp1,dtmp2
     double precision, dimension(3) :: vtmp1
-    integer, intent(in) :: axis
     double precision, dimension(3), intent(in) :: loc
     double precision, dimension(3,3), intent(in) :: lat
     integer, dimension(2) :: atom
@@ -1923,8 +2058,8 @@ contains
     implicit none
     integer :: is,ia,ja,itmp1,itmp2!ref_atom
     integer :: minspecloc,minatomloc,nxtatomloc
-    double precision :: scale,up_loc,lw_loc,up_loc2,lw_loc2
-    double precision, dimension(3) :: ref_loc,transvec,tmp_vec1,tmp_vec2,tmp_vec3,tvec
+    double precision :: up_loc,lw_loc,up_loc2,lw_loc2
+    double precision, dimension(3) :: transvec,tmp_vec1,tmp_vec2,tmp_vec3,tvec
     logical, allocatable, dimension(:) :: atom_mask
     type(wyck_spec_type) :: wyckoff
     integer, intent(in) :: axis
@@ -2196,6 +2331,52 @@ contains
 
 
   end function get_shortest_bond
+!!!#############################################################################
+
+  
+!!!#############################################################################
+!!! shares strain between two lattices
+!!!#############################################################################
+  subroutine share_strain(lat1,lat2,bulk_mod1,bulk_mod2,axis,lcompensate)
+    implicit none
+    integer :: i
+    integer :: iaxis
+    double precision :: area1,area2,delta1,delta2
+    integer, dimension(3) :: abc=(/1,2,3/)
+    double precision, dimension(3) :: strain
+
+    double precision, intent(in) :: bulk_mod1,bulk_mod2
+    double precision, dimension(3,3), intent(inout) :: lat1,lat2
+
+    integer, optional, intent(in) :: axis
+    logical, optional, intent(in) :: lcompensate
+
+    iaxis=3
+    if(present(axis)) iaxis=axis
+ 
+    abc=cshift(abc,3-iaxis)
+    area1 = modu(cross(lat1(abc(1),:),lat1(abc(2),:)))
+    area2 = modu(cross(lat2(abc(1),:),lat2(abc(2),:)))
+    delta1 = - (1.D0 - area2/area1)/(1.D0 + (area2/area1)*(bulk_mod1/bulk_mod2))
+    delta2 = - (1.D0 - area1/area2)/(1.D0 + (area1/area2)*(bulk_mod2/bulk_mod1))
+    write(0,*) "areas", area1,area2
+    write(0,*) "deltas", delta1,delta2
+    write(0,*) "modulus", bulk_mod1,bulk_mod2
+    do i=1,3
+       if(i.eq.iaxis) cycle
+       strain(:) = lat1(i,:)-lat2(i,:)
+       lat1(i,:) = lat1(i,:) * (1.D0 + delta1)
+       lat2(i,:) = lat1(i,:)
+    end do
+    
+    if(present(lcompensate))then
+       if(lcompensate)then
+          lat1(abc(3),:) =  lat1(abc(3),:) * (1.D0 - delta1/(1.D0 + delta1))  
+          lat2(abc(3),:) =  lat2(abc(3),:) * (1.D0 - delta2/(1.D0 + delta2))
+       end if
+    end if
+
+  end subroutine share_strain
 !!!#############################################################################
 
 end module edit_geom

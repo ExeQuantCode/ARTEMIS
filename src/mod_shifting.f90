@@ -964,7 +964,7 @@ contains
              !! checks only 1st missing bond
              !!-----------------------------------------------------------------
              plane_loc(:)=&
-                  get_nth_plane(invec=DON_missing(i,is)%atom(ia,:),&
+                  get_nth_plane(invec=dble(DON_missing(i,is)%atom(ia,:)),&
                   nth=2,window=20,is_periodic=.false.) !! WINDOW WAS 10, NOW 20
              itmp1=nint( &
                   sum(DON_missing(i,is)%atom(ia,:plane_loc(1)))*&
