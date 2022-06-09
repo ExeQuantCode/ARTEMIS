@@ -1676,10 +1676,10 @@ contains
        end if sym_if
        !if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
        !     mterm,term_arr(i)%hmin,term_arr(i)%hmax,term_arr(i)%natom
-       term_arr_uniq(mterm) = term_arr(i) !what does this line do?
-       term_arr_uniq(mterm)%nstep = 1 !MTERM or i? It was i
-       allocate(term_arr_uniq(mterm)%ladder(nterm)) !MTERM or i? it was mterm
-       term_arr_uniq(mterm)%ladder(1) = 0.D0 !MTERM or i? it was i
+       term_arr_uniq(mterm) = term_arr(i)
+       term_arr_uniq(mterm)%nstep = 1
+       allocate(term_arr_uniq(mterm)%ladder(nterm))
+       term_arr_uniq(mterm)%ladder(:) = 0.D0
        !open(100+mterm)
        !call geom_write(100+mterm,lat,bas_arr(mterm))
        !close(100+mterm)
