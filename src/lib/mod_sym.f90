@@ -1637,7 +1637,6 @@ contains
     !!--------------------------------------------------------------------------
     grp_store%confine%l=.true.
     grp_store%confine%laxis(axis)=.true.
-    write(0,*) "HELLO", nterm
     allocate(term_arr_uniq(2*nterm))
     allocate(reject_match(nterm,2))
     shift_loop1:do i=1,nterm
