@@ -15,7 +15,7 @@ module interface_subroutines
        get_min_bulk_bond,clone_bas,bas_lat_merge,get_shortest_bond,bond_type,&
        share_strain
   use mod_sym,              only: term_arr_type,confine_type,gldfnd,&
-       get_terminations,print_terminations,setup_ladder,get_primitive_cell
+       get_terminations,get_primitive_cell
   use swapping,              only: rand_swapper
   use shifting !!! CHANGE TO SHIFTER?
   implicit none
@@ -32,7 +32,7 @@ module interface_subroutines
   type(bulk_DON_type), dimension(2) :: bulk_DON
 
 
-!!!updated  2022/04/04
+!!!updated  2023/02/14
 
 
 contains
@@ -42,9 +42,19 @@ contains
   subroutine gen_terminations(lat,bas,miller_plane,axis,directory,&
        thickness,udef_layer_sep)
     implicit none
-    character(len=200) :: dirname
+    integer :: unit
+    integer :: itmp1,j,iterm,term_start,term_end,iterm_step
+    integer :: old_natom,ncells,thickness_val,ntrans
+    double precision :: height
+    character(len=1024) :: dirname,filename,pwd
+    logical :: ludef_surf,lignore
+    type(bas_type) :: tmp_bas1,tmp_bas2
+    type(confine_type) :: confine
     type(term_arr_type) :: term
-    double precision, dimension(3,3) :: tfmat
+    double precision, dimension(3,3) :: tfmat,tmp_lat1,tmp_lat2
+
+    integer, allocatable, dimension(:,:,:) :: bas_map,t1bas_map
+    double precision, allocatable, dimension(:,:) :: trans
 
     integer, intent(in) :: axis
     type(bas_type), intent(in) :: bas
@@ -56,32 +66,112 @@ contains
     character(len=*), optional, intent(in) :: directory
 
 
+    !! copy lattice and basis for manipulating
+    call clone_bas(bas,tmp_bas1,lat,tmp_lat1)
+    allocate(bas_map(tmp_bas1%nspec,maxval(tmp_bas1%spec(:)%num,dim=1),2))
+    bas_map=-1
+
+
     write(6,'(1X,"Using supplied plane...")')
-    tfmat=planecutter(lat,dble(miller_plane))
-    call transformer(lat,bas,tfmat)
+    tfmat=planecutter(tmp_lat1,dble(miller_plane))
+    call transformer(tmp_lat1,tmp_bas1,tfmat,bas_map)
     !call err_abort_print_struc(lat,bas,"check.vasp","stop")
 
-
-    if(present(udef_layer_sep)) then
-       term = get_terminations(lat,bas,axis,lprint=.true.,layer_sep=udef_layer_sep)
+    !!-----------------------------------------------------------------------
+    !! Finds smallest thickness of the slab and increases to ...
+    !! ... user-defined thickness
+    !!-----------------------------------------------------------------------
+    confine%l=.false.
+    confine%axis=axis
+    confine%laxis=.false.
+    confine%laxis(axis)=.true.
+    old_natom=tmp_bas1%natom
+    if(allocated(trans)) deallocate(trans)
+    allocate(trans(minval(tmp_bas1%spec(:)%num+2),3))
+    call gldfnd(confine,tmp_bas1,tmp_bas1,trans,ntrans)
+    tfmat(:,:)=0.D0
+    tfmat(1,1)=1.D0
+    tfmat(2,2)=1.D0
+    if(ntrans.eq.0)then
+       tfmat(3,3)=1.D0
     else
-       term = get_terminations(lat,bas,axis,lprint=.true.,layer_sep=layer_sep)
+       itmp1=minloc(abs(trans(:ntrans,axis)),dim=1,&
+            mask=abs(trans(:ntrans,axis)).gt.1.D-3/modu(tmp_lat1(axis,:)))
+       tfmat(3,:)=trans(itmp1,:)
     end if
-    term%arr(:)%hmin = term%arr(:)%hmin - 1.D-8
-    !call setup_ladder(lat,bas,axis,term)
+    if(all(abs(tfmat(3,:)).lt.1.D-5)) tfmat(3,3) = 1.D0
+    call transformer(tmp_lat1,tmp_bas1,tfmat,bas_map)
 
+    !! get the terminations
+    if(present(udef_layer_sep)) then
+       term = get_terminations(tmp_lat1,tmp_bas1,axis,&
+            lprint=.true.,layer_sep=udef_layer_sep)
+    else
+       term = get_terminations(tmp_lat1,tmp_bas1,axis,&
+            lprint=.true.,layer_sep=layer_sep)
+    end if
 
+    !! set thickness if provided by user
+    if(present(thickness))then
+       thickness_val = thickness
+    else
+       thickness_val = 1
+    end if
+
+    !! make directory and change to that directory
     if(present(directory))then
        dirname = directory
     else
        dirname = "DTERMINATIONS"
     end if
-    if(present(thickness))then
-       call print_terminations(term,lat,bas,trim(dirname),thickness,vacuum,&
-            lortho = lortho)
-    else
-       call print_terminations(term,lat,bas,trim(dirname),lortho = lortho)
-    end if
+    call system('mkdir -p '//trim(adjustl(dirname)))
+    call getcwd(pwd)
+    call chdir(dirname)
+
+    !! determine tolerance for layer separations (termination tolerance)
+    !! ... this is different from layer_sep
+    call set_layer_tol(term)
+
+    !! determine required extension and perform that
+    call set_slab_height(tmp_lat1,tmp_bas1,bas_map,term,lw_surf,old_natom,&
+         height,thickness_val,ncells,&
+         term_start,term_end,iterm_step,ludef_surf,&
+         dirname,"lw",lignore)
+
+    
+    !! loop over terminations and write them
+    do iterm=term_start,term_end,iterm_step
+       call clone_bas(tmp_bas1,tmp_bas2,tmp_lat1,tmp_lat2)
+       if(allocated(t1bas_map)) deallocate(t1bas_map)
+       allocate(t1bas_map,source=bas_map)
+       call prepare_slab(tmp_lat2,tmp_bas2,bas_map,term,iterm,&
+            thickness_val,ncells,height,ludef_surf,term_end,&
+            "lw",lignore)
+  
+       !!-----------------------------------------------------------------------
+       !! If requested, orthogonalises interface axis wrt the other two axes
+       !!-----------------------------------------------------------------------
+       if(lortho)then
+          ortho_check_term: do j=1,2
+             if(abs(dot_product(tmp_lat2(j,:),tmp_lat2(term%axis,:))).gt.1.D-5)then
+                call ortho_axis(tmp_lat2,tmp_bas2,term%axis)
+                exit ortho_check_term
+             end if
+          end do ortho_check_term
+       end if
+
+       !!-----------------------------------------------------------------------
+       !! Prints structure
+       !!-----------------------------------------------------------------------
+       unit=100+iterm
+       write(filename,'("POSCAR_term",I0)') iterm
+       open(unit,file=trim(filename))
+       call geom_write(unit,tmp_lat2,tmp_bas2)
+       close(unit)
+    end do
+
+    !! return to parent directory
+    call chdir(pwd)
 
 
     return
@@ -489,7 +579,6 @@ contains
        if(allocated(lw_term%arr)) deallocate(lw_term%arr)
        lw_term=get_terminations(lw_lat,lw_bas,axis,&
             lprint=lprint_terms,layer_sep=lw_layer_sep)
-write(0,*) 
 
 
        !!-----------------------------------------------------------------------
@@ -502,8 +591,6 @@ write(0,*)
           call err_abort(trim(msg),fmtd=.true.)
        end if
        call set_layer_tol(lw_term)
-       lw_term%arr(:)%hmin = lw_term%arr(:)%hmin - lw_term%tol !- 1.D-8
-       !lw_term%arr(:)%hmax = lw_term%arr(:)%hmax + lw_term%tol !+ 1.D-8
 
 
        !!-----------------------------------------------------------------------
@@ -557,8 +644,6 @@ write(0,*)
           call err_abort(trim(msg),fmtd=.true.)
        end if
        call set_layer_tol(up_term)
-       up_term%arr(:)%hmin = up_term%arr(:)%hmin - up_term%tol !- 1.D-8
-       !up_term%arr(:)%hmax = up_term%arr(:)%hmax + up_term%tol !+ 1.D-8
 
 
        !!-----------------------------------------------------------------------
@@ -572,18 +657,8 @@ write(0,*)
 
 
        !!-----------------------------------------------------------------------
-       !! Readjust termination plane locations and print
+       !! Print termination plane locations
        !!-----------------------------------------------------------------------
-       lw_term%arr(:)%hmin = lw_term%arr(:)%hmin/dble(lw_ncells)
-       lw_term%arr(:)%hmax = lw_term%arr(:)%hmax/dble(lw_ncells)
-       !lw_term%arr(:)%add = lw_term%arr(:)%add/dble(lw_ncells)
-       lw_term%tol = lw_term%tol/dble(lw_ncells)
-       up_term%arr(:)%hmin = up_term%arr(:)%hmin/dble(up_ncells)
-       up_term%arr(:)%hmax = up_term%arr(:)%hmax/dble(up_ncells)
-       !up_term%arr(:)%add = up_term%arr(:)%add/dble(up_ncells)
-       up_term%tol = up_term%tol/dble(up_ncells)
-
-
        write(6,'(1X,"Number of unique terminations: ",I0,2X,I0)') &
             lw_term%nterm,up_term%nterm
 
@@ -1053,7 +1128,7 @@ write(0,*)
     logical, intent(inout) :: ludef_surf
     logical, intent(out) :: lcycle
     type(bas_type), intent(inout) :: bas
-    type(term_arr_type), intent(in) :: term
+    type(term_arr_type), intent(inout) :: term
     integer, dimension(2), intent(in) :: surf
     double precision, dimension(3,3), intent(inout) :: lat
 
@@ -1072,7 +1147,7 @@ write(0,*)
 
 
     !!-----------------------------------------------------------------------
-    !! Defines height of lower slab from user-defined values
+    !! Defines height of slab from user-defined values
     !!-----------------------------------------------------------------------
     ludef_surf = .false.
     term_start = 1
@@ -1091,6 +1166,7 @@ write(0,*)
        term_start = surf(1)
        term_end = surf(2)
 
+       !! determines the maximum number of cells required
        allocate(vtmp1(size(list)))
        height = term%arr(term_start)%hmin
        do i=thickness,2,-1
@@ -1108,17 +1184,30 @@ write(0,*)
             mask=&
             vtmp1(:).gt.0.and.&
             list(:)%term.eq.surf(2))
+       !write(0,*) "temp",itmp1
+       !write(0,*) "temp",list(:)%loc
+       !write(0,*) "SURFACES",surf
+       !write(0,*) "height check1", height
+       !write(0,*) list(:)%term
+       !write(0,*) vtmp1(itmp1)
        height = height + vtmp1(itmp1) - term%arr(term_start)%hmin
+       !write(0,*) "height check2", height
 
-       ncells = ceiling(height)
-       height = height/dble(ncells)
 
+       !! if there is no mirror, we need to remove extra layers in the cell
        if(.not.term%lmirror)then
+          ! get thickness of top/surface layer
           dtmp1 = term%arr(surf(2))%hmax - term%arr(surf(2))%hmin
           if(dtmp1.lt.0.D0) dtmp1 = dtmp1 + 1.D0
-          height = height + dtmp1
+          height = height - (1.D0 - dtmp1)
        end if
+
+       !write(0,*) "HEIGHT", height
+       ncells = ceiling(height)
+       height = height/dble(ncells)
     end if
+    !write(0,*) "ncells",ncells
+    !write(0,*) "height",height
 
     
     !!-----------------------------------------------------------------------
@@ -1132,9 +1221,12 @@ write(0,*)
 
     
     !!-----------------------------------------------------------------------
-    !! Extends lower slab to user-defined thickness
+    !! Extend slab to user-defined thickness
     !!-----------------------------------------------------------------------
-    ncells = int((thickness-1)/term%nstep)+1
+    !write(0,*) "HERE",term%nstep,thickness
+    !write(0,*) thickness-1, (thickness-1)/term%nstep,int((thickness-1)/term%nstep)+1
+    if(.not.ludef_surf) ncells = int((thickness-1)/term%nstep)+1
+    !write(0,*) ncells
     tfmat(:,:)=0.D0
     tfmat(1,1)=1.D0
     tfmat(2,2)=1.D0
@@ -1156,6 +1248,16 @@ write(0,*)
        write(0,'(2X,"Skipping this lattice match...")')
        lcycle=.true.
     end if
+
+    
+    !!-----------------------------------------------------------------------
+    !! Readjust termination plane locations
+    !! ... i.e. divide all termination values by the number of cells
+    !!-----------------------------------------------------------------------
+    term%arr(:)%hmin = term%arr(:)%hmin/dble(ncells)
+    term%arr(:)%hmax = term%arr(:)%hmax/dble(ncells)
+    term%tol = term%tol/dble(ncells)
+
 
   end subroutine set_slab_height
 !!!#############################################################################
@@ -1184,6 +1286,11 @@ write(0,*)
           term%tol = dtmp1
        end if
     end do
+
+    !! add the tolerances to the edges of the layers
+    !! this ensures that all atoms in the layers are captured
+    term%arr(:)%hmin = term%arr(:)%hmin - term%tol
+    term%arr(:)%hmax = term%arr(:)%hmax + term%tol
 
 
   end subroutine set_layer_tol
@@ -1262,16 +1369,17 @@ write(0,*)
     !!--------------------------------------------------------------------
     !! Determine cell reduction to specified termination
     !!--------------------------------------------------------------------
+    !write(0,*) "LUDEF_SURF?", ludef_surf
     do j=1,3
        tfmat(j,j)=1.D0
        if(j.eq.term%axis)then
           if(ludef_surf)then
-             tfmat(j,j) = height + term%tol*2.D0
+             tfmat(j,j) = height !+ term%tol*2.D0
           else!if(term%lmirror)then
              if(istep.ne.0)then
                 dtmp1 = (ncells-1) + term%arr(iterm)%ladder(istep)
                 dtmp1 = dtmp1/(ncells)
-                tfmat(j,j) = dtmp1 + term%tol*2.D0
+                tfmat(j,j) = dtmp1 !+ term%tol*2.D0
                 tfmat(j,j) = tfmat(j,j) + &
                      (term%arr(iterm)%hmax - term%arr(iterm)%hmin)
              end if
