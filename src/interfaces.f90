@@ -146,7 +146,7 @@ contains
        allocate(t1bas_map,source=bas_map)
        call prepare_slab(tmp_lat2,tmp_bas2,bas_map,term,iterm,&
             thickness_val,ncells,height,ludef_surf,lw_surf(2),&
-            "lw",lignore,lortho)
+            "lw",lignore,lortho,vacuum)
 
        !!-----------------------------------------------------------------------
        !! Prints structure
@@ -1304,10 +1304,11 @@ contains
 !!! Supply a supercell that can be cut down to the size of the slab ...
 !!! ... i.e. the input structure must be larger or equal to the desired output
   subroutine prepare_slab(lat, bas, map, term, iterm, thickness, ncells, &
-       height, ludef_surf, udef_top_iterm, lwup_in, lcycle, ludef_ortho)
+       height, ludef_surf, udef_top_iterm, lwup_in, lcycle, &
+       ludef_ortho, udef_vacuum)
     implicit none
-    integer :: j,j_start,istep,natom_check
-    double precision :: dtmp1
+    integer :: j, j_start, istep, natom_check
+    double precision :: vacuum, dtmp1
     character(2) :: lwup
     character(5) :: lowerupper
     character(1024) :: msg
@@ -1327,7 +1328,7 @@ contains
 
     integer, allocatable, dimension(:,:,:), intent(inout) :: map
     logical, optional, intent(in) :: ludef_ortho
-
+    double precision, optional, intent(in) :: udef_vacuum
 
     !!--------------------------------------------------------------------
     !! Initialise variables
@@ -1345,6 +1346,12 @@ contains
        lortho = ludef_ortho
     else
        lortho = .true.
+    end if
+
+    if(present(udef_vacuum))then
+       vacuum = udef_vacuum
+    else
+       vacuum = tmp_vac
     end if
 
 
@@ -1399,7 +1406,15 @@ contains
           end if
        end if
     end do
+
+
+    !!--------------------------------------------------------------------
+    !! Apply transformation and shift cell back to bottom of layer
+    !! ... i.e. account for the tolerance that has been added to layer ...
+    !! ... hmin and hmax
+    !!--------------------------------------------------------------------
     call transformer(lat,bas,tfmat,map)
+    call shifter(bas,term%axis,-term%tol/tfmat(term%axis,term%axis),.true.)
 
 
     !!--------------------------------------------------------------------
@@ -1442,7 +1457,7 @@ contains
           end if
        end do ortho_check
     end if
-    call set_vacuum(lat,bas,term%axis,1.D0,tmp_vac)
+    call set_vacuum(lat,bas,term%axis,1.D0-term%tol/tfmat(term%axis,term%axis),vacuum)
     !call err_abort_print_struc(lat,bas,"check.vasp","stop")
 
 
