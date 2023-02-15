@@ -145,20 +145,8 @@ contains
        if(allocated(t1bas_map)) deallocate(t1bas_map)
        allocate(t1bas_map,source=bas_map)
        call prepare_slab(tmp_lat2,tmp_bas2,bas_map,term,iterm,&
-            thickness_val,ncells,height,ludef_surf,term_end,&
-            "lw",lignore)
-  
-       !!-----------------------------------------------------------------------
-       !! If requested, orthogonalises interface axis wrt the other two axes
-       !!-----------------------------------------------------------------------
-       if(lortho)then
-          ortho_check_term: do j=1,2
-             if(abs(dot_product(tmp_lat2(j,:),tmp_lat2(term%axis,:))).gt.1.D-5)then
-                call ortho_axis(tmp_lat2,tmp_bas2,term%axis)
-                exit ortho_check_term
-             end if
-          end do ortho_check_term
-       end if
+            thickness_val,ncells,height,ludef_surf,lw_surf(2),&
+            "lw",lignore,lortho)
 
        !!-----------------------------------------------------------------------
        !! Prints structure
@@ -292,7 +280,7 @@ contains
     integer, allocatable, dimension(:,:,:) :: up_map,t1up_map,t2up_map
     double precision, allocatable, dimension(:,:) :: trans
 
-    
+
 !!!-----------------------------------------------------------------------------
 !!! determines the primitive and niggli reduced cell for each bulk
 !!!-----------------------------------------------------------------------------
@@ -649,7 +637,7 @@ contains
        !!-----------------------------------------------------------------------
        !! Defines height of upper slab from user-defined values
        !!-----------------------------------------------------------------------
-       call set_slab_height(up_lat,up_bas,t1up_map,up_term,up_surf, old_natom,&
+       call set_slab_height(up_lat,up_bas,t1up_map,up_term,up_surf,old_natom,&
             up_height,up_thickness,up_ncells,&
             up_term_start,up_term_end,jterm_step,ludef_up_surf,&
             intf_dir,"up",lcycle)
@@ -674,7 +662,7 @@ contains
           !! Shifts lower material to specified termination
           !!--------------------------------------------------------------------
           call prepare_slab(tlw_lat,tlw_bas,t2lw_map,lw_term,iterm,&
-               lw_thickness,lw_ncells,lw_height,ludef_lw_surf,lw_term_end,&
+               lw_thickness,lw_ncells,lw_height,ludef_lw_surf,lw_surf(2),&
                "lw",lcycle)
           if(lcycle) cycle lw_term_loop
 
@@ -687,7 +675,7 @@ contains
              if(allocated(t2up_map)) deallocate(t2up_map)
              allocate(t2up_map,source=t1up_map)
              call prepare_slab(tup_lat,tup_bas,t2up_map,up_term,jterm,&
-                  up_thickness,up_ncells,up_height,ludef_up_surf,up_term_end,&
+                  up_thickness,up_ncells,up_height,ludef_up_surf,up_surf(2),&
                   "up",lcycle)
              if(lcycle) cycle up_term_loop
 
@@ -1163,8 +1151,12 @@ contains
        end if
        ludef_surf = .true.
        list = get_term_list(term)
+       !! set term_start to first surface value
        term_start = surf(1)
-       term_end = surf(2)
+       !! set term_end to first surface value as a user-defined surface ...
+       !! ... should not be cycled over.
+       !! it is just one, potentially assymetric, slab to be explored.
+       term_end = surf(1)
 
        !! determines the maximum number of cells required
        allocate(vtmp1(size(list)))
@@ -1179,28 +1171,35 @@ contains
           height = height + vtmp1(itmp1)
        end do
        vtmp1 = list(:)%loc - height
-       vtmp1 = vtmp1 - ceiling( vtmp1 - 1.D0 )
+       !vtmp1 = vtmp1 - ceiling( vtmp1 - 1.D0 )
+       where(vtmp1.lt.-1.D-5)
+          vtmp1 = vtmp1 - ceiling( vtmp1 + 1.D-5 - 1.D0 )
+       end where
        itmp1 = minloc( vtmp1(:), dim=1,&
             mask=&
-            vtmp1(:).gt.0.and.&
+            vtmp1(:).ge.-1.D-5.and.&
             list(:)%term.eq.surf(2))
-       !write(0,*) "temp",itmp1
-       !write(0,*) "temp",list(:)%loc
-       !write(0,*) "SURFACES",surf
-       !write(0,*) "height check1", height
+       !!write(0,*) "temp",itmp1
+       !!write(0,*) "temp",list(:)%loc
+       !!write(0,*) "SURFACES",surf
+       !write(0,*) "look",term%arr(term_start)%hmin, term_start
+       !write(0,*) vtmp1(itmp1),itmp1
+       !write(0,*) list(:)%loc
+       !write(0,*) list(:)%loc-height
+       !write(0,*) vtmp1
        !write(0,*) list(:)%term
-       !write(0,*) vtmp1(itmp1)
+       !write(0,*) "height check1", height
        height = height + vtmp1(itmp1) - term%arr(term_start)%hmin
        !write(0,*) "height check2", height
 
-
+       !write(0,*) "mirror?",term%lmirror
        !! if there is no mirror, we need to remove extra layers in the cell
-       if(.not.term%lmirror)then
+       !if(.not.term%lmirror)then
           ! get thickness of top/surface layer
           dtmp1 = term%arr(surf(2))%hmax - term%arr(surf(2))%hmin
-          if(dtmp1.lt.0.D0) dtmp1 = dtmp1 + 1.D0
-          height = height - (1.D0 - dtmp1)
-       end if
+          if(dtmp1.lt.-1.D-5) dtmp1 = dtmp1 + 1.D0
+          height = height + dtmp1 !(1.D0 - dtmp1)
+       !end if
 
        !write(0,*) "HEIGHT", height
        ncells = ceiling(height)
@@ -1231,7 +1230,9 @@ contains
     tfmat(1,1)=1.D0
     tfmat(2,2)=1.D0
     tfmat(3,3)=ncells
+    !write(0,*) "test0",ncells
     call transformer(lat,bas,tfmat,map)
+    !write(0,*) "test1"
     if(mod(real(old_natom*ncells)/real(bas%natom),1.0).gt.1.D-5)then
        write(0,'(1X,"ERROR: Internal error in interfaces subroutine")')
        write(0,'(2X,"gldfnd subroutine did not reproduce a sensible &
@@ -1303,13 +1304,14 @@ contains
 !!! Supply a supercell that can be cut down to the size of the slab ...
 !!! ... i.e. the input structure must be larger or equal to the desired output
   subroutine prepare_slab(lat, bas, map, term, iterm, thickness, ncells, &
-       height, ludef_surf, udef_top_iterm, lwup_in, lcycle)
+       height, ludef_surf, udef_top_iterm, lwup_in, lcycle, ludef_ortho)
     implicit none
     integer :: j,j_start,istep,natom_check
     double precision :: dtmp1
     character(2) :: lwup
     character(5) :: lowerupper
     character(1024) :: msg
+    logical :: lortho
     integer, dimension(3) :: abc=(/1,2,3/)
     double precision, dimension(3,3) :: tfmat
     integer, allocatable, dimension(:) :: iterm_list
@@ -1324,6 +1326,7 @@ contains
     double precision, dimension(3,3), intent(inout) :: lat
 
     integer, allocatable, dimension(:,:,:), intent(inout) :: map
+    logical, optional, intent(in) :: ludef_ortho
 
 
     !!--------------------------------------------------------------------
@@ -1337,6 +1340,12 @@ contains
     tfmat=0.D0
     istep = thickness - (ncells-1)*term%nstep
     natom_check = bas%natom
+
+    if(present(ludef_ortho))then
+       lortho = ludef_ortho
+    else
+       lortho = .true.
+    end if
 
 
     !!--------------------------------------------------------------------
@@ -1396,6 +1405,8 @@ contains
     !!--------------------------------------------------------------------
     !! Check number of atoms is expected
     !!--------------------------------------------------------------------
+    !write(0,*) "HERE1", term%nterm, term%nstep, istep, max(0,term%nstep-istep)
+    !write(0,*) "HERE2", j_start, term%nterm
     if(term%nterm.gt.1.or.term%nstep.gt.1)then
        do j=1,max(0,term%nstep-istep),1
           natom_check = natom_check - sum(term%arr(:)%natom)
@@ -1423,12 +1434,14 @@ contains
     !! Apply slab_cuber to orthogonalise lower material
     !!--------------------------------------------------------------------
     abc=cshift(abc,3-term%axis)
-    ortho_check: do j=1,2
-       if(abs(dot_product(lat(abc(j),:),lat(axis,:))).gt.1.D-5)then
-          call ortho_axis(lat,bas,term%axis)
-          exit ortho_check
-       end if
-    end do ortho_check
+    if(lortho)then
+       ortho_check: do j=1,2
+          if(abs(dot_product(lat(abc(j),:),lat(axis,:))).gt.1.D-5)then
+             call ortho_axis(lat,bas,term%axis)
+             exit ortho_check
+          end if
+       end do ortho_check
+    end if
     call set_vacuum(lat,bas,term%axis,1.D0,tmp_vac)
     !call err_abort_print_struc(lat,bas,"check.vasp","stop")
 

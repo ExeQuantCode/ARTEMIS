@@ -1646,7 +1646,7 @@ contains
     grp_store%lspace = .true.
     grp_store%confine%l = .true.
     grp_store%confine%laxis(axis) = .true.
-    call sym_setup(grp_store,lat,predefined=.true.,new_start=.true.)
+    call sym_setup(grp_store,lat,predefined=.false.,new_start=.true.)
 
     !!WRITE OUT THE STRUCTURES HERE AND COMPARE
     !do i=1,grp_store%nsym
@@ -1700,6 +1700,8 @@ contains
        bas_arr(mterm) = bas
        centre = term_arr(i)%hmin + (term_arr(i)%hmax - term_arr(i)%hmin)/2.D0
        call shifter(bas_arr(mterm),axis,1-centre,.true.)
+       !if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+       !     i,term_arr(i)%hmin,term_arr(i)%hmax,term_arr(i)%natom
        sym_if: if(i.ne.1)then
           sym_loop1:do j=1,mterm-1
              if(abs(abs(term_arr(i)%hmax-term_arr(i)%hmin) - &
@@ -1716,14 +1718,6 @@ contains
                 !write(0,*) "we have a possible reject"
                 !if(any(savsym(:grp1%nsymop,axis,axis).eq.-1.D0))then
                 if(savsym(1,axis,axis).eq.-1.D0)then
-                   !open(100,file="100.vasp")
-                   !call geom_write(100,lat,bas_arr(mterm))
-                   !close(100)
-                   !open(101,file="101.vasp")
-                   !call geom_write(101,lat,bas_arr(j))
-                   !close(101)
-                   !write(0,*) "we have a reject!!!"
-                   !call exit()
                    ireject = ireject + 1
                    reject_match(ireject,:) = [ i, j ]
                    bas_arr_reject(ireject) = bas_arr(mterm)
@@ -1751,7 +1745,7 @@ contains
     !!--------------------------------------------------------------------------
     !! Set up mirror/inversion symmetries of the matrix
     !!--------------------------------------------------------------------------
-    call sym_setup(grp_store,lat,predefined=.true.,new_start=.true.)
+    call sym_setup(grp_store,lat,predefined=.false.,new_start=.true.)
     allocate(tmpsym(count(grp_store%sym(:,3,3).eq.-1.D0),4,4))
     allocate(tmpop(count(grp_store%sym(:,3,3).eq.-1.D0)))
     itmp1 = 0
@@ -1895,11 +1889,6 @@ contains
             &Exiting...")')
        call exit()
     end if
-
-
-    !open(13,file="TESTER.vasp")
-    !call geom_write(13,lat,bas)
-    !close(13)
 
 
   end function get_terminations
