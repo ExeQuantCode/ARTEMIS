@@ -13,7 +13,7 @@ module interface_subroutines
   use edit_geom,            only: planecutter,primitive_lat,ortho_axis,&
        shift_region,set_vacuum,transformer,shifter,reducer,&
        get_min_bulk_bond,clone_bas,bas_lat_merge,get_shortest_bond,bond_type,&
-       share_strain
+       share_strain, normalise_basis
   use mod_sym,              only: term_arr_type,confine_type,gldfnd,&
        get_terminations,get_primitive_cell
   use swapping,              only: rand_swapper
@@ -1459,7 +1459,7 @@ contains
     end if
     call set_vacuum(lat,bas,term%axis,1.D0-term%tol/tfmat(term%axis,term%axis),vacuum)
     !call err_abort_print_struc(lat,bas,"check.vasp","stop")
-
+    call normalise_basis(bas,dtmp=0.9999D0,lfloor=.true.)
 
   end subroutine prepare_slab
 !!!#############################################################################
