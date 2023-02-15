@@ -24,7 +24,7 @@ module mod_help
 
 
   ! Cell_edits number of tags
-  integer, parameter :: ntags_cell_edits=10
+  integer, parameter :: ntags_cell_edits=11
   ! Cell_edits tags
   integer, parameter :: iout_file_tag=1
   integer, parameter :: ilsurf_gen_CE_tag=2
@@ -36,6 +36,7 @@ module mod_help
   integer, parameter :: itfmat_tag=8
   integer, parameter :: ilayer_sep_CE_tag=9
   integer, parameter :: ilortho_CE_tag=10
+  integer, parameter :: isurf_tag=11
 
 
   ! Interface number of tags
@@ -337,6 +338,14 @@ contains
     tag(ilayer_sep_CE_tag)%description = &
          'Defines the minimum size of gaps along the Miller direction that &
          &distinguish between separate layers (in Å)'
+
+    tag(isurf_tag)%name    = 'SURFACE'
+    tag(isurf_tag)%type    = 'U'
+    tag(isurf_tag)%summary = 'Crystal surface terminations'
+    tag(isurf_tag)%allowed = 'One or two integer numbers (<INT> [INT])'
+    tag(isurf_tag)%default = '(empty)'
+    tag(isurf_tag)%description = &
+         'Defines the bottom and top surface terminations of the crystal'
 
 
 !!! SET UP A CUTTER FUNCTION

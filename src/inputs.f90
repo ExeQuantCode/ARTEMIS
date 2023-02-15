@@ -535,7 +535,7 @@ contains
     character(1024) :: buffer,tagname,store
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(10) :: readvar
+    integer, dimension(11) :: readvar
     logical, optional, intent(in) :: skip
     character(len=6), dimension(4) :: &
          tag_list = ["axis  ","loc   ","val   ","bounds"]
@@ -610,6 +610,15 @@ contains
           call assign(buffer,layer_sep,        readvar(9))
        case("LORTHO")
           call assign(buffer,lortho,           readvar(10))
+       case("SURFACE")
+          call assign(buffer,store,            readvar(11))
+          select case(icount(store))
+          case(1)
+             read(store,*) lw_surf(1)
+             lw_surf(2) = lw_surf(1)
+          case(2)
+             read(store,*) lw_surf
+          end select
        case default
           write(6,'("NOTE: unable to assign variable on line ",I0)') count
        end select
