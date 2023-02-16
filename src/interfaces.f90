@@ -32,7 +32,7 @@ module interface_subroutines
   type(bulk_DON_type), dimension(2) :: bulk_DON
 
 
-!!!updated  2023/02/14
+!!!updated  2023/02/16
 
 
 contains
@@ -665,6 +665,19 @@ contains
                lw_thickness,lw_ncells,lw_height,ludef_lw_surf,lw_surf(2),&
                "lw",lcycle)
           if(lcycle) cycle lw_term_loop
+
+
+          !!-----------------------------------------------------------------------
+          !! TEMPORARY
+          !!-----------------------------------------------------------------------
+          write(0,*) "writing termination"
+          write(msg,'("POSCAR_term",I0)') iterm
+          open(100+iterm,file=trim(msg))
+          call geom_write(100+iterm,tlw_lat,tlw_bas)
+          close(100+iterm)
+          !!-----------------------------------------------------------------------
+          !! TEMPORARY
+          !!-----------------------------------------------------------------------
 
           
           !!--------------------------------------------------------------------
@@ -1420,8 +1433,6 @@ contains
     !!--------------------------------------------------------------------
     !! Check number of atoms is expected
     !!--------------------------------------------------------------------
-    !write(0,*) "HERE1", term%nterm, term%nstep, istep, max(0,term%nstep-istep)
-    !write(0,*) "HERE2", j_start, term%nterm
     if(term%nterm.gt.1.or.term%nstep.gt.1)then
        do j=1,max(0,term%nstep-istep),1
           natom_check = natom_check - sum(term%arr(:)%natom)
@@ -1448,6 +1459,8 @@ contains
     !!--------------------------------------------------------------------
     !! Apply slab_cuber to orthogonalise lower material
     !!--------------------------------------------------------------------
+    call set_vacuum(lat,bas,term%axis,1.D0-term%tol/tfmat(term%axis,term%axis),vacuum)
+    !call err_abort_print_struc(lat,bas,"check.vasp","stop")
     abc=cshift(abc,3-term%axis)
     if(lortho)then
        ortho_check: do j=1,2
@@ -1457,9 +1470,8 @@ contains
           end if
        end do ortho_check
     end if
-    call set_vacuum(lat,bas,term%axis,1.D0-term%tol/tfmat(term%axis,term%axis),vacuum)
-    !call err_abort_print_struc(lat,bas,"check.vasp","stop")
     call normalise_basis(bas,dtmp=0.9999D0,lfloor=.true.)
+
 
   end subroutine prepare_slab
 !!!#############################################################################

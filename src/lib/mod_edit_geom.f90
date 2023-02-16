@@ -7,6 +7,8 @@
 !!!module includes the following functions and subroutines:
 !!! MATNORM          (normalises a 3x3 matrix)
 !!! min_dist         (min distance between a point in a cell and nearest atom)
+!!! get_surface_normal (return the vector normal to the surface of the plane ...
+!!!                   ... constructed by the other two vectors)
 !!! get_atom_height  (get the value of the atom along that axis)
 !!! get_min_bulk_bond
 !!! shifter          (shifts the basis along the cell by an amount)
@@ -58,7 +60,7 @@ module edit_geom
   end interface get_closest_atom
 
 
-!!!updated 2022/04/04
+!!!updated 2023/02/16
 
 
 contains
@@ -415,44 +417,74 @@ contains
 
 
 !!!#############################################################################
+!!! Return the surface normal vector
+!!!#############################################################################
+  function get_surface_normal(lat,axis) result(normal)
+    implicit none
+    double precision :: component
+    integer, dimension(3) :: order=(/1,2,3/)
+    double precision, dimension(3) :: normal
+
+    integer, intent(in) :: axis
+    double precision, dimension(3,3), intent(in) :: lat
+
+    order = cshift(order,3-axis)
+    normal = cross(lat(order(1),:),lat(order(2),:))
+    component = dot_product(lat(3,:),normal) / modu(normal)**2.D0
+    normal = normal * component
+
+    return
+  end function get_surface_normal
+!!!#############################################################################
+
+
+!!!#############################################################################
 !!! Adjusts the amount of vacuum at a location ...
 !!! ... within a cell and adjusts the basis accordingly
 !!!#############################################################################
-  subroutine vacuumer(lat,bas,axis,loc,add,otol)
+  subroutine vacuumer(lat,bas,axis,loc,add,tol)
     implicit none
     integer :: is,ia
-    integer, intent(in) :: axis
-    double precision :: tol,tloc
+    double precision :: rtol,rloc,ortho_scale
     double precision :: cur_vac,inc,diff,mag_old,mag_new
+    double precision,dimension(3) :: normal
+
+    integer, intent(in) :: axis
     double precision, intent(in) :: add,loc
-    type(bas_type) :: bas
-    double precision, optional :: otol
-    double precision,dimension(3,3) :: lat
+    type(bas_type), intent(inout) :: bas
+    double precision,dimension(3,3), intent(inout) :: lat
+
+    double precision, optional, intent(in) :: tol
 
 
-    tol=1.D-5
-    inc=add
-    if(present(otol)) tol=otol
-    cur_vac=min_dist(bas,axis,loc,.true.)-min_dist(bas,axis,loc,.false.)
-    cur_vac=cur_vac*modu(lat(axis,:))
-    diff=cur_vac+inc
+    !! get surface normal vector
+    normal = get_surface_normal(lat,axis)
+    ortho_scale = modu(lat(axis,:))/modu(normal)
+
+
+    rtol = 1.D-5
+    inc = add
+    if(present(tol)) rtol = tol
+    cur_vac = min_dist(bas,axis,loc,.true.) - min_dist(bas,axis,loc,.false.)
+    cur_vac = cur_vac * modu(lat(axis,:))
+    diff = cur_vac + inc
     if(diff.lt.0.D0)then
        write(0,*) "WARNING! Removing vacuum entirely"
     end if
 
-    mag_old=modu(lat(axis,:))
-    mag_new=(mag_old+inc)/mag_old
-    lat(axis,:)=lat(axis,:)*mag_new
-    inc=inc/modu(lat(axis,:))
-    tol=tol/mag_old
-    tloc=loc/mag_new+tol
+    mag_old = modu(lat(axis,:))
+    mag_new = ( mag_old + inc ) / mag_old
+    lat(axis,:) = lat(axis,:) * mag_new
+    inc = inc / modu(lat(axis,:)) * ortho_scale
+    rtol = rtol / mag_old
+    rloc = loc / mag_new + rtol
 
 
     do is=1,bas%nspec
        do ia=1,bas%spec(is)%num
-          bas%spec(is)%atom(ia,axis)=bas%spec(is)%atom(ia,axis)/mag_new
-          if(bas%spec(is)%atom(ia,axis).gt.tloc) then
-             bas%spec(is)%atom(ia,axis)=bas%spec(is)%atom(ia,axis)+inc
+          bas%spec(is)%atom(ia,axis) = bas%spec(is)%atom(ia,axis) / mag_new
+          if(bas%spec(is)%atom(ia,axis).gt.rloc) then
+             bas%spec(is)%atom(ia,axis) = bas%spec(is)%atom(ia,axis) + inc
           end if
        end do
     end do
@@ -466,41 +498,49 @@ contains
 !!! Adjusts the amount of vacuum at a location ...
 !!! ... within a cell and adjusts the basis accordingly
 !!!#############################################################################
-  subroutine set_vacuum(lat,bas,axis,loc,vac,otol)
+  subroutine set_vacuum(lat,bas,axis,loc,vac,tol)
     implicit none
     integer :: is,ia
-    integer, intent(in) :: axis
-    double precision :: tol,tloc
+    double precision :: rtol,rloc,ortho_scale
     double precision :: cur_vac,diff,mag_old,mag_new
+    double precision,dimension(3) :: normal
+
+    integer, intent(in) :: axis
     double precision, intent(in) :: vac,loc
-    type(bas_type) :: bas
-    double precision, optional :: otol
-    double precision,dimension(3,3) :: lat
+    type(bas_type), intent(inout) :: bas
+    double precision,dimension(3,3), intent(inout) :: lat
+
+    double precision, optional, intent(in) :: tol
 
 
-    tol=0.D0
-    if(present(otol)) tol=otol
+    !! get surface normal vector
+    normal = get_surface_normal(lat,axis)
+    ortho_scale = modu(lat(axis,:))/modu(normal)
+
+
+    rtol = 0.D0
+    if(present(tol)) rtol = tol
     if(vac.lt.0.D0)then
        write(0,*) "WARNING! Removing vacuum entirely"
     end if
-    cur_vac=min_dist(bas,axis,loc,.true.)-min_dist(bas,axis,loc,.false.)
-    cur_vac=cur_vac*modu(lat(axis,:))
-    diff=vac-cur_vac
+    cur_vac = min_dist(bas,axis,loc,.true.) - min_dist(bas,axis,loc,.false.)
+    cur_vac = cur_vac * modu(normal)
+    diff = ( vac - cur_vac ) * ortho_scale
 
-    mag_old=modu(lat(axis,:))
-    mag_new=(mag_old+diff)/mag_old
-    lat(axis,:)=lat(axis,:)*mag_new
-    diff=diff/modu(lat(axis,:))
-    tol=tol/mag_old
-    tloc=loc/mag_new+tol
+    mag_old = modu(lat(axis,:))
+    mag_new = ( mag_old + diff ) / mag_old
+    lat(axis,:) = lat(axis,:) * mag_new
+    diff = diff / modu(lat(axis,:))
+    rtol = rtol / mag_old
+    rloc = loc / mag_new + rtol
 
 
 
     do is=1,bas%nspec
        do ia=1,bas%spec(is)%num
-          bas%spec(is)%atom(ia,axis)=bas%spec(is)%atom(ia,axis)/mag_new
-          if(bas%spec(is)%atom(ia,axis).gt.tloc) then
-             bas%spec(is)%atom(ia,axis)=bas%spec(is)%atom(ia,axis)+diff
+          bas%spec(is)%atom(ia,axis) = bas%spec(is)%atom(ia,axis) / mag_new
+          if(bas%spec(is)%atom(ia,axis).gt.rloc) then
+             bas%spec(is)%atom(ia,axis) = bas%spec(is)%atom(ia,axis) + diff
           end if
        end do
     end do
