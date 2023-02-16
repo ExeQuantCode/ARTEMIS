@@ -666,19 +666,6 @@ contains
                "lw",lcycle)
           if(lcycle) cycle lw_term_loop
 
-
-          !!-----------------------------------------------------------------------
-          !! TEMPORARY
-          !!-----------------------------------------------------------------------
-          write(0,*) "writing termination"
-          write(msg,'("POSCAR_term",I0)') iterm
-          open(100+iterm,file=trim(msg))
-          call geom_write(100+iterm,tlw_lat,tlw_bas)
-          close(100+iterm)
-          !!-----------------------------------------------------------------------
-          !! TEMPORARY
-          !!-----------------------------------------------------------------------
-
           
           !!--------------------------------------------------------------------
           !! Cycles over terminations of upper material
