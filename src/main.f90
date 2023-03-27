@@ -38,7 +38,8 @@ program artemis
      end if
      call edit_structure(&
           lat=struc1_lat,bas=struc1_bas,&
-          ofile=out_filename,edits=edits)
+          ofile=out_filename,edits=edits,&
+          lnorm=lnorm_lat)
 
   case(1) ! interfaces/ARTEMIS/SEARCH
      write(6,'(1X,"task ",I0," set",/,1X,"Performing Interface Generation")') task

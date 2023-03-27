@@ -24,7 +24,7 @@ module mod_help
 
 
   ! Cell_edits number of tags
-  integer, parameter :: ntags_cell_edits=11
+  integer, parameter :: ntags_cell_edits=12
   ! Cell_edits tags
   integer, parameter :: iout_file_tag=1
   integer, parameter :: ilsurf_gen_CE_tag=2
@@ -37,6 +37,7 @@ module mod_help
   integer, parameter :: ilayer_sep_CE_tag=9
   integer, parameter :: ilortho_CE_tag=10
   integer, parameter :: isurf_tag=11
+  integer, parameter :: ilnorm_lat_tag=12
 
 
   ! Interface number of tags
@@ -105,7 +106,7 @@ module mod_help
   public :: interface_help
 
 
-!!!updated 2021/12/08
+!!!updated 2023/03/27
 
 
 contains
@@ -346,6 +347,15 @@ contains
     tag(isurf_tag)%default = '(empty)'
     tag(isurf_tag)%description = &
          'Defines the bottom and top surface terminations of the crystal'
+
+    tag(ilnorm_lat_tag)%name    = 'LNORM_LAT'
+    tag(ilnorm_lat_tag)%type    = 'L'
+    tag(ilnorm_lat_tag)%summary = 'Apply Buerger cell renormalisation'
+    tag(ilnorm_lat_tag)%allowed = 'TRUE or FALSE'
+    tag(ilnorm_lat_tag)%default = 'TRUE'
+    tag(ilnorm_lat_tag)%description = &
+         'Defines whether the lattice (cell) is printed out as-is, or whether &
+         &the Buerger reduction is performed to make lattice more manageable'
 
 
 !!! SET UP A CUTTER FUNCTION

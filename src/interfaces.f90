@@ -13,7 +13,7 @@ module interface_subroutines
   use edit_geom,            only: planecutter,primitive_lat,ortho_axis,&
        shift_region,set_vacuum,transformer,shifter,reducer,&
        get_min_bulk_bond,clone_bas,bas_lat_merge,get_shortest_bond,bond_type,&
-       share_strain, normalise_basis
+       share_strain, normalise_basis, MATNORM
   use mod_sym,              only: term_arr_type,confine_type,gldfnd,&
        get_terminations,get_primitive_cell
   use swapping,              only: rand_swapper
@@ -139,7 +139,18 @@ contains
          dirname,"lw",lignore)
 
     
+    !!--------------------------------------------------------------------------
+    !! Normalise lattice
+    !!--------------------------------------------------------------------------
+    if(lnorm_lat)then
+       call reducer(tmp_lat1,tmp_bas1)
+       tmp_lat1=MATNORM(tmp_lat1)
+    end if
+    
+
+    !!--------------------------------------------------------------------------
     !! loop over terminations and write them
+    !!--------------------------------------------------------------------------
     do iterm=term_start,term_end,iterm_step
        call clone_bas(tmp_bas1,tmp_bas2,tmp_lat1,tmp_lat2)
        if(allocated(t1bas_map)) deallocate(t1bas_map)
@@ -148,8 +159,9 @@ contains
             thickness_val,ncells,height,ludef_surf,lw_surf(2),&
             "lw",lignore,lortho,vacuum)
 
+
        !!-----------------------------------------------------------------------
-       !! Prints structure
+       !! Print structure
        !!-----------------------------------------------------------------------
        unit=100+iterm
        write(filename,'("POSCAR_term",I0)') iterm

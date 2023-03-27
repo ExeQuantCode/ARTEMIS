@@ -32,7 +32,7 @@ module inputs
   logical :: lsurf_gen,lprint_matches,lprint_terms,lgen_interfaces,lprint_shifts
   logical :: lw_use_pricel, up_use_pricel
   logical :: lw_layered,up_layered
-  logical :: lortho
+  logical :: lortho,lnorm_lat
   logical :: ludef_lw_layered,ludef_up_layered,ludef_axis
   logical :: lpresent_struc2
   logical :: lswap_mirror
@@ -48,7 +48,7 @@ module inputs
   double precision, dimension(3,3) :: struc1_lat,struc2_lat
 
 
-!!!updated  2022/04/11
+!!!updated  2023/03/27
 
 
 contains
@@ -131,6 +131,7 @@ contains
     ludef_lw_layered=.false.
     ludef_up_layered=.false.
     ludef_axis=.false.
+    lnorm_lat=.true.
     lw_surf=0
     up_surf=0
     iintf=-1
@@ -535,7 +536,7 @@ contains
     character(1024) :: buffer,tagname,store
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(11) :: readvar
+    integer, dimension(12) :: readvar
     logical, optional, intent(in) :: skip
     character(len=6), dimension(4) :: &
          tag_list = ["axis  ","loc   ","val   ","bounds"]
@@ -619,6 +620,8 @@ contains
           case(2)
              read(store,*) lw_surf
           end select
+       case("LNORM_LAT")
+          call assign(buffer,lnorm_lat,           readvar(12))
        case default
           write(6,'("NOTE: unable to assign variable on line ",I0)') count
        end select

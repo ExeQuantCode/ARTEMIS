@@ -551,7 +551,7 @@ contains
 
 
 !!!#############################################################################
-!!! Takes a lattice and makes the define axis orthogonal to the other two
+!!! Takes a lattice and makes the defined axis orthogonal to the other two
 !!! WARNING! THIS IS FOR SLAB STRUCTURES! IT REMOVES PERIODICITY ALONG THAT AXIS
 !!!#############################################################################
   subroutine ortho_axis(lat,bas,axis)
