@@ -3,3 +3,7 @@
 bin/
 obj/
 *.mod
+tests/*/*.txt
+tests/*/*.out
+tests/*/DINTERFACES
+tests/*/DTERMINATIONS
