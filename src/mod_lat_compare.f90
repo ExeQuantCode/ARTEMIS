@@ -25,7 +25,6 @@ module lat_compare
   logical :: lreduce=.true.
   integer, private :: match_method=0
 
-
   type latmatch_type
      integer :: nfit
      logical :: lreduced
@@ -47,7 +46,7 @@ module lat_compare
   end type tol_type
 
   
-!!!updated  2020/02/11
+!!!updated  2021/11/19
  
   
 contains
@@ -96,7 +95,7 @@ contains
                   plane1=plane1,nmiller=num_miller,&
                   lprint=lprint)
           end if
-       elseif(present(plane1))then
+       elseif(present(plane2))then
           call lattice_matching(&
                SAV,tol,bas1,bas2,&
                plane2=plane2,nmiller=num_miller,&
@@ -712,7 +711,7 @@ contains
        else
           tvec=tf2(1,:)
           tf2(1,:)=tf2(2,:)
-          tf2(2,:)=-tvec
+          tf2(2,:)=-nint(tvec)
           diff=max(&
                abs((mag_mat1(1)-mag_mat2(2))/mag_mat1(1)),&
                abs((mag_mat1(2)-mag_mat2(1))/mag_mat1(2)))
@@ -726,22 +725,24 @@ contains
        !!-----------------------------------------------------------------------
        !! Prints the mismatches for the current successful match
        !!-----------------------------------------------------------------------
-       if(present(lprint).and.lprint)then
-          write(6,'(/,A,I0,2X,A,I0)') &
-               "Fit number: ",SAV%nfit+1,&
-               "Area increase: ",&
-               nint(get_area(dble(tf1(1,:)),dble(tf1(2,:))))
-          write(6,'("   Transmat 1:    Transmat 2:")')
-          write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
-          write(6,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
-               tf1(1,1:3),tf2(1,1:3),&
-               tf1(2,1:3),tf2(2,1:3),&
-               tf1(3,1:3),tf2(3,1:3)
-          write(6,'(" vector mismatch (%) = ",F0.9)') diff*100.D0
-          write(6,'(" angle mismatch (°)  = ",F0.9)') abs(ang1-ang2)*180/pi
-          write(6,'(" area mismatch (%)   = ",F0.9)') (&
-               1-abs(t_area1/t_area2))*100.D0
-          write(6,*) "reduced:",SAV%lreduced
+       if(present(lprint))then
+          if(lprint)then
+             write(6,'(/,A,I0,2X,A,I0)') &
+                  "Fit number: ",SAV%nfit+1,&
+                  "Area increase: ",&
+                  nint(get_area(dble(tf1(1,:)),dble(tf1(2,:))))
+             write(6,'("   Transmat 1:    Transmat 2:")')
+             write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
+             write(6,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
+                  tf1(1,1:3),tf2(1,1:3),&
+                  tf1(2,1:3),tf2(2,1:3),&
+                  tf1(3,1:3),tf2(3,1:3)
+             write(6,'(" vector mismatch (%) = ",F0.9)') diff*100.D0
+             write(6,'(" angle mismatch (°)  = ",F0.9)') abs(ang1-ang2)*180/pi
+             write(6,'(" area mismatch (%)   = ",F0.9)') (&
+                  1-abs(t_area1/t_area2))*100.D0
+             write(6,*) "reduced:",SAV%lreduced
+          end if
        end if
        !!-----------------------------------------------------------------------
        !! Checks if best mismatch and saves accordingly
@@ -850,7 +851,7 @@ contains
              converted(i,j)=n(i,j)
           else
              converted(i,j)=&
-                  floor(abs(1.0+(n(i,j)-1.0)/2.0))*((-1.0)**(n(i,j)-1.0))
+                  nint(floor(abs(1.0+(n(i,j)-1.0)/2.0))*((-1.0)**(n(i,j)-1.0)))
           end if
        end do
     end do
@@ -982,6 +983,10 @@ contains
 
     integer, dimension(3,3) :: tmat1,tmat2
     integer, dimension(3,3) :: transform1,transform2 !The transformations output by planecutter.
+
+    real, dimension(3) :: rvec1, rvec2
+    real, dimension(3,3) :: rmat1
+    
     double precision, allocatable, dimension(:,:,:) :: tmpsym1,tmpsym2,tmpsym
     double precision, allocatable, dimension(:,:,:) :: transform1_saved,transform2_saved !The transformations output by plane cutter
 
@@ -1010,8 +1015,10 @@ contains
     allocate(transform2_saved(tol%nstore,3,3))
     allocate(Tsaved_1(tol%nstore,2,2))
     allocate(Tsaved_2(tol%nstore,2,2))
-    Tsaved_1 = 0
-    Tsaved_2 = 0
+    transform1_saved = 0.D0
+    transform2_saved = 0.D0
+    Tsaved_1 = 0.D0
+    Tsaved_2 = 0.D0
     allocate(tolerances(tol%nstore,3))
     allocate(saved_tolerances(tol%nstore,3))
     saved_tolerances = INF
@@ -1019,7 +1026,7 @@ contains
     lat2 = SAV%lat2
     pm_tol%maxsize=tol%maxsize
     pm_tol%maxfit=tol%maxfit
-    pm_tol%maxfit=tol%nstore
+    pm_tol%nstore=tol%nstore
     pm_tol%vec=tol%vec
     pm_tol%ang=tol%ang
     pm_tol%area=tol%area
@@ -1126,20 +1133,22 @@ contains
        allocate(miller2(itmp1,3))
        miller2(:,:)=ivtmp1(:itmp1,:)
     end if
-    if(present(lprint).and.lprint)then
-       write(6,*)
-       write(6,'(1X,"Miller planes considered for lower material: ",I0)') &
-            size(miller1(:,1))
-       do i=1,size(miller1(:,1))
-          write(6,'(2X,I2,")",3X,3(3X,I0))') i,miller1(i,:)
-       end do
-       write(6,*)
-       write(6,'(1X,"Miller planes considered for upper material: ",I0)') &
-            size(miller2(:,1))
-       do i=1,size(miller2(:,1))
-          write(6,'(2X,I2,")",3X,3(3X,I0))') i,miller2(i,:)
-       end do
-       write(6,*)
+    if(present(lprint))then
+       if(lprint)then
+          write(6,*)
+          write(6,'(1X,"Miller planes considered for lower material: ",I0)') &
+               size(miller1(:,1))
+          do i=1,size(miller1(:,1))
+             write(6,'(2X,I2,")",3X,3(3X,I0))') i,miller1(i,:)
+          end do
+          write(6,*)
+          write(6,'(1X,"Miller planes considered for upper material: ",I0)') &
+               size(miller2(:,1))
+          do i=1,size(miller2(:,1))
+             write(6,'(2X,I2,")",3X,3(3X,I0))') i,miller2(i,:)
+          end do
+          write(6,*)
+       end if
     end if
 
 
@@ -1163,17 +1172,37 @@ contains
        nsym1=0
        tmpsym1=0.D0
 !!! IS THIS REASONABLE TO DO IT THIS WAY? OR DO WE NEED TO CHANGE sym TO BE IN THE NEW LAT?
+!!! Wait, should it be instead that the cross product of the a-b plane is always consistent?
+       rvec1=real(cross(templat1(1,:),templat1(2,:)))
        do i=1,grp1%nsym
-          if(all(&
-               abs( templat1(3,:) - matmul(templat1(3,:),tmpsym(i,:3,:3)) )&
-               .lt.1.D-8).or.&
-               all(&
-               abs( templat2(3,:) + matmul(templat2(3,:),tmpsym(i,:3,:3)) )&
-               .lt.1.D-8))then
+          rmat1=real(matmul(tmpsym(i,:3,:3),templat1(:,:)))
+          rvec2=cross(rmat1(1,:),rmat1(2,:))
+          if(all(abs( rvec1(:) - rvec2(:) ).lt.1.D-8).or.&
+               all(abs( rvec1(:) + rvec2(:) ).lt.1.D-8))then
              nsym1=nsym1+1
              tmpsym1(nsym1,:3,:3) = tmpsym(i,:3,:3)
+          else
+             cycle
           end if
+          ! redundant if a-b plane works instead.
+          !if(all(&
+          !     abs( templat1(3,:) - matmul(templat1(3,:),tmpsym(i,:3,:3)) )&
+          !     .lt.1.D-8).or.&
+          !     all(&
+          !     abs( templat1(3,:) + matmul(templat1(3,:),tmpsym(i,:3,:3)) )&
+          !     .lt.1.D-8))then
+          !   nsym1=nsym1+1
+          !   tmpsym1(nsym1,:3,:3) = tmpsym(i,:3,:3)
+          !end if
+          !write(0,*) "################################"
+          !write(0,*) i
+          !write(0,'(3(2X,F7.2))') tmpsym(i,:3,:3)
+          !write(0,*)
+          !write(0,'(3(2X,F7.2))') rvec1!(templat1(j,:),j=1,3)!(grp1%sym(i,j,:3),j=1,3) !tmpsym(i,:3,:3)
+          !write(0,*)
+          !write(0,'(3(2X,F7.2))') rvec2!matmul(templat1(3,:),tmpsym(i,:3,:3))!(tmpsym(i,j,:3),j=1,3)
        end do
+       !stop
 
 
        MAINLOOP2: do m2=1,size(miller2(:,1),dim=1)
@@ -1210,7 +1239,7 @@ contains
 
 
           !!--------------------------------------------------------------------
-          !! Calls the function cell_match which matches the ab  plane for ...
+          !! Calls the function cell_match which matches the ab plane for ...
           !! ... two input lattices
           !!--------------------------------------------------------------------
           call cell_match(pm_tol,&
@@ -1226,13 +1255,13 @@ contains
           !! Find the (tol%nstore) best matches overall
           !!--------------------------------------------------------------------
           loop110: do i=1,num_of_transforms
-             IF101: if ( all( tolerances(i,:).le.&
-                  saved_tolerances(tol%nstore,:) ) )then
+             IF101: if ( dot_product(tolerances(i,:),vaa_weighting).le.&
+                  dot_product(saved_tolerances(tol%nstore,:),vaa_weighting) )then
                 temp_mat1(:,:) = dble(Tcellmatch_1(i,:,:))
                 temp_mat2(:,:) = dble(Tcellmatch_2(i,:,:))
                 IF102: if (.not.is_duplicate(&
-                     dble(Tsaved_1),dble(Tsaved_2),&
-                     dble(temp_mat1),dble(temp_mat2),&
+                     (Tsaved_1),(Tsaved_2),&
+                     (temp_mat1),(temp_mat2),&
                      tmpsym1,tmpsym2) ) then
                    saved_tolerances(tol%nstore,:) = tolerances(i,:)
                    Tsaved_1(tol%nstore,:,:) = temp_mat1(:,:)
@@ -1265,8 +1294,8 @@ contains
        big_T_2(i,3,3) = 1
     end do loop101
     loop103: do i=1,tol%nstore
-       big_T_1(i,:2,:2) = dble(Tsaved_1(i,:,:))
-       big_T_2(i,:2,:2) = dble(Tsaved_2(i,:,:))
+       big_T_1(i,:2,:2) = (Tsaved_1(i,:,:))
+       big_T_2(i,:2,:2) = (Tsaved_2(i,:,:))
     end do loop103
 
 
@@ -1330,33 +1359,177 @@ contains
        SAV%tf2(i,:,:) = nint(comb_trans_2(i,:,:))
     end do OUTLOOP
     SAV%tol(:,1) = SAV%tol(:,1)*100.D0
+    SAV%tol(:,3) = SAV%tol(:,3)*100.D0
     write(6,*) "Total number of matches saved:",SAV%nfit
 
 
 !!!-----------------------------------------------------------------------------
 !!! Print the set of best matches
 !!!-----------------------------------------------------------------------------
-    if(present(lprint).and.lprint)then
-       do i=1,SAV%nfit
-          write(6,'(/,A,I0,2X,A,I0)') &
-               "Fit number: ",i,&
-               "Area increase: ",&
-               nint(get_area(dble(SAV%tf1(i,1,:)),dble(SAV%tf1(i,2,:))))
-          write(6,'("   Transmat 1:    Transmat 2:")')
-          write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
-          write(6,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
-               SAV%tf1(i,1,1:3),SAV%tf2(i,1,1:3),&
-               SAV%tf1(i,2,1:3),SAV%tf2(i,2,1:3),&
-               SAV%tf1(i,3,1:3),SAV%tf2(i,3,1:3)
-          write(6,'(" vector mismatch (%) = ",F0.9)') SAV%tol(i,1)
-          write(6,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(i,2)
-          write(6,*) "reduced:",lvec1(i)
-          write(6,*)
-       end do
+    if(present(lprint))then
+       if(lprint)then
+          do i=1,SAV%nfit
+             write(6,'(/,A,I0,2X,A,I0)') &
+                  "Fit number: ",i,&
+                  "Area increase: ",&
+                  nint(get_area(dble(SAV%tf1(i,1,:)),dble(SAV%tf1(i,2,:))))
+             write(6,'("   Transmat 1:    Transmat 2:")')
+             write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
+             write(6,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
+                  SAV%tf1(i,1,1:3),SAV%tf2(i,1,1:3),&
+                  SAV%tf1(i,2,1:3),SAV%tf2(i,2,1:3),&
+                  SAV%tf1(i,3,1:3),SAV%tf2(i,3,1:3)
+             write(6,'(" vector mismatch (%) = ",F0.9)') SAV%tol(i,1)
+             write(6,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(i,2)
+             write(6,'(" area mismatch (%)   = ",F0.9)') SAV%tol(i,3)
+             write(6,*) "reduced:",lvec1(i)
+             write(6,*)
+          end do
+       end if
     end if
 
 
   end subroutine lattice_matching
 !!!#############################################################################
 
+  
+!!!!#############################################################################
+!!!! Apply the elastic constants to determine strain energy
+!!!!#############################################################################
+!!!! elastic tensor form (Voight notation):
+!!!!  C1111  C1122  C1133  C1123  C1113  C1112
+!!!!         C2222  C2233  C2223  C2213  C2212
+!!!!                C3333  C3323  C3313  C3312
+!!!!                       C2323  C2313  C2312
+!!!!                              C1313  C1312
+!!!!                                     C1212
+!!!! (VASP swaps the final three columns to 12 23 13
+!  function compensate_strains(tfmat,w_elastic_tensor,up_elastic_tensor)
+!    implicit none
+!    integer :: i
+!    double precision, dimension(3) :: strain_vec
+!
+!    integer, intent(in) :: axis
+!    double precision, dimension(3,3), intent(in) :: lat1,lat2
+!    double precision, dimension(6,6), intent(in) :: elastic_tensor
+!
+!    
+!    ident = 0.D0
+!    do i=1,3
+!       ident(i,i) = 1.D0
+!    end do
+!
+!    do i=1,3
+!       strain_ratio(i) = sum(lw_elastic_tensor(i,:))/sum(up_elastic_tensor(i,:))
+!    end do
+!    do i=1,3
+!       strain_ratio(3+i) = sum(lw_elastic_tensor(i,4:))/sum(up_elastic_tensor(i,4:))
+!    end do
+!
+!    
+!
+!    
+!    
+!  end function compensate_strains
+!!!!#############################################################################
+!
+!  
+!!!!#############################################################################
+!!!! Apply the elastic constants to determine strain energy
+!!!!#############################################################################
+!!!! elastic tensor form (Voight notation):
+!!!!  C1111  C1122  C1133  C1123  C1113  C1112
+!!!!         C2222  C2233  C2223  C2213  C2212
+!!!!                C3333  C3323  C3313  C3312
+!!!!                       C2323  C2313  C2312
+!!!!                              C1313  C1312
+!!!!                                     C1212
+!!!! (VASP swaps the final three columns to 12 23 13
+!  function tester(lw_lat,up_lat,lw_tfmat,up_tfmat,lw_elastic,up_elastic) result(stress_vec)
+!    implicit none
+!    integer :: i
+!    double precision, dimension(6) :: strain_vec, stress_vec
+!
+!    integer, intent(in) :: axis
+!    double precision, dimension(2,3), intent(in) :: lw_tfmat,up_tfmat
+!    double precision, dimension(3,3), intent(in) :: lw_lat,up_lat
+!    double precision, dimension(6,6), intent(in) :: lw_elastic,up_elastic
+!
+!
+!    ! turn lw_elastic and up_elastic into 3x3x3x3 matrices
+!    ! apply the lw_tfmat to lw_elastic and same for up
+!    ! ... this should reduce them to a WHAT? sized matrix
+!    ! ... this can then be reduced to the Voigt notation, to reduce size and number of variables
+!    ! apply transformations to lw_lat and up_lat
+!    ! ... then determine the transformation matrix between lw_lat and up_lat.
+!    ! now compare the two sets of elements and make them equal.
+!    ! apply this to one of the stress matrices. Then we have their ratio timesed by the tfmat already, so we have the amount one will expand or compress. The inverse should be the other.
+!
+!
+!    lw_tflat = matmul(lw_lat,lw_tfmat)
+!    up_tflat = matmul(up_lat,up_tfmat)
+!    
+!    ident = 0.D0
+!    do i=1,3
+!       ident(i,i) = 1.D0
+!    end do
+!    
+!    strain_mat = matmul(lat1,inverse(lat2))-ident
+!    do i=1,3
+!       strain_vec(i) = strain_mat(i,i)
+!    end do
+!    strain_vec(4) = 2.D0*strain_mat(2,3)
+!    strain_vec(5) = 2.D0*strain_mat(3,1)
+!    strain_vec(6) = 2.D0*strain_mat(1,2)
+!
+!    stress_vec = matmul(strain_vec,elastic_tensor)
+!
+!    
+!    
+!  end function tester
+!!!!#############################################################################
+!
+!  
+!!!!#############################################################################
+!!!! Apply the elastic constants to determine strain energy
+!!!!#############################################################################
+!!!! elastic tensor form (Voight notation):
+!!!!  C1111  C1122  C1133  C1123  C1113  C1112
+!!!!         C2222  C2233  C2223  C2213  C2212
+!!!!                C3333  C3323  C3313  C3312
+!!!!                       C2323  C2313  C2312
+!!!!                              C1313  C1312
+!!!!                                     C1212
+!!!! (VASP swaps the final three columns to 12 23 13
+!  function get_stress(lat1,lat2,axis,elastic_tensor) result(stress_vec)
+!    implicit none
+!    integer :: i
+!    double precision, dimension(6) :: strain_vec, stress_vec
+!
+!    integer, intent(in) :: axis
+!    double precision, dimension(3,3), intent(in) :: lat1,lat2
+!    double precision, dimension(6,6), intent(in) :: elastic_tensor
+!
+!    
+!    ident = 0.D0
+!    do i=1,3
+!       ident(i,i) = 1.D0
+!    end do
+!    
+!    strain_mat = matmul(lat1,inverse(lat2))-ident
+!    do i=1,3
+!       strain_vec(i) = strain_mat(i,i)
+!    end do
+!    strain_vec(4) = 2.D0*strain_mat(2,3)
+!    strain_vec(5) = 2.D0*strain_mat(3,1)
+!    strain_vec(6) = 2.D0*strain_mat(1,2)
+!
+!    stress_vec = matmul(strain_vec,elastic_tensor)
+!
+!    
+!    
+!  end function get_stress
+!!!!#############################################################################
+
+  
 end module lat_compare

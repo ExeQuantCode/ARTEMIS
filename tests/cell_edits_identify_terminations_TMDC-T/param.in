@@ -1,0 +1,57 @@
+SETTINGS
+  TASK        = 0
+  RESTART     = 0
+  STRUC1_FILE = POSCAR  ! lower structure/interface structure
+!  STRUC2_FILE = ! upper structure (not used if RESTART > 0)
+  MASTER_DIR  = DINTERFACES
+  SUBDIR_PREFIX = D
+  IPRINT = 0
+  CLOCK =               ! taken from the time clock by default
+END SETTINGS
+
+
+CELL_EDITS
+  LSURF_GEN   = T
+  MILLER_PLANE  = 0 0 1
+  SLAB_THICKNESS = 3
+  LAYER_SEP = 2
+END CELL_EDITS
+
+
+INTERFACES
+  LGEN_INTERFACES = T   ! generate interfaces
+  IMATCH =  0           ! interface matching method
+  NINTF = 100           ! max number of interfaces
+  NMATCH = 5            ! max number of lattice matches
+  TOL_VEC = 10.D0        ! max vector tolerance (in percent %)
+  TOL_ANG = 1.D0        ! max angle tolerance (in degrees (°))
+  TOL_AREA = 20.D0      ! max area tolerance (in percent %)
+  TOL_MAXFIND = 100     ! max number of good fits to find per plane
+  TOL_MAXSIZE = 10      ! max increase of any lattice vector
+  NMILLER = 10          ! number of Miller planes to consider
+  LW_MILLER = 0 1 0          ! written as a miller plane, e.g. 0 0 1
+  UP_MILLER = 1 -1 1          ! written as a miller plane, e.g. 0 0 1
+
+  LW_SLAB_THICKNESS = 4 ! thickness of lower material
+  UP_SLAB_THICKNESS = 5 ! thickness of upper material
+  NTERM = 5             ! max number of terminations per material per match
+  LAYER_SEP = 0.4
+  MBOND_MAXLEN = 10
+  LW_LAYERED = F
+
+  SHIFTDIR =  DSHIFT    ! shift directory name
+  ISHIFT = 0            ! shifting method
+  SHIFT = 1
+  NSHIFT = 5            ! number of shifts to apply
+  C_SCALE = 1.D0        ! interface-separation scaling factor
+
+  SWAPDIR =  DSWAP      ! swap directory name
+  ISWAP = 0             ! swapping method
+  NSWAP = 5             ! number of swap structures generated per interface
+  SWAP_DENSITY = 5.D-2  ! intermixing area density
+
+  LSURF_GEN      = F      ! generate surfaces of a plane
+  LPRINT_TERMS   = T      ! prints all found terminations
+  LPRINT_MATCHES = T    ! prints all found lattice matches
+END INTERFACES
+

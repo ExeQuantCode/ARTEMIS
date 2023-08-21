@@ -9,7 +9,7 @@
 !!! MAYBE HAVE FINDSYM IN HERE IN ORDER TO EDIT TOLSYM?
 module inputs
   use constants, only: ierror,pi
-  use misc, only: flagmaker,file_check
+  use misc, only: flagmaker,file_check,to_lower,to_upper
   use rw_geom, only: bas_type,geom_read,geom_write
   use io
   use aspect, only: aspect_type, edit_structure
@@ -23,16 +23,20 @@ module inputs
   integer :: lw_thickness,up_thickness
   integer :: nshift,nterm,nintf,nswap,nmiller
   real :: max_bondlength,swap_sigma,swap_depth
-  double precision :: c_scale,intf_depth,layer_sep,swap_den,tol_sym
+  double precision :: lw_bulk_modulus, up_bulk_modulus
+  double precision :: c_scale,intf_depth,vacuum
+  double precision :: layer_sep,lw_layer_sep,up_layer_sep,swap_den,tol_sym
   character(len=20) :: input_fmt,output_fmt
   character(200) :: struc1_file,struc2_file,out_filename
   character(100) :: dirname,shiftdir,swapdir,subdir_prefix
   logical :: lsurf_gen,lprint_matches,lprint_terms,lgen_interfaces,lprint_shifts
+  logical :: lw_use_pricel, up_use_pricel
   logical :: lw_layered,up_layered
-  logical :: lortho
+  logical :: lortho,lnorm_lat
   logical :: ludef_lw_layered,ludef_up_layered,ludef_axis
   logical :: lpresent_struc2
   logical :: lswap_mirror
+  logical :: lc_fix
   type(bas_type) :: struc1_bas,struc2_bas
   type(tol_type) :: tolerance
   type(aspect_type) :: edits
@@ -44,7 +48,7 @@ module inputs
   double precision, dimension(3,3) :: struc1_lat,struc2_lat
 
 
-!!!updated  2020/02/26
+!!!updated  2023/03/27
 
 
 contains
@@ -84,6 +88,8 @@ contains
     idepth=0   !!! SWAP DEFAULT DEPTH METHOD !!!
     intf_depth=1.5D0
     layer_sep=1.D0
+    lw_layer_sep=0.D0
+    up_layer_sep=0.D0
     lortho = .true.
     lsurf_gen=.false.
     up_mplane=(/0,0,0/)
@@ -91,6 +97,7 @@ contains
     axis=3
     lw_thickness=3
     up_thickness=3
+    vacuum=14.D0
     lw_surf=0
     up_surf=0
     c_scale=1.5D0
@@ -124,11 +131,18 @@ contains
     ludef_lw_layered=.false.
     ludef_up_layered=.false.
     ludef_axis=.false.
+    lnorm_lat=.true.
     lw_surf=0
     up_surf=0
     iintf=-1
     tol_sym = 1.D-6
     udef_intf_loc = [ -1.D0, -1.D0 ]
+    lw_use_pricel=.true.
+    up_use_pricel=.true.
+
+    lw_bulk_modulus=0.E0
+    up_bulk_modulus=0.E0
+    lc_fix=.true.
 
 
 !!!-----------------------------------------------------------------------------
@@ -452,7 +466,9 @@ contains
        if(trim(buffer).eq.'') cycle settings_read
        if(index(trim(buffer),"END").ne.0.and.&
             index(trim(buffer),"SETTINGS").ne.0) exit settings_read
-       if(present(skip).and.skip) cycle
+       if(present(skip))then
+          if(skip) cycle
+       end if
        tagname=trim(adjustl(buffer))
        if(scan(buffer,"=").ne.0) tagname=trim(tagname(:scan(tagname,"=")-1))
        select case(trim(tagname))
@@ -520,7 +536,7 @@ contains
     character(1024) :: buffer,tagname,store
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(9) :: readvar
+    integer, dimension(12) :: readvar
     logical, optional, intent(in) :: skip
     character(len=6), dimension(4) :: &
          tag_list = ["axis  ","loc   ","val   ","bounds"]
@@ -537,7 +553,9 @@ contains
        if(trim(buffer).eq.'') cycle cell_edits_read
        if(index(trim(buffer),"END").ne.0.and.&
             index(trim(buffer),"CELL_EDITS").ne.0) exit cell_edits_read
-       if(present(skip).and.skip) cycle
+       if(present(skip))then
+          if(skip) cycle
+       end if
        tagname=trim(adjustl(buffer))
        if(scan(buffer,"=").ne.0) tagname=trim(tagname(:scan(tagname,"=")-1))
        if(scan(trim(adjustl(tagname))," ").ne.0) read(tagname,*) tagname
@@ -545,7 +563,7 @@ contains
        case("OUTPUT_FILE")
           call assign(buffer,out_filename,   readvar(1))
        case("LSURF_GEN")
-          call assign(buffer,lsurf_gen,      readvar(2))   !LSURF_GEN
+          call assign(buffer,lsurf_gen,      readvar(2))
        case("MILLER_PLANE")
           call assign_vec(buffer,lw_mplane,  readvar(3))
        case("SLAB_THICKNESS")
@@ -563,24 +581,26 @@ contains
              readvar(5) = readvar(5) + 1
              edits%list(edits%nedits)=1
           else
-             readvar(8) = readvar(8) + 1
+             readvar(6) = readvar(6) + 1
              edits%list(edits%nedits)=4
              edits%bounds(edits%nedits,:)=assign_listvec(store,tag_list,4)
           end if
        case("VACUUM")
-          readvar(6) = readvar(6) + 1
           edits%nedits=edits%nedits+1
           edits%list(edits%nedits)=2
           store=buffer(index(buffer,"VACUUM")+len("VACUUM"):)
           if(trim(store).eq.'')then
+             readvar(7) = readvar(7) + 1
              call cat(unit=unit,end_string="END",end_string2="VACUUM",&
                   line=count,string=store,rm_cmt=.true.)
+             edits%axis(edits%nedits)=assign_list(store,tag_list,1)
+             edits%bounds(edits%nedits,1)=assign_list(store,tag_list,2)
+             edits%val(edits%nedits)=assign_list(store,tag_list,3)
+          else
+             call assign(buffer, vacuum,        readvar(7))
           end if
-          edits%axis(edits%nedits)=assign_list(store,tag_list,1)
-          edits%bounds(edits%nedits,1)=assign_list(store,tag_list,2)
-          edits%val(edits%nedits)=assign_list(store,tag_list,3)
        case("TFMAT")
-          readvar(7) = readvar(7) + 1
+          readvar(8) = readvar(8) + 1
           edits%nedits=edits%nedits+1
           edits%list(edits%nedits)=3
           store=''
@@ -588,9 +608,20 @@ contains
                line=count,string=store,rm_cmt=.true.)
           read(store,*) edits%tfmat(1,:),edits%tfmat(2,:),edits%tfmat(3,:)
        case("LAYER_SEP")
-          call assign(buffer,layer_sep,        readvar(8))
+          call assign(buffer,layer_sep,        readvar(9))
        case("LORTHO")
-          call assign(buffer,lortho,           readvar(9))
+          call assign(buffer,lortho,           readvar(10))
+       case("SURFACE")
+          call assign(buffer,store,            readvar(11))
+          select case(icount(store))
+          case(1)
+             read(store,*) lw_surf(1)
+             lw_surf(2) = lw_surf(1)
+          case(2)
+             read(store,*) lw_surf
+          end select
+       case("LNORM_LAT")
+          call assign(buffer,lnorm_lat,           readvar(12))
        case default
           write(6,'("NOTE: unable to assign variable on line ",I0)') count
        end select
@@ -621,14 +652,16 @@ contains
     integer :: Reason,j,iudef_nshift
     character(1024) :: store
     character(1024) :: buffer,tagname
-    logical :: ludef_offset
+    logical :: ludef_offset, ludef_lw_layer_sep, ludef_up_layer_sep
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(47) :: readvar
+    integer, dimension(54) :: readvar
     logical, optional, intent(in) :: skip
 
 
     ludef_offset=.false.
+    ludef_lw_layer_sep=.false.
+    ludef_up_layer_sep=.false.
     readvar=0
     interfaces_read: do
        count=count+1
@@ -638,7 +671,9 @@ contains
        if(trim(buffer).eq.'') cycle interfaces_read
        if(index(trim(buffer),"END").ne.0.and.&
             index(trim(buffer),"INTERFACES").ne.0) exit interfaces_read
-       if(present(skip).and.skip) cycle
+       if(present(skip))then
+          if(skip) cycle
+       end if
        tagname=trim(adjustl(buffer))
        if(scan(buffer,"=").ne.0) tagname=trim(tagname(:scan(tagname,"=")-1))
        select case(trim(tagname))
@@ -697,6 +732,9 @@ contains
              case(3)
                 read(store,*) offset(1,:)
                 if(all(offset.ge.0.D0)) iudef_nshift=1
+             case default
+                call err_abort('ERROR: Invalid number of arguments provided to SHIFT&
+                     &\nValid number of arguments is 1 or 3.&')
              end select
           end if
        case("NSHIFT")
@@ -766,18 +804,34 @@ contains
           call assign(buffer,iintf,            readvar(40))
        case("LAYER_SEP")
           call assign(buffer,layer_sep,        readvar(41))
+       case("LW_LAYER_SEP")
+          call assign(buffer,lw_layer_sep,     readvar(42))
+          ludef_lw_layer_sep=.true.
+       case("UP_LAYER_SEP")
+          call assign(buffer,up_layer_sep,     readvar(43))
+          ludef_up_layer_sep=.true.
        case("MBOND_MAXLEN")
-          call assign(buffer,max_bondlength,   readvar(42))
+          call assign(buffer,max_bondlength,   readvar(44))
        case("SWAP_SIGMA")
-          call assign(buffer,swap_sigma,       readvar(43))
+          call assign(buffer,swap_sigma,       readvar(45))
        case("SWAP_DEPTH")
-          call assign(buffer,swap_depth,       readvar(44))
+          call assign(buffer,swap_depth,       readvar(46))
        case("INTF_LOC")
-          call assign_vec(buffer,udef_intf_loc,readvar(45))
+          call assign_vec(buffer,udef_intf_loc,readvar(47))
        case("LMIRROR")
-          call assign(buffer,lswap_mirror,     readvar(46))
+          call assign(buffer,lswap_mirror,     readvar(48))
        case("LORTHO")
-          call assign(buffer,lortho,           readvar(47))
+          call assign(buffer,lortho,           readvar(49))
+       case("LW_USE_PRICEL")
+          call assign(buffer,lw_use_pricel,    readvar(50))
+       case("UP_USE_PRICEL")
+          call assign(buffer,up_use_pricel,    readvar(51))
+       case("LW_BULK_MODULUS")
+          call assign(buffer,lw_bulk_modulus,  readvar(52))
+       case("UP_BULK_MODULUS")
+          call assign(buffer,up_bulk_modulus,  readvar(53))
+       case("LC_FIX")
+          call assign(buffer,lc_fix,           readvar(54))
        case default
           write(0,'("NOTE: unable to assign variable on line ",I0)') count
        end select
@@ -810,6 +864,10 @@ contains
        allocate(offset(1,3))
        offset(1,:)=(/-1.D0,-1.D0,-1.D0/)
     end if
+
+    ! set lw_ and up_layer_sep if not defined
+    if(.not.ludef_lw_layer_sep) lw_layer_sep = layer_sep
+    if(.not.ludef_up_layer_sep) up_layer_sep = layer_sep
 
 
     if(any(readvar.gt.1)) then
@@ -851,7 +909,9 @@ contains
        if(trim(buffer).eq.'') cycle defects_read
        if(index(trim(buffer),"END").ne.0.and.&
             index(trim(buffer),"DEFECTS").ne.0) exit defects_read
-       if(present(skip).and.skip) cycle
+       if(present(skip))then
+          if(skip) cycle
+       end if
        tagname=trim(adjustl(buffer))
        if(scan(buffer,"=").ne.0) tagname=trim(tagname(:scan(tagname,"=")-1))
       select case(trim(tagname))
@@ -916,9 +976,9 @@ contains
        write(UNIT,'(2X,"NINTF = ",I0)') nintf
        write(UNIT,'(2X,"IMATCH = ",I0)') imatch
        write(UNIT,'(2X,"NMATCH = ",I0)') tolerance%nstore
-       write(UNIT,'(2X,"TOL_VEC = ",F0.7)') tolerance%vec
-       write(UNIT,'(2X,"TOL_ANG = ",F0.7)') tolerance%ang
-       write(UNIT,'(2X,"TOL_AREA = ",F0.7)') tolerance%area
+       write(UNIT,'(2X,"TOL_VEC = ",F0.7)') tolerance%vec*100
+       write(UNIT,'(2X,"TOL_ANG = ",F0.7)') tolerance%ang*360/(2*pi)
+       write(UNIT,'(2X,"TOL_AREA = ",F0.7)') tolerance%area*100
        write(UNIT,*)
        write(UNIT,'(2X,"NMILLER  = ",3(I0,1X))') nmiller
        write(UNIT,'(2X,"LW_MILLER_PLANE  = ",3(I0,1X))') lw_mplane

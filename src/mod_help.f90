@@ -24,22 +24,24 @@ module mod_help
 
 
   ! Cell_edits number of tags
-  integer, parameter :: ntags_cell_edits=10
+  integer, parameter :: ntags_cell_edits=12
   ! Cell_edits tags
-  integer, parameter :: ishift_tag=1
-  integer, parameter :: ivacuum_tag=2
-  integer, parameter :: itfmat_tag=3
-  integer, parameter :: ishift_region_tag=4
-  integer, parameter :: iout_file_tag=5
-  integer, parameter :: ilsurf_gen_CE_tag=6
-  integer, parameter :: islab_thick_tag=7
-  integer, parameter :: imiller_tag=8
-  integer, parameter :: ilortho_CE_tag=9
-  integer, parameter :: ilayer_sep_CE_tag=10
+  integer, parameter :: iout_file_tag=1
+  integer, parameter :: ilsurf_gen_CE_tag=2
+  integer, parameter :: imiller_tag=3
+  integer, parameter :: islab_thick_tag=4
+  integer, parameter :: ishift_tag=5
+  integer, parameter :: ishift_region_tag=6
+  integer, parameter :: ivacuum_tag=7
+  integer, parameter :: itfmat_tag=8
+  integer, parameter :: ilayer_sep_CE_tag=9
+  integer, parameter :: ilortho_CE_tag=10
+  integer, parameter :: isurf_tag=11
+  integer, parameter :: ilnorm_lat_tag=12
 
 
   ! Interface number of tags
-  integer, parameter :: ntags_interface=47
+  integer, parameter :: ntags_interface=54
   ! Interface tags
   integer, parameter :: inintf_tag=1
   integer, parameter :: iimatch_tag=2
@@ -81,13 +83,20 @@ module mod_help
   integer, parameter :: ilsurf_gen_tag=38
   integer, parameter :: iiintf_tag=39
   integer, parameter :: ilayer_sep_tag=40
-  integer, parameter :: interm_tag=41
-  integer, parameter :: imbond_maxlen_tag=42
-  integer, parameter :: iswap_sigma_tag=43
-  integer, parameter :: iswap_depth_tag=44
-  integer, parameter :: iintf_loc_tag=45
-  integer, parameter :: ilmirror_tag=46
-  integer, parameter :: ilortho_tag=47
+  integer, parameter :: ilw_layer_sep_tag=41
+  integer, parameter :: iup_layer_sep_tag=42
+  integer, parameter :: interm_tag=43
+  integer, parameter :: imbond_maxlen_tag=44
+  integer, parameter :: iswap_sigma_tag=45
+  integer, parameter :: iswap_depth_tag=46
+  integer, parameter :: iintf_loc_tag=47
+  integer, parameter :: ilmirror_tag=48
+  integer, parameter :: ilortho_tag=49
+  integer, parameter :: ilw_use_pricel_tag=50
+  integer, parameter :: iup_use_pricel_tag=51
+  integer, parameter :: ilw_bulk_modulus_tag=52
+  integer, parameter :: iup_bulk_modulus_tag=53
+  integer, parameter :: ilc_fix_tag=54
 
 
 
@@ -97,7 +106,7 @@ module mod_help
   public :: interface_help
 
 
-!!!updated 2020/02/26
+!!!updated 2023/03/27
 
 
 contains
@@ -137,7 +146,7 @@ contains
     tag(is1file_tag)%default = 'POSCAR'
     tag(is1file_tag)%description = &
          'Name of the input structure file.\n&
-         If generating an interface, it is be taken as the lower crystal'
+         &If generating an interface, it is be taken as the lower crystal'
 
     tag(is2file_tag)%name    = 'STRUC2_FILE'
     tag(is2file_tag)%type    = 'S'
@@ -238,9 +247,12 @@ contains
     tag(ivacuum_tag)%type    = 'B'
     tag(ivacuum_tag)%summary = 'Add/remove vacuum at a point in a cell'
     tag(ivacuum_tag)%allowed = ''
-    tag(ivacuum_tag)%default = ''
+    tag(ivacuum_tag)%default = '14'
     tag(ivacuum_tag)%description = &
-         'Example:\n&
+         'Vacuum gap (only applied for surface generation or when &
+         &user-defined).\n&
+         &Example:\n&
+         &  VACUUM = 14 !(Å)\n&
          &  VACUUM\n&
          &    axis = 3\n&
          &    loc = 0.8\n&
@@ -328,6 +340,23 @@ contains
          'Defines the minimum size of gaps along the Miller direction that &
          &distinguish between separate layers (in Å)'
 
+    tag(isurf_tag)%name    = 'SURFACE'
+    tag(isurf_tag)%type    = 'U'
+    tag(isurf_tag)%summary = 'Crystal surface terminations'
+    tag(isurf_tag)%allowed = 'One or two integer numbers (<INT> [INT])'
+    tag(isurf_tag)%default = '(empty)'
+    tag(isurf_tag)%description = &
+         'Defines the bottom and top surface terminations of the crystal'
+
+    tag(ilnorm_lat_tag)%name    = 'LNORM_LAT'
+    tag(ilnorm_lat_tag)%type    = 'L'
+    tag(ilnorm_lat_tag)%summary = 'Apply Buerger cell renormalisation'
+    tag(ilnorm_lat_tag)%allowed = 'TRUE or FALSE'
+    tag(ilnorm_lat_tag)%default = 'TRUE'
+    tag(ilnorm_lat_tag)%description = &
+         'Defines whether the lattice (cell) is printed out as-is, or whether &
+         &the Buerger reduction is performed to make lattice more manageable'
+
 
 !!! SET UP A CUTTER FUNCTION
 
@@ -406,7 +435,7 @@ contains
          interfaces along.\n&
          &NOTE: this does not change the interfaces generated, simply whether &
          &a generated interface will lie along a, b or c in the generated &
-         output structure file'
+         &output structure file'
 
     tag(iintf_loc_tag)%name    = 'INTF_LOC'
     tag(iintf_loc_tag)%type    = 'V'
@@ -457,7 +486,10 @@ contains
     tag(ilw_miller_tag)%allowed = 'Three integer numbers'
     tag(ilw_miller_tag)%default = '(empty)'
     tag(ilw_miller_tag)%description = &
-         'Confines the lower crystal to this Miller plane for lattice matching'
+         'Confines the lower crystal to this Miller plane for lattice matching.\n&
+         &NOTE: Miller indices used in ARTEMIS are defined for the cell in &
+         &use. Experimental Miller indices are presented with respect to the &
+         & primitive cell. To use proper Miller indices, ensure LW_USE_PRICEL=T.'
 
     tag(iup_miller_tag)%name    = 'UP_MILLER'
     tag(iup_miller_tag)%type    = 'U'
@@ -465,7 +497,10 @@ contains
     tag(iup_miller_tag)%allowed = 'Three integer numbers'
     tag(iup_miller_tag)%default = '(empty)'
     tag(iup_miller_tag)%description = &
-         'Confines the upper crystal to this Miller plane for lattice matching'
+         'Confines the upper crystal to this Miller plane for lattice matching..\n&
+         &NOTE: Miller indices used in ARTEMIS are defined for the cell in &
+         &use. Experimental Miller indices are presented with respect to the &
+         & primitive cell. To use proper Miller indices, ensure UP_USE_PRICEL=T.'
 
     tag(inmiller_tag)%name    = 'NMILLER'
     tag(inmiller_tag)%type    = 'I'
@@ -514,7 +549,29 @@ contains
     tag(ilayer_sep_tag)%default = '1.0'
     tag(ilayer_sep_tag)%description = &
          'Defines the minimum size of gaps along the Miller direction that &
-         &distinguish between separate layers (in Å)'
+         &distinguish between separate layers (in Å).\n&
+         &This tag is ignored if LW_LAYER_SEP and UP_LAYER_SEP are defined.\n&
+         &If either LW_LAYER_SEP and UP_LAYER_SEP are undefined, then this value is used.'
+
+    tag(ilw_layer_sep_tag)%name    = 'LW_LAYER_SEP'
+    tag(ilw_layer_sep_tag)%type    = 'R'
+    tag(ilw_layer_sep_tag)%summary = 'Min size of gap between layers for lower &
+         &structure'
+    tag(ilw_layer_sep_tag)%allowed = 'Any number greater than or equal to zero'
+    tag(ilw_layer_sep_tag)%default = '1.0'
+    tag(ilw_layer_sep_tag)%description = &
+         'Defines the minimum size of gaps along the Miller direction that &
+         &distinguish between separate layers (in Å) for the lower structure'
+
+    tag(iup_layer_sep_tag)%name    = 'UP_LAYER_SEP'
+    tag(iup_layer_sep_tag)%type    = 'R'
+    tag(iup_layer_sep_tag)%summary = 'Min size of gap between layers for upper &
+         &structure'
+    tag(iup_layer_sep_tag)%allowed = 'Any number greater than or equal to zero'
+    tag(iup_layer_sep_tag)%default = '1.0'
+    tag(iup_layer_sep_tag)%description = &
+         'Defines the minimum size of gaps along the Miller direction that &
+         &distinguish between separate layers (in Å) for the upper structure'
 
     tag(ilprint_shifts_tag)%name    = 'LPRINT_SHIFTS'
     tag(ilprint_shifts_tag)%type    = 'L'
@@ -585,7 +642,7 @@ contains
          &    0.0 0.0 1.0 !(direct, direct, Å)\n&
          &    0.0 0.0 2.0 !(direct, direct, Å)\n&
          &    0.0 0.0 3.0 !(direct, direct, Å)\n&
-         &  ENDSHIFT\n&'
+         &  ENDSHIFT\n'
 
     tag(iidepth_tag)%name    = 'IDEPTH'
     tag(iidepth_tag)%type    = 'I'
@@ -749,8 +806,10 @@ contains
          'Prints the surface terminations of a Miller plane in DTERMINATIONS &
          &directory.\n&
          &Prints surfaces for crystals that have had their Miller planes supplied using the "LW_MILLER" and "UP_MILLER" tags\n&
-         &Inside DTERMINATIONS, populates directory DLW_TERMS with lower parent structure surfaces.&
-         &Inside DTERMINATIONS, populates directory DUP_TERMS with upper parent structure surfaces.'
+         &Inside DTERMINATIONS, populates directory DLW_TERMS with lower &
+         parent structure surfaces.\n&
+         &Inside DTERMINATIONS, populates directory DUP_TERMS with upper &
+         parent structure surfaces.'
 
     tag(ilortho_tag)%name    = 'LORTHO'
     tag(ilortho_tag)%type    = 'L'
@@ -760,6 +819,57 @@ contains
     tag(ilortho_tag)%description = &
          'Defines whether to generate surfaces with the surface axis &
          &perpendicular to the surface'
+
+    tag(ilw_use_pricel_tag)%name    = 'LW_USE_PRICEL'
+    tag(ilw_use_pricel_tag)%type    = 'L'
+    tag(ilw_use_pricel_tag)%summary = 'Use lower primitive cell'
+    tag(ilw_use_pricel_tag)%allowed = 'TRUE or FALSE'
+    tag(ilw_use_pricel_tag)%default = 'TRUE'
+    tag(ilw_use_pricel_tag)%description = &
+         'Defines whether to generate and use the primitive unit cell &
+         &for the lower crystal'
+
+    tag(iup_use_pricel_tag)%name    = 'UP_USE_PRICEL'
+    tag(iup_use_pricel_tag)%type    = 'L'
+    tag(iup_use_pricel_tag)%summary = 'Use upper primitive cell'
+    tag(iup_use_pricel_tag)%allowed = 'TRUE or FALSE'
+    tag(iup_use_pricel_tag)%default = 'TRUE'
+    tag(iup_use_pricel_tag)%description = &
+         'Defines whether to generate and use the primitive unit cell &
+         &for the upper crystal'
+
+    tag(ilw_bulk_modulus_tag)%name    = 'LW_BULK_MODULUS'
+    tag(ilw_bulk_modulus_tag)%type    = 'R'
+    tag(ilw_bulk_modulus_tag)%summary = 'Bulk modulus of lower material'
+    tag(ilw_bulk_modulus_tag)%allowed = 'Any positive real number'
+    tag(ilw_bulk_modulus_tag)%default = '(empty)'
+    tag(ilw_bulk_modulus_tag)%description = &
+         'The bulk modulus of the upper material (units=GPa).\n&
+         &If LW_ and UP_ not defined, bulk modulus is ignored and upper &
+         &material takes all of the strain.\n&
+         &NOTE: Units are not important, as long as LW_ and UP_ have the same units.'
+
+    tag(iup_bulk_modulus_tag)%name    = 'UP_BULK_MODULUS'
+    tag(iup_bulk_modulus_tag)%type    = 'R'
+    tag(iup_bulk_modulus_tag)%summary = 'Bulk modulus of upper material'
+    tag(iup_bulk_modulus_tag)%allowed = 'Any positive real number'
+    tag(iup_bulk_modulus_tag)%default = '(empty)'
+    tag(iup_bulk_modulus_tag)%description = &
+         'The bulk modulus of the upper material (units=GPa).\n&
+         &If LW_ and UP_ not defined, bulk modulus is ignored and upper &
+         &material takes all of the strain.\n&
+         &NOTE: Units are not important, as long as LW_ and UP_ have the same units.'
+
+    tag(ilc_fix_tag)%name    = 'LC_FIX'
+    tag(ilc_fix_tag)%type    = 'L'
+    tag(ilc_fix_tag)%summary = 'Fix the c axis of each material'
+    tag(ilc_fix_tag)%allowed = 'TRUE or FALSE'
+    tag(ilc_fix_tag)%default = 'TRUE'
+    tag(ilc_fix_tag)%description = &
+         'The c axis (axis perpendicular to the interface plane) &
+         & can be fixed (strained) or changed (unstrained) to compensate for interfacial strains.\n&
+         &  TRUE  = fix the c axis\n&
+         &  FALSE = extend/compress c axis to compensate for strain.'
 
 
   end function setup_interface_tags

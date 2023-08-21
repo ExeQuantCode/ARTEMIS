@@ -21,22 +21,36 @@
 !!!#############################################################################
 module mod_sym
   use constants,   only: pi
-  use misc,        only: sort1D,sort_col
-  use misc_linalg, only: modu,inverse_3x3,det,gcd,gen_group
+  use misc,        only: sort1D,sort2D,sort_col,set
+  use misc_linalg, only: modu,inverse_3x3,det,gcd,gen_group,cross,uvec
   use rw_geom,     only: bas_type,geom_write
   use edit_geom,   only: transformer,vacuumer,set_vacuum,shifter,&
-       clone_bas,get_closest_atom,ortho_axis
+       clone_bas,get_closest_atom,ortho_axis,reducer,primitive_lat,get_min_dist
   implicit none
   integer :: ierror_sym=0
   integer :: s_start=1,s_end=0
   double precision :: tol_sym=5.D-5
   character(1) :: verb_sym="n"
   integer, allocatable, dimension(:) :: symops_compare
-  integer, allocatable, dimension(:,:,:) :: wyckoff,tmpwyckoff
   double precision, allocatable, dimension(:,:,:) :: savsym
+
+  interface get_wyckoff_atoms
+     procedure get_wyckoff_atoms_any,get_wyckoff_atoms_loc
+  end interface get_wyckoff_atoms
 
 
   private
+
+
+  type spec_wyck_type
+     integer :: num
+     character(len=5) :: name
+     integer, allocatable, dimension(:) :: atom
+  end type spec_wyck_type
+  type wyck_type
+     integer :: nwyck
+     type(spec_wyck_type), allocatable, dimension(:) :: spec
+  end type wyck_type
 
 
   type spcmap_type
@@ -51,21 +65,27 @@ module mod_sym
      double precision :: hmin
      double precision :: hmax
      integer :: natom
+     integer :: nstep
      double precision, allocatable, dimension(:) :: ladder
   end type term_type
 
   type term_arr_type
      integer :: nterm,axis,nstep
      double precision :: tol
-     logical :: lmirror
+     logical :: lmirror=.false.
      type(term_type), allocatable, dimension(:) :: arr
   end type term_arr_type
 
 
   type confine_type
-     integer :: axis=3
+     !! apply any confinement/constraints on symmetries
      logical :: l=.false.
+     !! axis to confine
+     integer :: axis=0
+     !! states whether to consider mirrors in only one plane
      logical :: lmirror=.false.
+     !! if l=.false. -> laxis defines which axes are free
+     !! if l=.true.  -> laxis defines which axes  are confined
      logical, dimension(3) :: laxis=(/.false.,.false.,.false./)
   end type confine_type
 
@@ -82,16 +102,23 @@ module mod_sym
   public :: set_symmetry_tolerance
   public :: ierror_sym,s_start,s_end
   public :: sym_type
+  public :: clone_grp
   public :: sym_setup,check_sym,gldfnd
 
-  public :: setup_ladder
+  public :: get_primitive_cell
+  
   public :: term_arr_type,confine_type
-  public :: get_terminations,print_terminations
+  public :: get_terminations
 
   public :: basmap_type,basis_map
 
+  public :: wyck_type
+  public :: get_wyckoff_atoms
 
-!!!updated 2020/05/04
+  public :: symops_compare
+
+
+!!!updated 2023/02/14
 
 
 contains
@@ -117,6 +144,8 @@ contains
 !!!#############################################################################
   subroutine sym_setup(grp,lat,predefined,new_start,tolerance)
     implicit none
+    logical :: lpresent
+
     type(sym_type) :: grp
 
     double precision, dimension(3,3), intent(in) :: lat
@@ -125,24 +154,30 @@ contains
 
 
     if(present(tolerance)) call set_symmetry_tolerance(tolerance)
-    if(present(new_start).and.new_start)then
-       if(allocated(grp%op)) deallocate(grp%op)
-       if(allocated(grp%sym)) deallocate(grp%sym)
+    if(present(new_start))then
+       if(new_start)then
+          if(allocated(grp%op)) deallocate(grp%op)
+          if(allocated(grp%sym)) deallocate(grp%sym)
+       end if
     end if
 
-    if(present(predefined).and.predefined)then
-       call gen_fundam_sym_matrices(grp,lat)
-    else
-       call mksym(grp,lat)
+    if(present(predefined))then
+       if(predefined)then
+          call gen_fundam_sym_matrices(grp,lat)
+          goto 10
+       end if
     end if
+    call mksym(grp,lat)
 
-    if(allocated(savsym)) deallocate(savsym)
+10  if(allocated(savsym)) deallocate(savsym)
     if(allocated(symops_compare)) deallocate(symops_compare)
-    if(allocated(wyckoff)) deallocate(wyckoff)
-    if(allocated(tmpwyckoff)) deallocate(tmpwyckoff)
     grp%nsymop=0
-    if(present(new_start).and.new_start.or..not.present(new_start).or.&
-         s_end.eq.0)then
+
+    lpresent=.false.
+    if(present(new_start))then
+       if(new_start) lpresent=.true.
+    end if
+    if(.not.present(new_start).or.lpresent.or.s_end.eq.0)then
        s_end=grp%nsym
     end if
 
@@ -157,21 +192,28 @@ contains
 !!!#############################################################################
 !!! tfbas   : transformed basis
 !!!#############################################################################
-  subroutine check_sym(grp,bas1,iperm,tmpbas2,lsave)
+  subroutine check_sym(grp,bas1,iperm,tmpbas2,wyckoff,lsave,lat,loc,lcheck_all)
     implicit none
     integer :: i,j,k,iatom,jatom,ispec,itmp1
     integer :: is,isym,jsym,count,ntrans
     integer :: samecount,oldnpntop
-    logical :: lpresent,lsaving,ltransformed
-    type(bas_type) :: bas1,bas2,tfbas
-    type(sym_type) :: grp
+    logical :: lpresent,lsaving,lwyckoff,ltransformed
+    type(bas_type) :: bas2,tfbas
     double precision, dimension(3) :: diff
     double precision, dimension(3,3) :: ident
+    type(wyck_type), allocatable, dimension(:) :: wyck_check
     double precision, allocatable, dimension(:,:) :: trans
     double precision, allocatable, dimension(:,:,:) :: tmpsav
+
+    type(bas_type), intent(in) :: bas1
+    type(sym_type), intent(inout) :: grp
+
     integer, optional, intent(in) :: iperm
-    type(bas_type), optional :: tmpbas2
-    logical, optional, intent(in) :: lsave
+    logical, optional, intent(in) :: lsave,lcheck_all
+    type(bas_type), optional, intent(in) :: tmpbas2
+    type(wyck_type), optional, intent(inout) :: wyckoff
+    double precision, dimension(3), optional, intent(in) :: loc
+    double precision, dimension(3,3), optional, intent(in) :: lat
 
 
 204 format(4(F11.6),/,4(F11.6),/,4(F11.6),/,4(F11.6))
@@ -182,12 +224,12 @@ contains
 !!!-----------------------------------------------------------------------------
     if(.not.allocated(grp%op))then
        allocate(grp%op(grp%nsym*minval(bas1%spec(:)%num)))
-       grp%op=0
+       grp%op = 0
     end if
     if(present(lsave))then
-       lsaving=lsave
+       lsaving = lsave
     else
-       lsaving=.false.
+       lsaving = .false.
     end if
 
 
@@ -195,48 +237,66 @@ contains
 !!! checks for optional arguments and assigns values if not present
 !!!-----------------------------------------------------------------------------
     if(present(tmpbas2)) then
-       bas2=tmpbas2
-       lpresent=.true.
+       bas2 = tmpbas2
+       if(present(lcheck_all))then
+          lpresent = .not.lcheck_all
+       else
+          lpresent = .true.
+       end if
     else
-       bas2=bas1
-       lpresent=.false.
+       bas2 = bas1
+       lpresent = .false.
     end if
     allocate(tmpsav(grp%nsym*minval(bas1%spec(:)%num),4,4))
-    itmp1=maxval(bas1%spec(:)%num)
-    if(.not.allocated(wyckoff)) &
-         allocate(wyckoff(bas1%nspec,itmp1,itmp1))
-    if(.not.allocated(tmpwyckoff)) &
-         allocate(tmpwyckoff(bas1%nspec,itmp1,itmp1))
+    itmp1 = maxval(bas1%spec(:)%num)
 
 
 !!!-----------------------------------------------------------------------------
 !!! initialises variables
 !!!-----------------------------------------------------------------------------
-    allocate(trans(minval(bas1%spec(:)%num+2),3)); trans=0.D0
+    allocate(trans(minval(bas1%spec(:)%num+2),3)); trans = 0.D0
     allocate(tfbas%spec(bas1%nspec))
-    itmp1=size(bas1%spec(1)%atom(1,:),dim=1)
+    itmp1 = size(bas1%spec(1)%atom(1,:),dim=1)
     do is=1,bas1%nspec
        allocate(tfbas%spec(is)%atom(bas1%spec(is)%num,itmp1))
     end do
-    grp%nsymop=0
-    grp%npntop=0
-    ! wyckoff section
-    !##########################
-    wyckoff=0
-    tmpwyckoff=0
-    do ispec=1,bas1%nspec
-       do iatom=1,bas1%spec(ispec)%num
-          wyckoff(ispec,iatom,1:bas1%spec(ispec)%num)=1
-          tmpwyckoff(ispec,iatom,1:bas1%spec(ispec)%num)=1
+    grp%nsymop = 0
+    grp%npntop = 0
+
+
+!!!-----------------------------------------------------------------------------
+!!! if present, initialises wyckoff arrays
+!!!-----------------------------------------------------------------------------
+    allocate(wyck_check(grp%nsym*minval(bas1%spec(:)%num)))
+    do isym=1,grp%nsym*minval(bas1%spec(:)%num)
+       allocate(wyck_check(isym)%spec(bas1%nspec))
+       do ispec=1,bas1%nspec
+          allocate(wyck_check(isym)%spec(ispec)%atom(bas1%spec(ispec)%num))
+          wyck_check(isym)%spec(ispec)%atom = 0
        end do
     end do
-    !##########################
+    if(present(wyckoff))then
+       lwyckoff = .true.
+       if(allocated(wyckoff%spec)) deallocate(wyckoff%spec)
+       wyckoff%nwyck = 0
+       allocate(wyckoff%spec(bas1%nspec))
+       do ispec=1,bas1%nspec
+          wyckoff%spec(ispec)%num = 0
+          wyckoff%spec(ispec)%name = ""
+          allocate(wyckoff%spec(ispec)%atom(bas1%spec(ispec)%num))
+          do iatom=1,bas1%spec(ispec)%num
+             wyckoff%spec(ispec)%atom(iatom) = iatom
+          end do
+       end do
+    else
+       lwyckoff = .false.
+    end if
 
 
 !!!-----------------------------------------------------------------------------
 !!! set up identity matrix as reference
 !!!-----------------------------------------------------------------------------
-    ltransformed=.false.
+    ltransformed = .false.
     ident = 0.D0
     do i=1,3
        ident(i,i) = 1.D0
@@ -246,8 +306,8 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! applying symmetries to basis to see if the basis conforms to any of them
 !!!-----------------------------------------------------------------------------
+    itmp1 = 1
     symloop: do isym=s_start,s_end
-       tmpwyckoff=wyckoff
        if(verb_sym.eq.'d') write(77,*) isym !,a,b,c
        if(verb_sym.eq.'d') write(77,204) grp%sym(isym,1:4,1:4)
        if(ierror_sym.eq.2.or.ierror_sym.eq.3) write(77,204)  &
@@ -257,11 +317,11 @@ contains
        !------------------------------------------------------------------------
        do ispec=1,bas1%nspec
           do iatom=1,bas1%spec(ispec)%num
-             tfbas%spec(ispec)%atom(iatom,1:3)=&
+             tfbas%spec(ispec)%atom(iatom,1:3) = &
                   matmul(bas1%spec(ispec)%atom(iatom,1:4),grp%sym(isym,1:4,1:3))
              do j=1,3
-                tfbas%spec(ispec)%atom(iatom,j)=&
-                     tfbas%spec(ispec)%atom(iatom,j)-&
+                tfbas%spec(ispec)%atom(iatom,j) = &
+                     tfbas%spec(ispec)%atom(iatom,j) - &
                      ceiling(tfbas%spec(ispec)%atom(iatom,j)-0.5D0)
              end do
           end do
@@ -271,42 +331,39 @@ contains
        !------------------------------------------------------------------------
        count=0
        spcheck: do ispec=1,bas1%nspec
-          diff=0.0
-          samecount=0
+          diff = 0.D0
+          samecount = 0
+          wyck_check(itmp1)%spec(ispec)%atom = 0
           atmcheck: do iatom=1,bas1%spec(ispec)%num
              atmcyc: do jatom=1,bas1%spec(ispec)%num
-                diff=tfbas%spec(ispec)%atom(iatom,1:3)-&
+                !if(wyck_check(itmp1)%spec(ispec)%atom(jatom).ne.0) cycle atmcyc
+                diff = tfbas%spec(ispec)%atom(iatom,1:3) - &
                      bas2%spec(ispec)%atom(jatom,1:3)
-                do j=1,3
-                   diff(j)=mod((diff(j)+100.D0),1.0)
-                   diff(j)=diff(j)-floor(diff(j))
-                   if((abs(diff(j)-1.D0)).lt.(tol_sym)) diff(j)=0.D0
-                end do
+                diff(:) = diff(:) - floor(diff(:))
+                where((abs(diff(:)-1.D0)).lt.(tol_sym))
+                   diff(:)=0.D0
+                end where
                 if(sqrt(dot_product(diff,diff)).lt.tol_sym)then
-                   samecount=samecount+1
-                   tmpwyckoff(ispec,iatom,jatom)=0
-                   tmpwyckoff(ispec,jatom,iatom)=0
+                   samecount = samecount + 1
+                   wyck_check(itmp1)%spec(ispec)%atom(iatom) = jatom
                 end if
                 if((iatom.eq.bas1%spec(ispec)%num).and.&
                      (jatom.eq.bas1%spec(ispec)%num))then
-                   if (samecount.ne.bas1%spec(ispec)%num)then
-                      goto 10
-                   end if
+                   if (samecount.ne.bas1%spec(ispec)%num) goto 10
                 end if
              end do atmcyc
-             count=count+samecount
+             count = count + samecount
           end do atmcheck
           if(samecount.ne.bas1%spec(ispec)%num) goto 10
        end do spcheck
-       grp%npntop=grp%npntop+1
-       grp%nsymop=grp%nsymop+1
-       wyckoff=tmpwyckoff
-       tmpsav(grp%nsymop,:,:)=grp%sym(isym,:,:)
-       grp%op(grp%nsymop)=isym
+       grp%npntop = grp%npntop + 1
+       grp%nsymop = grp%nsymop + 1
+       itmp1 = grp%nsymop + 1
+       tmpsav(grp%nsymop,:,:) = grp%sym(isym,:,:)
+       grp%op(grp%nsymop) = isym
        if(grp%nsymop.ne.0.and.lpresent) exit symloop
-10     trans=0.D0
-       ntrans=0
-       tmpwyckoff=wyckoff
+10     trans = 0.D0
+       ntrans = 0
        !------------------------------------------------------------------------
        ! checks if translations are valid with the current symmetry operation
        !------------------------------------------------------------------------
@@ -316,10 +373,14 @@ contains
           else
              ltransformed=.true.
           end if
-          call gldfnd(grp%confine,bas2,tfbas,trans,ntrans,transformed=ltransformed)
+          call gldfnd(grp%confine,&
+               bas2,tfbas,&
+               trans,ntrans,&
+               transformed=ltransformed,&
+               wyck_check=wyck_check(itmp1:))
           if(ntrans.gt.0) then
              if(lpresent.and..not.lsaving)then
-                grp%nsymop=grp%nsymop+1
+                grp%nsymop = grp%nsymop + 1
                 exit symloop
              end if
              transloop: do i=1,ntrans
@@ -331,10 +392,10 @@ contains
                       if(grp%op(jsym).eq.1) then
                          if(all(abs(trans(i,1:3)-tmpsav(jsym,4,1:3)).lt.&
                               tol_sym)) cycle transloop
-                         diff=trans(i,1:3)-tmpsav(jsym,4,1:3)
+                         diff = trans(i,1:3) - tmpsav(jsym,4,1:3)
                          do j=1,3
-                            diff(j)=diff(j)-floor(diff(j))
-                            if(diff(j).gt.0.5) diff(j)=diff(j)-1.D0
+                            diff(j) = diff(j) - floor(diff(j))
+                            if(diff(j).gt.0.5) diff(j) = diff(j) - 1.D0
                          end do
                          do k=1,i
                             if(all(abs(diff-trans(k,1:3)).lt.tol_sym)) &
@@ -343,22 +404,23 @@ contains
                       end if
                    end do
                 end if
-                grp%nsymop=grp%nsymop+1
-                tmpsav(grp%nsymop,:,:)=grp%sym(isym,:,:)
-                tmpsav(grp%nsymop,4,1:3)=trans(i,:)
-                grp%op(grp%nsymop)=isym
+                grp%nsymop = grp%nsymop + 1
+                itmp1 = grp%nsymop + 1
+                tmpsav(grp%nsymop,:,:) = grp%sym(isym,:,:)
+                tmpsav(grp%nsymop,4,1:3) = trans(i,:)
+                grp%op(grp%nsymop) = isym
              end do transloop
              if(lpresent) exit symloop
           end if
        end if
-       oldnpntop=grp%npntop
+       oldnpntop = grp%npntop
     end do symloop
 
 
 !!!-----------------------------------------------------------------------------
 !!! allocates and saves the array savsym if the first time submitted
 !!!-----------------------------------------------------------------------------
-    if(present(lsave).and.lsave)then
+    if(lsaving)then
        if(allocated(savsym)) deallocate(savsym)
        allocate(savsym(grp%nsymop,4,4))
        savsym=0.D0
@@ -386,10 +448,24 @@ contains
     end if iperm_if
 
 
-    if(present(lsave).and.lsave)then
+    if(lsaving)then
+       deallocate(grp%sym)
        call move_alloc(savsym,grp%sym)
-       grp%nsym=grp%nsymop
+       grp%nsym = grp%nsymop
     end if
+
+
+!!!-----------------------------------------------------------------------------
+!!! if wyckoff present, set up wyckoff atoms
+!!!-----------------------------------------------------------------------------
+    if(lwyckoff)then
+       if(present(lat).and.present(loc))then
+          wyckoff=get_wyckoff_atoms(wyck_check(:grp%nsymop),lat,bas1,loc)
+       else       
+          wyckoff=get_wyckoff_atoms(wyck_check(:grp%nsymop))
+       end if
+    end if
+
 
 
     return
@@ -401,24 +477,27 @@ contains
 !!! supplies the glides (if any) that are required to match the two bases ...
 !!! ... "bas" and "tfbas" onto one another
 !!!#############################################################################
-  subroutine gldfnd(confine,bas,tfbas,trans,ntrans,transformed)
+  subroutine gldfnd(confine,bas,tfbas,trans,ntrans,transformed,wyck_check)
     implicit none
     integer :: i,j,ispec,iatom,jatom,katom,itmp1
-    integer :: minspecloc,samecount,ntrans
-    type(bas_type) :: bas,tfbas
-    type(confine_type) :: confine
-    !    integer, allocatable, dimension(:,:,:) :: tmpwyck
+    integer :: minspecloc,samecount
+    logical :: lwyckoff
     double precision, dimension(3) :: ttrans,tmpbas,diff
-    double precision, dimension(:,:) :: trans
     double precision, allocatable, dimension(:,:) :: sav_trans
 
+    integer, intent(out) :: ntrans
+    type(bas_type), intent(in) :: bas,tfbas
+    type(confine_type), intent(in) :: confine
+    double precision, dimension(:,:), intent(out) :: trans
+
     logical, optional, intent(in) :: transformed
+
+    type(wyck_type), dimension(:), optional, intent(inout) :: wyck_check
 
 
 !!!-----------------------------------------------------------------------------
 !!! Allocate arrays and initialise variables
 !!!-----------------------------------------------------------------------------
-    !    allocate(tmpwyck(bas%nspec,maxval(bas%spec(:)%num),maxval(bas%spec(:)%num)))
     ttrans=0.D0
     trans=0.D0
     samecount=0
@@ -433,6 +512,16 @@ contains
        if(bas%spec(minspecloc)%num.eq.1) return
     end if
     allocate(sav_trans(bas%natom,3))
+
+
+!!!-----------------------------------------------------------------------------
+!!! if present, initialises tmp_wyckoff arrays
+!!!-----------------------------------------------------------------------------
+    if(present(wyck_check))then
+       lwyckoff=.true.
+    else
+       lwyckoff=.false.
+    end if
 
 
 !!!-----------------------------------------------------------------------------
@@ -452,46 +541,55 @@ contains
                abs(ttrans(confine%axis)-nint(ttrans(confine%axis)))&
                .gt.tol_sym) cycle trloop
        end if
-       !       tmpwyck=wyckoff
-       itmp1=0
-       sav_trans=0.D0
+       itmp1 = 0
+       sav_trans = 0.D0
+       if(lwyckoff.and.ntrans+1.gt.size(wyck_check))then
+          write(0,'("ERROR: error encountered in gldfnd")')
+          write(0,'(2X,"Internal error in subroutine gldfnd in mod_sym.f90")')
+          write(0,'(2X,"ntrans is greater than wyck_check")')
+          write(0,'(2X,"EXITING SUBROUTINE")')
+          return
+       end if
        trcyc: do ispec=1,bas%nspec
           samecount=0
+          if(lwyckoff) wyck_check(ntrans+1)%spec(ispec)%atom(:) = 0
           atmcyc2: do jatom=1,bas%spec(ispec)%num
-             itmp1=itmp1+1
-             tmpbas(1:3)=tfbas%spec(ispec)%atom(jatom,1:3)+ttrans(1:3)
-             tmpbas(:)=tmpbas(:)-ceiling(tmpbas(:)-0.5D0)
+             itmp1 = itmp1 + 1
+             tmpbas(1:3) = tfbas%spec(ispec)%atom(jatom,1:3) + ttrans(1:3)
+             tmpbas(:) = tmpbas(:) - ceiling(tmpbas(:)-0.5D0)
              atmcyc3: do katom=1,bas%spec(ispec)%num
-                diff=tmpbas(1:3)-bas%spec(ispec)%atom(katom,1:3)
+                !if(lwyckoff.and.&
+                !     wyck_check(ntrans+1)%spec(ispec)%atom(katom).ne.0) &
+                !     cycle atmcyc3
+                diff = tmpbas(1:3) - bas%spec(ispec)%atom(katom,1:3)
                 do j=1,3
-                   diff(j)=mod((diff(j)+100.D0),1.0)
-                   if((abs(diff(j)-1.D0)).lt.(tol_sym)) diff(j)=0.D0
+                   diff(j) = mod((diff(j)+100.D0),1.0)
+                   if((abs(diff(j)-1.D0)).lt.(tol_sym)) diff(j) = 0.D0
                 end do
                 if(sqrt(dot_product(diff,diff)).lt.tol_sym)then
-                   samecount=samecount+1
+                   samecount = samecount + 1
                    !sav_trans(itmp1,:)=bas%spec(ispec)%atom(jatom,1:3)-&
                    !     bas%spec(ispec)%atom(katom,1:3)
-                   sav_trans(itmp1,:)=bas%spec(ispec)%atom(katom,1:3)-&
+                   sav_trans(itmp1,:) = bas%spec(ispec)%atom(katom,1:3) - &
                         tfbas%spec(ispec)%atom(jatom,1:3)
-                   sav_trans(itmp1,:)=sav_trans(itmp1,:)-&
+                   sav_trans(itmp1,:) = sav_trans(itmp1,:) - &
                         ceiling(sav_trans(itmp1,:)-0.5D0)
-                   !                   tmpwyck(ispec,jatom,katom)=0
-                   !                   tmpwyck(ispec,katom,jatom)=0
+                   if(lwyckoff) &
+                        wyck_check(ntrans+1)%spec(ispec)%atom(jatom) = katom
                    cycle atmcyc2
                 end if
              end do atmcyc3
+             !cycle trloop
           end do atmcyc2
-          if (samecount.ne.bas%spec(ispec)%num)then
-             cycle trloop
-          end if
+          if (samecount.ne.bas%spec(ispec)%num) cycle trloop
        end do trcyc
 !!!-----------------------------------------------------------------------------
 !!! Cleans up succeeded translation vector
 !!!-----------------------------------------------------------------------------
        do j=1,3
-          itmp1=maxloc(abs(sav_trans(:,j)),dim=1)
-          ttrans(j)=sav_trans(itmp1,j)
-          ttrans(j)=ttrans(j)-ceiling(ttrans(j)-0.5D0)
+          itmp1 = maxloc(abs(sav_trans(:,j)),dim=1)
+          ttrans(j) = sav_trans(itmp1,j)
+          ttrans(j) = ttrans(j) - ceiling(ttrans(j)-0.5D0)
        end do
 !!!-----------------------------------------------------------------------------
 !!! If axis is confined, removes all symmetries not confined to the axis plane
@@ -502,9 +600,10 @@ contains
                .gt.tol_sym) cycle trloop
        else
           do i=1,3
-             if(confine%laxis(i).and.&
-                  abs(ttrans(confine%axis)-floor(ttrans(confine%axis)))&
-                  .lt.tol_sym) cycle trloop
+             if(confine%laxis(i))then
+                if(abs(ttrans(confine%axis)-floor(ttrans(confine%axis)))&
+                     .lt.tol_sym) cycle trloop
+             end if
           end do
        end if
 !!!-----------------------------------------------------------------------------
@@ -514,9 +613,8 @@ contains
           if(all(ttrans(:).eq.trans(i,:))) cycle trloop
           !if(all(abs(ttrans(:)-trans(i,:)).lt.tol_sym)) cycle trloop
        end do
-       !       wyckoff=tmpwyck
-       ntrans=ntrans+1
-       trans(ntrans,1:3)=ttrans(1:3)
+       ntrans = ntrans + 1
+       trans(ntrans,1:3) = ttrans(1:3)
        if(confine%l) return
     end do trloop
 
@@ -688,11 +786,15 @@ contains
     do i=1,64
        tmat1=matmul(lat,fundam_mat(i,:3,:3))
        tmat1=matmul(tmat1,(invlat))
-       if(all(abs(tmat1-nint(tmat1)).lt.tol_sym))then
+       !! ensure that the matrix preserves size of 1
+       !! this is likely redundant
+       if(abs(abs(det(tmat1))-1.D0).gt.tol_sym) cycle
+       if(all(abs(tmat1-nint(tmat1)).le.tol_sym))then
           grp%nsym=grp%nsym+1
           fundam_mat(grp%nsym,:,:)=fundam_mat(i,:,:)
        end if
     end do
+
 
     allocate(grp%sym(grp%nsym,4,4))
     grp%sym(:,:,:)=0.D0
@@ -759,9 +861,9 @@ contains
        mksyml: do n=1,10
           count=count+1
           if(n.gt.6)then
-             tht = -8.D0*atan(1.D0)/real(n-4) !=2*pi/(n-4)
+             tht = -2.D0*pi/real(n-4) !=2*pi/(n-4)
           else
-             tht = 8.D0*atan(1.D0)/real(n) !=2*pi/n          
+             tht = 2.D0*pi/real(n) !=2*pi/n          
           end if
           tsym1(count,1:3,1:3)=transpose(reshape((/&
                cos(tht) ,  sin(tht),   0.D0,&
@@ -783,9 +885,9 @@ contains
     if(laxis(1))then
        philoop: do n=1,10
           if(n.gt.6)then
-             tht = -8.D0*atan(1.D0)/real(n-4) !=2*pi/n
+             tht = -2.D0*pi/real(n-4) !=2*pi/n
           else
-             tht = 8.D0*atan(1.D0)/real(n) !=2*pi/n
+             tht = 2.D0*pi/real(n) !=2*pi/n
           end if
           rotmat=transpose(reshape((/&
                1.D0,      0.D0,      0.D0,  &
@@ -806,9 +908,9 @@ contains
     if(laxis(2))then
        psiloop: do n=1,10
           if(n.gt.6)then
-             tht = -8.D0*atan(1.D0)/real(n-4) !=2*pi/n 
+             tht = -2.D0*pi/real(n-4) !=2*pi/n 
           else
-             tht = 8.D0*atan(1.D0)/real(n) !=2*pi/n 
+             tht = 2.D0*pi/real(n) !=2*pi/n 
           end if
           rotmat=transpose(reshape((/&
                cos(tht) ,  0.D0,  sin(tht),&
@@ -927,6 +1029,135 @@ contains
 
   end subroutine clone_grp
 !!!#############################################################################
+ 
+
+!!!#############################################################################
+!!! returns the primitive cell from a supercell
+!!!#############################################################################
+  subroutine get_primitive_cell(lat,bas)
+    implicit none
+    integer :: is,ia,ja,i,j,k,itmp1
+    integer :: ntrans,len
+    double precision :: scale,proj,dtmp1
+    type(confine_type) :: confine
+    double precision, dimension(3,3) :: dmat1,invlat
+    double precision, allocatable, dimension(:,:) :: trans,atom_store
+    
+    type(sym_type) :: grp
+    type(bas_type) :: bas,pbas
+    double precision, dimension(3,3) :: lat
+
+    
+    !!-----------------------------------------------------------------------
+    !! Allocate and initialise
+    !!-----------------------------------------------------------------------
+    ntrans = 0
+    dmat1=0.D0
+    allocate(trans(minval(bas%spec(:)%num+2),3)); trans=0.D0
+
+    
+    !!-----------------------------------------------------------------------
+    !! Find the translation vectors in the cell
+    !!-----------------------------------------------------------------------
+    call gldfnd(confine,bas,bas,trans,ntrans,.false.)
+    len=size(bas%spec(1)%atom,dim=2)
+
+    
+    !!-----------------------------------------------------------------------
+    !! For each translation, reduce the basis
+    !!-----------------------------------------------------------------------
+    if(ntrans.ge.1)then
+       do i=ntrans+1,ntrans+3
+          trans(i,:)=0.D0
+          trans(i,i-ntrans)=1.D0
+       end do
+       !  trans=matmul(trans(1:ntrans,1:3),lat)
+       call sort2D(trans(1:ntrans+3,:),ntrans+3)
+       !! for each lattice vector, determine the shortest translation ...
+       !! ... vector that has a non-zero projection along that lattice vector.
+       do i=1,3
+          proj=1.D2
+          trans_loop: do j=1,ntrans+3
+             dtmp1 = dot_product(trans(j,:),trans(ntrans+i,:))
+             if(dtmp1.lt.tol_sym) cycle trans_loop
+
+             do k=1,i-1,1
+                if(modu(abs(cross(trans(j,:),dmat1(k,:)))).lt.1.D-8) cycle trans_loop
+             end do
+
+             dtmp1 = modu(trans(j,:))
+             if(dtmp1.lt.proj)then
+                proj=dtmp1
+                dmat1(i,:) = trans(j,:)
+                trans(j,:) = 0.D0
+             end if
+          end do trans_loop
+       end do
+       !dmat1=trans(1:3,1:3)
+       scale=det(dmat1)
+       dmat1=matmul(dmat1,lat)
+       invlat=inverse_3x3(dmat1)
+       do is=1,bas%nspec
+          itmp1=0
+          allocate(atom_store(nint(scale*bas%spec(is)%num),len))
+          atcheck: do ia=1,bas%spec(is)%num
+             !!-----------------------------------------------------------------
+             !! Reduce the basis
+             !!-----------------------------------------------------------------
+             bas%spec(is)%atom(ia,1:3)=&
+                  matmul(bas%spec(is)%atom(ia,1:3),lat(1:3,1:3))
+             bas%spec(is)%atom(ia,1:3)=&
+                  matmul(transpose(invlat(1:3,1:3)),bas%spec(is)%atom(ia,1:3))
+             do j=1,3
+                bas%spec(is)%atom(ia,j)=&
+                     bas%spec(is)%atom(ia,j)-floor(bas%spec(is)%atom(ia,j))
+                if(bas%spec(is)%atom(ia,j).gt.1.D0-tol_sym) &
+                     bas%spec(is)%atom(ia,j)=0.D0
+             end do
+             !!-----------------------------------------------------------------
+             !! Check for duplicates in the cell
+             !!-----------------------------------------------------------------
+             do ja=1,ia-1
+                if(all(abs(bas%spec(is)%atom(ia,1:3)-atom_store(ja,1:3)).lt.&
+                     (/tol_sym,tol_sym,tol_sym/))) cycle atcheck
+             end do
+             itmp1=itmp1+1
+             atom_store(itmp1,:)=bas%spec(is)%atom(ia,:)
+             !!-----------------------------------------------------------------
+             !! Check to ensure correct number of atoms remain after reduction
+             !!-----------------------------------------------------------------
+             if(itmp1.gt.size(atom_store,dim=1))then
+                write(0,*) "ERROR! Primitive cell subroutine retained too &
+                     &many atoms from supercell!", itmp1, size(atom_store,dim=1)
+                call exit()
+             end if
+             !!-----------------------------------------------------------------
+          end do atcheck
+          deallocate(bas%spec(is)%atom)
+          call move_alloc(atom_store,bas%spec(is)%atom)
+          bas%spec(is)%num=size(bas%spec(is)%atom,dim=1)
+          !deallocate(atom_store)
+       end do
+       !!-----------------------------------------------------------------------
+       !! Reduce the lattice
+       !!-----------------------------------------------------------------------
+       bas%natom=sum(bas%spec(:)%num)
+       lat=dmat1
+    end if
+
+    
+    !!-----------------------------------------------------------------------
+    !! Reduce the lattice to symmetry definition
+    !!-----------------------------------------------------------------------
+    call reducer(lat, bas)
+    !! next line necessary as FCC and BCC do not conform to Niggli reduced ...
+    !! ... cell definitions.
+    lat = primitive_lat(lat)
+
+
+    
+  end subroutine get_primitive_cell
+!!!#############################################################################
 
 
 !!!#############################################################################
@@ -994,6 +1225,158 @@ contains
     write(77,*) trim(adjustl(symchar))
 
   end subroutine symwrite
+!!!#############################################################################
+
+
+!!!#############################################################################
+!!! returns the wyckoff atoms of a basis (closest to a defined location)
+!!!#############################################################################
+  function get_wyckoff_atoms_any(wyckoff) result(wyckoff_atoms)
+    implicit none
+    integer :: i,is,ia,isym,imin,itmp1
+    integer :: nsym,nspec
+    type(wyck_type) :: wyckoff_atoms
+    integer, allocatable, dimension(:) :: ivtmp1
+
+    type(wyck_type), dimension(:), intent(in) :: wyckoff
+
+
+    nsym = size(wyckoff)
+    nspec = size(wyckoff(1)%spec(:))
+    allocate(wyckoff_atoms%spec(nspec))
+    wyckoff_atoms%spec(:)%num = 0
+    do is=1,nspec
+       allocate(ivtmp1(size(wyckoff(1)%spec(is)%atom)))
+       ivtmp1 = 0
+       do ia=1,size(wyckoff(1)%spec(is)%atom)
+
+          imin = wyckoff(1)%spec(is)%atom(ia)
+          if(imin.eq.0)then
+             write(0,'("ERROR: imin in get_wyckoff_atoms is zero!!!")')
+             write(0,'("Exiting...")')
+             stop
+          end if
+          sym_loop1: do isym=2,nsym
+             if(wyckoff(isym)%spec(is)%atom(ia).eq.0) cycle sym_loop1
+             if(wyckoff(isym)%spec(is)%atom(ia).lt.imin)&
+                  imin = wyckoff(isym)%spec(is)%atom(ia)
+          end do sym_loop1
+          sym_loop2: do 
+             itmp1 = minval( (/ (wyckoff(i)%spec(is)%atom(imin),i=1,nsym) /),&
+                  mask=(/ (wyckoff(i)%spec(is)%atom(imin),i=1,nsym) /).gt.0 )
+             if(itmp1.ne.imin)then
+                imin=itmp1
+             else
+                exit sym_loop2
+             end if
+          end do sym_loop2
+
+          if(.not.any(ivtmp1(:).eq.imin))then
+             wyckoff_atoms%spec(is)%num = wyckoff_atoms%spec(is)%num+1
+             ivtmp1(wyckoff_atoms%spec(is)%num) = imin
+          end if
+
+       end do
+       allocate(wyckoff_atoms%spec(is)%atom(wyckoff_atoms%spec(is)%num))
+       wyckoff_atoms%spec(is)%atom(:)=ivtmp1(:wyckoff_atoms%spec(is)%num)
+       deallocate(ivtmp1)
+    end do
+    wyckoff_atoms%nwyck = sum(wyckoff_atoms%spec(:)%num)
+
+    
+  end function get_wyckoff_atoms_any
+!!!-----------------------------------------------------------------------------
+!!!-----------------------------------------------------------------------------
+  function get_wyckoff_atoms_loc(wyckoff,lat,bas,loc) result(wyckoff_atoms)
+    implicit none
+    integer :: i,is,ia,isym,imin,itmp1
+    integer :: nsym
+    double precision :: dist
+    logical :: lfound_closer
+    type(wyck_type) :: wyckoff_atoms
+    double precision, dimension(3) :: diff
+    double precision, allocatable, dimension(:) :: dists
+    integer, allocatable, dimension(:) :: ivtmp1
+
+    type(bas_type), intent(in) :: bas
+    double precision, dimension(3), intent(in) :: loc
+    type(wyck_type), dimension(:), intent(in) :: wyckoff
+    double precision, dimension(3,3), intent(in) :: lat
+
+
+    nsym = size(wyckoff)
+    allocate(wyckoff_atoms%spec(bas%nspec))
+    wyckoff_atoms%spec(:)%num = 0
+    do is=1,bas%nspec
+       allocate(ivtmp1(size(wyckoff(1)%spec(is)%atom)))
+       ivtmp1 = 0
+
+       allocate(dists(bas%spec(is)%num))
+       do ia=1,bas%spec(is)%num
+          diff = loc - bas%spec(is)%atom(ia,:3)
+          diff = diff - ceiling(diff - 0.5D0)
+          dists(ia) = modu(matmul(diff,lat))
+       end do
+
+       wyckoff_loop1: do ia=1,size(wyckoff(1)%spec(is)%atom)
+
+          dist = huge(0.D0)
+          imin = wyckoff(1)%spec(is)%atom(ia)
+          sym_loop1: do isym=1,nsym
+             if(wyckoff(isym)%spec(is)%atom(ia).eq.0) cycle sym_loop1
+             
+             if(dists(wyckoff(isym)%spec(is)%atom(ia)).lt.dist)then
+                dist = dists(wyckoff(isym)%spec(is)%atom(ia))
+                imin = wyckoff(isym)%spec(is)%atom(ia)
+             end if
+          end do sym_loop1
+          if(any(ivtmp1(:).eq.imin)) cycle wyckoff_loop1
+
+          sym_loop2: do
+             lfound_closer = .false.
+             sym_loop3: do isym=1,nsym
+                if(wyckoff(isym)%spec(is)%atom(imin).eq.0) cycle sym_loop3
+                if(wyckoff(isym)%spec(is)%atom(imin).eq.imin) cycle sym_loop3
+                if(dists(wyckoff(isym)%spec(is)%atom(imin)).lt.dist)then
+                   dist = dists(wyckoff(isym)%spec(is)%atom(imin))
+                   itmp1 = wyckoff(isym)%spec(is)%atom(imin)
+                   lfound_closer = .true.
+                elseif(dists(wyckoff(isym)%spec(is)%atom(imin)).eq.dist)then
+                   if(any(ivtmp1(:).eq.wyckoff(isym)%spec(is)%atom(imin)))then
+                      dist = dists(wyckoff(isym)%spec(is)%atom(imin))
+                      itmp1 = wyckoff(isym)%spec(is)%atom(imin)
+                      lfound_closer = .true.
+                   end if
+                end if
+             end do sym_loop3
+             if(lfound_closer)then
+                imin = itmp1
+             else
+                exit sym_loop2
+             end if
+          end do sym_loop2
+
+
+          if(.not.any(ivtmp1(:).eq.imin))then
+             wyckoff_atoms%spec(is)%num = wyckoff_atoms%spec(is)%num+1
+             ivtmp1(wyckoff_atoms%spec(is)%num) = imin
+          end if
+          if(imin.eq.0)then
+             write(0,'("ERROR: imin in get_wyckoff_atoms is zero!!!")')
+             write(0,'("Exiting...")')
+             stop
+          end if
+
+       end do wyckoff_loop1
+       allocate(wyckoff_atoms%spec(is)%atom(wyckoff_atoms%spec(is)%num))
+       wyckoff_atoms%spec(is)%atom(:)=ivtmp1(:wyckoff_atoms%spec(is)%num)
+       deallocate(ivtmp1)
+       deallocate(dists)
+    end do
+    wyckoff_atoms%nwyck = sum(wyckoff_atoms%spec(:)%num)
+
+    
+  end function get_wyckoff_atoms_loc
 !!!#############################################################################
 
 
@@ -1086,127 +1469,22 @@ contains
 
 
 !!!#############################################################################
-!!! sets up the ladder
-!!!#############################################################################
-  subroutine setup_ladder(lat,bas,axis,term)
-    implicit none
-    integer :: i,j
-    integer :: nmirror,ntrans
-    type(sym_type) :: grp
-    logical :: lexclude_translation
-    logical, dimension(2,2) :: mask
-    
-    double precision, allocatable, dimension(:) :: ladder
-    double precision, allocatable, dimension(:,:,:) :: subgroup,group
-    double precision, allocatable, dimension(:,:,:) :: mirror_mat,trans_mat
-
-    integer, intent(in) :: axis
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(3,3), intent(in) :: lat
-    type(term_arr_type), optional, intent(inout) :: term
-
-    
-    !!--------------------------------------------------------------------------
-    !! Test if mirror/inversion or translation exists
-    !!--------------------------------------------------------------------------
-    call sym_setup(grp,lat,predefined=.true.,new_start=.true.)
-    call check_sym(grp,bas,lsave=.true.)
-    term%lmirror = .false.
-    allocate(mirror_mat(count(grp%sym(:,3,3).eq.-1.D0),2,2))
-    allocate(trans_mat(&
-         count(grp%sym(:,3,3).eq.1.D0.and.abs(grp%sym(:,4,axis)).gt.tol_sym),2,2))
-    mirror_mat(:,:,:) = 0.D0
-    do i=1,size(mirror_mat(:,1,1))
-       mirror_mat(i,:,2) = [ 0.D0, 1.D0 ]
-    end do
-    trans_mat(:,:,:) = 0.D0
-    do i=1,size(trans_mat(:,1,1))
-       trans_mat(i,:,2) = [ 0.D0, 1.D0 ]
-    end do
-
-    nmirror = 0
-    ntrans = 0
-    mirror_loop: do i=1,grp%nsym
-       !write(0,*) i
-       !write(0,'(4(2X,F9.4))') grp%sym(i,:,:)
-       !write(0,*)
-       if(grp%sym(i,3,3).eq.-1.D0)then
-          term%lmirror = .true.
-          if(all(mirror_mat(:nmirror,2,1).ne.grp%sym(i,4,axis)))then
-             nmirror = nmirror + 1
-             mirror_mat(nmirror,:,1) = grp%sym(i,3:4,axis)
-          end if
-       elseif(abs(grp%sym(i,4,axis)).gt.tol_sym)then
-          if(all(trans_mat(:ntrans,2,1).ne.grp%sym(i,4,axis)))then
-             ntrans = ntrans + 1
-             trans_mat(ntrans,:,1) = grp%sym(i,3:4,axis)
-          end if
-       end if
-    end do mirror_loop
-
-
-    !!--------------------------------------------------------------------------
-    !! If termination not present, then return
-    !!--------------------------------------------------------------------------
-    if(.not.present(term)) return
-
-
-    !!--------------------------------------------------------------------------
-    !! Set up rungs
-    !!--------------------------------------------------------------------------
-    allocate(subgroup(ntrans+nmirror,2,2))
-    subgroup(:ntrans,:,:) = trans_mat(:ntrans,:,:)
-    subgroup(ntrans+1:ntrans+nmirror,:,:) = mirror_mat(:nmirror,:,:)
-    mask = .false.
-    mask(2,1) = .true.
-    group = gen_group(subgroup,mask)
-    !write(0,*) "-----------------"
-    !do i=1,size(group(:,1,1))
-    !   write(0,*) i
-    !   write(0,'(2(2X,F9.6))') group(i,:,:)
-    !   write(0,*)
-    !end do
-    allocate(ladder(size(group(:,1,1))))
-
-    lexclude_translation = .false.
-    if(term%lmirror.and.abs(term%arr(1)%hmax-term%arr(1)%hmin).gt.tol_sym)&
-         lexclude_translation = .true.
-    term%nstep = 0
-    group_loop: do i=1,size(group(:,1,1))
-       if(any(ladder(:term%nstep).eq.group(i,2,1))) cycle group_loop
-       if(lexclude_translation.and.&
-            abs(group(i,1,1)-1.D0).lt.tol_sym) cycle group_loop
-       term%nstep = term%nstep + 1
-       ladder(term%nstep) = group(i,2,1)
-       if(abs(ladder(term%nstep)).lt.tol_sym) ladder(term%nstep) = 0.D0
-    end do group_loop
-    call sort1D(ladder(:term%nstep))
-    do i=1,term%nterm
-       allocate(term%arr(i)%ladder(term%nstep))
-       term%arr(i)%ladder(:) = ladder(:term%nstep)
-    end do
-
-
-
-  end subroutine setup_ladder
-!!!#############################################################################
-
-
-!!!#############################################################################
 !!! finds all possible terminations along an axis
 !!!#############################################################################
   function get_terminations(lat,bas,axis,lprint,layer_sep) result(term)
     implicit none
-    integer :: i,j,is,ia,nterm,mterm,dim,ireject
-    integer :: itmp1,init,min_loc
-    logical :: ludef_print
-    double precision :: dtmp1,tol,hmin,height,max_sep
+    integer :: i,j,is,nterm,mterm,dim,ireject
+    integer :: itmp1,itmp2,init,min_loc
+    logical :: ludef_print,lunique,ltmp1,lmirror
+    double precision :: dtmp1,tol,height,max_sep,c_along,centre
     type(sym_type) :: grp1,grp_store
     type(term_arr_type) :: term
-    double precision, dimension(3) :: vec_compare
+    integer, dimension(3) :: abc=(/1,2,3/)
+    double precision, dimension(3) :: vec_compare,vtmp1
+    double precision, dimension(3,3) :: inv_mat,ident
     type(bas_type),allocatable, dimension(:) :: bas_arr,bas_arr_reject
     type(term_type), allocatable, dimension(:) :: term_arr,term_arr_uniq
-    integer, allocatable, dimension(:) :: success
+    integer, allocatable, dimension(:) :: success,tmpop
     integer, allocatable, dimension(:,:) :: reject_match
     double precision, allocatable, dimension(:,:) :: bas_list
     double precision, allocatable, dimension(:,:,:) :: tmpsym
@@ -1224,10 +1502,9 @@ contains
 !!! E.G. (1 0 1)
     
     s_end=0
-    grp_store%confine%l=.true.
+    grp_store%confine%l=.false.
     grp_store%confine%axis=axis
     grp_store%confine%laxis=.false.
-    grp_store%confine%laxis(axis)=.true.
 !!!-----------------------------------------------------------------------------
 !!! Sets printing option
 !!!-----------------------------------------------------------------------------
@@ -1246,7 +1523,13 @@ contains
     else
        tol = 1.D0  !!!tolerance of 1 Å for defining a layer
     end if
-    tol = tol/modu(lat(axis,1:3))
+
+    abc=cshift(abc,3-axis)
+    c_along = abs(dot_product(lat(axis,:),&
+         uvec(cross(lat(abc(1),:),lat(abc(2),:)))))
+    tol = tol / c_along
+    !tol = tol/modu(lat(axis,1:3))
+    lmirror=.false.
 
 
 !!!-----------------------------------------------------------------------------
@@ -1277,6 +1560,10 @@ contains
        write(0,'("ERROR: Error in mod_sym.f90")')
        write(0,'(2X,"get_terminations subroutine unable to find a separation &
             &in the material that is greater than LAYER_SEP")')
+       write(0,'(2X,"Writing material to ''unlayerable.vasp''")')
+       open(13,file="unlayerable.vasp")
+       call geom_write(13,lat,bas)
+       close(13)
        write(0,'(2X,"We suggest reducing LAYER_SEP to less than ",F6.4)') &
             max_sep
        write(0,'(2X,"Please inform the developers of this and give details &
@@ -1300,8 +1587,15 @@ contains
     term_arr(1)%hmin=bas_list(1,axis)
     term_arr(1)%hmax=bas_list(1,axis)
     min_loc = 1
+    itmp1 = 1
     term_loop1: do
 
+       !! get the atom at that height.
+       !vtmp1 = get_min_dist(lat,bas,bas_list(itmp1,:3),.true.,axis,.true.,.false.)
+       !itmp1 = minloc(bas_list(:,axis) - vtmp1(axis), dim=1, &
+       !     mask = abs(bas_list(:,axis) - (bas_list(itmp1,axis) + vtmp1(axis))&
+       !     ).lt.tol_sym)
+       
        itmp1 = minloc(bas_list(:,axis) - term_arr(nterm)%hmax, dim=1, &
             mask = bas_list(:,axis) - term_arr(nterm)%hmax.gt.0.D0)
        if(itmp1.gt.bas%natom.or.itmp1.le.0)then
@@ -1309,17 +1603,18 @@ contains
           exit term_loop1
        end if
 
+       !dtmp1 = modu(matmul(vtmp1,lat))
        dtmp1 = bas_list(itmp1,axis) - term_arr(nterm)%hmax
        if(dtmp1.le.tol)then
           term_arr(nterm)%hmax = bas_list(itmp1,axis)
        else
-          term_arr(nterm)%natom = itmp1 - min_loc + 1
+          term_arr(nterm)%natom = itmp1 - min_loc
           min_loc = itmp1
           nterm = nterm + 1
           term_arr(nterm)%hmin = bas_list(itmp1,axis)
           term_arr(nterm)%hmax = bas_list(itmp1,axis)
        end if
-
+       
     end do term_loop1
     term_arr(:nterm)%hmin = term_arr(:nterm)%hmin + height
     term_arr(:nterm)%hmax = term_arr(:nterm)%hmax + height
@@ -1330,7 +1625,7 @@ contains
 !!!-----------------------------------------------------------------------------
     allocate(bas_arr(2*nterm))
     allocate(bas_arr_reject(2*nterm))
-    dim=size(bas%spec(1)%atom(1,:))
+    dim = size(bas%spec(1)%atom(1,:))
     do i=1,2*nterm
        allocate(bas_arr(i)%spec(bas%nspec))
        allocate(bas_arr_reject(i)%spec(bas%nspec))
@@ -1346,38 +1641,101 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Print location of unique terminations
 !!!-----------------------------------------------------------------------------
-    mterm=0
-    ireject=0
-    grp_store%lspace=.true.
-    call sym_setup(grp_store,lat)
+    mterm = 0
+    ireject = 0
+    grp_store%lspace = .true.
+    grp_store%confine%l = .true.
+    grp_store%confine%laxis(axis) = .true.
+    call sym_setup(grp_store,lat,predefined=.false.,new_start=.true.)
+
+    !!WRITE OUT THE STRUCTURES HERE AND COMPARE
+    !do i=1,grp_store%nsym
+    !   write(0,*) i
+    !   write(0,'(4(2X,F6.2))') grp_store%sym(i,:4,:3)
+    !   write(0,*) det(grp_store%sym(i,:3,:3))
+    !   write(0,*)
+    !end do
+
+
+    !!--------------------------------------------------------------------------
+    !! Handle inversion matrix (centre of inversion must be accounted for)
+    !!--------------------------------------------------------------------------
+    !! change symmetry constraints after setting up symmetries
+    !! this is done to constrain the matching of two bases in certain directions
+    grp_store%confine%l = .false.
+    grp_store%confine%laxis(axis) = .false.
+    call check_sym(grp_store,bas1=bas,iperm=-1,lsave=.true.)
+    inv_mat = 0.D0
+    do i=1,3
+       inv_mat(i,i) = -1.D0
+    end do
+    do i=1,grp_store%nsym
+       if(all(abs(grp_store%sym(i,:3,:3)-inv_mat).lt.tol_sym))then
+          itmp1 = i
+          exit
+       end if
+    end do
+    do i=1,grp_store%nsymop
+       if(all(abs(savsym(i,:3,:3)-inv_mat).lt.tol_sym)) &
+            grp_store%sym(itmp1,4,:3) = savsym(i,4,:3)
+    end do
+    !do i=1,grp_store%nsymop
+    !   write(0,*) i
+    !   write(0,'(4(2X,F9.4))') grp_store%sym(i,:4,:3)
+    !   write(0,*) det(grp_store%sym(i,:3,:3))
+    !   write(0,*)
+    !end do
+
+
+    !!--------------------------------------------------------------------------
+    !! Determine unique surface terminations
+    !!--------------------------------------------------------------------------
+    grp_store%confine%l = .true.
+    grp_store%confine%laxis(axis) = .true.
     allocate(term_arr_uniq(2*nterm))
     allocate(reject_match(nterm,2))
-    if(ludef_print)&
-         write(6,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
     shift_loop1:do i=1,nterm
        mterm = mterm + 1
 
        bas_arr(mterm) = bas
-       call shifter(bas_arr(mterm),axis,1-term_arr(i)%hmax,.true.)
+       centre = term_arr(i)%hmin + (term_arr(i)%hmax - term_arr(i)%hmin)/2.D0
+       call shifter(bas_arr(mterm),axis,1-centre,.true.)
+       !if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+       !     i,term_arr(i)%hmin,term_arr(i)%hmax,term_arr(i)%natom
        sym_if: if(i.ne.1)then
           sym_loop1:do j=1,mterm-1
+             if(abs(abs(term_arr(i)%hmax-term_arr(i)%hmin) - &
+                  abs(term_arr_uniq(j)%hmax-term_arr_uniq(j)%hmin)).gt.tol_sym) &
+                  cycle sym_loop1
              call clone_grp(grp_store,grp1)
              call check_sym(grp1,bas1=bas_arr(mterm),&
                   iperm=-1,tmpbas2=bas_arr(j),lsave=.true.)
+             !do is=1,grp1%nsymop
+             !   write(0,'(4(2X,F9.4))') savsym(is,:4,:3)
+             !   write(0,*)
+             !end do
              if(grp1%nsymop.ne.0)then
+                !write(0,*) "we have a possible reject"
+                !if(any(savsym(:grp1%nsymop,axis,axis).eq.-1.D0))then
                 if(savsym(1,axis,axis).eq.-1.D0)then
                    ireject = ireject + 1
                    reject_match(ireject,:) = [ i, j ]
                    bas_arr_reject(ireject) = bas_arr(mterm)
+                   lmirror=.true.
+                else
+                   term_arr_uniq(j)%nstep = term_arr_uniq(j)%nstep + 1
+                   term_arr_uniq(j)%ladder(term_arr_uniq(j)%nstep) = &
+                        term_arr(i)%hmin - term_arr_uniq(j)%hmin
                 end if
                 mterm = mterm - 1
                 cycle shift_loop1
              end if
           end do sym_loop1
        end if sym_if
-       if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
-            mterm,term_arr(i)%hmin,term_arr(i)%hmax,term_arr(i)%natom
        term_arr_uniq(mterm) = term_arr(i)
+       term_arr_uniq(mterm)%nstep = 1
+       allocate(term_arr_uniq(mterm)%ladder(nterm))
+       term_arr_uniq(mterm)%ladder(:) = 0.D0
        !open(100+mterm)
        !call geom_write(100+mterm,lat,bas_arr(mterm))
        !close(100+mterm)
@@ -1387,249 +1745,153 @@ contains
     !!--------------------------------------------------------------------------
     !! Set up mirror/inversion symmetries of the matrix
     !!--------------------------------------------------------------------------
-    call sym_setup(grp_store,lat,predefined=.true.,new_start=.true.)
+    call sym_setup(grp_store,lat,predefined=.false.,new_start=.true.)
     allocate(tmpsym(count(grp_store%sym(:,3,3).eq.-1.D0),4,4))
-    itmp1=0
+    allocate(tmpop(count(grp_store%sym(:,3,3).eq.-1.D0)))
+    itmp1 = 0
     do i=1,grp_store%nsym
        if(grp_store%sym(i,3,3).eq.-1.D0)then
           itmp1=itmp1+1
-          tmpsym(itmp1,:,:)=grp_store%sym(i,:,:)
+          tmpsym(itmp1,:,:) = grp_store%sym(i,:,:)
+          tmpop(itmp1) = i
        end if
     end do
-    grp_store%nsym=itmp1
-    grp_store%nlatsym=itmp1
+    grp_store%nsym = itmp1
+    grp_store%nlatsym = itmp1
     call move_alloc(tmpsym,grp_store%sym)
+    allocate(grp_store%op(itmp1))
+    grp_store%op(:) = tmpop(:itmp1)
+    s_end = grp_store%nsym
 
 
     !!--------------------------------------------------------------------------
     !! Check rejects for inverse surface termination of saved
     !!--------------------------------------------------------------------------
+    ident = 0.D0
+    do i=1,3
+       ident(i,i) = 1.D0
+    end do
     vec_compare = 0.D0
     vec_compare(axis) = -1.D0
     allocate(success(ireject))
     success=0
     reject_loop1: do i=1,ireject
-       itmp1=reject_match(i,2)
-       if(any(success(1:i-1).eq.itmp1)) cycle reject_loop1
-       call clone_grp(grp_store,grp1)
-       call check_sym(grp1,bas_arr(itmp1),&
-            tmpbas2=bas_arr_reject(i),iperm=-1,lsave=.true.)
-       !write(0,*) grp1%nsymop
-       if(all(savsym(1,axis,:3).eq.vec_compare(:)).and.&
-            all(savsym(1,:3,axis).eq.vec_compare(:)))then
-          !write(0,*) savsym(:,4,axis)
-          !write(0,*) "test0",savsym(1,4,axis),2.D0*min(term_arr_uniq(itmp1)%hmin,0.5D0-term_arr_uniq(itmp1)%hmin)
-          !write(0,*) "test1",term_arr_uniq(itmp1)%hmin,0.5D0-term_arr_uniq(itmp1)%hmin
-          !write(0,*) "test2",term_arr_uniq(itmp1)%hmin,term_arr_uniq(itmp1)%hmax
-          !write(0,*) "test3",term_arr(reject_match(i,1))%hmin
-          !if(savsym(1,4,axis).eq.0.D0.and.&
-          !     abs(term_arr_uniq(itmp1)%hmin-term_arr_uniq(itmp1)%hmax).lt.tol_sym)then
-          !   cycle reject_loop1
+       lunique=.true.
+       itmp1=reject_match(i,1)
+       itmp2=reject_match(i,2)
+       !! Check if comparison termination has already been compared successfully
+       prior_check: if(any(success(1:i-1).eq.itmp2))then
+          lunique=.false.
+       else
+          call clone_grp(grp_store,grp1)
+          call check_sym(grp1,bas_arr(itmp2),&
+               iperm=-1,lsave=.true.,lcheck_all=.true.)
+          ltmp1=.false.
+
+!!!HERE
+          !! Check if pure translations are present in comparison termination?
+          !do j=1,grp1%nsymop
+          !   if(all(abs(savsym(j,:3,:3)-ident).le.tol_sym))then
+          !      write(0,*) "FOUND TRANSLATION"
+          !      cycle reject_loop1
+          !   end if
+          !end do
+          !! Check if inversions are present in comparison termination
+          do j=1,grp1%nsymop
+             if(abs(det(savsym(j,:3,:3))+1.D0).le.tol_sym) ltmp1=.true.
+          end do
+          !! If they are not, then no point comparing. It is a new termination
+          if(.not.ltmp1) exit prior_check 
+
+          call clone_grp(grp_store,grp1)
+          call check_sym(grp1,bas_arr(itmp2),&
+               tmpbas2=bas_arr_reject(i),iperm=-1,lsave=.true.,lcheck_all=.true.)
+
+          !! Check det of all symmetry operations. If any are 1, move on
+          !! This is because they are just rotations as can be captured ...
+          !! ... through lattice matches.
+          !! Solely inversions are unique and must be captured.
+          do j=1,grp1%nsymop
+             !write(0,'(4(2X,F9.4))') savsym(j,:,:)
+             !write(0,*) det(savsym(j,:3,:3))
+             if(abs(det(savsym(j,:3,:3))-1.D0).le.tol_sym) lunique=.false.
+          end do
           if(savsym(1,4,axis).eq.&
-               2.D0*min(term_arr_uniq(itmp1)%hmin,0.5D0-term_arr_uniq(itmp1)%hmin))then
-             cycle reject_loop1
+               2.D0*min(term_arr_uniq(itmp2)%hmin,0.5D0-term_arr_uniq(itmp2)%hmin))then
+             lunique=.false.
           end if
 
-          !dtmp1 = term_arr(reject_match(i,1))%hmin
-          !if(dtmp1.gt.0.5D0)then
-          !   dtmp1 = 0.5D0 - dtmp1
-          !end if
-          !dtmp1 = dtmp1 + savsym(1,4,axis)
-          !write(0,*) "here",dtmp1,term_arr_uniq(itmp1)%hmin
-          !if(abs(dtmp1 - term_arr_uniq(itmp1)%hmin).lt.tol_sym)then
-          !   cycle reject_loop1
-          !end if
-          !
-          !
-          !! REMOVE THE j SYM_LOOP2 LOOP !!!
-          !! IT IS UNECESSARY AS ALL INVERSION SYMS WILL HAVE SAME TRANSLATION !!!
-          !reject_loop2: do j=1,i-1!count(reject_match(:,2).eq.reject_match(i,2))
-          !   if(itmp1.eq.reject_match(j,2))then
-          !      itmp2=reject_match(j,1)
-          !      write(0,*) i,j,itmp1
-          !      write(0,*) "min",term_arr(itmp2)%hmin,0.5D0-term_arr(itmp2)%hmin,&
-          !           term_arr_uniq(itmp1)%hmin,term_arr(reject_match(i,1))%hmin
-          !      dtmp1 = term_arr(reject_match(i,1))%hmin
-          !      if(dtmp1.gt.0.5D0)then
-          !         dtmp1 = 0.5D0 - dtmp1
-          !      end if
-          !      dtmp1 = dtmp1 + savsym(1,4,axis)
-          !      if(abs(dtmp1 - term_arr(itmp2)%hmin).lt.tol_sym)then
-          !         cycle reject_loop1
-          !      end if
-!         !       if(savsym(1,4,axis).eq.&
-!         !            2.D0*min(term_arr(itmp2)%hmin,0.5D0-term_arr(itmp2)%hmin))then
-!         !          cycle reject_loop1
-!         !       end if
-          !   end if
-          !end do reject_loop2
-!!! CYCLES ONE NOW SUCCESSFUL !!!
-!!! PROBABLY SAVE itmp1 AND STOP LOOKING AT THOSE !!!
+          if(.not.(all(savsym(1,axis,:3).eq.vec_compare(:)).and.&
+               all(savsym(1,:3,axis).eq.vec_compare(:)))) lunique=.false.
+          
+       end if prior_check
+
+       if(lunique)then
           mterm=mterm+1
-          success(i)=itmp1
+          success(i)=itmp2
           term_arr_uniq(mterm)=term_arr(reject_match(i,1))
-          if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
-               mterm,&
-               term_arr_uniq(mterm)%hmin,&
-               term_arr_uniq(mterm)%hmax,term_arr_uniq(mterm)%natom
+          !if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+          !     mterm,&
+          !     term_arr_uniq(mterm)%hmin,&
+          !     term_arr_uniq(mterm)%hmax,term_arr_uniq(mterm)%natom
           reject_match(i,2)=0
+          term_arr_uniq(mterm)%nstep = 1
+          allocate(term_arr_uniq(mterm)%ladder(ireject+1))
+          term_arr_uniq(mterm)%ladder(1) = 0.D0
+       else
+          term_arr_uniq(itmp2)%nstep = term_arr_uniq(itmp2)%nstep + 1
+          term_arr_uniq(itmp2)%ladder(term_arr_uniq(itmp2)%nstep) = &
+               term_arr(itmp1)%hmin - term_arr_uniq(itmp2)%hmin
        end if
     end do reject_loop1
 
+
+    !!--------------------------------------------------------------------------
+    !! Populate termination output
+    !!--------------------------------------------------------------------------
     allocate(term%arr(mterm))
     term%tol=tol
     term%axis=axis
     term%nterm=mterm
-    term%arr(:mterm)=term_arr_uniq(:mterm)
+    term%lmirror = lmirror
+    if(ludef_print)&
+         write(6,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
+    dtmp1 = term_arr_uniq(1)%hmin-1.D-6
+    itmp1 = 1
+    do i=1,mterm
+       allocate(term%arr(i)%ladder(term_arr_uniq(i)%nstep))
+       term%arr(i)%hmin = term_arr_uniq(itmp1)%hmin
+       term%arr(i)%hmax = term_arr_uniq(itmp1)%hmax
+       term%arr(i)%natom = term_arr_uniq(itmp1)%natom
+       term%arr(i)%nstep = term_arr_uniq(itmp1)%nstep
+       term%arr(i)%ladder(:term%arr(i)%nstep) = term_arr_uniq(i)%ladder(:term%arr(i)%nstep)
+       if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+            i,term%arr(i)%hmin,term%arr(i)%hmax,term%arr(i)%natom
+       itmp1 = minloc(term_arr_uniq(:)%hmin,&
+            mask=term_arr_uniq(:)%hmin.gt.dtmp1+tol,dim=1)
+       if(itmp1.eq.0) then
+          itmp1 = minloc(term_arr_uniq(:)%hmin,&
+               mask=term_arr_uniq(:)%hmin.gt.dtmp1+tol-1.D0,dim=1)
+       end if
+       dtmp1 = term_arr_uniq(itmp1)%hmin
+    end do
+    term%nstep = maxval(term%arr(:)%nstep)
 
-!!! THERE IS NO CLEAR TERMINATION PLANE
-!!! DO THIS IF ANY TERMINATION IS LARGER THAN A CERTAIN SIZE, 
+
+    !!--------------------------------------------------------------------------
+    !! Check to ensure equivalent number of steps for each termination
+    !!--------------------------------------------------------------------------
+    !! Not yet certain whether each termination should have samve number ...
+    !! ... of ladder rungs. That's why this check is here.
+    if(all(term%arr(:)%nstep.ne.term%nstep))then
+       write(0,'("ERROR: Number of rungs in terminations no equivalent for &
+            &every termination! Please report this to developers.\n&
+            &Exiting...")')
+       call exit()
+    end if
 
 
   end function get_terminations
-!!!#############################################################################
-
-
-!!!#############################################################################
-!!! prints the terminations to individual files
-!!!#############################################################################
-  subroutine print_terminations(term,inlat,inbas,dirname,thickness,lortho)
-    implicit none
-    integer :: unit,i,j,istep,ncells,udef_thick
-    double precision :: vac,dtmp1
-    character(1024) :: filename,pwd
-    logical :: udef_lortho
-    type(term_arr_type) :: term
-    type(bas_type) :: tbas,bas
-    double precision, dimension(3,3) :: tfmat
-    double precision, dimension(3,3) :: tlat,lat
-
-    type(bas_type), intent(in) :: inbas
-    double precision, dimension(3,3), intent(in) :: inlat
-
-    integer, optional, intent(in) :: thickness
-    character(*), optional, intent(in) :: dirname
-    logical, optional, intent(in) :: lortho
-
-
-    !!--------------------------------------------------------------------------
-    !! Handles optional parameters
-    !!--------------------------------------------------------------------------
-    if(present(lortho))then
-       udef_lortho = lortho
-    else
-       udef_lortho = .true.
-    end if
-
-    if(present(thickness))then
-       udef_thick = thickness
-    else
-       udef_thick = 2
-    end if
-
-
-    !!--------------------------------------------------------------------------
-    !! Makes directory and enters
-    !!--------------------------------------------------------------------------
-    vac=14.D0
-    call clone_bas(inbas,bas)
-    if(present(dirname))then
-       call system('mkdir -p '//trim(adjustl(dirname)))
-       call getcwd(pwd)
-       call chdir(dirname)
-    end if
-    
-
-    !!--------------------------------------------------------------------------
-    !! Increases crystal to max number of required unit cells thick
-    !!--------------------------------------------------------------------------
-    ncells = int((udef_thick-1)/term%nstep)+1
-    tfmat(:,:)=0.D0
-    tfmat(1,1)=1.D0
-    tfmat(2,2)=1.D0
-    tfmat(3,3)=ncells
-    tbas = inbas
-    tlat = inlat
-    call transformer(tlat,tbas,tfmat)
-
-
-    term%arr(:)%hmin = term%arr(:)%hmin/dble(ncells)
-    term%arr(:)%hmax = term%arr(:)%hmax/dble(ncells)
-    !term%arr(:)%add = term%arr(:)%add/dble(ncells)
-    term%tol = term%tol/dble(ncells)
-    
-
-    !!--------------------------------------------------------------------------
-    !! Generate each termination
-    !!--------------------------------------------------------------------------
-    do i=1,term%nterm
-       bas = tbas
-       lat = tlat
-       tfmat = 0.D0
-       !!-----------------------------------------------------------------------
-       !! Shifts material to specified termination
-       !!-----------------------------------------------------------------------
-       call shifter(bas,term%axis,-term%arr(i)%hmin,.true.)
-       
-       
-       !!-----------------------------------------------------------------------
-       !! Determines how much extension is required and performs extension
-       !!-----------------------------------------------------------------------
-       do j=1,3
-          tfmat(j,j) = 1.D0
-          if(j.eq.term%axis)then
-             istep = udef_thick - (ncells-1)*term%nstep
-             dtmp1 = (ncells-1) + term%arr(i)%ladder(istep)
-             dtmp1 = dtmp1/(ncells)
-             tfmat(j,j) = dtmp1 + term%tol/8.D0
-             if(.not.term%lmirror)then
-                tfmat(j,j) = tfmat(j,j) + (term%arr(i)%hmax - term%arr(i)%hmin)
-             end if
-          end if
-       end do
-       call transformer(lat,bas,tfmat)
-  
-
-       !!-----------------------------------------------------------------------
-       !! If requested, orthogonalises interface axis wrt the other two axes
-       !!-----------------------------------------------------------------------
-       if(udef_lortho)then
-          ortho_check1: do j=1,2
-             if(abs(dot_product(lat(j,:),lat(term%axis,:))).gt.tol_sym)then
-                call ortho_axis(lat,bas,term%axis)
-                exit ortho_check1
-             end if
-          end do ortho_check1
-       end if
-
-
-       !!-----------------------------------------------------------------------
-       !! Adds vacuum
-       !!-----------------------------------------------------------------------
-       call set_vacuum(lat,bas,term%axis,1.D0,vac)
-
-
-       !!-----------------------------------------------------------------------
-       !! Prints structure
-       !!-----------------------------------------------------------------------
-       unit=20+i
-       write(filename,'("POSCAR_term",I0)') i
-       open(unit,file=filename)
-       call geom_write(unit,lat,bas)
-       close(unit)
-    end do
-
-    
-    !!--------------------------------------------------------------------------
-    !! Returns to original directory
-    !!--------------------------------------------------------------------------
-    if(present(dirname))then
-       call chdir(pwd)
-    end if
-
-
-    return
-  end subroutine print_terminations
 !!!#############################################################################
 
 end module mod_sym

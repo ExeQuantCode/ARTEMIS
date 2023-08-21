@@ -5,7 +5,7 @@
 !!!#############################################################################
 module interface_identifier
   use misc, only: swap_d,sort1D
-  use misc_linalg, only: modu,simeq,get_area
+  use misc_linalg, only: modu,simeq,get_area,uvec
   use misc_maths, only: gauss_array,get_turn_points,overlap_indiv_points,&
        running_avg,mean,median,mode
   use rw_geom
@@ -81,11 +81,12 @@ contains
     implicit none
     integer :: i,j,k,is,ia,js,ja,count1
     integer :: nstep,nsize
-    real :: rdist_max
+    real :: rdist_max,rtmp1,rtmp2
     logical :: lscale_dist,lnorm
-    double precision :: gauss_tol,DON_sigma,dist
+    real :: gauss_tol,DON_sigma,dist
     integer, dimension(3) :: ncell
-    double precision, dimension(3) :: vtmp1,vtmp2,vtmp3
+    real, dimension(3) :: vrtmp1,vrtmp2
+    real, dimension(3) :: vtmp1,vtmp2,vtmp3
     real, allocatable, dimension(:) :: distance
     type(den_of_spec_type), allocatable, dimension(:) :: DOS
 
@@ -121,14 +122,78 @@ contains
        distance(i)=real(i)*rdist_max/real(nstep)
     end do
 
-    do i=1,3
-       ncell(i) = ceiling( rdist_max/modu(lat(i,:)) )
-    end do
+    !! should now consider lattice vector addition for obtuse cells.
+    !! in obtuse cells, ncells may need to be larger than just individual
+    !! distance due to similar paths
+    !ncell = 2
+    !i = -1
+    !rtmp1_old = 1E6
+    !ncell_loop1: do while ( i < 10 )
+    !   i = i + 1
+    !   j = -1
+    !   ncell_loop2: do while ( j < 10 )
+    !      j = j + 1
+    !      k = -1
+    !      ncell_loop3: do while ( k < 10 )
+    !         k = k + 1
+    !         if(i.eq.0.and.j.eq.0.and.k.eq.0) cycle ncell_loop3
+    !         rtmp1 = modu(i*lat(1,:) + j*lat(2,:) + k*lat(3,:))
+    !         if(rtmp1.gt.rtmp1_old)then
+    !            rtmp1_old = 1E6
+    !            exit ncell_loop3
+    !         end if
+    !         if(rtmp1.le.rdist_max)then
+    !            ncell(1) = max(ncell(1),i+1)
+    !            ncell(2) = max(ncell(2),j+1)
+    !            ncell(3) = max(ncell(3),k+1)
+    !         end if
+    !         rtmp1_old = rtmp1
+    !      end do ncell_loop3
+    !   end do ncell_loop2
+    !end do ncell_loop1
+
+    ncell = 0
+    ncell_loop1: do i=1,3
+       rtmp1 = real(modu(lat(i,:)))
+       ncell(i) = max(ncell(i),ceiling(rdist_max/modu(lat(i,:))))!maxval(ceiling( rdist_max/abs(lat(i,:)) ))
+       do j=1,3
+          if(i.eq.j) cycle
+          rtmp2 = real(dot_product(lat(i,:),lat(j,:)))
+          if(sign(1.0,rtmp1).eq.sign(1.0,rtmp2)) cycle
+          !vrtmp1 = uvec(lat(i,:)) * dot_product(uvec(lat(i,:)),lat(j,:))
+          !vrtmp1 = uvec(lat(i,:)) * lat(j,:)
+          vrtmp1 = merge(real(lat(j,:)), (/0.E0, 0.E0, 0.E0/), mask = abs(lat(i,:))>1.D-5)
+          rtmp1 = modu(vrtmp1)
+          if(abs(rtmp1).lt.1.D-5) cycle
+          k = 0
+          vrtmp2 = real(lat(i,:))
+          rtmp2 = modu(vrtmp2)
+          do while ( rtmp2 <= rtmp1)
+             k = k + 1
+             rtmp1 = rtmp2
+             vrtmp2 = real(lat(i,:)) + real(k)*vrtmp1
+             rtmp2 = modu(vrtmp2)
+          end do
+          if(abs(rtmp1).lt.1.D-5) cycle
+          ncell(i) = max(ncell(i), ceiling(rdist_max/rtmp1))
+          ncell(j) = max(ncell(j), (k-1)*ceiling(rdist_max/rtmp1))
+       end do
+    end do ncell_loop1
+    !iloop1: do i=1,3
+    !   ncell(i) = ceiling( rdist_max/modu(lat(i,:)) )
+    !   jloop1: do j=i+1,3
+    !      if(i.eq.j) cycle
+    !      itmp1 = ceiling(rdist_max/dot_product(lat(i,:),lat(j,:)))
+    !      if(ncell(i).lt.itmp1) ncell(i) = itmp1
+    !      if(ncell(j).lt.itmp1) ncell(j) = itmp1
+    !   end do jloop1
+    !end do iloop1
+    !write(0,*) "ncell",ncell
     nsize = bas%natom*(2*ncell(1)+1) * (2*ncell(2)+1) * (2*ncell(3)+1) - 1
     allocate(dist_list(nsize))
 
-    gauss_tol=16.D0!38.D0
-    DON_sigma=0.5D-1
+    gauss_tol=16.E0!38.D0
+    DON_sigma=0.5E-1
     specloop1: do is=1,bas%nspec
        DOS(is)%atom(:,:,:)=0.D0
        atomloop1: do ia=1,bas%spec(is)%num
@@ -137,11 +202,11 @@ contains
              count1=0
              dist_list = 0.0
              atomloop2: do ja=1,bas%spec(js)%num
-                vtmp1(:3) = bas%spec(is)%atom(ia,:3) - bas%spec(js)%atom(ja,:3)
+                vtmp1(:3) = real(bas%spec(is)%atom(ia,:3) - bas%spec(js)%atom(ja,:3))
                 do i=-ncell(1),ncell(1),1
-                   vtmp2(1) = vtmp1(1) + dble(i)
+                   vtmp2(1) = vtmp1(1) + real(i)
                    do j=-ncell(2),ncell(2),1
-                      vtmp2(2) = vtmp1(2) + dble(j)
+                      vtmp2(2) = vtmp1(2) + real(j)
                       kloop1: do k=-ncell(3),ncell(3),1
                          if(is.eq.js.and.ia.eq.ja)then
                             if(i.eq.0.and.j.eq.0.and.k.eq.0)then
@@ -155,8 +220,8 @@ contains
                          !   write(0,'(2X,"dist_list size allocated too small")')
                          !   stop
                          !end if
-                         vtmp2(3) = vtmp1(3) + dble(k)
-                         vtmp3 = matmul(vtmp2,lat)
+                         vtmp2(3) = vtmp1(3) + real(k)
+                         vtmp3 = matmul(vtmp2,real(lat))
                          dist_list(count1) = modu(vtmp3)
 
 
@@ -167,7 +232,7 @@ contains
              
              DOS(is)%atom(ia,js,:) = &
                   gauss_array(distance,&
-                  dist_list(:count1),real(DON_sigma),real(gauss_tol),lnorm)
+                  dist_list(:count1),DON_sigma,gauss_tol,lnorm)
 
              
           end do specloop2
@@ -175,7 +240,7 @@ contains
           if(lscale_dist)then
              do i=minloc(abs(distance(:)-2.D0),dim=1),nstep
                 !dist=abs(1.D0/distance(i))**2.D0
-                dist=exp(-abs(distance(i)-2.D0))
+                dist=exp(-abs(distance(i)-2.E0))
                 DOS(is)%atom(ia,:,i)=DOS(is)%atom(ia,:,i)*dist
              end do
           end if
@@ -303,7 +368,7 @@ contains
                   overlap_indiv_points(&
                   (real(DON(is)%atom(ia,:))),&
                   (real(DON(is)%atom(ja,:))))
-             similarity(is)%atom(ia,ja,:)=dble(newf)
+             similarity(is)%atom(ia,ja,:)=real(newf)
              deallocate(newf)
           end do atomloop2
           do i=1,nstep
@@ -402,13 +467,12 @@ contains
     implicit none
     integer :: axis
     integer :: i,is,ia,ja,l,m,n,ks,cutloc,nstep,itmp1
-    double precision :: power,dtmp1
-    real :: rdist_max,rcutoff
+    real :: rdist_max,rcutoff,power,rtmp1
     real, optional, intent(in) :: dist_max,cutoff
     logical, optional :: lprint
     type(bas_type) :: bas
     double precision, dimension(3) :: dir_disim
-    double precision, dimension(3) :: vtmp1,vtmp2,vtmp3
+    real, dimension(3) :: vtmp1,vtmp2,vtmp3
     double precision, dimension(3,3) :: lat
     real, allocatable, dimension(:) :: sim_dist,distance
     
@@ -420,9 +484,10 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! initialise variables
 !!!-----------------------------------------------------------------------------
-    if(present(lprint).and.lprint) &
-         write(6,'(1X,"Determining axis perpendicular to interface")')
-    power=1.D0
+    if(present(lprint))then
+       if(lprint) write(6,'(1X,"Determining axis perpendicular to interface")')
+    end if
+    power=1.E0
     nstep=size(DOS(1)%atom(1,1,:))
     rdist_max=12.0
     if(present(dist_max)) rdist_max=dist_max
@@ -457,26 +522,26 @@ contains
              !! This shows how similar an atom is to its local environment
              !!-----------------------------------------------------------------
              do ja=1,bas%spec(is)%num
-                vtmp1(:3) = bas%spec(is)%atom(ia,:3) - &
-                     bas%spec(is)%atom(ja,:3)
+                vtmp1(:3) = real(bas%spec(is)%atom(ia,:3) - &
+                     bas%spec(is)%atom(ja,:3))
                 do l=-1,1,1
-                   vtmp2(1) = vtmp1(1) + dble(l)
+                   vtmp2(1) = vtmp1(1) + real(l)
                    do m=-1,1,1
-                      vtmp2(2) = vtmp1(2) + dble(m)
+                      vtmp2(2) = vtmp1(2) + real(m)
                       nloop3: do n=-1,1,1
-                         vtmp2(3) = vtmp1(3) + dble(n)
-                         vtmp3 = matmul(vtmp2,lat)
-                         !dtmp1=table_func(vtmp3(i),0.8D0)
-                         !dtmp1=exp(-abs(vtmp3(i))*power)
-                         dtmp1=exp(-modu(vtmp3)*power)
-                         if(dtmp1.lt.1.D-3) cycle nloop3
+                         vtmp2(3) = vtmp1(3) + real(n)
+                         vtmp3 = matmul(vtmp2,real(lat))
+                         !rtmp1=table_func(vtmp3(i),0.8D0)
+                         !rtmp1=exp(-abs(vtmp3(i))*power)
+                         rtmp1=exp(-modu(vtmp3)*power)
+                         if(rtmp1.lt.1.D-3) cycle nloop3
                          itmp1=itmp1+1
 
                          do ks=1,bas%nspec
                             sim_dist = sim_dist + &
                                  sqrt(overlap_indiv_points(&
                                  (real(DOS(is)%atom(ia,ks,:))),&
-                                 (real(DOS(is)%atom(ja,ks,:)))))*dtmp1
+                                 (real(DOS(is)%atom(ja,ks,:)))))*rtmp1
                          end do
                       end do nloop3
                    end do
@@ -485,7 +550,7 @@ contains
              !!-----------------------------------------------------------------
              !! saves similarity up to the cutoff for each atom and its location
              !!-----------------------------------------------------------------
-             intf_func(i,is)%atom(ia,1)=bas%spec(is)%atom(ia,i)*modu(lat(i,:))
+             intf_func(i,is)%atom(ia,1)=real(bas%spec(is)%atom(ia,i)*modu(lat(i,:)))
              intf_func(i,is)%atom(ia,2)=sum(sim_dist(:cutloc))!/bas%spec(is)%num!/itmp1
 
 
@@ -521,8 +586,9 @@ contains
 !!! defines the interface axis as the one with the greatest difference
 !!!-----------------------------------------------------------------------------
     axis=minloc(dir_disim,dim=1)
-    if(present(lprint).and.lprint) &
-         write(6,*) "Interface located along axis",axis
+    if(present(lprint))then
+       if(lprint) write(6,*) "Interface located along axis",axis
+    end if
 
 
   end function get_intf_axis_DOS
@@ -532,15 +598,13 @@ contains
 !!!#############################################################################
 !!! determines axis perpendicular to the interface (CAD method)
 !!!#############################################################################
-  function get_intf_axis_CAD(lat,bas,lprint) result(axis)
+  function get_intf_axis_CAD(lat,bas) result(axis)
     implicit none
     integer :: i,j,is,iaxis
     integer :: pntl,pntr,nstep
     double precision :: sigma,gauss_tol,area
     integer, dimension(3) :: abc
-    double precision, dimension(2) :: intf_loc
     double precision, dimension(3) :: vtmp1,vtmp2,axis_vec
-    integer, allocatable, dimension(:) :: ivec1
     real, allocatable, dimension(:) :: rangevec
     double precision, allocatable, dimension(:) :: dist,multiCADD
     double precision, allocatable, dimension(:,:) :: CAD,deriv
@@ -550,7 +614,6 @@ contains
     type(bas_type), intent(in) :: bas
     double precision, dimension(3,3), intent(in) :: lat
 
-    logical, optional, intent(in) :: lprint
 
 
 !!!-----------------------------------------------------------------------------
@@ -559,9 +622,6 @@ contains
     nstep=nstep_default
     allocate(dist(nstep))
     dist=0.D0
-    do i=1,nstep
-       dist(i)=(i-1)*modu(lat(axis,:))/nstep
-    end do
 
     sigma=2.D0
     gauss_tol=16.D0
@@ -576,6 +636,9 @@ contains
 !!! cycle over the 3 axes
 !!!-----------------------------------------------------------------------------
     do iaxis=1,3
+       do i=1,nstep
+          dist(i)=(i-1)*modu(lat(iaxis,:))/nstep
+       end do
        abc = cshift(abc,1,1)
        area = get_area(lat(abc(1),:),lat(abc(2),:))
        CAD=0.D0
@@ -590,7 +653,7 @@ contains
           do j=-1,1,1
              CAD(is,:) = CAD(is,:) + gauss_array(&
                   dist(:),&
-                  (bas%spec(is)%atom(:,axis)+dble(j))*modu(lat(axis,:)),&
+                  (bas%spec(is)%atom(:,iaxis)+dble(j))*modu(lat(iaxis,:)),&
                   sigma,gauss_tol,.false.)
           end do
           !!-----------------------------------------------------------------------
@@ -606,7 +669,7 @@ contains
              pntl=i-1
              pntr=i+1
              do j=-1,1,1
-                vtmp1(j+2)=dble(i+j-1)*modu(lat(axis,:))/nstep
+                vtmp1(j+2)=dble(i+j-1)*modu(lat(iaxis,:))/nstep
              end do
              vtmp2=0.D0
              vtmp2(2)=CAD(is,i)
@@ -774,10 +837,12 @@ contains
 !!!-----------------------------------------------------------------------------
     multiCADD=running_avg(multiCADD,window=9,lperiodic=.true.)
     multiCADD=abs(multiCADD)
-    if(present(lprint).and.lprint) then
-       do i=1,nstep
-          write(52,*) dist(i),multiCADD(i)
-       end do
+    if(present(lprint))then
+       if(lprint) then
+          do i=1,nstep
+             write(52,*) dist(i),multiCADD(i)
+          end do
+       end if
     end if
 
 
@@ -942,16 +1007,17 @@ contains
 !!!#############################################################################
   function gen_single_DOS(lat,bas,ispec,iatom,dist_max,weight_dist) result(DOS)
     implicit none
-    integer :: i,j,k,is,ia,js,ja,count1
+    integer :: i,j,k,js,ja,count1
     integer :: nstep
     real :: rdist_max
-    double precision :: gauss_tol,DON_sigma,dist,dist_cutoff,dtmp1
+    real :: gauss_tol,DON_sigma,dist,dist_cutoff,rtmp1
     type(bas_type) :: bas
     logical :: lweight
-    double precision, dimension(3) :: vtmp1,vtmp2,vtmp3
-    double precision, dimension(3,3) :: lat
+    real, dimension(3) :: vtmp1,vtmp2,vtmp3
     real, allocatable, dimension(:) :: distance
+    
     integer, intent(in) :: ispec,iatom
+    double precision, dimension(3,3), intent(in) :: lat
     real, optional, intent(in) :: dist_max
     logical, optional, intent(in) :: weight_dist
     double precision, allocatable, dimension(:,:) :: DOS
@@ -961,9 +1027,7 @@ contains
 
     nstep=nstep_default
     allocate(dist_list(bas%natom*27-1))
-    do is=1,bas%nspec
-       allocate(DOS(bas%nspec,nstep))
-    end do
+    allocate(DOS(bas%nspec,nstep))
 
     allocate(distance(nstep))
     rdist_max=12.D0
@@ -972,8 +1036,8 @@ contains
        distance(i)=real(i)*rdist_max/real(nstep)
     end do
 
-    gauss_tol=16.D0!38.D0
-    DON_sigma=0.5D-1
+    gauss_tol=16.E0!38.D0
+    DON_sigma=0.5E-1
     dist_cutoff=dist_max+sqrt(2*gauss_tol*DON_sigma**2)
 
     DOS(:,:)=0.D0
@@ -981,21 +1045,21 @@ contains
        count1=0
        dist_list = 0.0
        atomloop1: do ja=1,bas%spec(js)%num
-          vtmp1(:3) = bas%spec(ispec)%atom(iatom,:3) - bas%spec(js)%atom(ja,:3)
+          vtmp1(:3) = real(bas%spec(ispec)%atom(iatom,:3) - bas%spec(js)%atom(ja,:3))
           do i=-1,1,1
-             vtmp2(1) = vtmp1(1) + dble(i)
+             vtmp2(1) = vtmp1(1) + real(i)
              do j=-1,1,1
-                vtmp2(2) = vtmp1(2) + dble(j)
+                vtmp2(2) = vtmp1(2) + real(j)
                 kloop1: do k=-1,1,1
                    if(ispec.eq.js.and.iatom.eq.ja)then
                       if(i.eq.0.and.j.eq.0.and.k.eq.0)then
                          cycle kloop1
                       end if
                    end if
-                   vtmp2(3) = vtmp1(3) + dble(k)
-                   vtmp3 = matmul(vtmp2,lat)
-                   dtmp1=modu(vtmp3)
-                   if(dtmp1.gt.dist_cutoff) cycle kloop1
+                   vtmp2(3) = vtmp1(3) + real(k)
+                   vtmp3 = matmul(vtmp2,real(lat))
+                   rtmp1=modu(vtmp3)
+                   if(rtmp1.gt.dist_cutoff) cycle kloop1
                    count1=count1+1
                    dist_list(count1) = modu(vtmp3)
 
@@ -1006,7 +1070,7 @@ contains
 
        DOS(js,:) = &
             gauss_array(distance,&
-            dist_list(:count1),real(DON_sigma),real(gauss_tol),.false.)
+            dist_list(:count1),DON_sigma,gauss_tol,.false.)
 
     end do specloop1
 
@@ -1018,8 +1082,8 @@ contains
     end if
 
     if(lweight)then
-       do i=minloc(abs(distance(:)-2.D0),dim=1),nstep
-          dist=exp(-abs(distance(i)-2.D0))
+       do i=minloc(abs(distance(:)-2.E0),dim=1),nstep
+          dist=exp(-abs(distance(i)-2.E0))
           DOS(:,i)=DOS(:,i)*dist
        end do
     end if

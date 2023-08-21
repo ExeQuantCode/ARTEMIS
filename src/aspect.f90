@@ -36,19 +36,20 @@ module aspect
   public :: edit_structure
 
 
-!!!updated  2019/11/17
+!!!updated  2023/03/27
 
 
 contains
 !!!#############################################################################
 !!! 
 !!!#############################################################################
-  subroutine edit_structure(lat,bas,ofile,edits)
+  subroutine edit_structure(lat,bas,ofile,edits,lnorm)
     implicit none
     integer :: GEOMunit,i
     type(bas_type) :: edited_bas
     double precision, dimension(3,3) :: edited_lat
     character(len=*), intent(in) :: ofile
+    logical, optional, intent(in) :: lnorm
     type(bas_type), intent(in) :: bas
     type(aspect_type), intent(in) :: edits
     double precision, dimension(3,3), intent(in) :: lat
@@ -82,6 +83,11 @@ contains
 
     end do
     
+    if(present(lnorm))then
+       if(lnorm) call reducer(edited_lat,edited_bas)
+    end if
+
+
     GEOMunit=101
     open(unit=GEOMunit,file=trim(ofile))
     call geom_write(GEOMunit,edited_lat,edited_bas)

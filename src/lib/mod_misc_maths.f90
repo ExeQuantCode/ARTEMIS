@@ -94,7 +94,7 @@ contains
     else
        udef_tol=16.D0
     end if
-    x=(pos-centre)**2.D0/(2.D0*sigma)
+    x=(pos-centre)**2.E0/(2.E0*sigma)
     if(abs(x).lt.udef_tol) then
        gauss=exp(-(x))
     else
@@ -344,22 +344,24 @@ contains
     end if
 
     out_array=0.0
-    if(present(lperiodic).and.lperiodic)then
-       do i=1,lw
-          out_array(i)=sum(in_array(nstep-lw+i:nstep))+&
-               sum(in_array(1:i+up))
-       end do
-       do i=lw+1,nstep-up
-          out_array(i)=sum(in_array(i-lw:i+up))
-       end do
-       do i=nstep-up+1,nstep
-          out_array(i)=sum(in_array(i-lw:nstep))+&
-               sum(in_array(1:up-(nstep-i)))
-       end do
-       out_array=out_array/window
-    else
-       out_array=in_array
+    if(present(lperiodic))then
+       if(lperiodic)then
+          do i=1,lw
+             out_array(i)=sum(in_array(nstep-lw+i:nstep))+&
+                  sum(in_array(1:i+up))
+          end do
+          do i=lw+1,nstep-up
+             out_array(i)=sum(in_array(i-lw:i+up))
+          end do
+          do i=nstep-up+1,nstep
+             out_array(i)=sum(in_array(i-lw:nstep))+&
+                  sum(in_array(1:up-(nstep-i)))
+          end do
+          out_array=out_array/window
+          return
+       end if
     end if
+    out_array=in_array
 
   end function rrunning_avg
 !!!-----------------------------------------------------
@@ -382,22 +384,24 @@ contains
     end if
 
     out_array=0.0
-    if(present(lperiodic).and.lperiodic)then
-       do i=1,lw
-          out_array(i)=sum(in_array(nstep-lw+i:nstep))+&
-               sum(in_array(1:i+up))
-       end do
-       do i=lw+1,nstep-up
-          out_array(i)=sum(in_array(i-lw:i+up))
-       end do
-       do i=nstep-up+1,nstep
-          out_array(i)=sum(in_array(i-lw:nstep))+&
-               sum(in_array(1:up-(nstep-i)))
-       end do
-       out_array=out_array/window
-    else
-       out_array=in_array
+    if(present(lperiodic))then
+       if(lperiodic)then
+          do i=1,lw
+             out_array(i)=sum(in_array(nstep-lw+i:nstep))+&
+                  sum(in_array(1:i+up))
+          end do
+          do i=lw+1,nstep-up
+             out_array(i)=sum(in_array(i-lw:i+up))
+          end do
+          do i=nstep-up+1,nstep
+             out_array(i)=sum(in_array(i-lw:nstep))+&
+                  sum(in_array(1:up-(nstep-i)))
+          end do
+          out_array=out_array/window
+          return
+       end if
     end if
+    out_array=in_array
 
   end function drunning_avg
 !!!#####################################################
@@ -539,8 +543,8 @@ contains
 !!! MAKE IT CHECK THE TURNING POINT IS SUSTAINED ACROSS THE WINDOW
   function get_turn_points(invec,lperiodic,window) result(resvec)
     implicit none
-    integer :: i,j,nturn,itmp1
-    double precision :: dtmp1,l_grad,r_grad
+    integer :: i,j,nturn,itmp1,itmp2
+    double precision :: l_grad,r_grad
     double precision, dimension(:), intent(in) :: invec
     integer, allocatable, dimension(:) :: tvec1,resvec
     integer, optional :: window
@@ -552,12 +556,14 @@ contains
     allocate(tvec1(size(invec)))
     l_grad=0.D0
     r_grad=invec(2)-invec(1)
-    if(present(lperiodic).and.lperiodic)then
-       l_grad=invec(1)-invec(size(invec))
-       if(sign(1.D0,l_grad).ne.sign(1.D0,r_grad).or.&
-            (r_grad.eq.0.D0.and.l_grad.ne.r_grad))then
-          nturn=nturn+1
-          tvec1(nturn)=1
+    if(present(lperiodic))then
+       if(lperiodic)then
+          l_grad=invec(1)-invec(size(invec))
+          if(sign(1.D0,l_grad).ne.sign(1.D0,r_grad).or.&
+               (r_grad.eq.0.D0.and.l_grad.ne.r_grad))then
+             nturn=nturn+1
+             tvec1(nturn)=1
+          end if
        end if
     end if
 
@@ -573,12 +579,14 @@ contains
     end do
 
 
-    if(present(lperiodic).and.lperiodic)then
-       r_grad=invec(1)-invec(size(invec))
-       if(sign(1.D0,l_grad).ne.sign(1.D0,r_grad).or.&
-            (r_grad.eq.0.D0.and.l_grad.ne.r_grad))then
-          nturn=nturn+1
-          tvec1(nturn)=size(invec)
+    if(present(lperiodic))then
+       if(lperiodic)then
+          r_grad=invec(1)-invec(size(invec))
+          if(sign(1.D0,l_grad).ne.sign(1.D0,r_grad).or.&
+               (r_grad.eq.0.D0.and.l_grad.ne.r_grad))then
+             nturn=nturn+1
+             tvec1(nturn)=size(invec)
+          end if
        end if
     end if
 
@@ -601,9 +609,9 @@ contains
     resvec(:nturn)=tvec1(:nturn)
     do i=1,nturn
        itmp1=minloc((/  (invec(resvec(j)),j=i,nturn)  /),dim=1)+i-1
-       dtmp1=resvec(i)
+       itmp2=resvec(i)
        resvec(i)=resvec(itmp1)
-       resvec(itmp1)=dtmp1
+       resvec(itmp1)=itmp2
     end do
 
     
@@ -772,7 +780,9 @@ contains
     udef_tol=16.0
     if(present(tol)) udef_tol=tol
     mult=(1.0/(sqrt(pi*2.0)*sigma))
-    if(present(norm).and..not.norm) mult=1.0
+    if(present(norm))then
+       if(.not.norm) mult=1.0
+    end if
     
     gauss_func=0.0
     do n=1,size(in_array)
@@ -815,7 +825,9 @@ contains
     udef_tol=38.D0
     if(present(tol)) udef_tol=tol
     mult=(1.D0/(sqrt(pi*2.D0)*sigma))
-    if(present(norm).and..not.norm) mult=1.D0
+    if(present(norm))then
+       if(.not.norm) mult=1.D0
+    end if
     
     gauss_func=0.D0
     do n=1,size(in_array)
@@ -859,7 +871,9 @@ contains
     udef_tol=1.E16
     if(present(tol)) udef_tol=tol
     mult=(1.0/(pi*gamma))
-    if(present(norm).and..not.norm) mult=1.0
+    if(present(norm))then
+       if(.not.norm) mult=1.0
+    end if
     
     c_func=0.0
     do n=1,size(in_array)
@@ -896,7 +910,9 @@ contains
     udef_tol=1.D16
     if(present(tol)) udef_tol=tol
     mult=(1.D0/(pi*gamma))
-    if(present(norm).and..not.norm) mult=1.D0
+    if(present(norm))then
+       if(.not.norm) mult=1.D0
+    end if
     
     c_func=0.D0
     do n=1,size(in_array)
@@ -937,7 +953,9 @@ contains
     udef_tol=38.0
     if(present(tol)) udef_tol=tol
     mult=((zeta**3.0)/pi)**(0.5)
-    if(present(norm).and..not.norm) mult=1.0
+    if(present(norm))then
+       if(.not.norm) mult=1.0
+    end if
     
     s_func=0.0
     do n=1,size(in_array)
@@ -973,7 +991,9 @@ contains
     udef_tol=38.D0
     if(present(tol)) udef_tol=tol
     mult=((zeta**3.D0)/pi)**(0.5D0)
-    if(present(norm).and..not.norm) mult=1.D0
+    if(present(norm))then
+       if(.not.norm) mult=1.D0
+    end if
     
     s_func=0.D0
     do n=1,size(in_array)

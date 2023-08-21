@@ -517,12 +517,14 @@ contains
     if(present(c_scale)) res_shifts(:,3) = res_shifts(:,3) * c_scale
 
 
-    if(present(lprint).and.(lprint))then
-       write(6,'(1X,"Shifts to be applied (Å)")')
-       do is=1,nstore
-          write(6,*) res_shifts(is,1),res_shifts(is,2), &
-               res_shifts(is,3)*modu(lat(axis,:))
-       end do
+    if(present(lprint))then
+       if(lprint)then
+          write(6,'(1X,"Shifts to be applied (Å)")')
+          do is=1,nstore
+             write(6,*) res_shifts(is,1),res_shifts(is,2), &
+                  res_shifts(is,3)*modu(lat(axis,:))
+          end do
+       end if
     end if
 
 !!! 1st, get it to find best c axis shift to find the best shift.
@@ -748,7 +750,7 @@ contains
     real :: stepsize,max_sep,dist_max
     real :: rtmp1,rtmp2,rtmp3
     double precision :: bond,depth,cur_vac,c_shift,val,dtmp1,dtmp2
-    logical :: lbulk
+    logical :: lbulk, lpresent
     type(confine_type) :: confine
     integer, dimension(2) :: plane_loc
     integer, dimension(3) :: ngrid,nstep,ivtmp1
@@ -854,7 +856,7 @@ contains
        end do
     end do
     min_trans=abs(min_trans)
-    where(min_trans.eq.0.D0)
+    where(abs(min_trans).lt.1.D-5)
        min_trans=1.D0
     end where
     if(ierror.eq.1) write(6,*) "repeated_trans:",min_trans
@@ -962,7 +964,7 @@ contains
              !! checks only 1st missing bond
              !!-----------------------------------------------------------------
              plane_loc(:)=&
-                  get_nth_plane(invec=DON_missing(i,is)%atom(ia,:),&
+                  get_nth_plane(invec=dble(DON_missing(i,is)%atom(ia,:)),&
                   nth=2,window=20,is_periodic=.false.) !! WINDOW WAS 10, NOW 20
              itmp1=nint( &
                   sum(DON_missing(i,is)%atom(ia,:plane_loc(1)))*&
@@ -985,6 +987,8 @@ contains
              elseif(itmp1.lt.0.and.lbulk)then
                 write(0,'("parent  species  atom  nmissing")')
                 write(0,'(2X,I2,6X,I2,4X,I4,4X,I4)') i,is,ia,itmp1
+                write(0,'("species  atom")')
+                write(0,'(2X,I2,4X,I4)') is, map(i)%spec(is,ia,2)
                 write(0,*) "Writing failed DON to output file &
                      &'full_broken_DON.dat'"
                 open(unit=13,file="full_broken_DON.dat")
@@ -1006,7 +1010,7 @@ contains
                         DON_missing(i,is)%atom(ia,j),&
                         bulk_DON(i)%spec(map(i)%spec(is,ia,1))%atom(map(i)%spec(is,ia,2),j)
                 end do
-                close(14)       
+                close(14)
                 call err_abort_print_struc(lat,splitbas(1),"lw_term.vasp",&
                      "",.false.)
                 call err_abort_print_struc(lat,splitbas(2),"up_term.vasp",&
@@ -1051,9 +1055,14 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Defines grid size and equivalent step size
 !!!-----------------------------------------------------------------------------
-    if(present(offset).and.offset(axis).ge.0.D0)then
-       max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(lat(axis,:))
-    else
+    lpresent=.false.
+    if(present(offset))then
+       if(offset(axis).ge.0.D0)then
+          max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(lat(axis,:))
+          lpresent=.true.
+       end if
+    end if
+    if(.not.lpresent)then
        max_sep = 6.0
        add = 0.D0
     end if
@@ -1068,7 +1077,6 @@ contains
     gridsize(2) = stepsize/modu(lat(2,:))
     gridsize(3) = stepsize/modu(lat(3,:))
 
-    
     nstep(:2) = min_trans(:2)*ngrid(:2)
     nstep(3) = 0
     do jc=1,ngrid(3)
@@ -1259,14 +1267,16 @@ contains
     if(present(c_scale)) res_shifts(:,axis) = res_shifts(:,axis)*c_scale
 
 
-    if(present(lprint).and.(lprint))then
-       write(6,'(1X,"Shifts to be applied (Å)")')
-       do i=1,nstore
-          write(6,'(I3,":",2X,3(2X,F7.4))') &
-               i,res_shifts(i,:2),res_shifts(i,3)*modu(lat(axis,:))
-       end do
+    if(present(lprint))then
+       if(lprint)then
+          write(6,'(1X,"Shifts to be applied (Å)")')
+          do i=1,nstore
+             write(6,'(I3,":",2X,3(2X,F7.4))') &
+                  i,res_shifts(i,:2),res_shifts(i,3)*modu(lat(axis,:))
+          end do
+       end if
     end if
-
+       
 
   end function get_shifts_DON
 !!!#############################################################################

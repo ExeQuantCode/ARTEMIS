@@ -38,17 +38,17 @@ OBJS := $(addprefix $(SRC_DIR)/,$(SRCS))
 ##########################################
 FFLAGS = -O2
 #PPFLAGS = -cpp
-FC?=gfortran
+FC=gfortran
 ifeq ($(FC),ifort)
 	MPIFLAG = -qopenmp
 	MODULEFLAG = -module
 	DEVFLAGS = -check all -warn #all
-	DEBUGFLAGS = -check all -fpe0 -warn -tracekback -debug extended # -check bounds
+	DEBUGFLAGS = -check all -fpe0 -warn -tracekback -debug extended
 else
 	MPIFLAG = -fopenmp
 	MODULEFLAG = -J
-	DEVFLAGS = -g -static -ffpe-trap=invalid
-	DEBUGFLAGS = -fbounds-check
+	DEVFLAGS = -g -fbacktrace -fcheck=all
+	DEBUGFLAGS = -fbounds-check -Wall -Wno-maybe-uninitialized
 endif
 
 

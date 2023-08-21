@@ -172,16 +172,18 @@ contains
        end if
     else
        write(0,*) "WARNING: No mirror identified in interface"
-       if(present(require_mirror).and..not.require_mirror)then
-          write(0,*) "Performing swaps over only one interface then"
-       else
-          write(0,*) "As such, cannot generate equivalent swaps on both interfaces"
-          write(0,*) "Skipping..."
-          return
+       if(present(require_mirror))then
+          if(.not.require_mirror)then
+             write(0,*) "Performing swaps over only one interface then"
+             goto 10
+          end if
        end if
+       write(0,*) "As such, cannot generate equivalent swaps on both interfaces"
+       write(0,*) "Skipping..."
+       return
     end if
 
-    deallocate(grp%sym)
+10  deallocate(grp%sym)
     call sym_setup(grp,lat,new_start=.true.)
     call check_sym(grp,tmpbas)!,lsave=.true.)
     
@@ -580,9 +582,7 @@ end function rand_swapper
     integer :: i,loc1,loc2
     integer :: nbelow,nabove
     integer :: lw_mirror,up_mirror
-    integer :: nfail !,nperm
     real :: r_rand1,r_rand2
-    type(sym_type) :: grp
     integer, allocatable, dimension(:) :: lw_convert,up_convert
     integer, allocatable, dimension(:,:) :: swap_list
     real, allocatable, dimension(:) :: tlw_weight_list,tup_weight_list

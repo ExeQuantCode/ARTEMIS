@@ -73,7 +73,7 @@ module misc_linalg
 
 
 
-!!!updated 2020/05/02
+!!!updated 2021/12/09
 
 
 contains
@@ -163,21 +163,23 @@ contains
 
 
     !! sets up array dimensions of Gram-Schmidt basis
-    if(present(cmo).and.cmo)then
-       write(0,'("Column Major Order Gram-Schmidt &
-            &not yet set up")')
-       write(0,'("Stopping...")')
-       stop
-       num = size(basis(1,:),dim=1)
-       dim = size(basis(:,1),dim=1)
-       allocate(u(dim,num))
-    else
-       num = size(basis(:,1),dim=1)
-       dim = size(basis(1,:),dim=1)
-       allocate(u(num,dim))
+    if(present(cmo))then
+       if(cmo)then
+          write(0,'("Column Major Order Gram-Schmidt &
+               &not yet set up")')
+          write(0,'("Stopping...")')
+          stop
+          num = size(basis(1,:),dim=1)
+          dim = size(basis(:,1),dim=1)
+          allocate(u(dim,num))
+          goto 10
+       end if
     end if
-    allocate(vtmp(dim))
-
+    num = size(basis(:,1),dim=1)
+    dim = size(basis(1,:),dim=1)
+    allocate(u(num,dim))
+    
+10  allocate(vtmp(dim))
 
     !! Evaluates the Gram-Schmidt basis
     u(1,:) = basis(1,:)
@@ -191,10 +193,12 @@ contains
 
 
     !! Normalises new basis if required
-    if(present(normalise).and.normalise)then
-       do i=1,num
-          u(i,:) = u(i,:)/modu(u(i,:))
-       end do
+    if(present(normalise))then
+       if(normalise)then
+          do i=1,num
+             u(i,:) = u(i,:)/modu(u(i,:))
+          end do
+       end if
     end if
 
 
@@ -205,29 +209,27 @@ contains
 !!!#####################################################
 !!! cross product
 !!!#####################################################
-  function rcross(a,b)
+  pure function rcross(a,b) result(cross)
     implicit none
-    real, dimension(3) :: rcross
+    real, dimension(3) :: cross
     real, dimension(3), intent(in) :: a,b
 
-    rcross(1) = a(2)*b(3) - a(3)*b(2)
-    rcross(2) = a(3)*b(1) - a(1)*b(3)
-    rcross(3) = a(1)*b(2) - a(2)*b(1)
+    cross(1) = a(2)*b(3) - a(3)*b(2)
+    cross(2) = a(3)*b(1) - a(1)*b(3)
+    cross(3) = a(1)*b(2) - a(2)*b(1)
 
-    return
   end function rcross
 !!!-----------------------------------------------------
 !!!-----------------------------------------------------
-  function dcross(a,b)
+  pure function dcross(a,b) result(cross)
     implicit none
-    double precision, dimension(3) :: dcross
+    double precision, dimension(3) :: cross
     double precision, dimension(3), intent(in) :: a,b
 
-    dcross(1) = a(2)*b(3) - a(3)*b(2)
-    dcross(2) = a(3)*b(1) - a(1)*b(3)
-    dcross(3) = a(1)*b(2) - a(2)*b(1)
+    cross(1) = a(2)*b(3) - a(3)*b(2)
+    cross(2) = a(3)*b(1) - a(1)*b(3)
+    cross(3) = a(1)*b(2) - a(2)*b(1)
 
-    return
   end function dcross
 !!!#####################################################
 
@@ -544,13 +546,13 @@ contains
     if(n.eq.1) then
        res = a(1,1)
     else
-       res = 0
+       res = 0.D0
        sign = 1
        do i=1, n
           tmp(:,:(i-1))=a(2:,:i-1)
           tmp(:,i:)=a(2:,i+1:)
           res=res+sign*a(1,i)*rec_det(tmp,n-1)
-          sign=-1.D0*sign
+          sign=-1*sign
        end do
     end if
 
@@ -1012,8 +1014,8 @@ contains
     integer :: numer,denom
     integer :: a,b,c,gcd
 
-    a=numer
-    b=denom
+    a=abs(numer)
+    b=abs(denom)
     if(a.gt.b)then
        c=a
        a=b
@@ -1044,10 +1046,10 @@ contains
     integer, dimension(:),intent(in) :: vec
     integer, allocatable, dimension(:) :: in_vec
 
-    
+
     dim=size(vec,dim=1)
     allocate(in_vec(dim))
-    in_vec=vec
+    in_vec=abs(vec)
     do i=1,dim
        loc=maxloc(in_vec(i:dim),dim=1)+i-1
        itmp1=in_vec(i)
@@ -1068,7 +1070,7 @@ contains
     end do
     gcd=a
 
-
+    return
   end function gcd_vec
 !!!#####################################################
 
@@ -1149,7 +1151,7 @@ contains
           if(abs(div).lt.tol) div=min(abs(vec(i)),old_div)
        end do
     else
-       a=vec(1)
+       a=nint(vec(1))
        do i=2,size(vec)
           if(a.eq.0.and.int(vec(i)).eq.0) cycle
           a=gcd(a,int(vec(i)))
@@ -1162,6 +1164,7 @@ contains
     end if
 
     if(div.eq.0.D0) return
+    allocate(tvec(size(invec)))
     tvec=vec/div
     if(any(abs(tvec(:)-nint(tvec(:))).gt.tol)) return
     vec=tvec
@@ -1174,7 +1177,7 @@ contains
 !!!#####################################################
 !!! generate entire group from supplied elements
 !!!#####################################################
-  function gen_group(elem,mask) result(group)
+  function gen_group(elem,mask,tol) result(group)
     implicit none
     integer :: i,j,k,nelem,ntot_elem,dim1,dim2,iter
     double precision :: tiny
@@ -1184,9 +1187,14 @@ contains
     double precision, dimension(:,:,:), intent(in) :: elem
     logical, dimension(:,:), optional, intent(in) :: mask
     double precision, allocatable, dimension(:,:,:) :: group
+    double precision, optional, intent(in) :: tol
 
 
-    tiny = 1.D-5
+    if(present(tol))then
+       tiny = tol
+    else
+       tiny = 1.D-5
+    end if
     nelem = size(elem(:,1,1))
     dim1 = size(elem(1,:,1))
     dim2 = size(elem(1,1,:))
@@ -1199,12 +1207,14 @@ contains
     ntot_elem = 0
     elem_loop1: do i=1,nelem
        cur_elem(:,:) = elem(i,:,:)
+       !write(0,*) "##########"
+       !write(0,*)
        !write(0,*) i
-       !write(0,'(2(2X,F9.4))') cur_elem(:,:)
+       !write(0,'(2(2X,F9.6))') cur_elem(:,:)
        !write(0,*)
        if(present(mask))then
           where(mask.and.(cur_elem(:,:).lt.-tiny.or.cur_elem(:,:).ge.1.D0-tiny))
-             cur_elem(:,:) = cur_elem(:,:) - floor(cur_elem(:,:))
+             cur_elem(:,:) = cur_elem(:,:) - floor(cur_elem(:,:)+tiny)
           end where
        end if
        do k=1,ntot_elem
@@ -1228,7 +1238,7 @@ contains
              tmp_elem(:,:) = matmul((apply_elem(:,:)),tmp_elem(:,:))
              if(present(mask))then
                 where(mask.and.(tmp_elem(:,:).lt.-tiny.or.tmp_elem(:,:).ge.1.D0-tiny))
-                   tmp_elem(:,:) = tmp_elem(:,:) - floor(tmp_elem(:,:))
+                   tmp_elem(:,:) = tmp_elem(:,:) - floor(tmp_elem(:,:)+tiny)
                 end where
              end if
              if(all(abs(cur_elem(:,:)-tmp_elem(:,:)).lt.tiny)) exit recursive_loop
