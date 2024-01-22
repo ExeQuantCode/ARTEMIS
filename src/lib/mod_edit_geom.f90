@@ -180,6 +180,11 @@ contains
 
 
     min_bond=huge(0.D0)
+    if(bas%natom.eq.1)then
+       min_bond = min(modu(lat(1,:3)),modu(lat(2,:3)),modu(lat(3,:3)))
+       return
+    end if
+
     do is=1,bas%nspec
        do ia=1,bas%spec(is)%num
 
@@ -198,7 +203,6 @@ contains
 
        end do
     end do
-
 
   end function get_min_bulk_bond
 !!!#############################################################################
@@ -891,12 +895,11 @@ contains
 !!!#############################################################################
 !!! convert basis coordinates to be within +val -> val-1
 !!!#############################################################################
-!!! MAKE AN OPTIONAL SETTING TO MOVE CLOSES ATOM TO ZERO TO ACTUAL ZERO
-  subroutine normalise_basis(bas,dtmp,lfloor,lround)
+  subroutine normalise_basis(bas,dtmp,lfloor,lround,zero_round)
     implicit none
     integer :: is,ia,j
     double precision :: ceil,flr,dround
-    double precision, optional :: dtmp
+    double precision, optional :: dtmp, zero_round
     type(bas_type) :: bas
     logical :: lfloor1,lround1
     logical, optional :: lfloor,lround
@@ -925,6 +928,10 @@ contains
                 if(abs(bas%spec(is)%atom(ia,j)-ceil).lt.dround.or.&
                      abs(bas%spec(is)%atom(ia,j)).lt.dround) &
                      bas%spec(is)%atom(ia,j)=flr
+             end if
+             if(present(zero_round))then
+                if(abs(bas%spec(is)%atom(ia,j)).lt.dround) &
+                     bas%spec(is)%atom(ia,j)=zero_round
              end if
           end do
        end do
