@@ -745,11 +745,11 @@ contains
     use edit_geom, only: get_bulk,wyck_spec_type,get_wyckoff
     use interface_identifier, only: gen_single_DON,nstep_default,den_of_neigh_type
     implicit none
-    integer :: i,j,k,l,is,ia,ja,jb,jc,count1,itmp1,itmp2
+    integer :: i,j,k,l,is,ia,ja,jb,jc,count1,itmp1
     integer :: ntrans,iatom,nneigh,ncheck
     real :: stepsize,max_sep,dist_max
     real :: rtmp1,rtmp2,rtmp3
-    double precision :: bond,depth,cur_vac,c_shift,val,dtmp1,dtmp2
+    double precision :: val,dtmp1,dtmp2
     logical :: lbulk, lpresent
     type(confine_type) :: confine
     integer, dimension(2) :: plane_loc

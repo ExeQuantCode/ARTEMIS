@@ -43,7 +43,7 @@ contains
        thickness,udef_layer_sep)
     implicit none
     integer :: unit
-    integer :: itmp1,j,iterm,term_start,term_end,iterm_step
+    integer :: itmp1,iterm,term_start,term_end,iterm_step
     integer :: old_natom,ncells,thickness_val,ntrans
     double precision :: height
     character(len=1024) :: dirname,filename,pwd
@@ -264,9 +264,9 @@ contains
 !!!#############################################################################
   subroutine gen_interfaces(tolerance,inlw_lat,inup_lat,inlw_bas,inup_bas)
     implicit none
-    integer :: i,j,iterm,jterm,ntrans,ifit,iunique,old_natom,itmp1,old_intf
+    integer :: j,iterm,jterm,ntrans,ifit,iunique,old_natom,itmp1,old_intf
     integer :: iterm_step,jterm_step
-    integer :: lw_ncells,up_ncells,istep
+    integer :: lw_ncells,up_ncells
     integer :: lw_layered_axis,up_layered_axis
     integer :: intf_start,intf_end
     integer :: lw_term_start,lw_term_end,up_term_start,up_term_end
@@ -872,7 +872,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Generates sets of shifts based on shift version
 !!!-----------------------------------------------------------------------------
-    if(ishift.eq.0) allocate(output_shifts(nshift,3))
+    if(ishift.eq.0.or.ishift.eq.1) allocate(output_shifts(nshift,3))
     select case(ishift)
     case(1)
        output_shifts(1,:3)=0.D0
@@ -1469,7 +1469,7 @@ contains
           end if
        end do ortho_check
     end if
-    call normalise_basis(bas,dtmp=0.9999D0,lfloor=.true.)
+    call normalise_basis(bas,dtmp=0.9999D0,lfloor=.true.,zero_round=0.D0)
 
 
   end subroutine prepare_slab
