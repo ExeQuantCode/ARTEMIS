@@ -887,7 +887,7 @@ contains
          SAV%tf1(1,2,1:3),SAV%tf2(1,2,1:3),&
          SAV%tf1(1,3,1:3),SAV%tf2(1,3,1:3)
     write(6,'(" vector mismatch (%) = ",F0.9)') SAV%tol(1,1)
-    write(6,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(1,2)
+    write(6,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(1,2)*180/pi
     write(6,'(" area mismatch (%)   = ",F0.9)') SAV%tol(1,3)
     write(6,*)
 
@@ -1380,7 +1380,7 @@ contains
                   SAV%tf1(i,2,1:3),SAV%tf2(i,2,1:3),&
                   SAV%tf1(i,3,1:3),SAV%tf2(i,3,1:3)
              write(6,'(" vector mismatch (%) = ",F0.9)') SAV%tol(i,1)
-             write(6,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(i,2)
+             write(6,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(i,2)*180/pi
              write(6,'(" area mismatch (%)   = ",F0.9)') SAV%tol(i,3)
              write(6,*) "reduced:",lvec1(i)
              write(6,*)

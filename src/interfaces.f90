@@ -1502,7 +1502,7 @@ contains
          SAV%tf1(ifit,2,1:3),SAV%tf2(ifit,2,1:3),&
          SAV%tf1(ifit,3,1:3),SAV%tf2(ifit,3,1:3)
     write(unit,'(" vector mismatch (%) = ",F0.9)') SAV%tol(ifit,1)
-    write(unit,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(ifit,2)
+    write(unit,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(ifit,2)*180/pi
     write(unit,'(" area mismatch (%)   = ",F0.9)') SAV%tol(ifit,3)
     write(unit,*)
     write(unit,'(" Lower crystal Miller plane: ",3(I3," "))') SAV%tf1(ifit,3,1:3)
