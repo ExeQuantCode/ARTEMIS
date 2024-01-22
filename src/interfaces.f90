@@ -266,7 +266,6 @@ contains
   subroutine gen_interfaces(tolerance,inlw_lat,inup_lat,inlw_bas,inup_bas)
     implicit none
     integer :: j,iterm,jterm,ntrans,ifit,iunique,old_natom,itmp1,old_intf
-    integer :: is, ia
     integer :: iterm_step,jterm_step
     integer :: lw_ncells,up_ncells
     integer :: lw_layered_axis,up_layered_axis
