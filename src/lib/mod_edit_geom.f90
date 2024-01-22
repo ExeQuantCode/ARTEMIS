@@ -197,7 +197,6 @@ contains
                      vdtmp1(2)*lat(2,:3) + &
                      vdtmp1(3)*lat(3,:3)
                 dtmp1 = modu(vdtmp1)
-                write(*,*) "tmp",dtmp1, min_bond
                 if(dtmp1.lt.min_bond) min_bond = dtmp1
              end do atmloop
           end do
