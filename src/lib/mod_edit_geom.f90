@@ -180,6 +180,11 @@ contains
 
 
     min_bond=huge(0.D0)
+    if(bas%natom.eq.1)then
+       min_bond = min(modu(lat(1,:3)),modu(lat(2,:3)),modu(lat(3,:3)))
+       return
+    end if
+
     do is=1,bas%nspec
        do ia=1,bas%spec(is)%num
 
@@ -192,13 +197,13 @@ contains
                      vdtmp1(2)*lat(2,:3) + &
                      vdtmp1(3)*lat(3,:3)
                 dtmp1 = modu(vdtmp1)
+                write(*,*) "tmp",dtmp1, min_bond
                 if(dtmp1.lt.min_bond) min_bond = dtmp1
              end do atmloop
           end do
 
        end do
     end do
-
 
   end function get_min_bulk_bond
 !!!#############################################################################
