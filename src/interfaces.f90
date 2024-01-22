@@ -1469,7 +1469,7 @@ contains
           end if
        end do ortho_check
     end if
-    call normalise_basis(bas,dtmp=0.9999D0,lfloor=.true.)
+    call normalise_basis(bas,dtmp=0.9999D0,lfloor=.true.,zero_round=0.D0)
 
 
   end subroutine prepare_slab
