@@ -16,6 +16,7 @@ Language to use:
 
 ### Fixed
 - Fixed normalisation before vacuum inserting in prepare_slab procedure
+- Tests diff file issues
 
 
 
