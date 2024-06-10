@@ -5,6 +5,7 @@ SETTINGS
   STRUC2_FILE = POSCAR_Ge  ! upper structure (not used if IRESTART > 0)
   IPRINT = -1
   TOL_SYM = 1.D-4
+  CLOCK = 0
 END SETTINGS
 
 
@@ -20,6 +21,11 @@ INTERFACES
   TOL_MAXSIZE = 10      ! max increase of any lattice vector
   NMILLER = 10          ! number of Miller planes to consider
 
+  LW_USE_PRICEL = F
+  UP_USE_PRICEL = F
+  LW_MILLER = 3 1 0
+  UP_MILLER = 1 1 0
+  LW_LAYER_SEP = 0.45
   LW_SLAB_THICKNESS = 6 ! thickness of lower material
   UP_SLAB_THICKNESS = 6 ! thickness of upper material
   NTERM = 5             ! max number of terminations per material per match
