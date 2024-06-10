@@ -10,7 +10,7 @@ module io
   
   private   !everything is private unless explicitly defined as public
 
-  character(25), public, parameter :: version="public version 1.0.2"
+  character(25), public, parameter :: version="development version 1.0.3"
   !character(30), public, parameter :: &
   !     author(3) = [&
   !     "N. T. Taylor",&

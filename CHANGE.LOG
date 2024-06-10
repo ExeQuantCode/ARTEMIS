@@ -14,6 +14,10 @@ Language to use:
 
 ## [Unreleased]
 
+### Fixed
+- Fixed normalisation before vacuum inserting in prepare_slab procedure
+
+
 
 ## [Public release 1.0.2] - 2024-01-22
 
