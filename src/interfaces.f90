@@ -1458,6 +1458,7 @@ contains
     !!--------------------------------------------------------------------
     !! Apply slab_cuber to orthogonalise lower material
     !!--------------------------------------------------------------------
+    call normalise_basis(bas,dtmp=0.9999D0,lfloor=.true.,zero_round=0.D0)
     call set_vacuum(lat,bas,term%axis,1.D0-term%tol/tfmat(term%axis,term%axis),vacuum)
     !call err_abort_print_struc(lat,bas,"check.vasp","stop")
     abc=cshift(abc,3-term%axis)
