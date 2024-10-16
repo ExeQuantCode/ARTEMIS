@@ -222,10 +222,9 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! allocated grp%op
 !!!-----------------------------------------------------------------------------
-    if(.not.allocated(grp%op))then
-       allocate(grp%op(grp%nsym*minval(bas1%spec(:)%num)))
-       grp%op = 0
-    end if
+    if(allocated(grp%op)) deallocate(grp%op)
+    allocate(grp%op(grp%nsym*minval(bas1%spec(:)%num)))
+    grp%op = 0
     if(present(lsave))then
        lsaving = lsave
     else
