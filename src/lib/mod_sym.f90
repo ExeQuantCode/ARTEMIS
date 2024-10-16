@@ -1472,11 +1472,11 @@ contains
 !!!#############################################################################
   function get_terminations(lat,bas,axis,lprint,layer_sep) result(term)
     implicit none
-    integer :: i,j,is,nterm,mterm,dim,ireject
+    integer :: i,j,k,is,nterm,mterm,dim,ireject
     integer :: itmp1,itmp2,init,min_loc
     logical :: ludef_print,lunique,ltmp1,lmirror
     double precision :: dtmp1,tol,height,max_sep,c_along,centre
-    type(sym_type) :: grp1,grp_store
+    type(sym_type) :: grp1,grp_store, grp_store_inv
     type(term_arr_type) :: term
     integer, dimension(3) :: abc=(/1,2,3/)
     double precision, dimension(3) :: vec_compare,vtmp1
@@ -1494,6 +1494,8 @@ contains
 
     double precision, optional, intent(in) :: layer_sep
     logical, optional, intent(in) :: lprint
+
+    integer, dimension(:), allocatable :: comparison_list
 
 
 
@@ -1737,23 +1739,29 @@ contains
     !!--------------------------------------------------------------------------
     !! Set up mirror/inversion symmetries of the matrix
     !!--------------------------------------------------------------------------
-    call sym_setup(grp_store,lat,predefined=.false.,new_start=.true.)
-    allocate(tmpsym(count(grp_store%sym(:,3,3).eq.-1.D0),4,4))
-    allocate(tmpop(count(grp_store%sym(:,3,3).eq.-1.D0)))
+    grp_store_inv%confine%axis=axis
+    grp_store_inv%confine%laxis=.false.
+    grp_store_inv%lspace = .true.
+    grp_store_inv%confine%l = .true.
+    grp_store_inv%confine%laxis(axis) = .true.
+    call sym_setup(grp_store_inv,lat,predefined=.false.,new_start=.true.)
+    itmp1 = count(abs(grp_store_inv%sym(:,3,3)+1.D0).lt.tol_sym)
+    allocate(tmpsym(itmp1,4,4))
+    allocate(tmpop(itmp1))
     itmp1 = 0
-    do i=1,grp_store%nsym
-       if(grp_store%sym(i,3,3).eq.-1.D0)then
+    do i=1,grp_store_inv%nsym
+       if(abs(grp_store_inv%sym(i,3,3)+1.D0).lt.tol_sym)then
           itmp1=itmp1+1
-          tmpsym(itmp1,:,:) = grp_store%sym(i,:,:)
+          tmpsym(itmp1,:,:) = grp_store_inv%sym(i,:,:)
           tmpop(itmp1) = i
        end if
     end do
-    grp_store%nsym = itmp1
-    grp_store%nlatsym = itmp1
-    call move_alloc(tmpsym,grp_store%sym)
-    allocate(grp_store%op(itmp1))
-    grp_store%op(:) = tmpop(:itmp1)
-    s_end = grp_store%nsym
+    grp_store_inv%nsym = itmp1
+    grp_store_inv%nlatsym = itmp1
+    call move_alloc(tmpsym,grp_store_inv%sym)
+    allocate(grp_store_inv%op(itmp1))
+    grp_store_inv%op(:) = tmpop(:itmp1)
+    s_end = grp_store_inv%nsym
 
 
     !!--------------------------------------------------------------------------
@@ -1772,59 +1780,81 @@ contains
        itmp1=reject_match(i,1)
        itmp2=reject_match(i,2)
        !! Check if comparison termination has already been compared successfully
-       prior_check: if(any(success(1:i-1).eq.itmp2))then
-          lunique=.false.
-       else
-          call clone_grp(grp_store,grp1)
-          call check_sym(grp1,bas_arr(itmp2),&
-               iperm=-1,lsave=.true.,lcheck_all=.true.)
-          ltmp1=.false.
-
-!!!HERE
-          !! Check if pure translations are present in comparison termination?
-          !do j=1,grp1%nsymop
-          !   if(all(abs(savsym(j,:3,:3)-ident).le.tol_sym))then
-          !      write(0,*) "FOUND TRANSLATION"
-          !      cycle reject_loop1
-          !   end if
-          !end do
-          !! Check if inversions are present in comparison termination
-          do j=1,grp1%nsymop
-             if(abs(det(savsym(j,:3,:3))+1.D0).le.tol_sym) ltmp1=.true.
+       comparison_list = [ itmp2 ]
+       !! check against all previous reject-turned-unique terminations
+       prior_check: if(any(success(1:i-1:1).eq.itmp2))then
+          do j = 1, i-1, 1
+             if(success(j).eq.itmp2)then
+                s_end = grp_store%nsym
+                call clone_grp(grp_store,grp1)
+                call check_sym(grp1,bas1=bas_arr_reject(j),&
+                     iperm=-1,tmpbas2=bas_arr_reject(i),lsave=.true.)
+                if(grp1%nsymop.ne.0)then
+                   if(abs(savsym(1,axis,axis)+1.D0).gt.tol_sym)then
+                      lunique = .false.
+                      itmp2 = reject_match(j,2)
+                      exit prior_check
+                   end if
+                end if
+                comparison_list = [ comparison_list, reject_match(j,2) ]
+             end if
           end do
-          !! If they are not, then no point comparing. It is a new termination
-          if(.not.ltmp1) exit prior_check 
-
-          call clone_grp(grp_store,grp1)
-          call check_sym(grp1,bas_arr(itmp2),&
-               tmpbas2=bas_arr_reject(i),iperm=-1,lsave=.true.,lcheck_all=.true.)
-
-          !! Check det of all symmetry operations. If any are 1, move on
-          !! This is because they are just rotations as can be captured ...
-          !! ... through lattice matches.
-          !! Solely inversions are unique and must be captured.
-          do j=1,grp1%nsymop
-             if(abs(det(savsym(j,:3,:3))-1.D0).le.tol_sym) lunique=.false.
-          end do
-          if(savsym(1,4,axis).eq.&
-               2.D0*min(term_arr_uniq(itmp2)%hmin,0.5D0-term_arr_uniq(itmp2)%hmin))then
-             lunique=.false.
-          end if
-
-          if(.not.(all(savsym(1,axis,:3).eq.vec_compare(:)).and.&
-               all(savsym(1,:3,axis).eq.vec_compare(:)))) lunique=.false.
-          
        end if prior_check
 
+       unique_condition1: if(lunique)then
+          s_end = grp_store_inv%nsym
+          lunique = .true.
+          do k = 1, size(comparison_list)
+             itmp2 = comparison_list(k)
+             call clone_grp(grp_store_inv,grp1)
+             call check_sym(grp1,bas_arr(itmp2),&
+                  iperm=-1,lsave=.true.,lcheck_all=.true.)
+   
+             !! Check if inversions are present in comparison termination
+             ltmp1=.false.
+             do j = 1, grp1%nsymop, 1
+                if(abs(det(savsym(j,:3,:3))+1.D0).le.tol_sym) ltmp1=.true.
+             end do
+             !! If they are not, then no point comparing. It is a new termination
+             if(.not.ltmp1) cycle
+   
+             call clone_grp(grp_store_inv,grp1)
+             call check_sym(grp1,bas_arr(itmp2),&
+                  tmpbas2=bas_arr_reject(i), &
+                  iperm=-1, &
+                  lsave=.true., &
+                  lcheck_all=.true. &
+             )
+   
+             !! Check det of all symmetry operations. If any are 1, move on
+             !! This is because they are just rotations as can be captured ...
+             !! ... through lattice matches.
+             !! Solely inversions are unique and must be captured.
+             do j = 1, grp1%nsymop, 1
+                if(abs(det(savsym(j,:3,:3))-1.D0).le.tol_sym) lunique=.false.
+             end do
+             if(savsym(1,4,axis).eq.&
+                  2.D0 * min( &
+                       term_arr_uniq(itmp2)%hmin, &
+                       0.5D0-term_arr_uniq(itmp2)%hmin &
+                  ) &
+             ) lunique=.false.
+   
+             if(.not.( &
+                  all(abs(savsym(1,axis,:3) - vec_compare(:)).lt.tol_sym).and.&
+                  all(abs(savsym(1,:3,axis) - vec_compare(:)).lt.tol_sym) &
+             ) ) lunique=.false.
+             
+             if(lunique) exit unique_condition1
+          end do
+       end if unique_condition1
+
        if(lunique)then
-          mterm=mterm+1
-          success(i)=itmp2
-          term_arr_uniq(mterm)=term_arr(reject_match(i,1))
-          !if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
-          !     mterm,&
-          !     term_arr_uniq(mterm)%hmin,&
-          !     term_arr_uniq(mterm)%hmax,term_arr_uniq(mterm)%natom
-          reject_match(i,2)=0
+          mterm = mterm + 1
+          success(i) = itmp2
+          bas_arr(mterm) = bas_arr_reject(i)
+          term_arr_uniq(mterm) = term_arr(itmp1)
+          reject_match(i,2) = mterm
           term_arr_uniq(mterm)%nstep = 1
           allocate(term_arr_uniq(mterm)%ladder(ireject+1))
           term_arr_uniq(mterm)%ladder(1) = 0.D0
