@@ -421,27 +421,27 @@ contains
     abc="abc"
     if(any(lw_mplane.ne.0))then
        if(imatch.ne.0)then
-          abc="ab"
+          abc="ab "
           tfmat=planecutter(inlw_lat,dble(lw_mplane))
           call transformer(inlw_lat,inlw_bas,tfmat,lw_map)
           SAV=get_best_match(&
                tolerance,&
                inlw_lat,inup_lat,&
                inlw_bas,inup_bas,&
-               trim(abc),"abc",lprint_matches,ierror,imatch=imatch)
+               abc,"abc",lprint_matches,ierror,imatch=imatch)
        elseif(any(up_mplane.ne.0))then
           SAV=get_best_match(&
                tolerance,&
                inlw_lat,inup_lat,&
                inlw_bas,inup_bas,&
-               trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
+               abc,"abc",lprint_matches,ierror,imatch=imatch,&
                plane1=lw_mplane,plane2=up_mplane,nmiller=nmiller)
        else
           SAV=get_best_match(&
                tolerance,&
                inlw_lat,inup_lat,&
                inlw_bas,inup_bas,&
-               trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
+               abc,"abc",lprint_matches,ierror,imatch=imatch,&
                plane1=lw_mplane,nmiller=nmiller)
        end if
     elseif(any(up_mplane.ne.0))then
@@ -449,14 +449,14 @@ contains
             tolerance,&
             inlw_lat,inup_lat,&
             inlw_bas,inup_bas,&
-            trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
+            abc,"abc",lprint_matches,ierror,imatch=imatch,&
             plane2=up_mplane,nmiller=nmiller)
     else
        SAV=get_best_match(&
             tolerance,&
             inlw_lat,inup_lat,&
             inlw_bas,inup_bas,&
-            trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
+            abc,"abc",lprint_matches,ierror,imatch=imatch,&
             nmiller=nmiller)
     end if
     if(min(tolerance%nstore,SAV%nfit).eq.0)then
