@@ -1712,8 +1712,8 @@ contains
              if(grp1%nsymop.ne.0)then
                 !write(0,*) "we have a possible reject"
                 !if(any(savsym(:grp1%nsymop,axis,axis).eq.-1.D0))then
-                if(savsym(1,axis,axis).eq.-1.D0)then
-                   ireject = ireject + 1
+                if(abs(savsym(1,axis,axis)+1.D0).lt.tol_sym)then
+                  ireject = ireject + 1
                    reject_match(ireject,:) = [ i, j ]
                    bas_arr_reject(ireject) = bas_arr(mterm)
                    lmirror=.true.
@@ -1845,7 +1845,10 @@ contains
     term%nterm=mterm
     term%lmirror = lmirror
     if(ludef_print)&
-         write(6,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
+         write(6,&
+              '(1X,"Term.",3X,"Min layer loc",3X,&
+              &"Max layer loc",3X,"no. atoms")' &
+         )
     dtmp1 = term_arr_uniq(1)%hmin-1.D-6
     itmp1 = 1
     do i=1,mterm
@@ -1854,7 +1857,8 @@ contains
        term%arr(i)%hmax = term_arr_uniq(itmp1)%hmax
        term%arr(i)%natom = term_arr_uniq(itmp1)%natom
        term%arr(i)%nstep = term_arr_uniq(itmp1)%nstep
-       term%arr(i)%ladder(:term%arr(i)%nstep) = term_arr_uniq(i)%ladder(:term%arr(i)%nstep)
+       term%arr(i)%ladder(:term%arr(i)%nstep) = &
+            term_arr_uniq(i)%ladder(:term%arr(i)%nstep)
        if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
             i,term%arr(i)%hmin,term%arr(i)%hmax,term%arr(i)%natom
        itmp1 = minloc(term_arr_uniq(:)%hmin,&
