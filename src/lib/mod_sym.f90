@@ -1710,10 +1710,6 @@ contains
              call clone_grp(grp_store,grp1)
              call check_sym(grp1,bas1=bas_arr(mterm),&
                   iperm=-1,tmpbas2=bas_arr(j),lsave=.true.)
-             !do is=1,grp1%nsymop
-             !   write(0,'(4(2X,F9.4))') savsym(is,:4,:3)
-             !   write(0,*)
-             !end do
              if(grp1%nsymop.ne.0)then
                 !write(0,*) "we have a possible reject"
                 !if(any(savsym(:grp1%nsymop,axis,axis).eq.-1.D0))then
@@ -1736,9 +1732,6 @@ contains
        term_arr_uniq(mterm)%nstep = 1
        allocate(term_arr_uniq(mterm)%ladder(nterm))
        term_arr_uniq(mterm)%ladder(:) = 0.D0
-       !open(100+mterm)
-       !call geom_write(100+mterm,lat,bas_arr(mterm))
-       !close(100+mterm)
     end do shift_loop1
 
 
@@ -1812,8 +1805,6 @@ contains
           !! ... through lattice matches.
           !! Solely inversions are unique and must be captured.
           do j=1,grp1%nsymop
-             !write(0,'(4(2X,F9.4))') savsym(j,:,:)
-             !write(0,*) det(savsym(j,:3,:3))
              if(abs(det(savsym(j,:3,:3))-1.D0).le.tol_sym) lunique=.false.
           end do
           if(savsym(1,4,axis).eq.&
