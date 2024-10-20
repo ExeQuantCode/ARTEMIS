@@ -34,7 +34,7 @@ module io
      character(40) :: summary
      character(60) :: allowed
      character(60) :: default
-     character(300) :: description
+     character(1024) :: description
   end type tag_type
 
   public :: write_fmtd
@@ -190,7 +190,10 @@ contains
 
 
        inewline=index(message(ipos:iend),'\n')
-       if(inewline.ne.0)then
+       if(inewline.eq.1)then
+          iend=ipos+1
+          cycle newline_loop
+       elseif(inewline.ne.0)then
           finished=.false.
           iend=ipos+inewline-2
           length=inewline-1
