@@ -414,7 +414,16 @@ contains
     tag(iimatch_tag)%allowed = '0, 1, 2'
     tag(iimatch_tag)%default = '0'
     tag(iimatch_tag)%description = &
-         'Defines the method used to match the two crystals'
+         &'Defines the method used to match the two crystals\n \n&
+         & 0 = Full lattice matching, but can be constrained to specific Miller planes&
+         & for lower and upper crystals via LW_MILLER and UP_MILLER\n&
+         & 1 = Cycle over all transformation matrices for lower crystal (within tolerances)&
+         & and find the closest transformation matrix to map the upper crystal to the lower\n&
+         & 2 = Cycle over all transformation matrices for lower and upper crystals (within tolerances)&
+         & and find the closest matches between the two crystals\n \n&
+         & NOTE: It is always recommended to stick to IMATCH=0 for best results.\n&
+         & Other methods are experimental and may not work as expected.\n&
+         & Only method 0 works with LW_MILLER and UP_MILLER.'
 
     tag(inmatch_tag)%name    = 'NMATCH'
     tag(inmatch_tag)%type    = 'I'
