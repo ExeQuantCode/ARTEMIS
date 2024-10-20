@@ -419,6 +419,23 @@ contains
     old_intf = -1
     intf=0
     abc="abc"
+    if(imatch.ne.0.and.(any(lw_mplane.ne.0).or.any(up_mplane.ne.0)))then
+       call err_abort( '&
+            &Cannot use LW_MILLER or UP_MILLER with IMATCH>0\n&
+            Exiting...', &
+            fmtd=.true. &
+       )
+    elseif(imatch.ne.0)then
+       write(msg,'("&
+            &IMATCH /= 0 methods are experimental and may\n&
+            &not work as expected.\n&
+            &They are not intended to be thorough searches.\n&
+            &This method is not recommended unless you\n&
+            &are clear on its intended use and\n&
+            &limitations.&
+       &")')
+       call print_warning(trim(msg))
+    end if
     if(any(lw_mplane.ne.0))then
        if(imatch.ne.0)then
           abc="ab "
