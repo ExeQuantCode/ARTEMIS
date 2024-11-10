@@ -362,7 +362,7 @@ contains
              if(bondlength.gt.max_bondlength)then
                 write(0,*) "Min bondlength for lower species ", &
                      is, " is ", bondlength
-                write(0,*) "To account for this, increase MAX_BONDLENGTH to at &
+                write(0,*) "To account for this, increase MBOND_MAXLEN to at &
                      &least ",bondlength
              end if
              call err_abort("ISSUE WITH THE LOWER BULK DON!!!")
@@ -393,7 +393,7 @@ contains
              if(bondlength.gt.max_bondlength)then
                 write(0,*) "Min bondlength for upper species ", &
                      is, " is ", bondlength
-                write(0,*) "To account for this, increase MAX_BONDLENGTH to at &
+                write(0,*) "To account for this, increase MBOND_MAXLEN to at &
                      &least ",bondlength
              end if
              call err_abort("ISSUE WITH THE UPPER BULK DON!!!")
