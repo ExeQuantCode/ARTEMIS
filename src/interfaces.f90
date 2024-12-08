@@ -12,7 +12,8 @@ module interface_subroutines
        get_interface,get_layered_axis,gen_DON
   use edit_geom,            only: planecutter,primitive_lat,ortho_axis,&
        shift_region,set_vacuum,transformer,shifter,reducer,&
-       get_min_bulk_bond,clone_bas,bas_lat_merge,get_shortest_bond,bond_type,&
+       get_min_bulk_bond,get_min_bond,&
+       clone_bas,bas_lat_merge,get_shortest_bond,bond_type,&
        share_strain, normalise_basis, MATNORM
   use mod_sym,              only: term_arr_type,confine_type,gldfnd,&
        get_terminations,get_primitive_cell
@@ -265,6 +266,7 @@ contains
   subroutine gen_interfaces(tolerance,inlw_lat,inup_lat,inlw_bas,inup_bas)
     implicit none
     integer :: j,iterm,jterm,ntrans,ifit,iunique,old_natom,itmp1,old_intf
+    integer :: is, ia
     integer :: iterm_step,jterm_step
     integer :: lw_ncells,up_ncells
     integer :: lw_layered_axis,up_layered_axis
@@ -272,8 +274,9 @@ contains
     integer :: lw_term_start,lw_term_end,up_term_start,up_term_end
     double precision :: avg_min_bond
     double precision :: lw_height,up_height
+    double precision :: dtmp1,bondlength
     character(3) :: abc
-    character(1024) :: pwd,intf_dir,dirpath,msg
+    character(1024) :: pwd,intf_dir,dirpath,msg, filename
     logical :: ludef_lw_surf,ludef_up_surf,lcycle
     type(bas_type) :: sbas
     type(bas_type) :: inlw_bas,inup_bas
@@ -339,25 +342,63 @@ contains
             dist_max=max_bondlength,&
             scale_dist=.false.,&
             norm=.true.)
-       if(all(abs(bulk_DON(1)%spec(1)%atom(:,:)).lt.1.D0))then
-          call err_abort("ISSUE WITH THE LOWER BULK DON!!!")
-       end if
-       open(unit=13,file="lw_DON.dat")
-       do j=1,1000
-          write(13,*) &
-               (j-1)*max_bondlength/1000,&
-               bulk_DON(1)%spec(1)%atom(1,j)
+       do is = 1, inlw_bas%nspec
+          if(all(abs(bulk_DON(1)%spec(is)%atom(:,:)).lt.1.D0))then
+             bondlength = huge(0.D0)
+             do ia = 1, inlw_bas%spec(is)%num
+                dtmp1 = modu(get_min_bond(inlw_lat, inlw_bas, is, ia))
+                if(dtmp1.lt.bondlength) bondlength = dtmp1
+                if(dtmp1.gt.max_bondlength)then
+                   write(filename,'("lw_DON_",I0,"_",I0,".dat")') is,ia
+                   open(unit=13,file=filename)
+                   do j=1,1000
+                      write(13,*) &
+                           (j-1)*max_bondlength/1000,&
+                           bulk_DON(1)%spec(is)%atom(ia,j)
+                   end do
+                   close(13)
+                  end if
+             end do
+             if(bondlength.gt.max_bondlength)then
+                write(0,*) "Min bondlength for lower species ", &
+                     is, " is ", bondlength
+                write(0,*) "To account for this, increase MBOND_MAXLEN to at &
+                     &least ",bondlength
+             end if
+             call err_abort("ISSUE WITH THE LOWER BULK DON!!!")
+          end if
        end do
-       close(13)
-       !call exit()
        up_map=0
        bulk_DON(2)%spec=gen_DON(inup_lat,inup_bas,&
             dist_max=max_bondlength,&
             scale_dist=.false.,&
             norm=.true.)
-       if(all(abs(bulk_DON(2)%spec(1)%atom(:,:)).lt.1.D0))then
-          call err_abort("ISSUE WITH THE UPPER BULK DON!!!")
-       end if
+       do is = 1, inup_bas%nspec
+          if(all(abs(bulk_DON(2)%spec(is)%atom(:,:)).lt.1.D0))then
+             bondlength = huge(0.D0)
+             do ia = 1, inup_bas%spec(is)%num
+                dtmp1 = modu(get_min_bond(inup_lat, inup_bas, is, ia))
+                if(dtmp1.lt.bondlength) bondlength = dtmp1
+                if(dtmp1.gt.max_bondlength)then
+                   write(filename,'("up_DON_",I0,"_",I0,".dat")') is,ia
+                   open(unit=13,file=filename)
+                   do j=1,1000
+                      write(13,*) &
+                           (j-1)*max_bondlength/1000,&
+                           bulk_DON(2)%spec(is)%atom(ia,j)
+                   end do
+                   close(13)
+                  end if
+             end do
+             if(bondlength.gt.max_bondlength)then
+                write(0,*) "Min bondlength for upper species ", &
+                     is, " is ", bondlength
+                write(0,*) "To account for this, increase MBOND_MAXLEN to at &
+                     &least ",bondlength
+             end if
+             call err_abort("ISSUE WITH THE UPPER BULK DON!!!")
+          end if
+       end do
     else
        lw_map=-1
        up_map=-1       
@@ -419,29 +460,46 @@ contains
     old_intf = -1
     intf=0
     abc="abc"
+    if(imatch.ne.0.and.(any(lw_mplane.ne.0).or.any(up_mplane.ne.0)))then
+       call err_abort( '&
+            &Cannot use LW_MILLER or UP_MILLER with IMATCH>0\n&
+            Exiting...', &
+            fmtd=.true. &
+       )
+    elseif(imatch.ne.0)then
+       write(msg,'("&
+            &IMATCH /= 0 methods are experimental and may\n&
+            &not work as expected.\n&
+            &They are not intended to be thorough searches.\n&
+            &This method is not recommended unless you\n&
+            &are clear on its intended use and\n&
+            &limitations.&
+       &")')
+       call print_warning(trim(msg))
+    end if
     if(any(lw_mplane.ne.0))then
        if(imatch.ne.0)then
-          abc="ab"
+          abc="ab "
           tfmat=planecutter(inlw_lat,dble(lw_mplane))
           call transformer(inlw_lat,inlw_bas,tfmat,lw_map)
           SAV=get_best_match(&
                tolerance,&
                inlw_lat,inup_lat,&
                inlw_bas,inup_bas,&
-               trim(abc),"abc",lprint_matches,ierror,imatch=imatch)
+               abc,"abc",lprint_matches,ierror,imatch=imatch)
        elseif(any(up_mplane.ne.0))then
           SAV=get_best_match(&
                tolerance,&
                inlw_lat,inup_lat,&
                inlw_bas,inup_bas,&
-               trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
+               abc,"abc",lprint_matches,ierror,imatch=imatch,&
                plane1=lw_mplane,plane2=up_mplane,nmiller=nmiller)
        else
           SAV=get_best_match(&
                tolerance,&
                inlw_lat,inup_lat,&
                inlw_bas,inup_bas,&
-               trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
+               abc,"abc",lprint_matches,ierror,imatch=imatch,&
                plane1=lw_mplane,nmiller=nmiller)
        end if
     elseif(any(up_mplane.ne.0))then
@@ -449,14 +507,14 @@ contains
             tolerance,&
             inlw_lat,inup_lat,&
             inlw_bas,inup_bas,&
-            trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
+            abc,"abc",lprint_matches,ierror,imatch=imatch,&
             plane2=up_mplane,nmiller=nmiller)
     else
        SAV=get_best_match(&
             tolerance,&
             inlw_lat,inup_lat,&
             inlw_bas,inup_bas,&
-            trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
+            abc,"abc",lprint_matches,ierror,imatch=imatch,&
             nmiller=nmiller)
     end if
     if(min(tolerance%nstore,SAV%nfit).eq.0)then

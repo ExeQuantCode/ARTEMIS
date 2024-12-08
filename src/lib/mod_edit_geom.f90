@@ -324,11 +324,9 @@ contains
 
     min_bond=huge(0.D0)
     vsave = 0.D0
-    write(0,*) "tester"
     do js=1,bas%nspec
        atmloop: do ja=1,bas%spec(js)%num
           vdtmp1 = bas%spec(js)%atom(ja,:3) - loc
-          write(0,*) js,ja, vdtmp1
           if(lignore_close.and.modu(vdtmp1).lt.dtol) cycle atmloop
           if(iaxis.gt.0)then
              if(abs(vdtmp1(iaxis)).lt.dtol) cycle atmloop
@@ -338,15 +336,12 @@ contains
                 vdtmp1(iaxis) = vdtmp1(iaxis) - 1.D0
              end if
           end if
-          write(0,*) js,ja, vdtmp1
           vdtmp2 = &
                vdtmp1(1)*lat(1,:3) + &
                vdtmp1(2)*lat(2,:3) + &
                vdtmp1(3)*lat(3,:3)
           dtmp1 = modu(vdtmp2)
-          write(0,*) dtmp1,min_bond
           if(dtmp1.lt.min_bond)then
-             write(0,*) dtmp1.lt.min_bond
              min_bond = dtmp1
              if(ludef_real)then
                 vsave = vdtmp1
