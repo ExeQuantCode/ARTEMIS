@@ -1,14 +1,37 @@
+<p align="center">
+<img src="docs/artemis_logo_no_background.png" width="250"/>
+</p>
+
+[![License: CC BY-NC 3.0](https://img.shields.io/badge/License-CC_BY--NC_3.0-lightgrey.svg)](ttps://creativecommons.org/licenses/by-nc/3.0/deed.en "View CC BY-NC 3.0 license")
+[![Latest Release](https://img.shields.io/github/v/release/ExeQuantCode/ARTEMIS?sort=semver)](https://github.com/ExeQuantCode/ARTEMIS/releases "View on GitHub")
+[![Paper](https://img.shields.io/badge/Paper-Comp_Phys_Comms-orange.svg)](https://doi.org/10.1016/j.cpc.2020.107515)
+[![GCC compatibility](https://img.shields.io/badge/gcc-14.1.0-green)](https://gcc.gnu.org/gcc-14/ "View GCC")
+
+
 Ab Initio Restructuring Tool Enabling Modelling of Interface Structures
 =========================================================================
-by Ned Thaddeus Taylor and Steven Paul Hepplestone  
-The ARTEMIS Research Group (Hepplestone Research Group)
+by Ned Thaddeus Taylor and Steven Paul Hepplestone, The ARTEMIS Research Group (Hepplestone Research Group)
+
+
+## New Repository Location
+
+This repository has been migrated from the University of Exeter GitLab to GitHub to facilitate community interaction and support. The latest version, updates, and collaboration now take place on this GitHub repository.
+
+**GitLab Repository (Archived):** https://git.exeter.ac.uk/hepplestone/artemis
+
+## Why the Migration?
+
+It was decided that this project should be migrated to allow for better community support (i.e. allowing community users to raise issues).
+All information has been ported over where possible.
+
+---
 
 
 ARTEMIS is a software package for the generation and modelling of interfaces between materials.
 
 ARTEMIS is distributed with the following directories:
 
-  doc/       Documentation  
+  docs/       Documentation  
   src/       Source code  
   tools/     Extra shell script tools  
   examples/  Example ARTEMIS files  
@@ -18,7 +41,7 @@ After ARTEMIS is compiled, the following directories may also exist:
   bin/       Contains binary executables  
   obj/       Contains object (built/indermetiate) files, which are compiled binary files that haven't been linked yet
 
-For further information please see the User manual (doc/manual.pdf)
+For further information please see the User manual (docs/manual.pdf)
 
 
 
@@ -49,7 +72,7 @@ artemis --help [TAGNAME]
 artemis --search <STRING>
 
 
-Further documentation on the workings of ARTEMIS can be found in the doc/
+Further documentation on the workings of ARTEMIS can be found in the docs/
 directory or on the wiki (linked below)
 
 
@@ -128,8 +151,8 @@ LICENSE           - license of ARTEMIS code
 CHANGE.LOG        - changelog for ARTEMIS  
 artemis.ascii     - ARTEMIS logo in ascii form  
 artemis_logo.pdf  - ARTEMIS logo  
-doc/manual.pdf    - pdf of ARTEMIS manual/user guide  
-doc/manual.tex    - tex file of ARTEMIS manual  
+docs/manual.pdf    - pdf of ARTEMIS manual/user guide  
+docs/manual.tex    - tex file of ARTEMIS manual  
 tools/compress.sh - script to compress ARTEMIS directory  
 examples/generate_interface/param.in    - example input file  
 examples/generate_interface/POSCAR_Si   - silicon 8 atom unit cell  
