@@ -2,7 +2,7 @@
 <img src="docs/artemis_logo_no_background.png" width="250"/>
 </p>
 
-[![License: CC BY-NC 3.0](https://img.shields.io/badge/License-CC_BY--NC_3.0-lightgrey.svg)](ttps://creativecommons.org/licenses/by-nc/3.0/deed.en "View CC BY-NC 3.0 license")
+[![License: CC BY-NC 3.0](https://img.shields.io/badge/License-CC_BY--NC_3.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/3.0/ "View CC BY-NC 3.0 license")
 [![Latest Release](https://img.shields.io/github/v/release/ExeQuantCode/ARTEMIS?sort=semver)](https://github.com/ExeQuantCode/ARTEMIS/releases "View on GitHub")
 [![Paper](https://img.shields.io/badge/Paper-Comp_Phys_Comms-orange.svg)](https://doi.org/10.1016/j.cpc.2020.107515)
 [![GCC compatibility](https://img.shields.io/badge/gcc-14.1.0-green)](https://gcc.gnu.org/gcc-14/ "View GCC")
@@ -86,7 +86,9 @@ Wiki:    http://www.artemis-materials.co.uk/HRG
 
 Contact
 -------
-Please send bug-reports, ideas and questions to the following email address:
+Please log issues, bug-reports, and feature requests on the issue tracker for this repository: https://github.com/ExeQuantCode/ARTEMIS/issues
+
+For any serious or private concerns, please use the following email address:
 support@artemis-materials.co.uk
 
 
