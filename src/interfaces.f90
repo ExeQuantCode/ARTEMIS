@@ -1374,7 +1374,7 @@ contains
     do j=1,term%nterm
        iterm_list(j) = j
     end do
-    iterm_list=cshift(iterm_list,term%nterm-iterm+1)
+    iterm_list=cshift(iterm_list,iterm-1)
     if(ludef_surf)then
        j_start = udef_top_iterm - iterm + 1
        if(j_start.le.0) j_start = j_start + term%nterm
