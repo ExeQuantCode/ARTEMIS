@@ -104,11 +104,23 @@ contains
 
     !! get the terminations
     if(present(udef_layer_sep)) then
-       term = get_terminations(tmp_lat1,tmp_bas1,axis,&
-            lprint=.true.,layer_sep=udef_layer_sep)
+       term = get_terminations( &
+            tmp_lat1, tmp_bas1, axis, &
+            lprint = .true., layer_sep = udef_layer_sep, &
+            break_on_fail = lbreak_on_no_term &
+       )
     else
-       term = get_terminations(tmp_lat1,tmp_bas1,axis,&
-            lprint=.true.,layer_sep=layer_sep)
+       term = get_terminations( &
+            tmp_lat1, tmp_bas1, axis, &
+            lprint = .true., layer_sep = layer_sep, &
+            break_on_fail = lbreak_on_no_term &
+       )
+    end if
+    if(term%nterm .eq. 0)then
+       write(0,'("WARNING: &
+            &No terminations found for Miller plane (",3(1X,I0)," )")' &
+       ) miller_plane
+       return
     end if
 
     !! set thickness if provided by user
@@ -577,8 +589,18 @@ contains
        !! Finds all terminations parallel to the surface plane
        !!-----------------------------------------------------------------------
        if(allocated(lw_term%arr)) deallocate(lw_term%arr)
-       lw_term=get_terminations(lw_lat,lw_bas,axis,&
-            lprint=lprint_terms,layer_sep=lw_layer_sep)
+       lw_term = get_terminations( &
+            lw_lat, lw_bas, axis, &
+            lprint = lprint_terms, layer_sep = lw_layer_sep, &
+            break_on_fail = lbreak_on_no_term &
+       )
+       if(lw_term%nterm .eq. 0)then
+          write(0,'("WARNING: &
+               &No terminations found for lower material Miller plane &
+               &(",3(1X,I0)," )")' &
+          ) lw_mplane
+          cycle intf_loop
+       end if
 
 
        !!-----------------------------------------------------------------------
@@ -630,8 +652,18 @@ contains
        !! Finds all up_lat unique terminations parallel to the surface plane
        !!-----------------------------------------------------------------------
        if(allocated(up_term%arr)) deallocate(up_term%arr)
-       up_term=get_terminations(up_lat,up_bas,axis,&
-            lprint=lprint_terms,layer_sep=up_layer_sep)
+       up_term = get_terminations( &
+            up_lat, up_bas, axis, &
+            lprint = lprint_terms, layer_sep = up_layer_sep, &
+            break_on_fail = lbreak_on_no_term &
+       )
+       if(up_term%nterm .eq. 0)then
+          write(0,'("WARNING: &
+               &No terminations found for upper material Miller plane &
+               &(",3(1X,I0)," )")' &
+          ) up_mplane
+          cycle intf_loop
+       end if
 
 
        !!-----------------------------------------------------------------------

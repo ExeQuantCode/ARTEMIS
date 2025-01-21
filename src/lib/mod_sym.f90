@@ -70,7 +70,7 @@ module mod_sym
   end type term_type
 
   type term_arr_type
-     integer :: nterm,axis,nstep
+     integer :: nterm = 0, axis, nstep
      double precision :: tol
      logical :: lmirror=.false.
      type(term_type), allocatable, dimension(:) :: arr
@@ -1471,11 +1471,11 @@ contains
 !!!#############################################################################
 !!! finds all possible terminations along an axis
 !!!#############################################################################
-  function get_terminations(lat,bas,axis,lprint,layer_sep) result(term)
+  function get_terminations(lat,bas,axis,lprint,layer_sep,break_on_fail) result(term)
     implicit none
     integer :: i,j,is,nterm,mterm,dim,ireject
     integer :: itmp1,itmp2,init,min_loc
-    logical :: ludef_print,lunique,ltmp1,lmirror
+    logical :: ludef_print,lunique,ltmp1,lmirror, break_on_fail_
     double precision :: dtmp1,tol,height,max_sep,c_along,centre
     type(sym_type) :: grp1,grp_store
     type(term_arr_type) :: term
@@ -1494,13 +1494,14 @@ contains
     double precision, dimension(3,3), intent(in) :: lat
 
     double precision, optional, intent(in) :: layer_sep
-    logical, optional, intent(in) :: lprint
+    logical, optional, intent(in) :: lprint, break_on_fail
 
 
 
 !!!APPLY TRANSFORMATION MATRIX TO FIND TERMINATIONS ALONG OTHER PLANES
 !!! E.G. (1 0 1)
     
+    term%nterm = 0
     s_end=0
     grp_store%confine%l=.false.
     grp_store%confine%axis=axis
@@ -1513,6 +1514,8 @@ contains
     else
        ludef_print = .false.
     end if
+    break_on_fail_ = .false.
+    if(present(break_on_fail)) break_on_fail_ = break_on_fail
 
 
 !!!-----------------------------------------------------------------------------
@@ -1557,7 +1560,11 @@ contains
        end if
     end do
     if(max_sep.lt.tol)then
-       write(0,'("ERROR: Error in mod_sym.f90")')
+       if(break_on_fail_)then
+          write(0,'("ERROR: Error in mod_sym.f90")')
+       else
+          write(0,'("WARNING:")')
+       end if
        write(0,'(2X,"get_terminations subroutine unable to find a separation &
             &in the material that is greater than LAYER_SEP")')
        write(0,'(2X,"Writing material to ''unlayerable.vasp''")')
@@ -1566,10 +1573,20 @@ contains
        close(13)
        write(0,'(2X,"We suggest reducing LAYER_SEP to less than ",F6.4)') &
             max_sep
+       write(0,'(2X,"NOTE: If LAYER_SEP < 0.7, the material likely does not &
+            &support the Miller plane")')
        write(0,'(2X,"Please inform the developers of this and give details &
             &of what structure caused this")')
-       write(0,'("Stopping...")')
-       stop
+       if(break_on_fail_)then
+          write( 0, &
+               '("To allow the program to continue, set &
+               &LBREAK_ON_NO_TERM = F")' &
+          )
+          write(0,'("Stopping...")')
+          call exit()
+       else
+          return
+       end if
     end if
     bas_list(:,axis) = bas_list(:,axis) - height
     bas_list(:,axis) = bas_list(:,axis) - floor(bas_list(:,axis))
