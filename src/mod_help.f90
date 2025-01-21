@@ -41,7 +41,7 @@ module mod_help
 
 
   ! Interface number of tags
-  integer, parameter :: ntags_interface=54
+  integer, parameter :: ntags_interface=55
   ! Interface tags
   integer, parameter :: inintf_tag=1
   integer, parameter :: iimatch_tag=2
@@ -97,6 +97,7 @@ module mod_help
   integer, parameter :: ilw_bulk_modulus_tag=52
   integer, parameter :: iup_bulk_modulus_tag=53
   integer, parameter :: ilc_fix_tag=54
+  integer, parameter :: ilbreak_on_no_term=55
 
 
 
@@ -572,6 +573,15 @@ contains
     tag(iup_layer_sep_tag)%description = &
          'Defines the minimum size of gaps along the Miller direction that &
          &distinguish between separate layers (in Å) for the upper structure'
+
+    tag(ilbreak_on_no_term)%name = 'LBREAK_ON_NO_TERM'
+    tag(ilbreak_on_no_term)%type = 'L'
+    tag(ilbreak_on_no_term)%summary = 'Stop on no termination'
+    tag(ilbreak_on_no_term)%allowed = 'TRUE or FALSE'
+    tag(ilbreak_on_no_term)%default = 'TRUE'
+    tag(ilbreak_on_no_term)%description = &
+         'Defines whether to stop the code if no terminations are found for a &
+         &given Miller plane'
 
     tag(ilprint_shifts_tag)%name    = 'LPRINT_SHIFTS'
     tag(ilprint_shifts_tag)%type    = 'L'

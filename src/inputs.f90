@@ -37,6 +37,7 @@ module inputs
   logical :: lpresent_struc2
   logical :: lswap_mirror
   logical :: lc_fix
+  logical :: lbreak_on_no_term
   type(bas_type) :: struc1_bas,struc2_bas
   type(tol_type) :: tolerance
   type(aspect_type) :: edits
@@ -143,6 +144,7 @@ contains
     lw_bulk_modulus=0.E0
     up_bulk_modulus=0.E0
     lc_fix=.true.
+    lbreak_on_no_term = .true.
 
 
 !!!-----------------------------------------------------------------------------
@@ -655,7 +657,7 @@ contains
     logical :: ludef_offset, ludef_lw_layer_sep, ludef_up_layer_sep
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(54) :: readvar
+    integer, dimension(55) :: readvar
     logical, optional, intent(in) :: skip
 
 
@@ -738,100 +740,102 @@ contains
              end select
           end if
        case("NSHIFT")
-          call assign(buffer,nshift,           readvar(10))
+          call assign(buffer,nshift,             readvar(10))
        case("NTERM")
-          call assign(buffer,nterm,            readvar(11))
+          call assign(buffer,nterm,              readvar(11))
        case("NMATCH")
-          call assign(buffer,tolerance%nstore, readvar(12))
+          call assign(buffer,tolerance%nstore,   readvar(12))
        case("TOL_VEC")
-          call assign(buffer,tolerance%vec,    readvar(13))
+          call assign(buffer,tolerance%vec,      readvar(13))
        case("TOL_ANG")
-          call assign(buffer,tolerance%ang,    readvar(14))
+          call assign(buffer,tolerance%ang,      readvar(14))
        case("TOL_AREA")
-          call assign(buffer,tolerance%area,   readvar(15))
+          call assign(buffer,tolerance%area,     readvar(15))
        case("TOL_MAXFIND")
-          call assign(buffer,tolerance%maxfit, readvar(16))
+          call assign(buffer,tolerance%maxfit,   readvar(16))
        case("TOL_MAXSIZE")
-          call assign(buffer,tolerance%maxsize,readvar(17))
+          call assign(buffer,tolerance%maxsize,  readvar(17))
        case("LPRINT_MATCHES")
-          call assign(buffer,lprint_matches,   readvar(18))
+          call assign(buffer,lprint_matches,     readvar(18))
        case("LPRINT_TERMS")
-          call assign(buffer,lprint_terms,     readvar(19))
+          call assign(buffer,lprint_terms,       readvar(19))
        case("LGEN_INTERFACES")
-          call assign(buffer,lgen_interfaces,  readvar(20))
+          call assign(buffer,lgen_interfaces,    readvar(20))
        case("IMATCH")
-          call assign(buffer,imatch,           readvar(21))
+          call assign(buffer,imatch,             readvar(21))
        case("ISHIFT")
-          call assign(buffer,ishift,           readvar(22))
+          call assign(buffer,ishift,             readvar(22))
        case("LREDUCE")
-          call assign(buffer,lreduce,          readvar(23))
+          call assign(buffer,lreduce,            readvar(23))
        case("LPRINT_SHIFTS")
-          call assign(buffer,lprint_shifts,    readvar(24))
+          call assign(buffer,lprint_shifts,      readvar(24))
        case("C_SCALE")
-          call assign(buffer,c_scale,          readvar(25))
+          call assign(buffer,c_scale,            readvar(25))
        case("INTF_DEPTH")
-          call assign(buffer,intf_depth,       readvar(26))
+          call assign(buffer,intf_depth,         readvar(26))
           idepth=0
        case("IDEPTH")
-          call assign(buffer,idepth,           readvar(27))
+          call assign(buffer,idepth,             readvar(27))
        case("NINTF")
-          call assign(buffer,nintf,            readvar(28))
+          call assign(buffer,nintf,              readvar(28))
        case("ISWAP")
-          call assign(buffer,iswap,            readvar(29))
+          call assign(buffer,iswap,              readvar(29))
        case("NSWAP")
-          call assign(buffer,nswap,            readvar(30))
+          call assign(buffer,nswap,              readvar(30))
        case("SWAP_DENSITY")
-          call assign(buffer,swap_den,         readvar(31))
+          call assign(buffer,swap_den,           readvar(31))
        case("SHIFTDIR")
-          call assign(buffer,shiftdir,         readvar(32))
+          call assign(buffer,shiftdir,           readvar(32))
        case("SWAPDIR")
-          call assign(buffer,swapdir,          readvar(33))
+          call assign(buffer,swapdir,            readvar(33))
        case("ICHECK")
-          call assign(buffer,icheck_intf,      readvar(34))
+          call assign(buffer,icheck_intf,        readvar(34))
        case("NMILLER")
-          call assign(buffer,nmiller,          readvar(35))
+          call assign(buffer,nmiller,            readvar(35))
        case("MAXLEN")
-          call assign(buffer,tolerance%maxlen, readvar(36))
+          call assign(buffer,tolerance%maxlen,   readvar(36))
        case("MAXAREA")
-          call assign(buffer,tolerance%maxarea,readvar(37))
+          call assign(buffer,tolerance%maxarea,  readvar(37))
        case("LW_LAYERED")
-          call assign(buffer,lw_layered,       readvar(38))
+          call assign(buffer,lw_layered,         readvar(38))
           ludef_lw_layered=.true.
        case("UP_LAYERED")
-          call assign(buffer,up_layered,       readvar(39))
+          call assign(buffer,up_layered,         readvar(39))
           ludef_up_layered=.true.
        case("IINTF")
-          call assign(buffer,iintf,            readvar(40))
+          call assign(buffer,iintf,              readvar(40))
        case("LAYER_SEP")
-          call assign(buffer,layer_sep,        readvar(41))
+          call assign(buffer,layer_sep,          readvar(41))
        case("LW_LAYER_SEP")
-          call assign(buffer,lw_layer_sep,     readvar(42))
+          call assign(buffer,lw_layer_sep,       readvar(42))
           ludef_lw_layer_sep=.true.
        case("UP_LAYER_SEP")
-          call assign(buffer,up_layer_sep,     readvar(43))
+          call assign(buffer,up_layer_sep,       readvar(43))
           ludef_up_layer_sep=.true.
        case("MBOND_MAXLEN")
-          call assign(buffer,max_bondlength,   readvar(44))
+          call assign(buffer,max_bondlength,     readvar(44))
        case("SWAP_SIGMA")
-          call assign(buffer,swap_sigma,       readvar(45))
+          call assign(buffer,swap_sigma,         readvar(45))
        case("SWAP_DEPTH")
-          call assign(buffer,swap_depth,       readvar(46))
+          call assign(buffer,swap_depth,         readvar(46))
        case("INTF_LOC")
-          call assign_vec(buffer,udef_intf_loc,readvar(47))
+          call assign_vec(buffer,udef_intf_loc,  readvar(47))
        case("LMIRROR")
-          call assign(buffer,lswap_mirror,     readvar(48))
+          call assign(buffer,lswap_mirror,       readvar(48))
        case("LORTHO")
-          call assign(buffer,lortho,           readvar(49))
+          call assign(buffer,lortho,             readvar(49))
        case("LW_USE_PRICEL")
-          call assign(buffer,lw_use_pricel,    readvar(50))
+          call assign(buffer,lw_use_pricel,      readvar(50))
        case("UP_USE_PRICEL")
-          call assign(buffer,up_use_pricel,    readvar(51))
+          call assign(buffer,up_use_pricel,      readvar(51))
        case("LW_BULK_MODULUS")
-          call assign(buffer,lw_bulk_modulus,  readvar(52))
+          call assign(buffer,lw_bulk_modulus,    readvar(52))
        case("UP_BULK_MODULUS")
-          call assign(buffer,up_bulk_modulus,  readvar(53))
+          call assign(buffer,up_bulk_modulus,    readvar(53))
        case("LC_FIX")
-          call assign(buffer,lc_fix,           readvar(54))
+          call assign(buffer,lc_fix,             readvar(54))
+       case("LBREAK_ON_NO_TERM")
+           call assign(buffer,lbreak_on_no_term, readvar(55))
        case default
           write(0,'("NOTE: unable to assign variable on line ",I0)') count
        end select
