@@ -656,7 +656,7 @@ contains
 
     tag(iidepth_tag)%name    = 'IDEPTH'
     tag(iidepth_tag)%type    = 'I'
-    tag(iidepth_tag)%summary = 'Interface depth mehtod'
+    tag(iidepth_tag)%summary = 'Interface depth method'
     tag(iidepth_tag)%allowed = '0, 1'
     tag(iidepth_tag)%default = '0'
     tag(iidepth_tag)%description = &
