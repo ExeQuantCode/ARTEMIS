@@ -598,7 +598,7 @@ contains
           write(0,'("WARNING: &
                &No terminations found for lower material Miller plane &
                &(",3(1X,I0)," )")' &
-          ) lw_mplane
+          ) SAV%tf1(ifit,3,1:3)
           cycle intf_loop
        end if
 
@@ -661,7 +661,7 @@ contains
           write(0,'("WARNING: &
                &No terminations found for upper material Miller plane &
                &(",3(1X,I0)," )")' &
-          ) up_mplane
+          ) SAV%tf2(ifit,3,1:3)
           cycle intf_loop
        end if
 
