@@ -104,11 +104,23 @@ contains
 
     !! get the terminations
     if(present(udef_layer_sep)) then
-       term = get_terminations(tmp_lat1,tmp_bas1,axis,&
-            lprint=.true.,layer_sep=udef_layer_sep)
+       term = get_terminations( &
+            tmp_lat1, tmp_bas1, axis, &
+            lprint = .true., layer_sep = udef_layer_sep, &
+            break_on_fail = lbreak_on_no_term &
+       )
     else
-       term = get_terminations(tmp_lat1,tmp_bas1,axis,&
-            lprint=.true.,layer_sep=layer_sep)
+       term = get_terminations( &
+            tmp_lat1, tmp_bas1, axis, &
+            lprint = .true., layer_sep = layer_sep, &
+            break_on_fail = lbreak_on_no_term &
+       )
+    end if
+    if(term%nterm .eq. 0)then
+       write(0,'("WARNING: &
+            &No terminations found for Miller plane (",3(1X,I0)," )")' &
+       ) miller_plane
+       return
     end if
 
     !! set thickness if provided by user
@@ -340,15 +352,15 @@ contains
             scale_dist=.false.,&
             norm=.true.)
        if(all(abs(bulk_DON(1)%spec(1)%atom(:,:)).lt.1.D0))then
+          open(unit=13,file="lw_DON.dat")
+          do j=1,1000
+             write(13,*) &
+                  (j-1)*max_bondlength/1000,&
+                  bulk_DON(1)%spec(1)%atom(1,j)
+          end do
+          close(13)
           call err_abort("ISSUE WITH THE LOWER BULK DON!!!")
        end if
-       open(unit=13,file="lw_DON.dat")
-       do j=1,1000
-          write(13,*) &
-               (j-1)*max_bondlength/1000,&
-               bulk_DON(1)%spec(1)%atom(1,j)
-       end do
-       close(13)
        !call exit()
        up_map=0
        bulk_DON(2)%spec=gen_DON(inup_lat,inup_bas,&
@@ -356,6 +368,13 @@ contains
             scale_dist=.false.,&
             norm=.true.)
        if(all(abs(bulk_DON(2)%spec(1)%atom(:,:)).lt.1.D0))then
+          open(unit=13,file="up_DON.dat")
+          do j=1,1000
+             write(13,*) &
+                  (j-1)*max_bondlength/1000,&
+                  bulk_DON(2)%spec(1)%atom(1,j)
+          end do
+          close(13)
           call err_abort("ISSUE WITH THE UPPER BULK DON!!!")
        end if
     else
@@ -577,8 +596,18 @@ contains
        !! Finds all terminations parallel to the surface plane
        !!-----------------------------------------------------------------------
        if(allocated(lw_term%arr)) deallocate(lw_term%arr)
-       lw_term=get_terminations(lw_lat,lw_bas,axis,&
-            lprint=lprint_terms,layer_sep=lw_layer_sep)
+       lw_term = get_terminations( &
+            lw_lat, lw_bas, axis, &
+            lprint = lprint_terms, layer_sep = lw_layer_sep, &
+            break_on_fail = lbreak_on_no_term &
+       )
+       if(lw_term%nterm .eq. 0)then
+          write(0,'("WARNING: &
+               &No terminations found for lower material Miller plane &
+               &(",3(1X,I0)," )")' &
+          ) SAV%tf1(ifit,3,1:3)
+          cycle intf_loop
+       end if
 
 
        !!-----------------------------------------------------------------------
@@ -630,8 +659,18 @@ contains
        !! Finds all up_lat unique terminations parallel to the surface plane
        !!-----------------------------------------------------------------------
        if(allocated(up_term%arr)) deallocate(up_term%arr)
-       up_term=get_terminations(up_lat,up_bas,axis,&
-            lprint=lprint_terms,layer_sep=up_layer_sep)
+       up_term = get_terminations( &
+            up_lat, up_bas, axis, &
+            lprint = lprint_terms, layer_sep = up_layer_sep, &
+            break_on_fail = lbreak_on_no_term &
+       )
+       if(up_term%nterm .eq. 0)then
+          write(0,'("WARNING: &
+               &No terminations found for upper material Miller plane &
+               &(",3(1X,I0)," )")' &
+          ) SAV%tf2(ifit,3,1:3)
+          cycle intf_loop
+       end if
 
 
        !!-----------------------------------------------------------------------
@@ -943,7 +982,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Determines number of swaps across the interface
 !!!-----------------------------------------------------------------------------
-    nswaps_per_cell=nint(swap_den*get_area(lat(abc(1),:),lat(abc(2),:)))
+    nswaps_per_cell=nint(swap_den*get_area([lat(abc(1),:)],[lat(abc(2),:)]))
     if(iswap.ne.0)then
        write(6,&
             '(" Generating ",I0," swaps per structure ")') nswaps_per_cell
@@ -1374,7 +1413,7 @@ contains
     do j=1,term%nterm
        iterm_list(j) = j
     end do
-    iterm_list=cshift(iterm_list,term%nterm-iterm+1)
+    iterm_list=cshift(iterm_list,iterm-1)
     if(ludef_surf)then
        j_start = udef_top_iterm - iterm + 1
        if(j_start.le.0) j_start = j_start + term%nterm
