@@ -1117,7 +1117,7 @@ contains
              !!-----------------------------------------------------------------
              !! Check for duplicates in the cell
              !!-----------------------------------------------------------------
-             do ja=1,ia-1
+             do ja=1, itmp1
                 if(all(abs(bas%spec(is)%atom(ia,1:3)-atom_store(ja,1:3)).lt.&
                      (/tol_sym,tol_sym,tol_sym/))) cycle atcheck
              end do
