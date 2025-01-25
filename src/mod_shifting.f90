@@ -1063,7 +1063,7 @@ contains
        end if
     end if
     if(.not.lpresent)then
-       max_sep = 6.0
+       max_sep = max(6.D0, max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(lat(axis,:)))
        add = 0.D0
     end if
 
