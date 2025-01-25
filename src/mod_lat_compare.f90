@@ -1173,10 +1173,10 @@ contains
        tmpsym1=0.D0
 !!! IS THIS REASONABLE TO DO IT THIS WAY? OR DO WE NEED TO CHANGE sym TO BE IN THE NEW LAT?
 !!! Wait, should it be instead that the cross product of the a-b plane is always consistent?
-       rvec1=real(cross(templat1(1,:),templat1(2,:)))
+       rvec1=real(cross([templat1(1,:)],[templat1(2,:)]))
        do i=1,grp1%nsym
           rmat1=real(matmul(tmpsym(i,:3,:3),templat1(:,:)))
-          rvec2=cross(rmat1(1,:),rmat1(2,:))
+          rvec2=cross([rmat1(1,:)],[rmat1(2,:)])
           if(all(abs( rvec1(:) - rvec2(:) ).lt.1.D-8).or.&
                all(abs( rvec1(:) + rvec2(:) ).lt.1.D-8))then
              nsym1=nsym1+1

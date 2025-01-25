@@ -433,7 +433,7 @@ contains
     double precision, dimension(3,3), intent(in) :: lat
 
     order = cshift(order,3-axis)
-    normal = cross(lat(order(1),:),lat(order(2),:))
+    normal = cross([lat(order(1),:)],[lat(order(2),:)])
     component = dot_product(lat(3,:),normal) / modu(normal)**2.D0
     normal = normal * component
 
