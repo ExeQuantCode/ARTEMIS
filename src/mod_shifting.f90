@@ -1014,7 +1014,7 @@ contains
                 call err_abort_print_struc(lat,splitbas(1),"lw_term.vasp",&
                      "",.false.)
                 call err_abort_print_struc(lat,splitbas(2),"up_term.vasp",&
-                     "",.false.)         
+                     "",.false.)
                 call err_abort("ERROR: Internal error in get_shifts_DON\n&
                   &  More neighbours found in slab than in bulk.",.true.)
              end if
@@ -1046,7 +1046,7 @@ contains
     intf(2)%neigh(:)%pos(3) = intf(2)%neigh(:)%pos(3) - lowest_atom(2)
     lowest_atom(1) = minval(intf(1)%neigh(:)%pos(3),dim=1)
     highest_atom(2) = maxval(intf(2)%neigh(:)%pos(3),dim=1)
-    if(ierror.ge.1)then
+    if(abs(ierror).ge.1)then
        write(6,*) "lowest atom:",lowest_atom
        write(6,*) "highest atom:",highest_atom
     end if
@@ -1109,13 +1109,25 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Determines neighbours for each grid point 
 !!!-----------------------------------------------------------------------------
-    if(ierror.ge.1)then
+    if(abs(ierror).ge.1)then
        write(6,'(1X,A,3(2X,F8.4))') &
             "lat:",modu(lat(1,:)),modu(lat(2,:)),modu(lat(3,:))
        write(6,'(1X,A,3(2X,F8.4))') "gridsize:",gridsize
        write(6,*) "add:",add
        write(6,*) "nstep:",nstep
        write(6,*) "ngrid:",ngrid
+       write(*,*) "max_sep:",max_sep
+    end if
+
+    if(any(nstep(:).le.0))then
+       write(0,*) "ERROR: Internal error in get_shifts_DON"
+       write(0,*) "nstep:",nstep
+       write(0,*) "ngrid:",ngrid
+       call err_abort_print_struc(lat,splitbas(1),"lw_term.vasp",&
+            "",.false.)
+       call err_abort_print_struc(lat,splitbas(2),"up_term.vasp",&
+            "",.false.)
+       call err_abort("ERROR: Internal error in get_shifts_DON",.true.)
     end if
 !$OMP PARALLEL DO &
 !$OMP DEFAULT(SHARED) &
