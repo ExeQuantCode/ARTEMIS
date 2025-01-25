@@ -352,15 +352,15 @@ contains
             scale_dist=.false.,&
             norm=.true.)
        if(all(abs(bulk_DON(1)%spec(1)%atom(:,:)).lt.1.D0))then
+          open(unit=13,file="lw_DON.dat")
+          do j=1,1000
+             write(13,*) &
+                  (j-1)*max_bondlength/1000,&
+                  bulk_DON(1)%spec(1)%atom(1,j)
+          end do
+          close(13)
           call err_abort("ISSUE WITH THE LOWER BULK DON!!!")
        end if
-       open(unit=13,file="lw_DON.dat")
-       do j=1,1000
-          write(13,*) &
-               (j-1)*max_bondlength/1000,&
-               bulk_DON(1)%spec(1)%atom(1,j)
-       end do
-       close(13)
        !call exit()
        up_map=0
        bulk_DON(2)%spec=gen_DON(inup_lat,inup_bas,&
@@ -368,6 +368,13 @@ contains
             scale_dist=.false.,&
             norm=.true.)
        if(all(abs(bulk_DON(2)%spec(1)%atom(:,:)).lt.1.D0))then
+          open(unit=13,file="up_DON.dat")
+          do j=1,1000
+             write(13,*) &
+                  (j-1)*max_bondlength/1000,&
+                  bulk_DON(2)%spec(1)%atom(1,j)
+          end do
+          close(13)
           call err_abort("ISSUE WITH THE UPPER BULK DON!!!")
        end if
     else
