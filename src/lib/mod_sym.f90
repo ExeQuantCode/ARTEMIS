@@ -1529,7 +1529,7 @@ contains
 
     abc=cshift(abc,3-axis)
     c_along = abs(dot_product(lat(axis,:),&
-         uvec(cross(lat(abc(1),:),lat(abc(2),:)))))
+         uvec(cross([lat(abc(1),:)],[lat(abc(2),:)]))))
     tol = tol / c_along
     !tol = tol/modu(lat(axis,1:3))
     lmirror=.false.

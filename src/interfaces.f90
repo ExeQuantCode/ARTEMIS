@@ -982,7 +982,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Determines number of swaps across the interface
 !!!-----------------------------------------------------------------------------
-    nswaps_per_cell=nint(swap_den*get_area(lat(abc(1),:),lat(abc(2),:)))
+    nswaps_per_cell=nint(swap_den*get_area([lat(abc(1),:)],[lat(abc(2),:)]))
     if(iswap.ne.0)then
        write(6,&
             '(" Generating ",I0," swaps per structure ")') nswaps_per_cell
