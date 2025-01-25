@@ -746,9 +746,9 @@ contains
      MAINLOOP2: do m=1,nvec1
         tmpmat(2,:2) = numstore_1(m,:2)
         if(all(latstore_1(l,:).eq.latstore_1(m,:))) cycle MAINLOOP2
-        if(get_area(latstore_1(l,:),latstore_1(m,:)).gt.tol%maxarea) cycle MAINLOOP2
-        if(all(cross(latstore_1(l,:),latstore_1(m,:)).eq.0.D0)) cycle MAINLOOP2
-        reference_angle = get_angle(latstore_1(l,:),latstore_1(m,:))
+        if(get_area([latstore_1(l,:)],[latstore_1(m,:)]).gt.tol%maxarea) cycle MAINLOOP2
+        if(all(cross([latstore_1(l,:)],[latstore_1(m,:)]).eq.0.D0)) cycle MAINLOOP2
+        reference_angle = get_angle([latstore_1(l,:)],[latstore_1(m,:)])
         if (abs(reference_angle) .lt. tiny) cycle MAINLOOP2 
         
         !!! CHANGE IT TO TAKE IN A 2x2 MATRIX LATER !!!
@@ -791,7 +791,7 @@ contains
               considered_vectors(1,:) = list_1a(i,1)*lat2_veca + list_1a(i,2)*lat2_vecb
               considered_vectors(2,:) = list_1b(j,1)*lat2_veca + list_1b(j,2)*lat2_vecb
               considered_angle = &
-                   get_angle(considered_vectors(1,:),considered_vectors(2,:))
+                   get_angle([considered_vectors(1,:)],[considered_vectors(2,:)])
               !if(.not.is_unique_set(nint(list_1a(i,:2)),nint(list_1b(j,:2)),sym2)) &
               !     cycle loop110
               !!--------------------------------------------------------------------------
@@ -829,12 +829,12 @@ contains
                  tmp_tolerances(len_list_final,2) = &
                       abs(considered_angle-reference_angle)
                  tmp_tolerances(len_list_final,3) = abs(1.D0 - &
-                      get_area(considered_vectors(1,:),considered_vectors(2,:))&
-                      /get_area(latstore_1(l,:),latstore_1(m,:)))
+                      get_area([considered_vectors(1,:)],[considered_vectors(2,:)])&
+                      /get_area([latstore_1(l,:)],[latstore_1(m,:)]))
                  list_angle_fits(len_list_final,5) = &
                       tol%ang_weight * abs(considered_angle-reference_angle) + &
                       list_1a(i,3) + list_1b(i,3) + &
-                      tol%area_weight*get_area(latstore_1(l,:),latstore_1(m,:))
+                      tol%area_weight*get_area([latstore_1(l,:)],[latstore_1(m,:)])
               end if
            end do loop110
         end do loop109
