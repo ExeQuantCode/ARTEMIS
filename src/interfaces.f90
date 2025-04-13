@@ -359,7 +359,12 @@ contains
                   bulk_DON(1)%spec(1)%atom(1,j)
           end do
           close(13)
-          call err_abort("ISSUE WITH THE LOWER BULK DON!!!")
+          write(err_msg,'(A,F0.3,A)') &
+               "The lower bulk DON identified no atoms within the bulk cutoff" //&
+               &" distance (MAX_BONDLENGTH = ", max_bondlength, " Å)." // achar(10) //&
+               &" To proceed with the current shift method," //&
+               &" increase MAX_BONDLENGTH."
+          call err_abort(trim(err_msg),fmtd=.true.)
        end if
        !call exit()
        up_map=0
@@ -375,7 +380,12 @@ contains
                   bulk_DON(2)%spec(1)%atom(1,j)
           end do
           close(13)
-          call err_abort("ISSUE WITH THE UPPER BULK DON!!!")
+          write(err_msg,'(A,F0.3,A)') &
+               "The upper bulk DON identified no atoms within the bulk cutoff" //&
+               &" distance (MAX_BONDLENGTH = ", max_bondlength, " Å)." // achar(10) //&
+               &" To proceed with the current shift method," //&
+               &" increase MAX_BONDLENGTH."
+          call err_abort(trim(err_msg),fmtd=.true.)
        end if
     else
        lw_map=-1
