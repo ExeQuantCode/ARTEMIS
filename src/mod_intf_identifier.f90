@@ -317,7 +317,8 @@ contains
     integer, allocatable, dimension(:,:) :: intf_atoms
     integer, optional, intent(in) :: avg_mthd
 
-    type(den_of_neigh_type), allocatable, dimension(:) :: DON,sim
+    type(den_of_neigh_type), dimension(:) :: DON
+   type(den_of_neigh_type), allocatable, dimension(:) :: sim
     type(den_of_spec_type), allocatable, dimension(:) :: similarity
 
     
