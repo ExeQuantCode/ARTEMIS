@@ -240,7 +240,7 @@ contains
     lpresent=.false.
     if(present(fmtd))then
        if(fmtd)then
-          call write_fmtd(unit,trim(message))
+          call write_fmtd(unit,"ERROR: "//trim(message))
           lpresent=.true.
        end if
     end if
