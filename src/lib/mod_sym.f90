@@ -26,6 +26,7 @@ module mod_sym
   use rw_geom,     only: bas_type,geom_write
   use edit_geom,   only: transformer,vacuumer,set_vacuum,shifter,&
        clone_bas,get_closest_atom,ortho_axis,reducer,primitive_lat,get_min_dist
+  use io,          only: err_abort
   implicit none
   integer :: ierror_sym=0
   integer :: s_start=1,s_end=0
@@ -977,8 +978,8 @@ contains
     tsym2(:,4,4)=1.D0
     count=0
     samecheck: do isym=1,grp%nsym
-       tmat1=matmul((lat),tsym1(isym,:3,:3))
-       tmat1=matmul(tmat1,(invlat))
+       tmat1=matmul((invlat),tsym1(isym,:3,:3))
+       tmat1=matmul(tmat1,(lat))
        do i=1,3
           do j=1,3
              if(abs(tmat1(i,j)).lt.tol_sym) tmat1(i,j)=0.D0
@@ -993,7 +994,7 @@ contains
        !!-----------------------------------------------------------------------
        if(.not.all(abs(tmat1-nint(tmat1)).lt.tol_sym)) cycle samecheck
        do jsym=1,count
-          if(all(tmat1.eq.tsym2(jsym,:3,:3))) cycle samecheck
+          if(all(abs(tmat1-tsym2(jsym,:3,:3)).lt.tol_sym)) cycle samecheck
           !if(all(tsym1(isym,:3,:3).eq.tsym2(jsym,:3,:3))) cycle samecheck
        end do
        count=count+1
@@ -1492,6 +1493,7 @@ contains
     integer, intent(in) :: axis
     type(bas_type), intent(in) :: bas
     double precision, dimension(3,3), intent(in) :: lat
+    character(len=256) :: err_msg
 
     double precision, optional, intent(in) :: layer_sep
     logical, optional, intent(in) :: lprint, break_on_fail
@@ -1686,12 +1688,17 @@ contains
     do i=1,3
        inv_mat(i,i) = -1.D0
     end do
+    itmp1 = 0
     do i=1,grp_store%nsym
        if(all(abs(grp_store%sym(i,:3,:3)-inv_mat).lt.tol_sym))then
           itmp1 = i
           exit
        end if
     end do
+    if(itmp1.eq.0)then
+       write(err_msg,*) "No inversion symmetry found!"
+       call err_abort(err_msg)
+    end if
     do i=1,grp_store%nsymop
        if(all(abs(savsym(i,:3,:3)-inv_mat).lt.tol_sym)) &
             grp_store%sym(itmp1,4,:3) = savsym(i,4,:3)
