@@ -6,7 +6,7 @@
 !!!#############################################################################
 module interface_subroutines
   use io
-  use misc_linalg,          only: uvec,modu,get_area,inverse
+  use misc_linalg,          only: uvec,modu,get_area,inverse,cross
   use inputs
   use interface_identifier, only: intf_info_type,&
        get_interface,get_layered_axis,gen_DON
@@ -41,11 +41,11 @@ contains
 !!! Generates and prints terminations parallel to the supplied miller plane
 !!!#############################################################################
   subroutine gen_terminations(lat,bas,miller_plane,axis,directory,&
-       thickness,udef_layer_sep)
+       num_layers,thickness,udef_layer_sep)
     implicit none
     integer :: unit
     integer :: itmp1,iterm,term_start,term_end,iterm_step
-    integer :: old_natom,ncells,thickness_val,ntrans
+    integer :: old_natom,ncells,num_layers_,ntrans
     double precision :: height
     character(len=1024) :: dirname,filename,pwd
     logical :: ludef_surf,lignore
@@ -58,11 +58,12 @@ contains
     double precision, allocatable, dimension(:,:) :: trans
 
     integer, intent(in) :: axis
+    double precision, intent(in) :: thickness
     type(bas_type), intent(in) :: bas
     integer, dimension(3), intent(in) :: miller_plane
     double precision, dimension(3,3), intent(in) :: lat
 
-    integer, optional, intent(in) :: thickness
+    integer, optional, intent(in) :: num_layers
     double precision, optional, intent(in) :: udef_layer_sep
     character(len=*), optional, intent(in) :: directory
 
@@ -125,10 +126,10 @@ contains
     end if
 
     !! set thickness if provided by user
-    if(present(thickness))then
-       thickness_val = thickness
+    if(present(num_layers))then
+       num_layers_ = num_layers
     else
-       thickness_val = 1
+       num_layers_ = 1
     end if
 
     !! make directory and change to that directory
@@ -147,7 +148,7 @@ contains
 
     !! determine required extension and perform that
     call set_slab_height(tmp_lat1,tmp_bas1,bas_map,term,lw_surf,old_natom,&
-         height,thickness_val,ncells,&
+         height,num_layers_, thickness, ncells,&
          term_start,term_end,iterm_step,ludef_surf,&
          dirname,"lw",lignore)
 
@@ -169,7 +170,7 @@ contains
        if(allocated(t1bas_map)) deallocate(t1bas_map)
        allocate(t1bas_map,source=bas_map)
        call prepare_slab(tmp_lat2,tmp_bas2,bas_map,term,iterm,&
-            thickness_val,ncells,height,ludef_surf,lw_surf(2),&
+            num_layers_,ncells, thickness, height,ludef_surf,lw_surf(2),&
             "lw",lignore,lortho,vacuum)
 
 
@@ -305,6 +306,7 @@ contains
     integer, allocatable, dimension(:,:,:) :: lw_map,t1lw_map,t2lw_map
     integer, allocatable, dimension(:,:,:) :: up_map,t1up_map,t2up_map
     double precision, allocatable, dimension(:,:) :: trans
+    character(len=256) :: err_msg
 
 
 !!!-----------------------------------------------------------------------------
@@ -676,7 +678,7 @@ contains
        !! Defines height of lower slab from user-defined values
        !!-----------------------------------------------------------------------
        call set_slab_height(lw_lat,lw_bas,t1lw_map,lw_term,lw_surf, old_natom,&
-            lw_height,lw_thickness,lw_ncells,&
+            lw_height,lw_num_layers, lw_thickness,lw_ncells,&
             lw_term_start,lw_term_end,iterm_step,ludef_lw_surf,&
             intf_dir,"lw",lcycle)
        if(lcycle) cycle intf_loop
@@ -739,7 +741,7 @@ contains
        !! Defines height of upper slab from user-defined values
        !!-----------------------------------------------------------------------
        call set_slab_height(up_lat,up_bas,t1up_map,up_term,up_surf,old_natom,&
-            up_height,up_thickness,up_ncells,&
+            up_height,up_num_layers, up_thickness, up_ncells,&
             up_term_start,up_term_end,jterm_step,ludef_up_surf,&
             intf_dir,"up",lcycle)
        if(lcycle) cycle intf_loop
@@ -763,7 +765,7 @@ contains
           !! Shifts lower material to specified termination
           !!--------------------------------------------------------------------
           call prepare_slab(tlw_lat,tlw_bas,t2lw_map,lw_term,iterm,&
-               lw_thickness,lw_ncells,lw_height,ludef_lw_surf,lw_surf(2),&
+               lw_num_layers,lw_ncells, lw_thickness,lw_height,ludef_lw_surf,lw_surf(2),&
                "lw",lcycle)
           if(lcycle) cycle lw_term_loop
 
@@ -776,7 +778,7 @@ contains
              if(allocated(t2up_map)) deallocate(t2up_map)
              allocate(t2up_map,source=t1up_map)
              call prepare_slab(tup_lat,tup_bas,t2up_map,up_term,jterm,&
-                  up_thickness,up_ncells,up_height,ludef_up_surf,up_surf(2),&
+                  up_num_layers,up_ncells, up_thickness, up_height,ludef_up_surf,up_surf(2),&
                   "up",lcycle)
              if(lcycle) cycle up_term_loop
 
@@ -1195,12 +1197,12 @@ contains
 !!! sets the maximum height of the slab
 !!!#############################################################################
   subroutine set_slab_height(lat, bas, map, term, surf, old_natom,&
-       height, thickness, ncells,&
+       height, num_layers, thickness, ncells,&
        term_start, term_end, term_step, ludef_surf,&
        intf_dir, lwup_in, lcycle)
     implicit none
     integer :: i,itmp1
-    double precision :: dtmp1
+    double precision :: dtmp1, slab_thickness, largest_sep
     character(2) :: lwup
     character(5) :: lowerupper
     character(1024) :: msg
@@ -1208,10 +1210,11 @@ contains
     double precision, allocatable, dimension(:) :: vtmp1
     type(term_list_type), allocatable, dimension(:) :: list
 
-    integer, intent(in) :: thickness, old_natom
+    integer, intent(in) :: num_layers, old_natom
     integer, intent(inout) :: term_start, term_end, ncells
     integer, intent(out) :: term_step
-    double precision, intent(inout) :: height
+    double precision, intent(in) :: thickness
+    double precision, intent(out) :: height
     character(2), intent(in) :: lwup_in
     character(1024), intent(in) :: intf_dir
     logical, intent(inout) :: ludef_surf
@@ -1262,7 +1265,7 @@ contains
        !! determines the maximum number of cells required
        allocate(vtmp1(size(list)))
        height = term%arr(term_start)%hmin
-       do i=thickness,2,-1
+       do i=num_layers,2,-1
           vtmp1 = list(:)%loc - height
           vtmp1 = vtmp1 - ceiling( vtmp1 - 1.D0 )
           itmp1 = minloc( vtmp1(:), dim=1,&
@@ -1280,21 +1283,8 @@ contains
             mask=&
             vtmp1(:).ge.-1.D-5.and.&
             list(:)%term.eq.surf(2))
-       !!write(0,*) "temp",itmp1
-       !!write(0,*) "temp",list(:)%loc
-       !!write(0,*) "SURFACES",surf
-       !write(0,*) "look",term%arr(term_start)%hmin, term_start
-       !write(0,*) vtmp1(itmp1),itmp1
-       !write(0,*) list(:)%loc
-       !write(0,*) list(:)%loc-height
-       !write(0,*) vtmp1
-       !write(0,*) list(:)%term
-       !write(0,*) "height check1", height
        height = height + vtmp1(itmp1) - term%arr(term_start)%hmin
-       !write(0,*) "height check2", height
 
-       !write(0,*) "mirror?",term%lmirror
-       !! if there is no mirror, we need to remove extra layers in the cell
        !if(.not.term%lmirror)then
           ! get thickness of top/surface layer
           dtmp1 = term%arr(surf(2))%hmax - term%arr(surf(2))%hmin
@@ -1302,12 +1292,9 @@ contains
           height = height + dtmp1 !(1.D0 - dtmp1)
        !end if
 
-       !write(0,*) "HEIGHT", height
        ncells = ceiling(height)
        height = height/dble(ncells)
     end if
-    !write(0,*) "ncells",ncells
-    !write(0,*) "height",height
 
     
     !!-----------------------------------------------------------------------
@@ -1323,17 +1310,37 @@ contains
     !!-----------------------------------------------------------------------
     !! Extend slab to user-defined thickness
     !!-----------------------------------------------------------------------
-    !write(0,*) "HERE",term%nstep,thickness
-    !write(0,*) thickness-1, (thickness-1)/term%nstep,int((thickness-1)/term%nstep)+1
-    if(.not.ludef_surf) ncells = int((thickness-1)/term%nstep)+1
-    !write(0,*) ncells
-    tfmat(:,:)=0.D0
-    tfmat(1,1)=1.D0
-    tfmat(2,2)=1.D0
-    tfmat(3,3)=ncells
-    !write(0,*) "test0",ncells
+    if(.not.ludef_surf) ncells = int((num_layers-1)/term%nstep)+1
+    !! convert thickness, in angstroms to number of cells
+    if(thickness.gt.0.D0)then
+       select case(term%axis)
+       case(1)
+          slab_thickness = dot_product(uvec(cross(lat(2,:),lat(3,:))), lat(1,:))
+       case(2)
+          slab_thickness = dot_product(uvec(cross(lat(1,:),lat(3,:))), lat(2,:))
+       case(3)
+          slab_thickness = dot_product(uvec(cross(lat(1,:),lat(2,:))), lat(3,:))
+       end select
+       ! get the largest separation between two terminations
+       largest_sep = abs( term%arr(1)%hmin - &
+            term%arr(term%nterm)%ladder(term%nstep) - &
+            term%arr(term%nterm)%hmax + 1.D0 )
+       ! if hmax .gt. hmin, hmax = hmax - 1
+       if(largest_sep.lt.0.D0) largest_sep = 1.D0 + largest_sep
+       do i = 2, term%nterm, 1
+          dtmp1 = abs(term%arr(i)%hmin - term%arr(i-1)%hmax)
+          if(dtmp1.gt.largest_sep) largest_sep = dtmp1
+       end do
+       ! thickness = ( ncells - 1 ) * slab_thickness + ( 1 - largest_sep ) * slab_thickness
+       ! ncells = ceiling( thickness / slab_thickness - ( 1 - largest_sep ) + 1 )
+       ncells = ceiling( thickness / slab_thickness - (1.E0 - largest_sep - 2.E0 * term%tol) ) + 1
+       height = thickness/dble(ncells)
+    end if
+    tfmat(:,:) = 0.D0
+    tfmat(1,1) = 1.D0
+    tfmat(2,2) = 1.D0
+    tfmat(3,3) = ncells
     call transformer(lat,bas,tfmat,map)
-    !write(0,*) "test1"
     if(mod(real(old_natom*ncells)/real(bas%natom),1.0).gt.1.D-5)then
        write(0,'(1X,"ERROR: Internal error in interfaces subroutine")')
        write(0,'(2X,"gldfnd subroutine did not reproduce a sensible &
@@ -1359,6 +1366,7 @@ contains
     term%arr(:)%hmin = term%arr(:)%hmin/dble(ncells)
     term%arr(:)%hmax = term%arr(:)%hmax/dble(ncells)
     term%tol = term%tol/dble(ncells)
+    
 
 
   end subroutine set_slab_height
@@ -1404,22 +1412,23 @@ contains
 !!!#############################################################################
 !!! Supply a supercell that can be cut down to the size of the slab ...
 !!! ... i.e. the input structure must be larger or equal to the desired output
-  subroutine prepare_slab(lat, bas, map, term, iterm, thickness, ncells, &
+  subroutine prepare_slab(lat, bas, map, term, iterm, num_layers, ncells, thickness, &
        height, ludef_surf, udef_top_iterm, lwup_in, lcycle, &
        ludef_ortho, udef_vacuum)
     implicit none
     integer :: j, j_start, istep, natom_check
-    double precision :: vacuum, dtmp1
+    double precision :: vacuum, dtmp1, slab_thickness, shift_val
     character(2) :: lwup
     character(5) :: lowerupper
     character(1024) :: msg
     logical :: lortho
     integer, dimension(3) :: abc=(/1,2,3/)
+    double precision, dimension(3) :: surface_normal_vec
     double precision, dimension(3,3) :: tfmat
     integer, allocatable, dimension(:) :: iterm_list
 
-    integer, intent(in) :: iterm, udef_top_iterm, thickness, ncells
-    double precision, intent(in) :: height
+    integer, intent(in) :: iterm, udef_top_iterm, num_layers, ncells
+    double precision, intent(in) :: height, thickness
     character(2), intent(in) :: lwup_in
     logical, intent(in) :: ludef_surf
     logical, intent(out) :: lcycle
@@ -1440,7 +1449,30 @@ contains
     lcycle = .false.
     dtmp1=0.D0
     tfmat=0.D0
-    istep = thickness - (ncells-1)*term%nstep
+    select case(term%axis)
+    case(1)
+       surface_normal_vec = uvec(cross(lat(2,:),lat(3,:)))
+       slab_thickness = abs( dot_product(surface_normal_vec, lat(1,:)) )
+    case(2)
+       surface_normal_vec = uvec(cross(lat(1,:),lat(3,:)))
+       slab_thickness = abs( dot_product(surface_normal_vec, lat(2,:)) )
+    case(3)
+       surface_normal_vec = uvec(cross(lat(1,:),lat(2,:)))
+       slab_thickness = abs( dot_product(surface_normal_vec, lat(3,:)) )
+    end select
+    if(thickness.gt.0.D0)then
+       dtmp1 = slab_thickness / ncells * ( ncells - 1 )
+         istep = term%nstep
+         do j = 1, term%nstep
+            dtmp1 = dtmp1 + term%arr(iterm)%ladder(j) * slab_thickness / real(ncells)
+            if(dtmp1.ge.thickness)then
+               istep = j
+               exit
+            end if
+         end do
+    else
+       istep = num_layers - (ncells-1)*term%nstep
+    end if
     natom_check = bas%natom
 
     if(present(ludef_ortho))then
@@ -1514,8 +1546,9 @@ contains
     !! ... i.e. account for the tolerance that has been added to layer ...
     !! ... hmin and hmax
     !!--------------------------------------------------------------------
+    shift_val = term%tol * slab_thickness / modu(lat(term%axis,:))
     call transformer(lat,bas,tfmat,map)
-    call shifter(bas,term%axis,-term%tol/tfmat(term%axis,term%axis),.true.)
+    call shifter(bas,term%axis,-shift_val/tfmat(term%axis,term%axis),.true.)
 
 
     !!--------------------------------------------------------------------
