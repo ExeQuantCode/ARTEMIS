@@ -20,9 +20,10 @@ module inputs
   implicit none
   integer :: nout,clock,task,task_defect,axis,icheck_intf,iintf
   integer :: irestart,idepth,imatch,ishift,iswap
-  integer :: lw_thickness,up_thickness
+  integer :: lw_num_layers,up_num_layers
   integer :: nshift,nterm,nintf,nswap,nmiller
   real :: max_bondlength,swap_sigma,swap_depth
+  double precision :: lw_thickness, up_thickness
   double precision :: lw_bulk_modulus, up_bulk_modulus
   double precision :: c_scale,intf_depth,vacuum
   double precision :: layer_sep,lw_layer_sep,up_layer_sep,swap_den,tol_sym
@@ -96,8 +97,10 @@ contains
     up_mplane=(/0,0,0/)
     lw_mplane=(/0,0,0/)
     axis=3
-    lw_thickness=3
-    up_thickness=3
+    lw_num_layers=0
+    up_num_layers=0
+    lw_thickness=-1.D0
+    up_thickness=-1.D0
     vacuum=14.D0
     lw_surf=0
     up_surf=0
@@ -382,6 +385,16 @@ contains
 
     write(6,'(A)') repeat("#",50)
 
+    if(lw_thickness.gt.0.D0.and.lw_num_layers.gt.0) then
+       write(0,'(1X,A)') "WARNING: SLAB THICKNESS AND NUMBER OF LAYERS BOTH DEFINED"
+       write(0,'(1X,A)') "         SLAB THICKNESS OVERRIDES NUMBER OF LAYERS"
+       lw_num_layers=0
+    end if
+    if(up_thickness.gt.0.D0.and.up_num_layers.gt.0) then
+       write(0,'(1X,A)') "WARNING: SLAB THICKNESS AND NUMBER OF LAYERS BOTH DEFINED"
+       write(0,'(1X,A)') "         SLAB THICKNESS OVERRIDES NUMBER OF LAYERS"
+       up_num_layers=0
+    end if
 
     return
   end subroutine set_global_vars
@@ -538,7 +551,7 @@ contains
     character(1024) :: buffer,tagname,store
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(12) :: readvar
+    integer, dimension(13) :: readvar
     logical, optional, intent(in) :: skip
     character(len=6), dimension(4) :: &
          tag_list = ["axis  ","loc   ","val   ","bounds"]
@@ -568,8 +581,11 @@ contains
           call assign(buffer,lsurf_gen,      readvar(2))
        case("MILLER_PLANE")
           call assign_vec(buffer,lw_mplane,  readvar(3))
-       case("SLAB_THICKNESS")
-          call assign(buffer,lw_thickness,   readvar(4))
+       case("NUM_LAYERS", "SLAB_THICKNESS")
+          if(index(buffer,"SLAB_THICKNESS").ne.0)then
+             write(0,'(1X,A)') "WARNING: SLAB_THICKNESS is deprecated, use NUM_LAYERS instead"
+          end if
+          call assign(buffer,lw_num_layers,   readvar(4))
        case("SHIFT")
           edits%nedits=edits%nedits+1
           store=buffer(index(buffer,"SHIFT")+len("SHIFT"):)
@@ -624,6 +640,8 @@ contains
           end select
        case("LNORM_LAT")
           call assign(buffer,lnorm_lat,           readvar(12))
+       case("MIN_THICKNESS")
+          call assign(buffer,lw_thickness,   readvar(13))
        case default
           write(6,'("NOTE: unable to assign variable on line ",I0)') count
        end select
@@ -657,7 +675,7 @@ contains
     logical :: ludef_offset, ludef_lw_layer_sep, ludef_up_layer_sep
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(55) :: readvar
+    integer, dimension(57) :: readvar
     logical, optional, intent(in) :: skip
 
 
@@ -684,10 +702,16 @@ contains
        case("AXIS")
           ludef_axis=.true.
           call assign(buffer,axis,             readvar(2))
-       case("LW_SLAB_THICKNESS")
-          call assign(buffer,lw_thickness,     readvar(3))
-       case("UP_SLAB_THICKNESS")
-          call assign(buffer,up_thickness,     readvar(4))
+       case("LW_NUM_LAYERS", "LW_SLAB_THICKNESS")
+          if(index(buffer,"LW_SLAB_THICKNESS").ne.0)then
+             write(0,'(1X,A)') "WARNING: LW_SLAB_THICKNESS is deprecated, use LW_NUM_LAYERS instead"
+          end if
+          call assign(buffer,lw_num_layers,     readvar(3))
+       case("UP_NUM_LAYERS", "UP_SLAB_THICKNESS")
+          if(index(buffer,"LW_SLAB_THICKNESS").ne.0)then
+             write(0,'(1X,A)') "WARNING: UP_SLAB_THICKNESS is deprecated, use LW_NUM_LAYERS instead"
+          end if
+          call assign(buffer,up_num_layers,     readvar(4))
        case("LW_MILLER")
           call assign_vec(buffer,lw_mplane,    readvar(5))
        case("UP_MILLER")
@@ -835,7 +859,11 @@ contains
        case("LC_FIX")
           call assign(buffer,lc_fix,             readvar(54))
        case("LBREAK_ON_NO_TERM")
-           call assign(buffer,lbreak_on_no_term, readvar(55))
+          call assign(buffer,lbreak_on_no_term, readvar(55))
+       case("LW_MIN_THICKNESS")
+          call assign(buffer,lw_thickness,     readvar(56))
+       case("UP_MIN_THICKNESS")
+          call assign(buffer,up_thickness,     readvar(57))
        case default
           write(0,'("NOTE: unable to assign variable on line ",I0)') count
        end select
@@ -987,8 +1015,8 @@ contains
        write(UNIT,'(2X,"NMILLER  = ",3(I0,1X))') nmiller
        write(UNIT,'(2X,"LW_MILLER_PLANE  = ",3(I0,1X))') lw_mplane
        write(UNIT,'(2X,"UP_MILLER_PLANE  = ",3(I0,1X))') up_mplane
-       write(UNIT,'(2X,"LW_SLAB_THICKNESS = ",I0)') lw_thickness
-       write(UNIT,'(2X,"UP_SLAB_THICKNESS = ",I0)') up_thickness
+       write(UNIT,'(2X,"LW_SLAB_THICKNESS = ",I0)') lw_num_layers
+       write(UNIT,'(2X,"UP_SLAB_THICKNESS = ",I0)') up_num_layers
        if(ludef_lw_layered) write(UNIT,'(2X,"LW_LAYERED = ",L)') lw_layered
        if(ludef_up_layered) write(UNIT,'(2X,"UP_LAYERED = ",L)') lw_layered
        write(UNIT,'(2X,"NTERM = ",I0)') nterm
