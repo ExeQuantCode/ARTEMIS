@@ -1,0 +1,25 @@
+name = "artemis"
+version = "1.0.2"
+author = "Ned Thaddeus Taylor"
+maintainer = "n.t.taylor@exeter.ac.uk"
+description = "A Fortran executable for generating interface lattice matches"
+
+[preprocess]
+[preprocess.cpp]
+suffixes = ["F90", "f90"]
+
+[library]
+source-dir="src/fortran"
+
+[dependencies]
+openmp = "*"
+
+[fortran]
+implicit-typing = false
+implicit-external = false
+source-form = "free"
+
+[[executable]]
+name="artemis_executable"
+source-dir="app"
+main="main.f90"
