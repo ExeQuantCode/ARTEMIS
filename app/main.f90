@@ -4,14 +4,11 @@
 !!! Code part of the ARTEMIS group (Hepplestone research group).
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
-program artemis
-  use inputs
-  use interface_subroutines
+program artemis_executable
+  use artemis
   implicit none
 
 
-!!!updated 2021/11/12
- 
 
 !!!-----------------------------------------------------------------------------
 !!! set up global variables
@@ -103,5 +100,5 @@ program artemis
 
  
 
-end program artemis
+end program artemis_executable
 
