@@ -1300,12 +1300,27 @@ contains
              step_loop1: do istep = 1, term%nstep, 1
                 if(surf(2).lt.surf(1))then
                    if(istep.eq.term%nstep)then
-                      layer_thickness = term%arr(surf(2))%hmax - term%arr(surf(1))%hmin - 2.E0 * term%tol + ( 1.E0 + term%arr(surf(2))%ladder(1) - term%arr(surf(1))%ladder(term%nstep) )
+                      layer_thickness = &
+                           term%arr(surf(2))%hmax - term%arr(surf(1))%hmin - &
+                           2.E0 * term%tol + ( &
+                                1.E0 + term%arr(surf(2))%ladder(1) - &
+                                term%arr(surf(1))%ladder(term%nstep) &
+                           )
                    else
-                      layer_thickness = term%arr(surf(2))%hmax - term%arr(surf(1))%hmin - 2.E0 * term%tol + ( term%arr(surf(2))%ladder(istep+1) - term%arr(surf(1))%ladder(istep) )
+                      layer_thickness = &
+                           term%arr(surf(2))%hmax - term%arr(surf(1))%hmin - &
+                           2.E0 * term%tol + ( &
+                                term%arr(surf(2))%ladder(istep+1) - &
+                                term%arr(surf(1))%ladder(istep) &
+                           )
                    end if
                 end if
-                dtmp1 = ( icell + layer_thickness + term%arr(surf(2))%ladder(istep) - term%arr(surf(1))%ladder(1) ) * slab_thickness
+                dtmp1 = &
+                     ( &
+                          icell + layer_thickness + &
+                          term%arr(surf(2))%ladder(istep) - &
+                          term%arr(surf(1))%ladder(1) &
+                     ) * slab_thickness
                 if(dtmp1.ge.thickness)then
                    success = .true.
                    height = dtmp1 + 2.E0 * term%tol * slab_thickness
@@ -1374,7 +1389,6 @@ contains
     term%arr(:)%hmax = term%arr(:)%hmax/dble(ncells)
     term%tol = term%tol/dble(ncells)
     
-
 
   end subroutine set_slab_height
 !!!#############################################################################
