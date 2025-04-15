@@ -36,6 +36,10 @@ module io
      character(60) :: allowed
      character(60) :: default
      character(300) :: description
+     logical :: is_deprecated = .false.
+     logical :: to_be_deprecated = .false.
+     character(25) :: deprecated_name = ''
+     character(20) :: deprecated_version
   end type tag_type
 
   public :: write_fmtd
@@ -312,8 +316,18 @@ contains
              if(index(tags(i)%name,checkword).ne.0)then
                 found=.true.
 
-                write(unit,'(A,T33,A)') &
-                     trim(tags(i)%name),trim(tags(i)%summary)
+                if(tags(i)%to_be_deprecated)then
+                   write(unit,'(A,T33,A)') &
+                        trim(tags(i)%name),&
+                        'To be deprecated ('//trim(tags(i)%deprecated_version)//')'
+                elseif(tags(i)%is_deprecated)then
+                   write(unit,'(A,T33,A)') &
+                         trim(tags(i)%name),&
+                         'Deprecated ('//trim(tags(i)%deprecated_version)//')'
+                else
+                   write(unit,'(A,T33,A)') &
+                        trim(tags(i)%name),trim(tags(i)%summary)
+                end if
 
              end if
           end do tagloop1
@@ -353,6 +367,19 @@ contains
           write(unit,*)
           write(unit,fmt) trim(title)
           write(unit,*)
+          if(tags(i)%is_deprecated)then
+             write(unit,'("DEPRECATED AS OF ",A)') &
+                  trim(tags(i)%deprecated_version)
+          elseif(tags(i)%to_be_deprecated)then
+             write(unit,'("TO BE DEPRECATED AS OF ",A)') &
+                  trim(tags(i)%deprecated_version)
+          end if
+          if(trim(tags(i)%deprecated_name).ne.'')then
+             write(unit,'("New tag name: ",A)') trim(tags(i)%deprecated_name)
+          end if
+          if(tags(i)%is_deprecated.or.tags(i)%to_be_deprecated)then
+             write(unit,*)
+          end if
 
           select case(tags(i)%type)
           case('I'); type = 'Integer'

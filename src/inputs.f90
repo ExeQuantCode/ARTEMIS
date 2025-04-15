@@ -385,15 +385,19 @@ contains
 
     write(6,'(A)') repeat("#",50)
 
-    if(lw_thickness.gt.0.D0.and.lw_num_layers.gt.0) then
+    if(lw_thickness.gt.0.D0.and.lw_num_layers.gt.0)then
        write(0,'(1X,A)') "WARNING: SLAB THICKNESS AND NUMBER OF LAYERS BOTH DEFINED"
        write(0,'(1X,A)') "         SLAB THICKNESS OVERRIDES NUMBER OF LAYERS"
        lw_num_layers=0
+    elseif(lw_thickness.le.0.D0.and.lw_num_layers.le.0)then
+       lw_thickness = 10.D0
     end if
-    if(up_thickness.gt.0.D0.and.up_num_layers.gt.0) then
+    if(up_thickness.gt.0.D0.and.up_num_layers.gt.0)then
        write(0,'(1X,A)') "WARNING: SLAB THICKNESS AND NUMBER OF LAYERS BOTH DEFINED"
        write(0,'(1X,A)') "         SLAB THICKNESS OVERRIDES NUMBER OF LAYERS"
        up_num_layers=0
+    elseif(up_thickness.le.0.D0.and.up_num_layers.le.0)then
+       up_thickness = 10.D0
     end if
 
     return
@@ -639,9 +643,9 @@ contains
              read(store,*) lw_surf
           end select
        case("LNORM_LAT")
-          call assign(buffer,lnorm_lat,           readvar(12))
+          call assign(buffer,lnorm_lat,        readvar(12))
        case("MIN_THICKNESS")
-          call assign(buffer,lw_thickness,   readvar(13))
+          call assign(buffer,lw_thickness,     readvar(13))
        case default
           write(6,'("NOTE: unable to assign variable on line ",I0)') count
        end select
