@@ -1185,6 +1185,10 @@ contains
     double precision, dimension(3,3), intent(inout) :: lat
 
     integer, allocatable, dimension(:,:,:), intent(inout) :: map
+
+    integer :: icell, istep, iterm
+    double precision :: layer_thickness
+    logical :: success
     
 
     !!--------------------------------------------------------------------
@@ -1282,19 +1286,62 @@ contains
           slab_thickness = dot_product(uvec(cross(lat(1,:),lat(2,:))), lat(3,:))
        end select
        ! get the largest separation between two terminations
-       largest_sep = abs( term%arr(1)%hmin - &
-            term%arr(term%nterm)%ladder(term%nstep) - &
-            term%arr(term%nterm)%hmax + 1.D0 )
-       ! if hmax .gt. hmin, hmax = hmax - 1
-       if(largest_sep.lt.0.D0) largest_sep = 1.D0 + largest_sep
-       do i = 2, term%nterm, 1
-          dtmp1 = abs(term%arr(i)%hmin - term%arr(i-1)%hmax)
-          if(dtmp1.gt.largest_sep) largest_sep = dtmp1
-       end do
-       ! thickness = ( ncells - 1 ) * slab_thickness + ( 1 - largest_sep ) * slab_thickness
-       ! ncells = ceiling( thickness / slab_thickness - ( 1 - largest_sep ) + 1 )
-       ncells = ceiling( thickness / slab_thickness - (1.E0 - largest_sep - 2.E0 * term%tol) ) + 1
-       height = thickness/dble(ncells)
+       if(ludef_surf)then
+
+          height = 0.E0
+          largest_sep = abs( term%arr(surf(1))%hmin - &
+               term%arr(surf(2))%ladder(term%nstep) - &
+               term%arr(surf(2))%hmax + 1.D0 )
+          if(largest_sep.lt.0.D0) largest_sep = 1.D0 + largest_sep
+          ! check for all terminations that a certain step is sufficiently large to reproduce thickness
+          cell_loop1: do icell = 0, ceiling(thickness/slab_thickness), 1
+             layer_thickness = term%arr(surf(2))%hmax - term%arr(surf(1))%hmin - 2.E0 * term%tol
+             success = .false.
+             step_loop1: do istep = 1, term%nstep, 1
+                if(surf(2).lt.surf(1))then
+                   if(istep.eq.term%nstep)then
+                      layer_thickness = term%arr(surf(2))%hmax - term%arr(surf(1))%hmin - 2.E0 * term%tol + ( 1.E0 + term%arr(surf(2))%ladder(1) - term%arr(surf(1))%ladder(term%nstep) )
+                   else
+                      layer_thickness = term%arr(surf(2))%hmax - term%arr(surf(1))%hmin - 2.E0 * term%tol + ( term%arr(surf(2))%ladder(istep+1) - term%arr(surf(1))%ladder(istep) )
+                   end if
+                end if
+                dtmp1 = ( icell + layer_thickness + term%arr(surf(2))%ladder(istep) - term%arr(surf(1))%ladder(1) ) * slab_thickness
+                if(dtmp1.ge.thickness)then
+                   success = .true.
+                   height = dtmp1 + 2.E0 * term%tol * slab_thickness
+                   exit step_loop1
+                end if
+             end do step_loop1
+             if(.not.success) cycle cell_loop1
+             ncells = icell + 1
+             exit cell_loop1
+          end do cell_loop1
+          
+       else
+          largest_sep = abs( term%arr(1)%hmin - &
+               term%arr(1)%ladder(term%nstep) - &
+               term%arr(1)%hmax + 1.D0 )
+          if(largest_sep.lt.0.D0) largest_sep = 1.D0 + largest_sep
+          ! check for all terminations that a certain step is sufficiently large to reproduce thickness
+          cell_loop2: do icell = 0, ceiling(thickness/slab_thickness), 1
+             term_loop: do iterm = 1, term%nterm, 1
+                layer_thickness = term%arr(iterm)%hmax - term%arr(iterm)%hmin - 2.E0 * term%tol
+                success = .false.
+                step_loop: do istep = 1, term%nstep, 1
+                   dtmp1 = ( icell + layer_thickness + term%arr(iterm)%ladder(istep) ) * slab_thickness
+                   if(dtmp1.ge.thickness)then
+                      success = .true.
+                      exit step_loop
+                   end if
+                end do step_loop
+                if(.not.success) cycle cell_loop2
+             end do term_loop
+             ncells = icell + 1
+             exit cell_loop2
+          end do cell_loop2
+
+       end if
+       height = height/dble(ncells * slab_thickness)
     end if
     tfmat(:,:) = 0.D0
     tfmat(1,1) = 1.D0
@@ -1400,6 +1447,9 @@ contains
     logical, optional, intent(in) :: ludef_ortho
     double precision, optional, intent(in) :: udef_vacuum
 
+    integer :: icell, num_cells, jterm
+    double precision :: layer_thickness
+
     !!--------------------------------------------------------------------
     !! Initialise variables
     !!--------------------------------------------------------------------
@@ -1422,16 +1472,35 @@ contains
     end select
     if(thickness.gt.0.D0)then
        dtmp1 = slab_thickness / ncells * ( ncells - 1 )
-         istep = term%nstep
-         do j = 1, term%nstep
-            dtmp1 = dtmp1 + term%arr(iterm)%ladder(j) * slab_thickness / real(ncells)
-            if(dtmp1.ge.thickness)then
-               istep = j
-               exit
-            end if
-         end do
+       istep = term%nstep
+       num_cells = ncells - 1
+       if(ludef_surf)then
+          jterm = udef_top_iterm
+       else
+          jterm = iterm
+       end if
+       cell_loop: do icell = 0, ncells, 1
+          layer_thickness = term%arr(udef_top_iterm)%hmax - term%arr(iterm)%hmin - 2.E0 * term%tol
+          step_loop: do j = 1, term%nstep
+             if(udef_top_iterm.lt.iterm)then
+                if(j.eq.term%nstep)then
+                   layer_thickness = term%arr(udef_top_iterm)%hmax - term%arr(iterm)%hmin - 2.E0 * term%tol + ( 1.E0 + term%arr(udef_top_iterm)%ladder(1) - term%arr(iterm)%ladder(term%nstep) )
+                else
+                   layer_thickness = term%arr(udef_top_iterm)%hmax - term%arr(iterm)%hmin - 2.E0 * term%tol + ( term%arr(udef_top_iterm)%ladder(j+1) - term%arr(iterm)%ladder(j) )
+                end if
+             end if
+             dtmp1 = ( icell / real(ncells) + layer_thickness ) * slab_thickness + &
+                  term%arr(udef_top_iterm)%ladder(j) * slab_thickness / real(ncells)
+             if(dtmp1.ge.thickness)then
+                istep = j
+                num_cells = icell
+                exit cell_loop
+             end if
+          end do step_loop
+       end do cell_loop
     else
        istep = num_layers - (ncells-1)*term%nstep
+       num_cells = ncells - 1
     end if
     natom_check = bas%natom
 
@@ -1483,12 +1552,12 @@ contains
        tfmat(j,j)=1.D0
        if(j.eq.term%axis)then
           if(ludef_surf)then
-             tfmat(j,j) = height !+ term%tol*2.D0
+             tfmat(j,j) = height
           else!if(term%lmirror)then
              if(istep.ne.0)then
-                dtmp1 = (ncells-1) + term%arr(iterm)%ladder(istep)
+                dtmp1 = num_cells + term%arr(iterm)%ladder(istep)
                 dtmp1 = dtmp1/(ncells)
-                tfmat(j,j) = dtmp1 !+ term%tol*2.D0
+                tfmat(j,j) = dtmp1
                 tfmat(j,j) = tfmat(j,j) + &
                      (term%arr(iterm)%hmax - term%arr(iterm)%hmin)
              end if
@@ -1499,6 +1568,16 @@ contains
           end if
        end if
     end do
+
+
+    !!--------------------------------------------------------------------
+    !! Check number of atoms is expected
+    !!--------------------------------------------------------------------
+    if(num_cells.ne.ncells-1)then
+       do icell = num_cells + 2, ncells, 1
+          natom_check = natom_check - nint( bas%natom / real(ncells) )
+       end do
+    end if
 
 
     !!--------------------------------------------------------------------
