@@ -998,7 +998,6 @@ contains
        end do
        count=count+1
        tsym2(count,:3,:3)=tmat1
-       !tsym2(count,:4,:4)=tsym1(isym,:4,:4)
     end do samecheck
     grp%nsym=count
     deallocate(tsym1)
@@ -1534,7 +1533,6 @@ contains
     c_along = abs(dot_product(lat(axis,:),&
          uvec(cross([lat(abc(1),:)],[lat(abc(2),:)]))))
     tol = tol / c_along
-    !tol = tol/modu(lat(axis,1:3))
     lmirror=.false.
 
 
@@ -1668,13 +1666,6 @@ contains
     grp_store%confine%laxis(axis) = .true.
     call sym_setup(grp_store,lat,predefined=.false.,new_start=.true.)
 
-    !!WRITE OUT THE STRUCTURES HERE AND COMPARE
-    !do i=1,grp_store%nsym
-    !   write(0,*) i
-    !   write(0,'(4(2X,F6.2))') grp_store%sym(i,:4,:3)
-    !   write(0,*) det(grp_store%sym(i,:3,:3))
-    !   write(0,*)
-    !end do
 
 
     !!--------------------------------------------------------------------------
@@ -1704,12 +1695,7 @@ contains
        if(all(abs(savsym(i,:3,:3)-inv_mat).lt.tol_sym)) &
             grp_store%sym(itmp1,4,:3) = savsym(i,4,:3)
     end do
-    !do i=1,grp_store%nsymop
-    !   write(0,*) i
-    !   write(0,'(4(2X,F9.4))') grp_store%sym(i,:4,:3)
-    !   write(0,*) det(grp_store%sym(i,:3,:3))
-    !   write(0,*)
-    !end do
+
 
 
     !!--------------------------------------------------------------------------
