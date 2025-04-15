@@ -24,12 +24,12 @@ module mod_help
 
 
   ! Cell_edits number of tags
-  integer, parameter :: ntags_cell_edits=12
+  integer, parameter :: ntags_cell_edits=13
   ! Cell_edits tags
   integer, parameter :: iout_file_tag=1
   integer, parameter :: ilsurf_gen_CE_tag=2
   integer, parameter :: imiller_tag=3
-  integer, parameter :: islab_thick_tag=4
+  integer, parameter :: inum_layers_tag=4
   integer, parameter :: ishift_tag=5
   integer, parameter :: ishift_region_tag=6
   integer, parameter :: ivacuum_tag=7
@@ -38,10 +38,15 @@ module mod_help
   integer, parameter :: ilortho_CE_tag=10
   integer, parameter :: isurf_tag=11
   integer, parameter :: ilnorm_lat_tag=12
+  integer, parameter :: imin_thick_tag=13
+
+  integer, parameter :: ntags_depr_cell_edits=1
+  ! Cell_edits deprecated tags
+  integer, parameter :: islab_thick_tag=1
 
 
   ! Interface number of tags
-  integer, parameter :: ntags_interface=55
+  integer, parameter :: ntags_interface=57
   ! Interface tags
   integer, parameter :: inintf_tag=1
   integer, parameter :: iimatch_tag=2
@@ -50,8 +55,8 @@ module mod_help
   integer, parameter :: iaxis_tag=5
   integer, parameter :: ilw_miller_tag=6
   integer, parameter :: iup_miller_tag=7
-  integer, parameter :: ilw_thick_tag=8
-  integer, parameter :: iup_thick_tag=9
+  integer, parameter :: ilw_num_layers_tag=8
+  integer, parameter :: iup_num_layers_tag=9
   integer, parameter :: ishiftdir_tag=10
   integer, parameter :: iishift_tag=11
   integer, parameter :: inshift_tag=12
@@ -97,7 +102,14 @@ module mod_help
   integer, parameter :: ilw_bulk_modulus_tag=52
   integer, parameter :: iup_bulk_modulus_tag=53
   integer, parameter :: ilc_fix_tag=54
-  integer, parameter :: ilbreak_on_no_term=55
+  integer, parameter :: ilbreak_on_no_term_tag=55
+  integer, parameter :: ilw_min_thick_tag=56
+  integer, parameter :: iup_min_thick_tag=57
+
+  integer, parameter :: ntags_depr_interface=2
+  ! Cell_edits deprecated tags
+  integer, parameter :: ilw_slab_thick_tag=1
+  integer, parameter :: iup_slab_thick_tag=2
 
 
 
@@ -307,13 +319,23 @@ contains
          'Prints the surface terminations of a Miller plane into DTERMINATIONS &
          &directory'
 
-    tag(islab_thick_tag)%name    = 'SLAB_THICKNESS'
-    tag(islab_thick_tag)%type    = 'I'
-    tag(islab_thick_tag)%summary = 'Thickness of slab'
-    tag(islab_thick_tag)%allowed = 'Any positive integer number'
-    tag(islab_thick_tag)%default = '3'
-    tag(islab_thick_tag)%description = &
+    tag(inum_layers_tag)%name    = 'NUM_LAYERS'
+    tag(inum_layers_tag)%type    = 'I'
+    tag(inum_layers_tag)%summary = 'Number of layers of crystal'
+    tag(inum_layers_tag)%allowed = 'Any positive integer number'
+    tag(inum_layers_tag)%default = '(empty)'
+    tag(inum_layers_tag)%description = &
          'Defines the number of primitive layers to use for the slab'
+
+    tag(imin_thick_tag)%name    = 'MIN_THICKNESS'
+    tag(imin_thick_tag)%type    = 'R'
+    tag(imin_thick_tag)%summary = 'Minimum thickness of slab'
+    tag(imin_thick_tag)%allowed = 'Any positive real number'
+    tag(imin_thick_tag)%default = '10.0'
+    tag(imin_thick_tag)%description = &
+         'Defines the minimum thickness of the lower crystal (in Å).\n&
+         &The generated slab will be the smallest possible thickness equal to &
+         &or greater than this value.'
 
     tag(imiller_tag)%name    = 'MILLER_PLANE'
     tag(imiller_tag)%type    = 'U'
@@ -522,21 +544,41 @@ contains
     tag(inmiller_tag)%description = &
          'Defines the number of Miller planes to search over for each crystal.'
 
-    tag(ilw_thick_tag)%name    = 'LW_SLAB_THICKNESS'
-    tag(ilw_thick_tag)%type    = 'I'
-    tag(ilw_thick_tag)%summary = 'Thickness of lower crystal'
-    tag(ilw_thick_tag)%allowed = 'Any positive integer number'
-    tag(ilw_thick_tag)%default = '3'
-    tag(ilw_thick_tag)%description = &
+    tag(ilw_num_layers_tag)%name    = 'LW_NUM_LAYERS'
+    tag(ilw_num_layers_tag)%type    = 'I'
+    tag(ilw_num_layers_tag)%summary = 'Number of layers of lower crystal'
+    tag(ilw_num_layers_tag)%allowed = 'Any positive integer number'
+    tag(ilw_num_layers_tag)%default = '(empty)'
+    tag(ilw_num_layers_tag)%description = &
          'Defines the number of primitive layers to use for the lower crystal'
 
-    tag(iup_thick_tag)%name    = 'UP_SLAB_THICKNESS'
-    tag(iup_thick_tag)%type    = 'I'
-    tag(iup_thick_tag)%summary = 'Thickness of upper crystal'
-    tag(iup_thick_tag)%allowed = 'Any positive integer number'
-    tag(iup_thick_tag)%default = '3'
-    tag(iup_thick_tag)%description = &
+    tag(iup_num_layers_tag)%name    = 'UP_NUM_LAYERS'
+    tag(iup_num_layers_tag)%type    = 'I'
+    tag(iup_num_layers_tag)%summary = 'Number of layers of upper crystal'
+    tag(iup_num_layers_tag)%allowed = 'Any positive integer number'
+    tag(iup_num_layers_tag)%default = '(empty)'
+    tag(iup_num_layers_tag)%description = &
          'Defines the number of primitive layers to use for the upper crystal'
+
+    tag(ilw_min_thick_tag)%name    = 'LW_MIN_THICKNESS'
+    tag(ilw_min_thick_tag)%type    = 'R'
+    tag(ilw_min_thick_tag)%summary = 'Minimum thickness of lower crystal'
+    tag(ilw_min_thick_tag)%allowed = 'Any positive real number'
+    tag(ilw_min_thick_tag)%default = '10.0'
+    tag(ilw_min_thick_tag)%description = &
+         'Defines the minimum thickness of the lower crystal (in Å).\n&
+         &The generated slab will be the smallest possible thickness equal to &
+         &or greater than this value.'
+
+    tag(iup_min_thick_tag)%name    = 'UP_MIN_THICKNESS'
+    tag(iup_min_thick_tag)%type    = 'R'
+    tag(iup_min_thick_tag)%summary = 'Minimum thickness of upper crystal'
+    tag(iup_min_thick_tag)%allowed = 'Any positive real number'
+    tag(iup_min_thick_tag)%default = '10.0'
+    tag(iup_min_thick_tag)%description = &
+         'Defines the minimum thickness of the upper crystal (in Å).\n&
+         &The generated slab will be the smallest possible thickness equal to &
+         &or greater than this value.'
 
     tag(ilw_surf_tag)%name    = 'LW_SURFACE'
     tag(ilw_surf_tag)%type    = 'U'
@@ -585,12 +627,12 @@ contains
          'Defines the minimum size of gaps along the Miller direction that &
          &distinguish between separate layers (in Å) for the upper structure'
 
-    tag(ilbreak_on_no_term)%name = 'LBREAK_ON_NO_TERM'
-    tag(ilbreak_on_no_term)%type = 'L'
-    tag(ilbreak_on_no_term)%summary = 'Stop on no termination'
-    tag(ilbreak_on_no_term)%allowed = 'TRUE or FALSE'
-    tag(ilbreak_on_no_term)%default = 'TRUE'
-    tag(ilbreak_on_no_term)%description = &
+    tag(ilbreak_on_no_term_tag)%name = 'LBREAK_ON_NO_TERM'
+    tag(ilbreak_on_no_term_tag)%type = 'L'
+    tag(ilbreak_on_no_term_tag)%summary = 'Stop on no termination'
+    tag(ilbreak_on_no_term_tag)%allowed = 'TRUE or FALSE'
+    tag(ilbreak_on_no_term_tag)%default = 'TRUE'
+    tag(ilbreak_on_no_term_tag)%description = &
          'Defines whether to stop the code if no terminations are found for a &
          &given Miller plane'
 
@@ -642,7 +684,7 @@ contains
     tag(imbond_maxlen_tag)%name    = 'MBOND_MAXLEN'
     tag(imbond_maxlen_tag)%type    = 'R'
     tag(imbond_maxlen_tag)%summary = 'Maximum considered missing bondlength'
-    tag(imbond_maxlen_tag)%allowed = 'Any real positive number'
+    tag(imbond_maxlen_tag)%allowed = 'Any positive real number'
     tag(imbond_maxlen_tag)%default = '4.0 (Å)'
     tag(imbond_maxlen_tag)%description = &
          'ONLY USED IN ISHIFT = 4\n&
@@ -898,6 +940,61 @@ contains
 
 
 !!!#############################################################################
+!!! setup deprecated interface tag descriptions
+!!!#############################################################################
+  function setup_depr_cell_edits_tags() result(tag)
+    implicit none
+    type(tag_type), dimension(ntags_depr_cell_edits) :: tag
+
+    tag(islab_thick_tag)%name    = 'SLAB_THICKNESS'
+    tag(islab_thick_tag)%type    = 'I'
+    tag(islab_thick_tag)%summary = 'Number of layers of crystal'
+    tag(islab_thick_tag)%allowed = 'Any positive integer number'
+    tag(islab_thick_tag)%default = '(empty)'
+    tag(islab_thick_tag)%is_deprecated = .false.
+    tag(islab_thick_tag)%to_be_deprecated = .true.
+    tag(islab_thick_tag)%deprecated_version = '2.0.0'
+    tag(islab_thick_tag)%deprecated_name = 'NUM_LAYERS'
+    tag(islab_thick_tag)%description = &
+         'Defines the number of primitive layers to use for the lower crystal'
+
+  end function setup_depr_cell_edits_tags
+!-------------------------------------------------------------------------------
+  function setup_depr_interface_tags() result(tag)
+    implicit none
+    type(tag_type), dimension(ntags_depr_interface) :: tag
+
+    tag(ilw_slab_thick_tag)%name    = 'LW_SLAB_THICKNESS'
+    tag(ilw_slab_thick_tag)%type    = 'I'
+    tag(ilw_slab_thick_tag)%summary = 'Number of layers of lower crystal'
+    tag(ilw_slab_thick_tag)%allowed = 'Any positive integer number'
+    tag(ilw_slab_thick_tag)%default = '(empty)'
+    tag(ilw_slab_thick_tag)%is_deprecated = .false.
+    tag(ilw_slab_thick_tag)%to_be_deprecated = .true.
+    tag(ilw_slab_thick_tag)%deprecated_version = '2.0.0'
+    tag(ilw_slab_thick_tag)%deprecated_name = 'LW_NUM_LAYERS'
+    tag(ilw_slab_thick_tag)%description = &
+         'Defines the number of primitive layers to use for the lower crystal'
+
+
+    tag(iup_slab_thick_tag)%name    = 'UP_SLAB_THICKNESS'
+    tag(iup_slab_thick_tag)%type    = 'I'
+    tag(iup_slab_thick_tag)%summary = 'Number of layers of upper crystal'
+    tag(iup_slab_thick_tag)%allowed = 'Any positive integer number'
+    tag(iup_slab_thick_tag)%default = '(empty)'
+    tag(iup_slab_thick_tag)%is_deprecated = .false.
+    tag(iup_slab_thick_tag)%to_be_deprecated = .true.
+    tag(iup_slab_thick_tag)%deprecated_version = '2.0.0'
+    tag(iup_slab_thick_tag)%deprecated_name = 'UP_NUM_LAYERS'
+    tag(iup_slab_thick_tag)%description = &
+         'Defines the number of primitive layers to use for the upper crystal'
+
+  end function setup_depr_interface_tags
+!!!#############################################################################
+
+
+
+!!!#############################################################################
 !!! settings card help
 !!!#############################################################################
   subroutine settings_help(unit, helpword, search)
@@ -929,14 +1026,14 @@ contains
     implicit none
     integer, intent(in) :: unit
     character(len=*), intent(in) :: helpword
-    type(tag_type), dimension(ntags_cell_edits) :: tag
+    type(tag_type), dimension(ntags_cell_edits + ntags_depr_cell_edits) :: tag
     logical :: lsearch
     logical, optional :: search
     
     lsearch=.false.
     if(present(search)) lsearch=search
 
-    tag=setup_cell_edits_tags()
+    tag = [ setup_cell_edits_tags(), setup_depr_cell_edits_tags() ]
 
     write(unit,'("======================================")')
     write(unit,'("Help information in CELL_EDITS card:")')
@@ -954,14 +1051,14 @@ contains
     implicit none
     integer, intent(in) :: unit
     character(len=*), intent(in) :: helpword
-    type(tag_type), dimension(ntags_interface) :: tag
+    type(tag_type), dimension(ntags_interface + ntags_depr_interface) :: tag
     logical :: lsearch
     logical, optional :: search
     
     lsearch=.false.
     if(present(search)) lsearch=search
 
-    tag=setup_interface_tags()
+    tag = [ setup_interface_tags(), setup_depr_interface_tags() ]
 
     write(unit,'("======================================")')
     write(unit,'("Help information in INTERFACE card:")')
