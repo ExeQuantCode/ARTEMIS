@@ -4,7 +4,7 @@
 !!! Code part of the ARTEMIS group (Hepplestone research group).
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
-module interface_subroutines
+module artemis__generator
   use io
   use misc_linalg,          only: uvec,modu,get_area,inverse,cross
   use inputs
@@ -1740,4 +1740,4 @@ contains
 !!!#############################################################################
 
 
-end module interface_subroutines
+end module artemis__generator

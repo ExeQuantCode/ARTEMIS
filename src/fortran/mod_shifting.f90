@@ -1132,7 +1132,7 @@ contains
 !$OMP PARALLEL DO &
 !$OMP DEFAULT(SHARED) &
 !$OMP PRIVATE(is,ja,jb,jc,pos,vtmp1,vtmp2,vtmp3,count1,tmp_neigh) &
-!$OMP SCHEDULE(DYNAMIC,CHUNK)
+!$OMP SCHEDULE(DYNAMIC,8)
     do k=1,2
        nneigh = size(intf(k)%neigh,dim=1)
 
