@@ -57,6 +57,7 @@ set(LIB_FILES
     mod_misc.f90
     mod_misc_types.f90
     mod_io_utils.F90
+    mod_help.f90
     mod_misc_maths.f90
     mod_misc_linalg.f90
     mod_rw_geom.f90
@@ -69,7 +70,6 @@ set(LIB_FILES
 # Main source files
 set(SPECIAL_LIB_FILES
     aspect.f90
-    mod_help.f90
     mod_intf_identifier.f90
     mod_plane_matching.f90
     mod_lat_compare.f90
