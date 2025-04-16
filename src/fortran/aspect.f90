@@ -71,7 +71,7 @@ contains
        case(ishift_region_index)
           call err_abort('ERROR: SHIFT REGION NOT YET SET UP. ISSUE WITH BOUNDS')          
        case(ivacuum_index)
-          call vacuumer(edited_lat,edited_bas,&
+          call vacuumer(edited_bas%lat,edited_bas,&
                edits%axis(i),edits%bounds(i,1),edits%val(i))
        case(itransform_index)
           call transformer(basis=edited_bas,tfmat=edits%tfmat)
@@ -82,7 +82,7 @@ contains
     end do
     
     if(present(lnorm))then
-       if(lnorm) call reducer(edited_lat,edited_bas)
+       if(lnorm) call reducer(edited_bas)
     end if
 
 

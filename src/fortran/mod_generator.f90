@@ -54,7 +54,7 @@ module artemis__generator
     real(real32) :: layer_separation_cutoff = 1._real32
 
    contains
-     procedure, pass(this) :: generate => gen_terminations
+     procedure, pass(this) :: generate => generate_terminations
   end type artemis_termination_generator_type
 
 
@@ -75,6 +75,8 @@ module artemis__generator
    !  type(basis_type), dimension(:), allocatable :: term_structures_up
    contains
     procedure, pass(this) :: set_tolerance
+    procedure, pass(this) :: generate => generate_interfaces
+    procedure, pass(this) :: restart => generate_intefaces_from_existing
   end type artemis_interface_generator_type
 
 contains
@@ -170,7 +172,7 @@ contains
 
 
 !###############################################################################
-  subroutine gen_terminations( &
+  subroutine generate_terminations( &
        this, basis, miller_plane, axis, num_layers, thickness &
   )
     !! Generate and prints terminations parallel to the supplied miller plane
@@ -292,7 +294,7 @@ contains
     ! Normalise lattice
     !---------------------------------------------------------------------------
     if(lnorm_lat)then
-       call reducer(tmp_bas1%lat,tmp_bas1)
+       call reducer(tmp_bas1)
        tmp_bas1%lat = MATNORM(tmp_bas1%lat)
     end if
     
@@ -317,7 +319,7 @@ contains
        this%structures = [ this%structures, output ]
     end if
 
-   end subroutine gen_terminations
+   end subroutine generate_terminations
 !###############################################################################
 
 
@@ -378,28 +380,36 @@ contains
 !!!#############################################################################
 !!! generate interfaces
 !!!#############################################################################
-  subroutine gen_interfaces_restart(lat,bas)
+  subroutine generate_intefaces_from_existing(this, basis)
+    !! Generate interfaces for the given basis
     implicit none
+
+    ! Arguments
+    class(artemis_interface_generator_type), intent(inout) :: this
+    !! Instance of artemis generator type
+    type(basis_type), intent(in) :: basis
+    !! Atomic structure data
+
+    ! Local variables
     integer :: is,ia,js,ja
+    !! Loop variables
     real(real32) :: dtmp1,min_bond,min_bond1,min_bond2
-    type(basis_type) :: bas
+    !! Minimum bond length
     type(intf_info_type) :: intf
+    !! Interface information
     real(real32), dimension(3) :: vtmp1
-    real(real32), dimension(3,3) :: lat
+    !! Temporary vector
 
-
-    call system('mkdir -p '//trim(adjustl(dirname)))
-    call chdir(dirname)
 
     min_bond1=huge(0._real32)
     min_bond2=huge(0._real32)
     if(any(udef_intf_loc.lt.0._real32))then
        if(ludef_axis)then
-          intf=get_interface(lat,bas,axis)
+          intf=get_interface(basis%lat,basis,axis)
        else
-          intf=get_interface(lat,bas)
+          intf=get_interface(basis%lat,basis)
        end if
-       intf%loc=intf%loc/modu(lat(intf%axis,:))
+       intf%loc=intf%loc/modu(basis%lat(intf%axis,:))
        write(6,*) "interface axis:",intf%axis
        write(6,*) "interface loc:",intf%loc
        !! write interface location to a file for user to refer back to
@@ -411,28 +421,28 @@ contains
        intf%axis = axis
        intf%loc = udef_intf_loc
     end if
-    specloop1: do is=1,bas%nspec
-       atomloop1: do ia=1,bas%spec(is)%num
+    specloop1: do is=1,basis%nspec
+       atomloop1: do ia=1,basis%spec(is)%num
 
-          specloop2: do js=1,bas%nspec
-             atomloop2: do ja=1,bas%spec(js)%num
+          specloop2: do js=1,basis%nspec
+             atomloop2: do ja=1,basis%spec(js)%num
                 if(is.eq.js.and.ia.eq.ja) cycle atomloop2
                 if( &
-                     ( bas%spec(is)%atom(ia,intf%axis).gt.intf%loc(1).and.&
-                     bas%spec(is)%atom(ia,intf%axis).lt.intf%loc(2) ).and.&
-                     ( bas%spec(js)%atom(ja,intf%axis).gt.intf%loc(1).and.&
-                     bas%spec(js)%atom(ja,intf%axis).lt.intf%loc(2) ) )then
-                   vtmp1 = (bas%spec(is)%atom(ia,:3)-bas%spec(js)%atom(ja,:3))
-                   vtmp1 = matmul(vtmp1,lat)
+                     ( basis%spec(is)%atom(ia,intf%axis).gt.intf%loc(1).and.&
+                     basis%spec(is)%atom(ia,intf%axis).lt.intf%loc(2) ).and.&
+                     ( basis%spec(js)%atom(ja,intf%axis).gt.intf%loc(1).and.&
+                     basis%spec(js)%atom(ja,intf%axis).lt.intf%loc(2) ) )then
+                   vtmp1 = (basis%spec(is)%atom(ia,:3)-basis%spec(js)%atom(ja,:3))
+                   vtmp1 = matmul(vtmp1,basis%lat)
                    dtmp1 = modu(vtmp1)
                    if(dtmp1.lt.min_bond1) min_bond1 = dtmp1
                 elseif( &
-                     ( bas%spec(is)%atom(ia,intf%axis).lt.intf%loc(1).or.&
-                     bas%spec(is)%atom(ia,intf%axis).gt.intf%loc(2) ).and.&
-                     ( bas%spec(js)%atom(ja,intf%axis).lt.intf%loc(1).or.&
-                     bas%spec(js)%atom(ja,intf%axis).gt.intf%loc(2) ) )then
-                   vtmp1 = (bas%spec(is)%atom(ia,:3)-bas%spec(js)%atom(ja,:3))
-                   vtmp1 = matmul(vtmp1,lat)
+                     ( basis%spec(is)%atom(ia,intf%axis).lt.intf%loc(1).or.&
+                     basis%spec(is)%atom(ia,intf%axis).gt.intf%loc(2) ).and.&
+                     ( basis%spec(js)%atom(ja,intf%axis).lt.intf%loc(1).or.&
+                     basis%spec(js)%atom(ja,intf%axis).gt.intf%loc(2) ) )then
+                   vtmp1 = (basis%spec(is)%atom(ia,:3)-basis%spec(js)%atom(ja,:3))
+                   vtmp1 = matmul(vtmp1,basis%lat)
                    dtmp1 = modu(vtmp1)
                    if(dtmp1.lt.min_bond2) min_bond2 = dtmp1
                 end if
@@ -446,20 +456,33 @@ contains
     min_bond = ( min_bond1 + min_bond2 )/2._real32
     write(6,'(1X,"Avg min bulk bond: ",F0.3," Å")') min_bond
     write(6,'(1X,"Trans-interfacial scaling factor:",F0.3)') c_scale
-    call gen_shifts_and_swaps(lat,bas,intf%axis,intf%loc,min_bond,&
+    call gen_shifts_and_swaps(basis,intf%axis,intf%loc,min_bond,&
          ishift,nshift,&
          iswap,swap_den,nswap)
 
 
-  end subroutine gen_interfaces_restart
+  end subroutine generate_intefaces_from_existing
 !!!#############################################################################
 
 
 !!!#############################################################################
 !!! generate interfaces
 !!!#############################################################################
-  subroutine gen_interfaces(tolerance,inlw_lat,inup_lat,inlw_bas,inup_bas)
+  subroutine generate_interfaces(this, basis_lw, basis_up)
+    !! Generate interfaces from two bulk structures
     implicit none
+
+    ! Arguments
+    class(artemis_interface_generator_type), intent(inout) :: this
+    !! Instance of artemis generator type
+    type(basis_type), intent(in) :: basis_lw
+    !! Lower bulk structure
+    type(basis_type), intent(in) :: basis_up
+    !! Upper bulk structure
+
+    ! Local variables
+    type(basis_type) :: basis_lw_, basis_up_
+
     integer :: j,iterm,jterm,ntrans,ifit,iunique,old_natom,itmp1,old_intf
     integer :: iterm_step,jterm_step
     integer :: lw_ncells,up_ncells
@@ -473,7 +496,6 @@ contains
     character(1024) :: pwd,intf_dir,dirpath,msg, filename
     logical :: ludef_lw_surf,ludef_up_surf,lcycle
     type(basis_type) :: sbas
-    type(basis_type) :: inlw_bas,inup_bas
     type(basis_type) :: lw_bas,up_bas,tlw_bas,tup_bas
     type(tol_type) :: tolerance
     type(confine_type) :: confine
@@ -483,7 +505,7 @@ contains
     real(real32), dimension(2) :: intf_loc
     real(real32), dimension(3) :: init_offset=[0._real32,0._real32,2._real32]
     !real(real32), dimension(3,3) :: mtmp1,DONup_lat
-    real(real32), dimension(3,3) :: tfmat,slat,inlw_lat,inup_lat
+    real(real32), dimension(3,3) :: tfmat,slat
     real(real32), dimension(3,3) :: lw_lat,up_lat,tlw_lat,tup_lat
     integer, allocatable, dimension(:,:,:) :: lw_map,t1lw_map,t2lw_map
     integer, allocatable, dimension(:,:,:) :: up_map,t1up_map,t2up_map
@@ -494,22 +516,24 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! determines the primitive and niggli reduced cell for each bulk
 !!!-----------------------------------------------------------------------------
+    call basis_lw_%copy(basis_lw)
+    call basis_up_%copy(basis_up)
     write(6,*)
     if(lw_use_pricel)then
        write(6,'(1X,"Using primitive cell for lower material")')
-       call get_primitive_cell(inlw_lat,inlw_bas)
+       call get_primitive_cell(basis_lw_%lat,basis_lw_)
     else
        write(6,'(1X,"Using supplied cell for lower material")')
-       call reducer(inlw_lat,inlw_bas)
-       inlw_lat=primitive_lat(inlw_lat)
+       call reducer(basis_lw_)
+       basis_lw_%lat=primitive_lat(basis_lw_%lat)
     end if
     if(up_use_pricel)then
        write(6,'(1X,"Using primitive cell for upper material")')
-       call get_primitive_cell(inup_lat,inup_bas)
+       call get_primitive_cell(basis_up_%lat,basis_up_)
     else
        write(6,'(1X,"Using supplied cell for upper material")')
-       call reducer(inup_lat,inup_bas)
-       inup_lat=primitive_lat(inup_lat)
+       call reducer(basis_up_)
+       basis_up_%lat=primitive_lat(basis_up_%lat)
     end if
     write(6,*)
     
@@ -519,8 +543,7 @@ contains
 !!! investigates individual bulks and their bondlengths
 !!!-----------------------------------------------------------------------------
     avg_min_bond = &
-         ( get_min_bulk_bond(inlw_lat,inlw_bas) + &
-         get_min_bulk_bond(inup_lat,inup_bas) )/2._real32
+         ( get_min_bulk_bond(basis_lw_) + get_min_bulk_bond(basis_up_) )/2._real32
     write(6,'(1X,"Avg min bulk bond: ",F0.3," Å")') avg_min_bond
     write(6,'(1X,"Trans-interfacial scaling factor: ",F0.3)') c_scale
     if(ishift.eq.-1) nshift=1
@@ -529,11 +552,11 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! gets bulk DONs, if ISHIFT = 4
 !!!-----------------------------------------------------------------------------
-    allocate(lw_map(inlw_bas%nspec,maxval(inlw_bas%spec(:)%num,dim=1),2))
-    allocate(up_map(inup_bas%nspec,maxval(inup_bas%spec(:)%num,dim=1),2))    
+    allocate(lw_map(basis_lw_%nspec,maxval(basis_lw_%spec(:)%num,dim=1),2))
+    allocate(up_map(basis_up_%nspec,maxval(basis_up_%spec(:)%num,dim=1),2))    
     if(ishift.eq.4.or.ishift.eq.0)then
        lw_map=0
-       bulk_DON(1)%spec=gen_DON(inlw_lat,inlw_bas,&
+       bulk_DON(1)%spec=gen_DON(basis_lw_%lat,basis_lw_,&
             dist_max=max_bondlength,&
             scale_dist=.false.,&
             norm=.true.)
@@ -564,7 +587,7 @@ contains
           end if
        end do
        up_map=0
-       bulk_DON(2)%spec=gen_DON(inup_lat,inup_bas,&
+       bulk_DON(2)%spec=gen_DON(basis_up_%lat,basis_up_,&
             dist_max=max_bondlength,&
             scale_dist=.false.,&
             norm=.true.)
@@ -603,7 +626,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! checks whether system appears layered
 !!!-----------------------------------------------------------------------------
-    lw_layered_axis=get_layered_axis(inlw_lat,inlw_bas)
+    lw_layered_axis=get_layered_axis(basis_lw_%lat,basis_lw_)
     if(.not.lw_layered.and.lw_layered_axis.gt.0)then
        ivtmp1=0
        ivtmp1(lw_layered_axis)=1
@@ -625,7 +648,7 @@ contains
        lw_mplane(lw_layered_axis)=1
     end if
 
-    up_layered_axis=get_layered_axis(inup_lat,inup_bas)
+    up_layered_axis=get_layered_axis(basis_up_%lat,basis_up_)
     if(.not.up_layered.and.up_layered_axis.gt.0)then
        ivtmp1=0
        ivtmp1(up_layered_axis)=1
@@ -675,53 +698,53 @@ contains
     if(any(lw_mplane.ne.0))then
        if(imatch.ne.0)then
           abc="ab"
-          tfmat=planecutter(inlw_lat,real(lw_mplane,real32))
-          call transformer(inlw_bas,tfmat,lw_map)
+          tfmat=planecutter(basis_lw_%lat,real(lw_mplane,real32))
+          call transformer(basis_lw_,tfmat,lw_map)
           SAV=get_best_match(&
-               tolerance,&
-               inlw_lat,inup_lat,&
-               inlw_bas,inup_bas,&
-               abc,"abc",lprint_matches,ierror,imatch=imatch)
+               this%tolerance,&
+               basis_lw_%lat,basis_up_%lat,&
+               basis_lw_,basis_up_,&
+               trim(abc),"abc",lprint_matches,ierror,imatch=imatch)
        elseif(any(up_mplane.ne.0))then
           SAV=get_best_match(&
-               tolerance,&
-               inlw_lat,inup_lat,&
-               inlw_bas,inup_bas,&
-               abc,"abc",lprint_matches,ierror,imatch=imatch,&
+               this%tolerance,&
+               basis_lw_%lat,basis_up_%lat,&
+               basis_lw_,basis_up_,&
+               trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
                plane1=lw_mplane,plane2=up_mplane,nmiller=nmiller)
        else
           SAV=get_best_match(&
-               tolerance,&
-               inlw_lat,inup_lat,&
-               inlw_bas,inup_bas,&
-               abc,"abc",lprint_matches,ierror,imatch=imatch,&
+               this%tolerance,&
+               basis_lw_%lat,basis_up_%lat,&
+               basis_lw_,basis_up_,&
+               trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
                plane1=lw_mplane,nmiller=nmiller)
        end if
     elseif(any(up_mplane.ne.0))then
        SAV=get_best_match(&
-            tolerance,&
-            inlw_lat,inup_lat,&
-            inlw_bas,inup_bas,&
-            abc,"abc",lprint_matches,ierror,imatch=imatch,&
+            this%tolerance,&
+            basis_lw_%lat,basis_up_%lat,&
+            basis_lw_,basis_up_,&
+            trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
             plane2=up_mplane,nmiller=nmiller)
     else
        SAV=get_best_match(&
-            tolerance,&
-            inlw_lat,inup_lat,&
-            inlw_bas,inup_bas,&
-            abc,"abc",lprint_matches,ierror,imatch=imatch,&
+            this%tolerance,&
+            basis_lw_%lat,basis_up_%lat,&
+            basis_lw_,basis_up_,&
+            trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
             nmiller=nmiller)
     end if
-    if(min(tolerance%nstore,SAV%nfit).eq.0)then
+    if(min(this%tolerance%nstore,SAV%nfit).eq.0)then
        write(0,'("No matches found.")')
        write(0,'("Exiting...")')
        call exit()
     else
        write(0,'(1X,"Number of matches found: ",I0)')&
-            min(tolerance%nstore,SAV%nfit)
+            min(this%tolerance%nstore,SAV%nfit)
     end if
     write(6,'(1X,"Maximum number of generated interfaces will be: ",I0)')&
-         nterm*nshift*tolerance%nstore
+         nterm*nshift*this%tolerance%nstore
     if(.not.lgen_interfaces)then
        write(0,'(1X,"Told not to generate interfaces, just find matches.")')
        write(0,'("Exiting...")')
@@ -742,7 +765,7 @@ contains
        write(6,'(1X,"Generating only interfaces for match ",I0)') iintf
     else
        intf_start=1
-       intf_end=min(tolerance%nstore,SAV%nfit)
+       intf_end=min(this%tolerance%nstore,SAV%nfit)
     end if
     iunique=0
 !!!-----------------------------------------------------------------------------
@@ -750,8 +773,8 @@ contains
 !!!-----------------------------------------------------------------------------
     intf_loop: do ifit=intf_start,intf_end
        write(6,'("Fit number: ",I0)') ifit
-       call lw_bas%copy(inlw_bas)
-       call up_bas%copy(inup_bas)
+       call lw_bas%copy(basis_lw_)
+       call up_bas%copy(basis_up_)
        if(allocated(t1lw_map)) deallocate(t1lw_map)
        if(allocated(t1up_map)) deallocate(t1up_map)
        allocate(t1lw_map,source=lw_map)
@@ -794,7 +817,7 @@ contains
                dist_max=max_bondlength,&
                scale_dist=.false.,&
                norm=.true.)
-          !call err_abort_print_struc(inup_bas,"bulk_up_term.vasp",&
+          !call err_abort_print_struc(basis_up_,"bulk_up_term.vasp",&
           !     "",.false.)
        end if
 
@@ -968,9 +991,9 @@ contains
              !!-----------------------------------------------------------------
              !! Checks stoichiometry
              !!-----------------------------------------------------------------
-             if(tlw_bas%nspec.ne.inlw_bas%nspec.or.any(&
-                  (inlw_bas%spec(1)%num*tlw_bas%spec(:)%num)&
-                  /tlw_bas%spec(1)%num.ne.inlw_bas%spec(:)%num))then
+             if(tlw_bas%nspec.ne.basis_lw_%nspec.or.any(&
+                  (basis_lw_%spec(1)%num*tlw_bas%spec(:)%num)&
+                  /tlw_bas%spec(1)%num.ne.basis_lw_%spec(:)%num))then
                 write(6,'("WARNING: This lower surface termination is not &
                      &stoichiometric")')
                 if(lw_layered)then
@@ -980,9 +1003,9 @@ contains
                    cycle lw_term_loop
                 end if
              end if
-             if(tup_bas%nspec.ne.inup_bas%nspec.or.any(&
-                  (inup_bas%spec(1)%num*tup_bas%spec(:)%num)&
-                  /tup_bas%spec(1)%num.ne.inup_bas%spec(:)%num))then
+             if(tup_bas%nspec.ne.basis_up_%nspec.or.any(&
+                  (basis_up_%spec(1)%num*tup_bas%spec(:)%num)&
+                  /tup_bas%spec(1)%num.ne.basis_up_%spec(:)%num))then
                 write(6,'("WARNING: This upper surface termination is not &
                      &stoichiometric")')
                 if(up_layered)then
@@ -1060,7 +1083,7 @@ contains
              !!-----------------------------------------------------------------
              !! Generates shifts and swaps and prints the subsequent structures
              !!-----------------------------------------------------------------
-             call gen_shifts_and_swaps(slat,sbas,axis,intf_loc,avg_min_bond,&
+             call gen_shifts_and_swaps(sbas,axis,intf_loc,avg_min_bond,&
                   ishift,nshift,&
                   iswap,swap_den,nswap,t2lw_map)
 
@@ -1083,7 +1106,7 @@ contains
 
 
     return
-  end subroutine gen_interfaces
+  end subroutine generate_interfaces
 !!!#############################################################################
 
 
@@ -1092,11 +1115,12 @@ contains
 !!! Prints these new structures to POSCARs.
 !!!#############################################################################
 !!! ISWAP METHOD NOT YET SET UP
-  subroutine gen_shifts_and_swaps(lat,bas,axis,intf_loc,bond,&
+  subroutine gen_shifts_and_swaps(basis,axis,intf_loc,bond,&
        ishift,nshift,&
        iswap,swap_den,nswap,&
        map)
     implicit none
+    type(basis_type), intent(in) :: basis
     integer :: shift_unit=10
     integer :: ounit,iaxis,k,l
     integer :: ngen_swaps,nswaps_per_cell
@@ -1115,8 +1139,6 @@ contains
     integer, intent(in) :: nshift,nswap
     integer, intent(in) :: ishift,iswap
     real(real32), intent(in) :: bond,swap_den
-    type(basis_type), intent(in) :: bas
-    real(real32), dimension(3,3), intent(in) :: lat
 
     integer, dimension(:,:,:), optional, intent(in) :: map
 
@@ -1156,7 +1178,7 @@ contains
        end do
     case(2)
        output_shifts = get_fit_shifts(&
-            lat=lat,bas=bas,&
+            lat=basis%lat,bas=basis,&
             bond=bond,&
             axis=axis,&
             intf_loc=intf_loc,&
@@ -1164,7 +1186,7 @@ contains
             nstore=nshift)
     case(3)
        output_shifts = get_descriptive_shifts(&
-            lat=lat,bas=bas,&
+            lat=basis%lat,bas=basis,&
             bond=bond,&
             axis=axis,&
             intf_loc=intf_loc,&
@@ -1173,7 +1195,7 @@ contains
     case(4)
        if(present(map))then
           output_shifts = get_shifts_DON(&
-               lat=lat,bas=bas,&
+               lat=basis%lat,bas=basis,&
                axis=axis,&
                intf_loc=intf_loc,&
                nstore=nshift,c_scale=c_scale,offset=offset(1,:3),&
@@ -1181,7 +1203,7 @@ contains
                max_bondlength=max_bondlength)
        else
           output_shifts = get_shifts_DON(&
-               lat=lat,bas=bas,&
+               lat=basis%lat,bas=basis,&
                axis=axis,&
                intf_loc=intf_loc,&
                nstore=nshift,c_scale=c_scale,offset=offset(1,:3),&
@@ -1203,7 +1225,7 @@ contains
        end do
     end select
     if(ishift.gt.0)then
-       output_shifts(:,axis) = output_shifts(:,axis)*modu(lat(axis,:))
+       output_shifts(:,axis) = output_shifts(:,axis)*modu(basis%lat(axis,:))
     end if
 
 
@@ -1216,7 +1238,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Determines number of swaps across the interface
 !!!-----------------------------------------------------------------------------
-    nswaps_per_cell=nint(swap_den*get_area([lat(abc(1),:)],[lat(abc(2),:)]))
+    nswaps_per_cell=nint(swap_den*get_area([basis%lat(abc(1),:)],[basis%lat(abc(2),:)]))
     if(iswap.ne.0)then
        write(6,&
             '(" Generating ",I0," swaps per structure ")') nswaps_per_cell
@@ -1227,7 +1249,7 @@ contains
 !!! Prints each unique shift structure
 !!!-----------------------------------------------------------------------------
     shift_loop: do k=1,nshift
-       call tbas%copy(bas)
+       call tbas%copy(basis)
        toffset=output_shifts(k,:3)
        do iaxis=1,2
           call shift_region(tbas,axis,&
@@ -1244,7 +1266,7 @@ contains
             basis=tbas,&
             axis=axis,loc=dtmp1,&
             vac=toffset(axis))
-       min_bond = get_shortest_bond(tlat,tbas)
+       min_bond = get_shortest_bond(tbas)
        if(min_bond%length.le.1.5_real32)then
           write(msg,'("Smallest bond in the interface structure is\nless than 1.5 Å.")')
           call print_warning(trim(msg))

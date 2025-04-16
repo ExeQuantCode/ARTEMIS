@@ -171,32 +171,36 @@ contains
 !!!#############################################################################
 !!! returns minimum bond within bulk
 !!!#############################################################################
-  function get_min_bulk_bond(lat,bas) result(min_bond)
+  function get_min_bulk_bond(basis) result(min_bond)
     implicit none
+    type(basis_type), intent(in) :: basis
+
     integer :: is,ia,js,ja
     real(real32) :: dtmp1,min_bond
-    type(basis_type) :: bas
     real(real32), dimension(3) :: vdtmp1
-    real(real32), dimension(3,3) :: lat
 
 
     min_bond=huge(0._real32)
-    if(bas%natom.eq.1)then
-       min_bond = min(modu(lat(1,:3)),modu(lat(2,:3)),modu(lat(3,:3)))
+    if(basis%natom.eq.1)then
+       min_bond = min( &
+            modu(basis%lat(1,:3)), &
+            modu(basis%lat(2,:3)), &
+            modu(basis%lat(3,:3)) &
+       )
        return
     end if
 
-    do is=1,bas%nspec
-       do ia=1,bas%spec(is)%num
+    do is = 1, basis%nspec
+       do ia = 1, basis%spec(is)%num
 
-          do js=1,bas%nspec
-             atmloop: do ja=1,bas%spec(js)%num
+          do js=1,basis%nspec
+             atmloop: do ja=1,basis%spec(js)%num
                 if(is.eq.js.and.ia.eq.ja) cycle atmloop
-                vdtmp1 = bas%spec(js)%atom(ja,:3) - bas%spec(is)%atom(ia,:3)
+                vdtmp1 = basis%spec(js)%atom(ja,:3) - basis%spec(is)%atom(ia,:3)
                 vdtmp1 = &
-                     vdtmp1(1)*lat(1,:3) + &
-                     vdtmp1(2)*lat(2,:3) + &
-                     vdtmp1(3)*lat(3,:3)
+                     vdtmp1(1)*basis%lat(1,:3) + &
+                     vdtmp1(2)*basis%lat(2,:3) + &
+                     vdtmp1(3)*basis%lat(3,:3)
                 dtmp1 = modu(vdtmp1)
                 if(dtmp1.lt.min_bond) min_bond = dtmp1
              end do atmloop
@@ -1013,16 +1017,16 @@ contains
 !!!#############################################################################
 !!! Uses Buerger's algorithm to reduce cell.
 !!!#############################################################################
-  subroutine reducer(lat,bas,tmptype,ltmp)
+  subroutine reducer(basis,tmptype,ltmp)
     implicit none
+    type(basis_type), intent(inout) :: basis
     integer :: cell_type
     integer :: i,j,k,count,limit
-    real(real32), dimension(3,3) :: lat,newlat,transmat,S,tmp_mat
+    real(real32), dimension(3,3) :: newlat,transmat,S,tmp_mat
     real(real32) :: tiny,pi,pi2
     logical :: verb,lreduced
     integer, optional :: tmptype
     logical, optional :: ltmp
-    type(basis_type) :: bas
 
 
 
@@ -1037,22 +1041,22 @@ contains
     count=0
     limit=100
     lreduced=.false.
-    tiny=1E-5*(get_vol(lat))**(1.E0/3.E0)
+    tiny=1E-5*(get_vol(basis%lat))**(1.E0/3.E0)
     pi=4._real32*atan(1._real32)
     pi2=2._real32*atan(1._real32)
     transmat=0._real32
     do i=1,3
        transmat(i,i)=1._real32
     end do
-    newlat=lat
+    newlat = basis%lat
 
 
 !!!-----------------------------------------------------------------------------
 !!! performs checks on the other main conditions defined by Niggli
 !!!-----------------------------------------------------------------------------
     find_reduced: do while(.not.lreduced)
-       count=count+1
-       call mkNiggli_lat(lat,newlat,transmat,S)
+       count = count + 1
+       call mkNiggli_lat(basis%lat,newlat,transmat,S)
        lreduced=reduced_check(newlat,cell_type,S)
        if(lreduced) exit
        if(verb) then
@@ -1076,7 +1080,7 @@ contains
              call swap(transmat(i,:),transmat(j,:))
              transmat=-transmat
              if(i.eq.2) cycle find_reduced
-             call mkNiggli_lat(lat,newlat,transmat,S)
+             call mkNiggli_lat(basis%lat,newlat,transmat,S)
           end if
        end do
 
@@ -1089,7 +1093,7 @@ contains
        if(i*j*k.gt.0) then
           tmp_mat=reshape((/i,0,0,  0,j,0,  0,0,k/),shape(tmp_mat))
           transmat=matmul(transpose(tmp_mat),transmat)
-          call mkNiggli_lat(lat,newlat,transmat,S)
+          call mkNiggli_lat(basis%lat,newlat,transmat,S)
        end if
 
 
@@ -1101,7 +1105,7 @@ contains
        if(i*j*k.gt.0) then
           tmp_mat=reshape((/i,0,0,  0,j,0,  0,0,k/),shape(tmp_mat))
           transmat=matmul(transpose(tmp_mat),transmat)
-          call mkNiggli_lat(lat,newlat,transmat,S)
+          call mkNiggli_lat(basis%lat,newlat,transmat,S)
        end if
 
 
@@ -1169,7 +1173,7 @@ contains
        tmp_mat=reshape((/-1,0,0,  0,-1,0,  0,0,-1/),shape(tmp_mat))
        transmat=matmul(transpose(tmp_mat),transmat)
     end if
-    call mkNiggli_lat(lat,newlat,transmat,S)
+    call mkNiggli_lat(basis%lat,newlat,transmat,S)
     lreduced=reduced_check(newlat,cell_type,S,"n")
     if(verb) then
        write(67,*) lreduced
@@ -1180,13 +1184,13 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Renormalises the lattice and basis into the new lattice
 !!!-----------------------------------------------------------------------------
-    lat=newlat
-    do i=1,bas%nspec
-       do j=1,bas%spec(i)%num
-          bas%spec(i)%atom(j,:3)=&
-               matmul(bas%spec(i)%atom(j,:3),inverse_3x3(transmat))
-          bas%spec(i)%atom(j,:3)=&
-               bas%spec(i)%atom(j,:3)-floor(bas%spec(i)%atom(j,:3))
+    basis%lat = newlat
+    do i = 1, basis%nspec
+       do j = 1, basis%spec(i)%num
+          basis%spec(i)%atom(j,:3) = &
+               matmul( basis%spec(i)%atom(j,:3), inverse_3x3(transmat) )
+          basis%spec(i)%atom(j,:3) = &
+               basis%spec(i)%atom(j,:3) - floor( basis%spec(i)%atom(j,:3) )
        end do
     end do
 
@@ -2334,35 +2338,35 @@ contains
 !!!#############################################################################
 !!! identify the shortest bond in the crystal, takes in crystal basis
 !!!#############################################################################
-  function get_shortest_bond(lat,bas) result(bond)
+  function get_shortest_bond(basis) result(bond)
     implicit none
+    type(basis_type), intent(in) :: basis
+
     integer :: is,js,ia,ja,ja_start
     real(real32) :: dist,min_bond
-    type(basis_type), intent(in) :: bas
     type(bond_type) :: bond
     real(real32), dimension(3) :: vec
     integer, dimension(2,2) :: atoms
-    real(real32), dimension(3,3) :: lat
     
-    min_bond = 100._real32
+    min_bond = huge(1._real32)
     atoms = 0
-    do is=1,bas%nspec
-       do js=is,bas%nspec
-          do ia=1,bas%spec(is)%num
+    do is = 1, basis%nspec
+       do js = is, basis%nspec
+          do ia = 1, basis%spec(is)%num
              if(is.eq.js)then
-                ja_start = ia+1
+                ja_start = ia + 1
              else
                 ja_start = 1
              end if
-             do ja=ja_start,bas%spec(js)%num
-                vec = bas%spec(is)%atom(ia,:3) - bas%spec(js)%atom(ja,:3)
+             do ja=ja_start,basis%spec(js)%num
+                vec = basis%spec(is)%atom(ia,:3) - basis%spec(js)%atom(ja,:3)
                 vec = vec - ceiling(vec - 0.5_real32)
-                vec = matmul(vec,lat)
+                vec = matmul(vec,basis%lat)
                 dist = modu(vec)
                 if(dist.lt.min_bond)then
                    min_bond = dist
-                   atoms(1,:) = (/is, ia/)
-                   atoms(2,:) = (/js, ja/)
+                   atoms(1,:) = [ is, ia ]
+                   atoms(2,:) = [ js, ja ]
                 end if
              end do
           end do
@@ -2370,7 +2374,6 @@ contains
     end do
     bond%length = min_bond
     bond%atoms = atoms
-
 
   end function get_shortest_bond
 !!!#############################################################################
