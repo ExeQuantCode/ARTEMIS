@@ -411,9 +411,9 @@ contains
     real(real32), dimension(:,:), intent(in) :: mat
     real(real32), dimension(size(mat(:,1),dim=1),size(mat(1,:),dim=1)) :: inverse
 
-    if(size(mat(1,:),dim=1).eq.2)then
+    if(size(mat,dim=2).eq.2)then
        inverse = inverse_2x2(mat)
-    elseif(size(mat(1,:),dim=1).eq.3)then
+    elseif(size(mat,dim=2).eq.3)then
        inverse = inverse_3x3(mat)
     end if
 
