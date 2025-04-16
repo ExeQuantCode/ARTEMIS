@@ -539,7 +539,7 @@ contains
     write(6,*)
     if(lw_use_pricel)then
        write(6,'(1X,"Using primitive cell for lower material")')
-       call get_primitive_cell(basis_lw_%lat,basis_lw_)
+       call get_primitive_cell(basis_lw_)
     else
        write(6,'(1X,"Using supplied cell for lower material")')
        call reducer(basis_lw_)
@@ -547,7 +547,7 @@ contains
     end if
     if(up_use_pricel)then
        write(6,'(1X,"Using primitive cell for upper material")')
-       call get_primitive_cell(basis_up_%lat,basis_up_)
+       call get_primitive_cell(basis_up_)
     else
        write(6,'(1X,"Using supplied cell for upper material")')
        call reducer(basis_up_)

@@ -1007,8 +1007,10 @@ contains
 !!!#############################################################################
 !!! returns the primitive cell from a supercell
 !!!#############################################################################
-  subroutine get_primitive_cell(lat,bas)
+  subroutine get_primitive_cell(basis)
     implicit none
+    type(basis_type), intent(inout) :: basis
+
     integer :: is,ia,ja,i,j,k,itmp1
     integer :: ntrans,len
     real(real32) :: scale,proj,dtmp1
@@ -1016,8 +1018,6 @@ contains
     real(real32), dimension(3,3) :: dmat1,invlat
     real(real32), allocatable, dimension(:,:) :: trans,atom_store
     
-    type(basis_type) :: bas
-    real(real32), dimension(3,3) :: lat
 
     
     !!-----------------------------------------------------------------------
@@ -1025,14 +1025,14 @@ contains
     !!-----------------------------------------------------------------------
     ntrans = 0
     dmat1=0._real32
-    allocate(trans(minval(bas%spec(:)%num+2),3)); trans=0._real32
+    allocate(trans(minval(basis%spec(:)%num+2),3)); trans=0._real32
 
     
     !!-----------------------------------------------------------------------
     !! Find the translation vectors in the cell
     !!-----------------------------------------------------------------------
-    call gldfnd(confine,bas,bas,trans,ntrans,.false.)
-    len=size(bas%spec(1)%atom,dim=2)
+    call gldfnd(confine,basis,basis,trans,ntrans,.false.)
+    len=size(basis%spec(1)%atom,dim=2)
 
     
     !!-----------------------------------------------------------------------
@@ -1043,7 +1043,7 @@ contains
           trans(i,:)=0._real32
           trans(i,i-ntrans)=1._real32
        end do
-       !  trans=matmul(trans(1:ntrans,1:3),lat)
+       !  trans=matmul(trans(1:ntrans,1:3),basis%lat)
        call sort2D(trans(1:ntrans+3,:),ntrans+3)
        !! for each lattice vector, determine the shortest translation ...
        !! ... vector that has a non-zero projection along that lattice vector.
@@ -1067,34 +1067,34 @@ contains
        end do
        !dmat1=trans(1:3,1:3)
        scale=det(dmat1)
-       dmat1=matmul(dmat1,lat)
+       dmat1=matmul(dmat1,basis%lat)
        invlat=inverse_3x3(dmat1)
-       do is=1,bas%nspec
+       do is=1,basis%nspec
           itmp1=0
-          allocate(atom_store(nint(scale*bas%spec(is)%num),len))
-          atcheck: do ia=1,bas%spec(is)%num
+          allocate(atom_store(nint(scale*basis%spec(is)%num),len))
+          atcheck: do ia=1,basis%spec(is)%num
              !!-----------------------------------------------------------------
              !! Reduce the basis
              !!-----------------------------------------------------------------
-             bas%spec(is)%atom(ia,1:3)=&
-                  matmul(bas%spec(is)%atom(ia,1:3),lat(1:3,1:3))
-             bas%spec(is)%atom(ia,1:3)=&
-                  matmul(transpose(invlat(1:3,1:3)),bas%spec(is)%atom(ia,1:3))
+             basis%spec(is)%atom(ia,1:3)=&
+                  matmul(basis%spec(is)%atom(ia,1:3),basis%lat(1:3,1:3))
+             basis%spec(is)%atom(ia,1:3)=&
+                  matmul(transpose(invlat(1:3,1:3)),basis%spec(is)%atom(ia,1:3))
              do j=1,3
-                bas%spec(is)%atom(ia,j)=&
-                     bas%spec(is)%atom(ia,j)-floor(bas%spec(is)%atom(ia,j))
-                if(bas%spec(is)%atom(ia,j).gt.1._real32-tol_sym) &
-                     bas%spec(is)%atom(ia,j)=0._real32
+                basis%spec(is)%atom(ia,j)=&
+                     basis%spec(is)%atom(ia,j)-floor(basis%spec(is)%atom(ia,j))
+                if(basis%spec(is)%atom(ia,j).gt.1._real32-tol_sym) &
+                     basis%spec(is)%atom(ia,j)=0._real32
              end do
              !!-----------------------------------------------------------------
              !! Check for duplicates in the cell
              !!-----------------------------------------------------------------
              do ja=1, itmp1
-                if(all(abs(bas%spec(is)%atom(ia,1:3)-atom_store(ja,1:3)).lt.&
+                if(all(abs(basis%spec(is)%atom(ia,1:3)-atom_store(ja,1:3)).lt.&
                      (/tol_sym,tol_sym,tol_sym/))) cycle atcheck
              end do
              itmp1=itmp1+1
-             atom_store(itmp1,:)=bas%spec(is)%atom(ia,:)
+             atom_store(itmp1,:)=basis%spec(is)%atom(ia,:)
              !!-----------------------------------------------------------------
              !! Check to ensure correct number of atoms remain after reduction
              !!-----------------------------------------------------------------
@@ -1105,26 +1105,26 @@ contains
              end if
              !!-----------------------------------------------------------------
           end do atcheck
-          deallocate(bas%spec(is)%atom)
-          call move_alloc(atom_store,bas%spec(is)%atom)
-          bas%spec(is)%num=size(bas%spec(is)%atom,dim=1)
+          deallocate(basis%spec(is)%atom)
+          call move_alloc(atom_store,basis%spec(is)%atom)
+          basis%spec(is)%num=size(basis%spec(is)%atom,dim=1)
           !deallocate(atom_store)
        end do
        !!-----------------------------------------------------------------------
        !! Reduce the lattice
        !!-----------------------------------------------------------------------
-       bas%natom=sum(bas%spec(:)%num)
-       lat=dmat1
+       basis%natom=sum(basis%spec(:)%num)
+       basis%lat=dmat1
     end if
 
     
     !!-----------------------------------------------------------------------
     !! Reduce the lattice to symmetry definition
     !!-----------------------------------------------------------------------
-    call reducer(bas)
+    call reducer(basis)
     !! next line necessary as FCC and BCC do not conform to Niggli reduced ...
     !! ... cell definitions.
-    lat = primitive_lat(lat)
+    basis%lat = primitive_lat(basis%lat)
 
 
     
