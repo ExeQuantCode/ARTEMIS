@@ -79,6 +79,7 @@ contains
 !###############################################################################
   subroutine set_tolerance( &
        this, &
+       tolerance, &
        vector_mismatch, angle_mismatch, area_mismatch, &
        max_length, max_area, max_fit, max_extension, &
        angle_weight, area_weight &
@@ -89,6 +90,8 @@ contains
     ! Arguments
     class(artemis_interface_generator_type), intent(inout) :: this
     !! Instance of artemis generator type
+    type(tol_type), intent(in), optional :: tolerance
+    !! Tolerance structure
     real(real32), intent(in), optional :: vector_mismatch
     !! Tolerance for the vector mismatch
     real(real32), intent(in), optional :: angle_mismatch
@@ -107,6 +110,8 @@ contains
     !! Importance weighting of angle mismatch
     real(real32), intent(in), optional :: area_weight
     !! Importance weighting of area mismatch
+
+    if(present(tolerance)) this%tolerance = tolerance
 
     if(present(vector_mismatch)) then
        this%tolerance%vec = vector_mismatch

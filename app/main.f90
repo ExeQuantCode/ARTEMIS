@@ -90,6 +90,9 @@ program artemis_executable
      !! interface generator
      !!-------------------------------------------------------------------------
      if(irestart.eq.0)then
+        call intf_gen%set_tolerance( &
+               tolerance = tolerance &
+        )
         call intf_gen%generate(struc1_bas, struc2_bas)
      else
         call intf_gen%restart(struc1_bas)
