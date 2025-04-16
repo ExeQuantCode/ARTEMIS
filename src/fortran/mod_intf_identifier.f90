@@ -4,11 +4,12 @@
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
 module interface_identifier
-  use misc, only: swap_d,sort1D
+  use artemis__constants, only: real32
+  use artemis__misc, only: swap,sort1D
   use misc_linalg, only: modu,simeq,get_area,uvec
   use misc_maths, only: gauss_array,get_turn_points,overlap_indiv_points,&
        running_avg,mean,median,mode
-  use rw_geom
+  use artemis__geom_rw
   implicit none
 
   private
@@ -17,14 +18,14 @@ module interface_identifier
 
   type intf_info_type
      integer :: axis
-     double precision, dimension(2) :: loc
+     real(real32), dimension(2) :: loc
   end type intf_info_type
   
   type den_of_neigh_type
-     double precision, allocatable, dimension(:,:) :: atom
+     real(real32), allocatable, dimension(:,:) :: atom
   end type den_of_neigh_type
   type den_of_spec_type
-     double precision, allocatable, dimension(:,:,:) :: atom
+     real(real32), allocatable, dimension(:,:,:) :: atom
   end type den_of_spec_type
 
 
@@ -47,9 +48,9 @@ contains
     implicit none
     integer :: nstep
     real :: dist_max
-    type(bas_type) :: bas
+    type(basis_type) :: bas
     type(intf_info_type) :: intf
-    double precision, dimension(3,3) :: lat
+    real(real32), dimension(3,3) :: lat
     type(den_of_spec_type), allocatable, dimension(:) :: DOS
 
     integer, optional, intent(in) :: axis
@@ -67,7 +68,7 @@ contains
 
     intf%loc=get_intf_CAD(lat,bas,intf%axis,nstep)
 
-    if(intf%loc(1).gt.intf%loc(2)) call swap_d(intf%loc(1),intf%loc(2))
+    if(intf%loc(1).gt.intf%loc(2)) call swap(intf%loc(1),intf%loc(2))
 
 
   end function get_interface
@@ -92,8 +93,8 @@ contains
 
     real, optional, intent(in) :: dist_max
     logical, optional, intent(in) :: scale_dist,norm
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(3,3), intent(in) :: lat
+    type(basis_type), intent(in) :: bas
+    real(real32), dimension(3,3), intent(in) :: lat
     
     real, allocatable, dimension(:) :: dist_list
 
@@ -116,7 +117,7 @@ contains
     end do
 
     allocate(distance(nstep))
-    rdist_max=12.D0
+    rdist_max=12._real32
     if(present(dist_max)) rdist_max=dist_max
     do i=1,nstep
        distance(i)=real(i)*rdist_max/real(nstep)
@@ -192,10 +193,10 @@ contains
     nsize = bas%natom*(2*ncell(1)+1) * (2*ncell(2)+1) * (2*ncell(3)+1) - 1
     allocate(dist_list(nsize))
 
-    gauss_tol=16.E0!38.D0
+    gauss_tol=16.E0!38._real32
     DON_sigma=0.5E-1
     specloop1: do is=1,bas%nspec
-       DOS(is)%atom(:,:,:)=0.D0
+       DOS(is)%atom(:,:,:)=0._real32
        atomloop1: do ia=1,bas%spec(is)%num
 
           specloop2: do js=1,bas%nspec
@@ -238,8 +239,8 @@ contains
           end do specloop2
 
           if(lscale_dist)then
-             do i=minloc(abs(distance(:)-2.D0),dim=1),nstep
-                !dist=abs(1.D0/distance(i))**2.D0
+             do i=minloc(abs(distance(:)-2._real32),dim=1),nstep
+                !dist=abs(1._real32/distance(i))**2._real32
                 dist=exp(-abs(distance(i)-2.E0))
                 DOS(is)%atom(ia,:,i)=DOS(is)%atom(ia,:,i)*dist
              end do
@@ -265,8 +266,8 @@ contains
     
     real, optional, intent(in) :: dist_max
     logical, optional, intent(in) :: scale_dist,norm
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(3,3), intent(in) :: lat
+    type(basis_type), intent(in) :: bas
+    real(real32), dimension(3,3), intent(in) :: lat
 
 
     if(present(scale_dist))then
@@ -328,12 +329,12 @@ contains
 !!!-----------------------------------------------------------------------------
     nstep=size(DON(1)%atom(1,:))
     allocate(distance(nstep))
-    rdist_max=12.D0
+    rdist_max=12._real32
     if(present(dist_max)) rdist_max=dist_max
     do i=1,nstep
        distance(i)=real(i)*rdist_max/real(nstep)
     end do
-    rcutoff=4.D0
+    rcutoff=4._real32
     if(present(cutoff)) rcutoff=min(rcutoff,cutoff)
     cutloc=minloc(abs(distance(:)-rcutoff),dim=1)
 
@@ -415,7 +416,7 @@ contains
           itmp1=i
        end do
     case(3)
-       maxjump=0.D0
+       maxjump=0._real32
        do i=2,natom
           if(simi(i)-simi(i-1).gt.maxjump)then
              maxjump = simi(i) - simi(i-1)
@@ -450,7 +451,7 @@ contains
 !!!#############################################################################
 !  subroutine get_intf_atoms(lat1,bas1,lat2,bas2)
 !    implicit none
-!    double precision, dimension(3,3) :: lat1,lat2
+!    real(real32), dimension(3,3) :: lat1,lat2
 !    integer, allocatable, dimension(:,:) :: intf_list1,intf_list2
 !
 !
@@ -472,10 +473,10 @@ contains
     real :: rdist_max,rcutoff,power,rtmp1
     real, optional, intent(in) :: dist_max,cutoff
     logical, optional :: lprint
-    type(bas_type) :: bas
-    double precision, dimension(3) :: dir_disim
+    type(basis_type) :: bas
+    real(real32), dimension(3) :: dir_disim
     real, dimension(3) :: vtmp1,vtmp2,vtmp3
-    double precision, dimension(3,3) :: lat
+    real(real32), dimension(3,3) :: lat
     real, allocatable, dimension(:) :: sim_dist,distance
     
 
@@ -517,7 +518,7 @@ contains
        distloop2: do is=1,bas%nspec
           do ia=1,bas%spec(is)%num
              itmp1=0
-             sim_dist=0.D0
+             sim_dist=0._real32
              !!-----------------------------------------------------------------
              !! identifies the similarity (scaled by inverse distance) ...
              !! ... between an atom and each other atom of the same species.
@@ -533,7 +534,7 @@ contains
                       nloop3: do n=-1,1,1
                          vtmp2(3) = vtmp1(3) + real(n)
                          vtmp3 = matmul(vtmp2,real(lat))
-                         !rtmp1=table_func(vtmp3(i),0.8D0)
+                         !rtmp1=table_func(vtmp3(i),0.8_real32)
                          !rtmp1=exp(-abs(vtmp3(i))*power)
                          rtmp1=exp(-modu(vtmp3)*power)
                          if(rtmp1.lt.1.D-3) cycle nloop3
@@ -558,7 +559,7 @@ contains
 
           end do
        end do distloop2
-       dir_disim(i)=0.D0
+       dir_disim(i)=0._real32
        !!-----------------------------------------------------------------------
        !! finds max difference between points within the cell along a direction
        !!-----------------------------------------------------------------------
@@ -567,7 +568,7 @@ contains
              do ja=ia+1,bas%spec(is)%num
                 if( abs( &
                      intf_func(i,is)%atom(ia,1) - &
-                     intf_func(i,is)%atom(ja,1)).lt.1.D0)then
+                     intf_func(i,is)%atom(ja,1)).lt.1._real32)then
                    if( abs( &
                         intf_func(i,is)%atom(ia,2) - &
                         intf_func(i,is)%atom(ja,2)).gt.dir_disim(i) )then
@@ -604,17 +605,17 @@ contains
     implicit none
     integer :: i,j,is,iaxis
     integer :: pntl,pntr,nstep
-    double precision :: sigma,gauss_tol,area
+    real(real32) :: sigma,gauss_tol,area
     integer, dimension(3) :: abc
-    double precision, dimension(3) :: vtmp1,vtmp2,axis_vec
+    real(real32), dimension(3) :: vtmp1,vtmp2,axis_vec
     real, allocatable, dimension(:) :: rangevec
-    double precision, allocatable, dimension(:) :: dist,multiCADD
-    double precision, allocatable, dimension(:,:) :: CAD,deriv
-    double precision, allocatable, dimension(:,:,:) :: CADD
+    real(real32), allocatable, dimension(:) :: dist,multiCADD
+    real(real32), allocatable, dimension(:,:) :: CAD,deriv
+    real(real32), allocatable, dimension(:,:,:) :: CADD
 
     integer :: axis
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(3,3), intent(in) :: lat
+    type(basis_type), intent(in) :: bas
+    real(real32), dimension(3,3), intent(in) :: lat
 
 
 
@@ -623,10 +624,10 @@ contains
 !!!-----------------------------------------------------------------------------
     nstep=nstep_default
     allocate(dist(nstep))
-    dist=0.D0
+    dist=0._real32
 
-    sigma=2.D0
-    gauss_tol=16.D0
+    sigma=2._real32
+    gauss_tol=16._real32
     allocate(rangevec(bas%nspec))
     allocate(deriv(bas%nspec,nstep))
     allocate(CAD(bas%nspec,nstep))
@@ -643,8 +644,8 @@ contains
        end do
        abc = cshift(abc,1,1)
        area = get_area(lat(abc(1),:),lat(abc(2),:))
-       CAD=0.D0
-       CADD=0.D0
+       CAD=0._real32
+       CADD=0._real32
        !!--------------------------------------------------------------------------
        !! set up CAD and CADD
        !!--------------------------------------------------------------------------
@@ -655,7 +656,7 @@ contains
           do j=-1,1,1
              CAD(is,:) = CAD(is,:) + gauss_array(&
                   dist(:),&
-                  (bas%spec(is)%atom(:,iaxis)+dble(j))*modu(lat(iaxis,:)),&
+                  (bas%spec(is)%atom(:,iaxis)+real(j,real32))*modu(lat(iaxis,:)),&
                   sigma,gauss_tol,.false.)
           end do
           !!-----------------------------------------------------------------------
@@ -671,12 +672,12 @@ contains
              pntl=i-1
              pntr=i+1
              do j=-1,1,1
-                vtmp1(j+2)=dble(i+j-1)*modu(lat(iaxis,:))/nstep
+                vtmp1(j+2)=real(i+j-1,real32)*modu(lat(iaxis,:))/nstep
              end do
-             vtmp2=0.D0
+             vtmp2=0._real32
              vtmp2(2)=CAD(is,i)
              if(i.eq.1)then
-                vtmp2(1)=0.D0
+                vtmp2(1)=0._real32
                 vtmp2(3)=CAD(is,pntr)
                 !pntl=nstep-1
              elseif(i.eq.nstep)then
@@ -698,7 +699,7 @@ contains
        !!--------------------------------------------------------------------------
        !! multiply the CADDs of each species into an overal CADD (multiCADD)
        !!--------------------------------------------------------------------------
-       multiCADD=1.D0
+       multiCADD=1._real32
        do is=1,bas%nspec
           if(rangevec(is).lt.maxval(rangevec)*5.D-2) cycle
           multiCADD(:) = multiCADD(:)*CADD(is,:,1)
@@ -729,16 +730,16 @@ contains
     integer :: i,j,is
     integer :: pntl,pntr,nstep
     integer, optional, intent(in) :: num_step
-    type(bas_type) :: bas
-    double precision :: sigma, gauss_tol
-    double precision, dimension(2) :: intf_loc
-    double precision, dimension(3) :: vtmp1,vtmp2
-    double precision, dimension(3,3) :: lat
+    type(basis_type) :: bas
+    real(real32) :: sigma, gauss_tol
+    real(real32), dimension(2) :: intf_loc
+    real(real32), dimension(3) :: vtmp1,vtmp2
+    real(real32), dimension(3,3) :: lat
     integer, allocatable, dimension(:) :: ivec1
     real, allocatable, dimension(:) :: rangevec
-    double precision, allocatable, dimension(:) :: dist,multiCADD
-    double precision, allocatable, dimension(:,:) :: CAD,deriv
-    double precision, allocatable, dimension(:,:,:) :: CADD
+    real(real32), allocatable, dimension(:) :: dist,multiCADD
+    real(real32), allocatable, dimension(:,:) :: CAD,deriv
+    real(real32), allocatable, dimension(:,:,:) :: CADD
     logical, optional :: lprint
 
 
@@ -748,19 +749,19 @@ contains
     nstep=nstep_default
     if(present(num_step)) nstep=num_step
     allocate(dist(nstep))
-    dist=0.D0
+    dist=0._real32
     do i=1,nstep
        dist(i)=(i-1)*modu(lat(axis,:))/nstep
     end do
 
-    sigma=2.D0
-    gauss_tol=16.D0
+    sigma=2._real32
+    gauss_tol=16._real32
     allocate(rangevec(bas%nspec))
     allocate(deriv(bas%nspec,nstep))
     allocate(CAD(bas%nspec,nstep))
     allocate(CADD(bas%nspec,nstep,3))  !!CADD(spec,nstep,nth order deriv)
-    CAD=0.D0
-    CADD=0.D0
+    CAD=0._real32
+    CADD=0._real32
 
    
 !!!-----------------------------------------------------------------------------
@@ -773,7 +774,7 @@ contains
        do j=-1,1,1
           CAD(is,:) = CAD(is,:) + gauss_array(&
                dist(:),&
-               (bas%spec(is)%atom(:,axis)+dble(j))*modu(lat(axis,:)),&
+               (bas%spec(is)%atom(:,axis)+real(j,real32))*modu(lat(axis,:)),&
                sigma,gauss_tol,.false.)
        end do
        !!-----------------------------------------------------------------------
@@ -789,12 +790,12 @@ contains
           pntl=i-1
           pntr=i+1
           do j=-1,1,1
-             vtmp1(j+2)=dble(i+j-1)*modu(lat(axis,:))/nstep
+             vtmp1(j+2)=real(i+j-1,real32)*modu(lat(axis,:))/nstep
           end do
-          vtmp2=0.D0
+          vtmp2=0._real32
           vtmp2(2)=CAD(is,i)
           if(i.eq.1)then
-             vtmp2(1)=0.D0
+             vtmp2(1)=0._real32
              vtmp2(3)=CAD(is,pntr)
              !pntl=nstep-1
           elseif(i.eq.nstep)then
@@ -817,7 +818,7 @@ contains
 !!! multiply the CADDs of each species into an overal CADD (multiCADD)
 !!!-----------------------------------------------------------------------------
     allocate(multiCADD(nstep))
-    multiCADD=1.D0
+    multiCADD=1._real32
     do is=1,bas%nspec
        if(rangevec(is).lt.maxval(rangevec)*5.D-2) cycle
        multiCADD(:)=multiCADD(:)*CADD(is,:,1)
@@ -852,7 +853,7 @@ contains
 !!! finds the turning points of the multiCADD and attributes them to ...
 !!! ... the two interfaces
 !!!-----------------------------------------------------------------------------
-    ivec1=get_turn_points(dble(multiCADD(:)),window=8,lperiodic=.true.)
+    ivec1=get_turn_points(real(multiCADD(:),real32),window=8,lperiodic=.true.)
     intf_loc(1)=dist(ivec1(size(ivec1)))
     intf_loc(2)=dist(ivec1(size(ivec1)-1))
 
@@ -869,22 +870,22 @@ contains
     implicit none
     integer :: i,is,j,nstep,diffcount,axis
     !integer, dimension(3) :: nturns
-    double precision :: sigma, gauss_tol
+    real(real32) :: sigma, gauss_tol
     logical :: udef_lprint
-    double precision, dimension(3) :: diff
-    double precision, dimension(3,2) :: minmax
-    double precision, allocatable, dimension(:) :: AD,dist
+    real(real32), dimension(3) :: diff
+    real(real32), dimension(3,2) :: minmax
+    real(real32), allocatable, dimension(:) :: AD,dist
     !integer, allocatable, dimension(:) :: ivec1
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(3,3), intent(in) :: lat
+    type(basis_type), intent(in) :: bas
+    real(real32), dimension(3,3), intent(in) :: lat
     logical, optional, intent(in) :: lprint
 
 
 !!!-----------------------------------------------------------------------------
 !!! initialise variables
 !!!-----------------------------------------------------------------------------
-    sigma=0.5D0
-    gauss_tol=16.D0
+    sigma=0.5_real32
+    gauss_tol=16._real32
     if(present(lprint))then
        udef_lprint=lprint
     else
@@ -897,21 +898,21 @@ contains
 !!!-----------------------------------------------------------------------------
     axis_loop1: do i=1,3
        if(allocated(dist)) deallocate(dist)
-       nstep=nint(modu(lat(i,:))/0.001D0)
+       nstep=nint(modu(lat(i,:))/0.001_real32)
        allocate(dist(nstep))
-       dist=0.D0
+       dist=0._real32
        do j=1,nstep
           dist(j)=(j-1)*modu(lat(i,:))/nstep
        end do
        
        if(allocated(AD)) deallocate(AD)       
        allocate(AD(nstep))       
-       AD=0.D0
+       AD=0._real32
        do is=1,bas%nspec
           do j=-1,1,1
              AD(:) = AD(:) + gauss_array(&
                   dist(:),&
-                  (bas%spec(is)%atom(:,i)+dble(j))*modu(lat(i,:)),&
+                  (bas%spec(is)%atom(:,i)+real(j,real32))*modu(lat(i,:)),&
                   sigma,gauss_tol,.false.)
           end do
        end do
@@ -927,7 +928,7 @@ contains
 !!! checks each axis 
 !!!-----------------------------------------------------------------------------
     axis=0
-    select case(count(diff.gt.huge(0.D0)))
+    select case(count(diff.gt.huge(0._real32)))
     case(1)
        axis=maxloc(diff(:),dim=1)
        if(udef_lprint) write(0,'("Found a 2D system along ",I0)') axis
@@ -941,7 +942,7 @@ contains
     case default
        axis_loop2: do i=1,3
 !!! ADD A TOLERANCE FOR 'COULD BE LAYERED'
-          diffcount=count(diff(i).gt.5.D0*diff(:))
+          diffcount=count(diff(i).gt.5._real32*diff(:))
           if(diffcount.eq.2)then
              axis=i
              exit axis_loop2
@@ -1013,16 +1014,16 @@ contains
     integer :: nstep
     real :: rdist_max
     real :: gauss_tol,DON_sigma,dist,dist_cutoff,rtmp1
-    type(bas_type) :: bas
+    type(basis_type) :: bas
     logical :: lweight
     real, dimension(3) :: vtmp1,vtmp2,vtmp3
     real, allocatable, dimension(:) :: distance
     
     integer, intent(in) :: ispec,iatom
-    double precision, dimension(3,3), intent(in) :: lat
+    real(real32), dimension(3,3), intent(in) :: lat
     real, optional, intent(in) :: dist_max
     logical, optional, intent(in) :: weight_dist
-    double precision, allocatable, dimension(:,:) :: DOS
+    real(real32), allocatable, dimension(:,:) :: DOS
 
     real, allocatable, dimension(:) :: dist_list
 
@@ -1032,17 +1033,17 @@ contains
     allocate(DOS(bas%nspec,nstep))
 
     allocate(distance(nstep))
-    rdist_max=12.D0
+    rdist_max=12._real32
     if(present(dist_max)) rdist_max=dist_max
     do i=1,nstep
        distance(i)=real(i)*rdist_max/real(nstep)
     end do
 
-    gauss_tol=16.E0!38.D0
+    gauss_tol=16.E0!38._real32
     DON_sigma=0.5E-1
     dist_cutoff=dist_max+sqrt(2*gauss_tol*DON_sigma**2)
 
-    DOS(:,:)=0.D0
+    DOS(:,:)=0._real32
     specloop1: do js=1,bas%nspec
        count1=0
        dist_list = 0.0
@@ -1101,10 +1102,10 @@ contains
   function gen_single_DON(lat,bas,ispec,iatom,dist_max) result(DON)
     implicit none
     integer :: i,nstep
-    type(bas_type) :: bas
-    double precision, dimension(3,3) :: lat
-    double precision, allocatable, dimension(:) :: DON
-    double precision, allocatable, dimension(:,:) :: DOS
+    type(basis_type) :: bas
+    real(real32), dimension(3,3) :: lat
+    real(real32), allocatable, dimension(:) :: DON
+    real(real32), allocatable, dimension(:,:) :: DOS
     integer, intent(in) :: ispec,iatom
     real, optional, intent(in) :: dist_max
 

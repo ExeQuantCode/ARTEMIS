@@ -4,13 +4,23 @@
 !!!    Ned Thaddeus Taylor
 !!! Code part of the ARTEMIS group
 !!!#############################################################################
-module io
-  use misc
+module artemis__io_utils
+  use artemis__constants, only: real32
+  use artemis__misc
   implicit none
-  
-  private   !everything is private unless explicitly defined as public
+  logical :: test_error_handling = .false.
 
-  character(25), public, parameter :: version="development version 1.0.3a"
+  logical :: suppress_warnings = .false.
+  
+  private
+
+  public :: write_fmtd
+  public :: err_abort,print_warning, stop_program
+  public :: io_print_help
+  public :: print_header
+
+
+  character(25), public, parameter :: artemis__version__="development version 1.0.2a"
   !character(30), public, parameter :: &
   !     author(3) = [&
   !     "N. T. Taylor",&
@@ -27,7 +37,7 @@ module io
   !     "S. G. Davies"&
   !     ]
 
-  
+
   type, public :: tag_type
      character(25) :: name
      character(1)  :: type
@@ -41,18 +51,42 @@ module io
      character(20) :: deprecated_version
   end type tag_type
 
-  public :: write_fmtd
-  public :: err_abort,print_warning
-  public :: err_abort_print_struc
-  public :: io_print_help
-  public :: print_header
-  public :: setup_input_fmt,setup_output_fmt
-
-
-!!!updated 2021/11/11
 
 
 contains
+
+!###############################################################################
+  subroutine stop_program(message, exit_code, block_stop)
+    !! Stop the program and print an error message.
+    implicit none
+    character(len=*), intent(in) :: message
+    integer, intent(in), optional :: exit_code
+    logical, intent(in), optional :: block_stop
+
+    integer :: exit_code_
+    logical :: block_stop_
+
+    if(present(exit_code)) then
+       exit_code_ = exit_code
+    else
+       exit_code_ = 1
+    end if
+    if(present(block_stop)) then
+       block_stop_ = block_stop
+    else
+       block_stop_ = .false.
+    end if
+
+    write(0,*) 'ERROR: ', trim(message)
+    if(.not.block_stop_)then
+       if(.not.test_error_handling) then
+          stop exit_code_
+       end if
+    end if
+  end subroutine stop_program
+!###############################################################################
+
+
 !!!#############################################################################
 !!! prints the ARTEMIS logo and author list
 !!!#############################################################################
@@ -76,7 +110,7 @@ contains
     write(unit,'(A)') "           Ab Initio Restructuring Tool           "
     write(unit,'(A)') "    Enabling Modelling of Interface Structures    "
     write(unit,*)
-    write(unit,'(A,A)') " Welcome to ARTEMIS version ",version
+    write(unit,'(A,A)') " Welcome to ARTEMIS version ", artemis__version__
     write(unit,'(A,A,1X,A,A)') " (build ",__DATE__,__TIME__,")"
     write(unit,*)
     write(unit,'(A)') " Authors:"
@@ -255,28 +289,6 @@ contains
 !!!#############################################################################
 
 
-!!!#############################################################################
-!!! Prints to stderr, prints structure and stops
-!!!#############################################################################
-  subroutine err_abort_print_struc(in_lat,in_bas,name,message,lstop)
-    use rw_geom
-    implicit none
-    integer :: unit=0
-    character(len=*) :: name,message
-    type(bas_type) :: in_bas
-    double precision, dimension(3,3) :: in_lat
-    logical, optional :: lstop
-
-    
-    open(100,file=name)
-    call geom_write(100,in_lat,in_bas)
-    close(100)
-    if(message.ne.'') write(unit,'(A)') trim(message)
-    if(.not.present(lstop).or.lstop) stop
-
-  end subroutine err_abort_print_struc
-!!!#############################################################################
-
 
 !!!#############################################################################
 !!! help and search
@@ -413,82 +425,5 @@ contains
 
   end subroutine io_print_help
 !!!#############################################################################
-  
 
-!!!#############################################################################
-!!! sets up the name of output files and subroutines to read files
-!!!#############################################################################
-  subroutine setup_input_fmt(fmt)
-    use rw_geom, only : igeom_input
-    implicit none
-    character(len=*), intent(in) :: fmt
-    character(len=:), allocatable :: form
-    
-
-    allocate(character(len=len(trim(adjustl(fmt)))) ::  form)
-    form = trim(adjustl(to_upper(fmt)))
-    
-    select case(form)
-    case("VASP")
-       write(6,*) "Input files will be VASP formatted"
-       igeom_input=1
-    case("CASTEP")
-       write(6,*) "Input files will be CASTEP formatted"
-       igeom_input=2
-       !call err_abort('ERROR: ARTEMIS not yet set up for CASTEP')
-    case("QE","QUANTUMESPRESSO")
-       write(6,*) "Input files will be QuantumEspresso formatted"
-       igeom_input=3
-       !call err_abort('ERROR: ARTEMIS not yet set up for Quantum Espresso')
-    case("CRYSTAL")
-       write(6,*) "Input files will be CRYSTAL formatted"
-       igeom_input=4
-       call err_abort('ERROR: ARTEMIS not yet set up for CRYSTAL')
-    end select
-
-    
-  end subroutine setup_input_fmt
-!!!#############################################################################
-  
-
-!!!#############################################################################
-!!! sets up the name of output files and subroutines to read files
-!!!#############################################################################
-  subroutine setup_output_fmt(fmt,out_filename)
-    use rw_geom, only : igeom_output
-    implicit none
-    character(len=*) :: out_filename
-    character(len=*), intent(in) :: fmt
-    character(len=:), allocatable :: form
-    
-
-    allocate(character(len=len(trim(adjustl(fmt)))) ::  form)
-    form = trim(adjustl(to_upper(fmt)))
-    
-    select case(form)
-    case("VASP")
-       write(6,*) "Output files will be VASP formatted"
-       if(out_filename.eq.'') out_filename="POSCAR"
-       igeom_output=1
-    case("CASTEP")
-       write(6,*) "Output files will be CASTEP formatted"
-       if(out_filename.eq.'') out_filename="struc.cell"
-       igeom_output=2
-       !call err_abort('ERROR: ARTEMIS not yet set up for CASTEP')
-    case("QE","QUANTUMESPRESSO")
-       write(6,*) "Output files will be QuantumEspresso formatted"
-       if(out_filename.eq.'') out_filename="struc.geom"
-       igeom_output=3
-       !call err_abort('ERROR: ARTEMIS not yet set up for Quantum Espresso')
-    case("CRYSTAL")
-       write(6,*) "Output files will be CRYSTAL formatted"
-       if(out_filename.eq.'') out_filename="INPUT_geom"
-       igeom_output=4
-       call err_abort('ERROR: ARTEMIS not yet set up for CRYSTAL')
-    end select
-
-    
-  end subroutine setup_output_fmt
-!!!#############################################################################
-
-end module io
+end module artemis__io_utils

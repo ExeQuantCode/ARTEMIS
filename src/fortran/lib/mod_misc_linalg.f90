@@ -40,25 +40,10 @@
 !!! gen_group        (generate group from a subset of elements)
 !!!#############################################################################
 module misc_linalg
+  use artemis__constants, only: real32
   implicit none
   integer, parameter, private :: QuadInt_K = selected_int_kind (16)
 
-  interface uvec
-     procedure ruvec,duvec
-  end interface uvec
-
-  interface modu
-     procedure rmodu,dmodu
-  end interface modu
-
-  interface proj
-     procedure rproj,dproj
-  end interface proj
-
-  interface cross
-     procedure rcross,dcross
-  end interface cross
-  
   interface gcd
      procedure gcd_vec,gcd_num
   end interface gcd
@@ -80,42 +65,25 @@ contains
 !!!#####################################################
 !!! finds unit vector of an arbitrary vector
 !!!#####################################################
-  function ruvec(vec) result(uvec)
+  function uvec(vec) result(output)
     implicit none
-    real,dimension(:)::vec
-    real,allocatable,dimension(:)::uvec
-    allocate(uvec(size(vec)))
-    uvec=vec/rmodu(vec)
-  end function ruvec
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  function duvec(vec) result(uvec)
-    implicit none
-    double precision,dimension(:)::vec
-    double precision,allocatable,dimension(:)::uvec
-    allocate(uvec(size(vec)))
-    uvec=vec/dmodu(vec)
-  end function duvec
+    real(real32),dimension(:)::vec
+    real(real32),allocatable,dimension(:) :: output
+    allocate(output(size(vec)))
+    output = vec/modu(vec)
+  end function uvec
 !!!#####################################################
 
 
 !!!#####################################################
 !!! finds modulus of an arbitrary length vector
 !!!#####################################################
-  function rmodu(vec) result(modu)
+  function modu(vec) result(output)
     implicit none
-    real,dimension(:)::vec
-    real::modu
-    modu=abs(sqrt(sum(vec(:)**2)))
-  end function rmodu
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  function dmodu(vec) result(modu)
-    implicit none
-    double precision,dimension(:)::vec
-    double precision::modu
-    modu=abs(sqrt(sum(vec(:)**2)))
-  end function dmodu
+    real(real32),dimension(:)::vec
+    real(real32)::output
+    output = abs(sqrt(sum(vec(:)**2)))
+  end function modu
 !!!#####################################################
 
 
@@ -123,26 +91,15 @@ contains
 !!! projection operator
 !!!#####################################################
 !!! projection of v on u
-  function rproj(u,v) result(proj)
+  function proj(u,v) result(output)
     implicit none
-    real, dimension(:) :: u,v
-    real, allocatable, dimension(:) :: proj
+    real(real32), dimension(:) :: u,v
+    real(real32), allocatable, dimension(:) :: output
 
-    allocate(proj(size(u,dim=1)))
-    proj = u*dot_product(v,u)/dot_product(u,u)
+    allocate(output(size(u,dim=1)))
+    output = u*dot_product(v,u)/dot_product(u,u)
 
-  end function rproj
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  function dproj(u,v) result(proj)
-    implicit none
-    double precision, dimension(:) :: u,v
-    double precision, allocatable, dimension(:) :: proj
-
-    allocate(proj(size(u,dim=1)))
-    proj = u*dot_product(v,u)/dot_product(u,u)
-
-  end function dproj
+  end function proj
 !!!#####################################################
 
 
@@ -155,9 +112,9 @@ contains
   function GramSchmidt(basis,normalise,cmo) result(u)
     implicit none
     integer :: num,dim,i,j
-    double precision, allocatable, dimension(:) :: vtmp
-    double precision, dimension(:,:), intent(in) :: basis
-    double precision, allocatable, dimension(:,:) :: u
+    real(real32), allocatable, dimension(:) :: vtmp
+    real(real32), dimension(:,:), intent(in) :: basis
+    real(real32), allocatable, dimension(:,:) :: u
     logical, optional, intent(in) :: cmo
     logical, optional, intent(in) :: normalise
 
@@ -184,7 +141,7 @@ contains
     !! Evaluates the Gram-Schmidt basis
     u(1,:) = basis(1,:)
     do i=2,num
-       vtmp = 0.D0
+       vtmp = 0._real32
        do j=1,i-1,1
           vtmp(:) = vtmp(:) + proj(u(j,:),basis(i,:))
        end do
@@ -209,28 +166,16 @@ contains
 !!!#####################################################
 !!! cross product
 !!!#####################################################
-  pure function rcross(a,b) result(cross)
+  pure function cross(a,b) result(output)
     implicit none
-    real, dimension(3) :: cross
-    real, dimension(3), intent(in) :: a,b
+    real(real32), dimension(3) :: output
+    real(real32), dimension(3), intent(in) :: a,b
 
-    cross(1) = a(2)*b(3) - a(3)*b(2)
-    cross(2) = a(3)*b(1) - a(1)*b(3)
-    cross(3) = a(1)*b(2) - a(2)*b(1)
+    output(1) = a(2)*b(3) - a(3)*b(2)
+    output(2) = a(3)*b(1) - a(1)*b(3)
+    output(3) = a(1)*b(2) - a(2)*b(1)
 
-  end function rcross
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  pure function dcross(a,b) result(cross)
-    implicit none
-    double precision, dimension(3) :: cross
-    double precision, dimension(3), intent(in) :: a,b
-
-    cross(1) = a(2)*b(3) - a(3)*b(2)
-    cross(2) = a(3)*b(1) - a(1)*b(3)
-    cross(3) = a(1)*b(2) - a(2)*b(1)
-
-  end function dcross
+  end function cross
 !!!#####################################################
 
 
@@ -245,10 +190,10 @@ contains
 !!!#####################################################
   function cross_matrix(a)
     implicit none
-    double precision, dimension(3,3) :: cross_matrix
-    double precision, dimension(3), intent(in) :: a
+    real(real32), dimension(3,3) :: cross_matrix
+    real(real32), dimension(3), intent(in) :: a
 
-    cross_matrix=0.D0
+    cross_matrix=0._real32
 
     cross_matrix(1,2) = -a(3)
     cross_matrix(1,3) =  a(2)
@@ -269,8 +214,8 @@ contains
   function outer_product(a,b)
     implicit none
     integer :: j
-    double precision, dimension(:) :: a,b
-    double precision,allocatable,dimension(:,:)::outer_product
+    real(real32), dimension(:) :: a,b
+    real(real32),allocatable,dimension(:,:)::outer_product
    
     allocate(outer_product(size(a),size(b)))
 
@@ -290,10 +235,10 @@ contains
     implicit none
     integer :: j
     integer, dimension(:) :: a
-    double precision, dimension(:,:) :: mat
-    double precision,allocatable,dimension(:) :: vec
+    real(real32), dimension(:,:) :: mat
+    real(real32),allocatable,dimension(:) :: vec
 
-    vec=0.D0
+    vec=0._real32
     allocate(vec(size(a)))
     do j=1,size(a)
        vec(:)=vec(:)+dble(a(j))*mat(j,:)
@@ -306,11 +251,11 @@ contains
   function dvec_dmat_mul(a,mat) result(vec)
     implicit none
     integer :: j
-    double precision, dimension(:) :: a
-    double precision, dimension(:,:) :: mat
-    double precision,allocatable,dimension(:) :: vec
+    real(real32), dimension(:) :: a
+    real(real32), dimension(:,:) :: mat
+    real(real32),allocatable,dimension(:) :: vec
 
-    vec=0.D0
+    vec=0._real32
     allocate(vec(size(a)))
     do j=1,size(a)
        vec(:)=vec(:)+a(j)*mat(j,:)
@@ -327,21 +272,21 @@ contains
   function get_vec_multiple(a,b) result(multi)
     implicit none
     integer :: i
-    double precision :: multi
-    double precision, dimension(:) :: a,b
+    real(real32) :: multi
+    real(real32), dimension(:) :: a,b
     
-    multi=1.D0
+    multi=1._real32
     do i=1,size(a)
-       if(a(i).eq.0.D0.or.b(i).eq.0.D0) cycle
+       if(abs(a(i)).lt.1.E-6_real32.or.abs(b(i)).lt.1.E-6_real32) cycle
        multi=b(i)/a(i)
        exit
     end do
 
     checkloop: do i=1,size(a)
-       if(a(i).eq.0.D0.or.b(i).eq.0.D0) cycle
-       if(abs(a(i)*multi-b(i)).gt.1.D-8)then
+       if(abs(a(i)).lt.1.E-6_real32.or.abs(b(i)).lt.1.E-6_real32) cycle
+       if(abs(a(i)*multi-b(i)).gt.1.E-6_real32)then
 
-          multi=0.D0
+          multi=0._real32
           exit checkloop
        end if
     end do checkloop
@@ -363,12 +308,12 @@ contains
 !!!#####################################################
   function get_angle(vec1,vec2) result(angle)
     implicit none
-    double precision :: angle
-    double precision, dimension(3) :: vec1,vec2
+    real(real32) :: angle
+    real(real32), dimension(3) :: vec1,vec2
 
     angle = acos( dot_product(vec1,vec2)/&
          ( modu(vec1) * modu(vec2) ))
-    if (isnan(angle)) angle = 0.D0
+    if (isnan(angle)) angle = 0._real32
 
     return
   end function get_angle
@@ -380,8 +325,8 @@ contains
 !!!#####################################################
   function get_area(a,b) result(area)
     implicit none
-    double precision :: area
-    double precision, dimension(3) :: vec,a,b
+    real(real32) :: area
+    real(real32), dimension(3) :: vec,a,b
 
     vec = cross(a,b)
     area = sqrt(dot_product(vec,vec))
@@ -397,21 +342,21 @@ contains
   function get_vol(lat) result(vol)
     implicit none
     integer :: n,i,j,k,l
-    double precision :: vol,scale
-    double precision, dimension(3,3) :: lat
-    double precision, dimension(3) :: a,b,c
+    real(real32) :: vol,scale
+    real(real32), dimension(3,3) :: lat
+    real(real32), dimension(3) :: a,b,c
 
     a=lat(1,:)
     b=lat(2,:)
     c=lat(3,:)
-    vol = 0.D0;scale = 1.D0
+    vol = 0._real32;scale = 1._real32
     i=1;j=2;k=3
 1   do n=1,3
        vol = vol+scale*a(i)*b(j)*c(k)
        l=i;i=j;j=k;k=l
     end do
     i=2;j=1;k=3;scale=-scale
-    if(scale<0.D0) goto 1
+    if(scale<0._real32) goto 1
 
     return
   end function get_vol
@@ -423,8 +368,8 @@ contains
 !!!#####################################################
   function trace(mat)
     integer::j
-    double precision,dimension(:,:)::mat
-    double precision::trace
+    real(real32),dimension(:,:)::mat
+    real(real32)::trace
     do j=1,size(mat,1)
        trace=trace+mat(j,j)
     end do
@@ -447,8 +392,8 @@ contains
 !!!-----------------------------------------------------
 !!!-----------------------------------------------------
   function ddet(mat) result(det)
-    double precision :: det
-    double precision, dimension(3,3) :: mat
+    real(real32) :: det
+    real(real32), dimension(3,3) :: mat
 
     det=mat(1,1)*mat(2,2)*mat(3,3)-mat(1,1)*mat(2,3)*mat(3,2)&
          - mat(1,2)*mat(2,1)*mat(3,3)+mat(1,2)*mat(2,3)*mat(3,1)&
@@ -462,8 +407,8 @@ contains
 !!! returns inverse of 2x2 or 3x3 matrix
 !!!#####################################################
   pure function inverse(mat)
-    double precision, dimension(:,:), intent(in) :: mat
-    double precision, dimension(size(mat(:,1),dim=1),size(mat(1,:),dim=1)) :: inverse
+    real(real32), dimension(:,:), intent(in) :: mat
+    real(real32), dimension(size(mat(:,1),dim=1),size(mat(1,:),dim=1)) :: inverse
 
     if(size(mat(1,:),dim=1).eq.2)then
        inverse=inverse_2x2(mat)
@@ -479,22 +424,22 @@ contains
 !!! returns inverse of 2 x 2 matrix
 !!!#####################################################
   pure function inverse_2x2(mat) result(inverse)
-    double precision :: det
-    double precision, dimension(2,2) :: inverse
-    double precision, dimension(2,2), intent(in) :: mat
+    real(real32) :: det
+    real(real32), dimension(2,2) :: inverse
+    real(real32), dimension(2,2), intent(in) :: mat
 
     det=mat(1,1)*mat(2,2)-mat(1,2)*mat(2,1)
-    !if(det.eq.0.D0)then
+    !if(det.eq.0._real32)then
     !   write(0,'("ERROR: Internal error in inverse_2x2")')
     !   write(0,'(2X,"inverse_2x2 in mod_misc_linalg found determinant of 0")')
     !   write(0,'(2X,"Exiting...")')
     !   stop
     !end if
 
-    inverse(1,1)=+1.D0/det*(mat(2,2))
-    inverse(2,1)=-1.D0/det*(mat(1,2))
-    inverse(1,2)=-1.D0/det*(mat(2,1))
-    inverse(2,2)=+1.D0/det*(mat(1,1))
+    inverse(1,1)=+1._real32/det*(mat(2,2))
+    inverse(2,1)=-1._real32/det*(mat(1,2))
+    inverse(1,2)=-1._real32/det*(mat(2,1))
+    inverse(2,2)=+1._real32/det*(mat(1,1))
 
   end function inverse_2x2
 !!!#####################################################
@@ -504,30 +449,30 @@ contains
 !!! returns inverse of 3 x 3 matrix
 !!!#####################################################
   pure function inverse_3x3(mat) result(inverse)
-    double precision :: det
-    double precision, dimension(3,3) :: inverse
-    double precision, dimension(3,3), intent(in) :: mat
+    real(real32) :: det
+    real(real32), dimension(3,3) :: inverse
+    real(real32), dimension(3,3), intent(in) :: mat
 
     det=mat(1,1)*mat(2,2)*mat(3,3)-mat(1,1)*mat(2,3)*mat(3,2)&
          - mat(1,2)*mat(2,1)*mat(3,3)+mat(1,2)*mat(2,3)*mat(3,1)&
          + mat(1,3)*mat(2,1)*mat(3,2)-mat(1,3)*mat(2,2)*mat(3,1)
 
-    !if(det.eq.0.D0)then
+    !if(det.eq.0._real32)then
     !   write(0,'("ERROR: Internal error in inverse_3x3")')
     !   write(0,'(2X,"inverse_3x3 in mod_misc_linalg found determinant of 0")')
     !   write(0,'(2X,"Exiting...")')
     !   stop
     !end if
 
-    inverse(1,1)=+1.D0/det*(mat(2,2)*mat(3,3)-mat(2,3)*mat(3,2))
-    inverse(2,1)=-1.D0/det*(mat(2,1)*mat(3,3)-mat(2,3)*mat(3,1))
-    inverse(3,1)=+1.D0/det*(mat(2,1)*mat(3,2)-mat(2,2)*mat(3,1))
-    inverse(1,2)=-1.D0/det*(mat(1,2)*mat(3,3)-mat(1,3)*mat(3,2))
-    inverse(2,2)=+1.D0/det*(mat(1,1)*mat(3,3)-mat(1,3)*mat(3,1))
-    inverse(3,2)=-1.D0/det*(mat(1,1)*mat(3,2)-mat(1,2)*mat(3,1))
-    inverse(1,3)=+1.D0/det*(mat(1,2)*mat(2,3)-mat(1,3)*mat(2,2))
-    inverse(2,3)=-1.D0/det*(mat(1,1)*mat(2,3)-mat(1,3)*mat(2,1))
-    inverse(3,3)=+1.D0/det*(mat(1,1)*mat(2,2)-mat(1,2)*mat(2,1))
+    inverse(1,1)=+1._real32/det*(mat(2,2)*mat(3,3)-mat(2,3)*mat(3,2))
+    inverse(2,1)=-1._real32/det*(mat(2,1)*mat(3,3)-mat(2,3)*mat(3,1))
+    inverse(3,1)=+1._real32/det*(mat(2,1)*mat(3,2)-mat(2,2)*mat(3,1))
+    inverse(1,2)=-1._real32/det*(mat(1,2)*mat(3,3)-mat(1,3)*mat(3,2))
+    inverse(2,2)=+1._real32/det*(mat(1,1)*mat(3,3)-mat(1,3)*mat(3,1))
+    inverse(3,2)=-1._real32/det*(mat(1,1)*mat(3,2)-mat(1,2)*mat(3,1))
+    inverse(1,3)=+1._real32/det*(mat(1,2)*mat(2,3)-mat(1,3)*mat(2,2))
+    inverse(2,3)=-1._real32/det*(mat(1,1)*mat(2,3)-mat(1,3)*mat(2,1))
+    inverse(3,3)=+1._real32/det*(mat(1,1)*mat(2,2)-mat(1,2)*mat(2,1))
 
   end function inverse_3x3
 !!!#####################################################
@@ -538,15 +483,15 @@ contains
 !!!#####################################################
   recursive function rec_det(a,n) result(res)
     integer :: i, sign
-    double precision :: res
+    real(real32) :: res
     integer, intent(in) :: n
-    double precision, dimension(n,n), intent(in) :: a
-    double precision, dimension(n-1, n-1) :: tmp
+    real(real32), dimension(n,n), intent(in) :: a
+    real(real32), dimension(n-1, n-1) :: tmp
 
     if(n.eq.1) then
        res = a(1,1)
     else
-       res = 0.D0
+       res = 0._real32
        sign = 1
        do i=1, n
           tmp(:,:(i-1))=a(2:,:i-1)
@@ -572,16 +517,16 @@ contains
   function LUdet(inmat)
     implicit none
     integer :: i,N
-    double precision :: LUdet
-    double precision, dimension(:,:) :: inmat
-    double precision, dimension(size(inmat,1),size(inmat,1)) :: L,U
+    real(real32) :: LUdet
+    real(real32), dimension(:,:) :: inmat
+    real(real32), dimension(size(inmat,1),size(inmat,1)) :: L,U
 
-    L=0.D0
-    U=0.D0
+    L=0._real32
+    U=0._real32
     N=size(inmat,1)
     call LUdecompose(inmat,L,U)
 
-    LUdet=(-1.D0)**N
+    LUdet=(-1._real32)**N
     do i=1,N
        LUdet=LUdet*L(i,i)*U(i,i)
     end do
@@ -605,13 +550,13 @@ contains
   function LUinv(inmat)
     implicit none
     integer :: i,m,N
-    double precision, dimension(:,:) :: inmat
-    double precision, dimension(size(inmat,1),size(inmat,1)) :: LUinv
-    double precision, dimension(size(inmat,1),size(inmat,1)) :: L,U
-    double precision, dimension(size(inmat,1)) :: c,z,x
+    real(real32), dimension(:,:) :: inmat
+    real(real32), dimension(size(inmat,1),size(inmat,1)) :: LUinv
+    real(real32), dimension(size(inmat,1),size(inmat,1)) :: L,U
+    real(real32), dimension(size(inmat,1)) :: c,z,x
 
-    L=0.D0
-    U=0.D0
+    L=0._real32
+    U=0._real32
     N=size(inmat,1)
     call LUdecompose(inmat,L,U)
 
@@ -619,8 +564,8 @@ contains
 !!! c are column vectors of the identity matrix
 !!! uses forward substitution to solve
     do m=1,N
-       c=0.D0
-       c(m)=1.D0
+       c=0._real32
+       c(m)=1._real32
 
        z(1)=c(1)
        do i=2,N
@@ -656,16 +601,16 @@ contains
   subroutine LUdecompose(inmat,L,U)
     implicit none
     integer :: i,j,N
-    double precision, dimension(:,:) :: inmat,L,U
-    double precision, dimension(size(inmat,1),size(inmat,1)) :: mat
+    real(real32), dimension(:,:) :: inmat,L,U
+    real(real32), dimension(size(inmat,1),size(inmat,1)) :: mat
 
     N=size(inmat,1)
     mat=inmat
-    L=0.D0
-    U=0.D0
+    L=0._real32
+    U=0._real32
 
     do j=1,N
-       L(j,j)=1.D0
+       L(j,j)=1._real32
     end do
 !!! Solves the lower matrix
     do j=1,N-1
@@ -703,8 +648,8 @@ contains
 !!!#####################################################
   function find_tf(mat1,mat2) result(tf)
     implicit none
-    double precision, dimension(:,:) :: mat1,mat2
-    double precision, allocatable, dimension(:,:) :: tf
+    real(real32), dimension(:,:) :: mat1,mat2
+    real(real32), allocatable, dimension(:,:) :: tf
 
     allocate(tf(size(mat2(:,1),dim=1),size(mat1(1,:),dim=1)))
     tf=matmul(inverse(mat1),mat2)
@@ -729,15 +674,15 @@ contains
 !!! hence, qA=qY P^-1
   function simeq(qX,qY)
     integer :: i,j,n,loc
-    double precision, dimension(:) :: qX,qY
-    double precision, dimension(size(qY)) :: funcY
-    double precision, dimension(size(qY)) :: simeq,tmpqY
-    double precision, dimension(size(qY),size(qY)) :: P,invP,tmpP
+    real(real32), dimension(:) :: qX,qY
+    real(real32), dimension(size(qY)) :: funcY
+    real(real32), dimension(size(qY)) :: simeq,tmpqY
+    real(real32), dimension(size(qY),size(qY)) :: P,invP,tmpP
 
 
     n=size(qX)
     funcy=qY
-    P=0.D0
+    P=0._real32
     do i=1,n
        do j=1,n
           P(i,j)=(qX(i)**dble(n-j))
@@ -775,19 +720,19 @@ contains
   function LLL_reduce(basis,delta) result(obas)
     implicit none
     integer :: num,dim,i,j,k,loc
-    double precision :: d,dtmp
-    double precision, allocatable, dimension(:) :: vtmp,mag_bas
-    double precision, allocatable, dimension(:,:) :: mu,GSbas,obas
+    real(real32) :: d,dtmp
+    real(real32), allocatable, dimension(:) :: vtmp,mag_bas
+    real(real32), allocatable, dimension(:,:) :: mu,GSbas,obas
 
-    double precision, dimension(:,:), intent(in) :: basis
-    double precision, optional, intent(in) :: delta
+    real(real32), dimension(:,:), intent(in) :: basis
+    real(real32), optional, intent(in) :: delta
 
 
     !! set up the value for delta
     if(present(delta))then
        d = delta
     else
-       d = 0.75D0
+       d = 0.75_real32
     end if
     
     !! allocate and initialise arrays
@@ -830,7 +775,7 @@ contains
     do while(k.le.num)
 
        jloop: do j=k-1,1!,-1
-          if(abs(mu(k,j)).lt.0.5D0)then
+          if(abs(mu(k,j)).lt.0.5_real32)then
              obas(k,:) = obas(k,:) - &
                   nint(mu(k,j))*obas(j,:)
              !! only need to update GSbas(k:,:) and mu
@@ -841,7 +786,7 @@ contains
        end do jloop
 
        if(dot_product(GSbas(k,:),GSbas(k,:)).ge.&
-            (d - mu(k,k-1)**2.D0)*&
+            (d - mu(k,k-1)**2._real32)*&
             dot_product(GSbas(k-1,:),GSbas(k-1,:)) )then
           k = k + 1
        else
@@ -867,7 +812,7 @@ contains
     function get_mu(bas1,bas2) result(mu)
       implicit none
       integer :: num1,num2
-      double precision, allocatable, dimension(:,:) :: mu,bas1,bas2
+      real(real32), allocatable, dimension(:,:) :: mu,bas1,bas2
       num1 = size(bas1(:,1),dim=1)
       num2 = size(bas2(:,1),dim=1)
 
@@ -888,10 +833,10 @@ contains
     subroutine update_GS_and_mu(GSbas,mu,basis,k)
       implicit none
       integer :: num,dim,i,j
-      double precision, allocatable, dimension(:) :: vtmp
+      real(real32), allocatable, dimension(:) :: vtmp
 
       integer, intent(in) :: k
-      double precision, allocatable, dimension(:,:) :: GSbas,basis,mu
+      real(real32), allocatable, dimension(:,:) :: GSbas,basis,mu
 
       num = size(basis(:,1),dim=1)
       dim = size(basis(1,:),dim=1)
@@ -900,7 +845,7 @@ contains
       
       !!update Gram-Schmidt vectors
       do i=k,num,1
-         vtmp = 0.D0
+         vtmp = 0._real32
          do j=1,i-1,1
             vtmp(:) = vtmp(:) + proj(GSbas(j,:),basis(i,:))
          end do
@@ -933,25 +878,25 @@ contains
 !!!#####################################################
   function rotvec(a,theta,phi,psi,new_length)
     implicit none
-    double precision :: magold,theta,phi,psi
-    double precision, dimension(3) :: a,rotvec
-    double precision, dimension(3,3) :: rotmat,rotmatx,rotmaty,rotmatz
-    double precision, optional :: new_length
+    real(real32) :: magold,theta,phi,psi
+    real(real32), dimension(3) :: a,rotvec
+    real(real32), dimension(3,3) :: rotmat,rotmatx,rotmaty,rotmatz
+    real(real32), optional :: new_length
 
-    !  if(phi.ne.0.D0) phi=-phi
+    !  if(phi.ne.0._real32) phi=-phi
 
     rotmatx=reshape((/&
-         1.D0,   0.D0,      0.D0,  &
-         0.D0, cos(theta), -sin(theta),&
-         0.D0, sin(theta),  cos(theta)/), shape(rotmatx))
+         1._real32,   0._real32,      0._real32,  &
+         0._real32, cos(theta), -sin(theta),&
+         0._real32, sin(theta),  cos(theta)/), shape(rotmatx))
     rotmaty=reshape((/&
-         cos(phi), 0.D0, sin(phi),&
-         0.D0,     1.D0,   0.D0,    &
-         -sin(phi), 0.D0, cos(phi)/), shape(rotmaty))
+         cos(phi), 0._real32, sin(phi),&
+         0._real32,     1._real32,   0._real32,    &
+         -sin(phi), 0._real32, cos(phi)/), shape(rotmaty))
     rotmatz=reshape((/&
-         cos(psi), -sin(psi), 0.D0,&
-         sin(psi), cos(psi), 0.D0,    &
-         0.D0,        0.D0,       1.D0/), shape(rotmatz))
+         cos(psi), -sin(psi), 0._real32,&
+         sin(psi), cos(psi), 0._real32,    &
+         0._real32,        0._real32,       1._real32/), shape(rotmatz))
 
 
     rotmat=matmul(rotmaty,rotmatx)
@@ -974,13 +919,13 @@ contains
   function rot_arb_lat(a,lat,ang) result(vec)
     implicit none
     integer :: i
-    double precision, dimension(3) :: a,u,ang,vec
-    double precision, dimension(3,3) :: rotmat,ident,lat
+    real(real32), dimension(3) :: a,u,ang,vec
+    real(real32), dimension(3,3) :: rotmat,ident,lat
 
 
-    ident=0.D0
+    ident=0._real32
     do i=1,3
-       ident(i,i)=1.D0
+       ident(i,i)=1._real32
     end do
    
     vec=a
@@ -1096,17 +1041,17 @@ contains
   integer function get_frac_denom(val)
     implicit none
     integer :: i
-    double precision :: val
-    double precision :: a,b,c,tiny
+    real(real32) :: val
+    real(real32) :: a,b,c,tiny
 
-    a=mod(val,1.D0)
-    b=1.D0
+    a=mod(val,1._real32)
+    b=1._real32
     tiny=1.D-6
     i=0
     do 
        i=i+1
-       if(abs(nint(1.D0/a)-(1.D0/a)).lt.tiny.and.&
-            abs(nint(val*1.D0/a)-val*(1.D0/a)).lt.tiny) exit
+       if(abs(nint(1._real32/a)-(1._real32/a)).lt.tiny.and.&
+            abs(nint(val*1._real32/a)-val*(1._real32/a)).lt.tiny) exit
        c=abs(b-a)
        b=a
        a=c
@@ -1116,7 +1061,7 @@ contains
        end if
     end do
 
-    get_frac_denom=nint(1.D0/a)
+    get_frac_denom=nint(1._real32/a)
 
     return
   end function get_frac_denom
@@ -1129,9 +1074,9 @@ contains
   function reduce_vec_gcd(invec) result(vec)
     implicit none
     integer :: i,a
-    double precision :: div,old_div,tol
-    double precision, allocatable, dimension(:) :: vec,tvec
-    double precision, dimension(:), intent(in) :: invec
+    real(real32) :: div,old_div,tol
+    real(real32), allocatable, dimension(:) :: vec,tvec
+    real(real32), dimension(:), intent(in) :: invec
 
 
 !!! MAKE IT DO SOMETHING IF IT CANNOT FULLY INTEGERISE
@@ -1163,7 +1108,7 @@ contains
        div=a
     end if
 
-    if(div.eq.0.D0) return
+    if(div.eq.0._real32) return
     allocate(tvec(size(invec)))
     tvec=vec/div
     if(any(abs(tvec(:)-nint(tvec(:))).gt.tol)) return
@@ -1180,14 +1125,14 @@ contains
   function gen_group(elem,mask,tol) result(group)
     implicit none
     integer :: i,j,k,nelem,ntot_elem,dim1,dim2,iter
-    double precision :: tiny
-    double precision, allocatable, dimension(:,:) :: tmp_elem,cur_elem,apply_elem
-    double precision, allocatable, dimension(:,:,:) :: tmp_group
+    real(real32) :: tiny
+    real(real32), allocatable, dimension(:,:) :: tmp_elem,cur_elem,apply_elem
+    real(real32), allocatable, dimension(:,:,:) :: tmp_group
 
-    double precision, dimension(:,:,:), intent(in) :: elem
+    real(real32), dimension(:,:,:), intent(in) :: elem
     logical, dimension(:,:), optional, intent(in) :: mask
-    double precision, allocatable, dimension(:,:,:) :: group
-    double precision, optional, intent(in) :: tol
+    real(real32), allocatable, dimension(:,:,:) :: group
+    real(real32), optional, intent(in) :: tol
 
 
     if(present(tol))then
@@ -1213,7 +1158,7 @@ contains
        !write(0,'(2(2X,F9.6))') cur_elem(:,:)
        !write(0,*)
        if(present(mask))then
-          where(mask.and.(cur_elem(:,:).lt.-tiny.or.cur_elem(:,:).ge.1.D0-tiny))
+          where(mask.and.(cur_elem(:,:).lt.-tiny.or.cur_elem(:,:).ge.1._real32-tiny))
              cur_elem(:,:) = cur_elem(:,:) - floor(cur_elem(:,:)+tiny)
           end where
        end if
@@ -1237,7 +1182,7 @@ contains
              end if
              tmp_elem(:,:) = matmul((apply_elem(:,:)),tmp_elem(:,:))
              if(present(mask))then
-                where(mask.and.(tmp_elem(:,:).lt.-tiny.or.tmp_elem(:,:).ge.1.D0-tiny))
+                where(mask.and.(tmp_elem(:,:).lt.-tiny.or.tmp_elem(:,:).ge.1._real32-tiny))
                    tmp_elem(:,:) = tmp_elem(:,:) - floor(tmp_elem(:,:)+tiny)
                 end where
              end if

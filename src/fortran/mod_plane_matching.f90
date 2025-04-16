@@ -4,20 +4,20 @@
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
 module plane_matching
-  use constants
+  use artemis__constants, only: real32, INF, pi
   use misc_linalg, only: cross,modu,get_angle,get_area,find_tf,&
        reduce_vec_gcd,gcd
   implicit none
   !! importance of vector, angle, and area
-  double precision, dimension(3) :: vaa_weighting=(/1.D0,5.D0,2.5D0/)
+  real(real32), dimension(3) :: vaa_weighting=(/1._real32,5._real32,2.5_real32/)
 
   type :: pm_tol_type
      integer :: maxsize,maxfit,nstore
-     double precision :: maxlen=20.D0
-     double precision :: maxarea=400.D0
-     double precision :: vec,ang,area
-     double precision :: ang_weight = 10.D0
-     double precision :: area_weight = 100.D0
+     real(real32) :: maxlen=20._real32
+     real(real32) :: maxarea=400._real32
+     real(real32) :: vec,ang,area
+     real(real32) :: ang_weight = 10._real32
+     real(real32) :: area_weight = 100._real32
   end type pm_tol_type
 
 
@@ -31,10 +31,10 @@ contains
 !!!#############################################################################
   subroutine datasort(list_in,tol_in)
     implicit none
-    double precision, dimension(:,:,:) :: list_in
-    double precision, allocatable, dimension(:,:,:) :: list_out
-    double precision, dimension(:) :: tol_in
-    double precision, allocatable, dimension(:) :: tol_out
+    real(real32), dimension(:,:,:) :: list_in
+    real(real32), allocatable, dimension(:,:,:) :: list_out
+    real(real32), dimension(:) :: tol_in
+    real(real32), allocatable, dimension(:) :: tol_out
     integer :: a,dummylocation,len
 
     len=size(list_in(:,1,1))
@@ -62,12 +62,12 @@ contains
     implicit none
     integer :: len
     integer :: a,dummylocation
-    double precision, dimension(:,:,:) :: mat1_in,mat2_in
-    double precision, allocatable, dimension(:,:,:) :: mat1_out,mat2_out
-    double precision, dimension(:,:,:) :: trans1_in,trans2_in
-    double precision, allocatable, dimension(:,:,:) :: trans1_out,trans2_out
-    double precision, dimension(:) :: list_in
-    double precision, allocatable, dimension(:) :: list_out
+    real(real32), dimension(:,:,:) :: mat1_in,mat2_in
+    real(real32), allocatable, dimension(:,:,:) :: mat1_out,mat2_out
+    real(real32), dimension(:,:,:) :: trans1_in,trans2_in
+    real(real32), allocatable, dimension(:,:,:) :: trans1_out,trans2_out
+    real(real32), dimension(:) :: list_in
+    real(real32), allocatable, dimension(:) :: list_out
 
 
     len = size(list_in)
@@ -103,11 +103,11 @@ contains
   subroutine datasort_tols(list_in,tol_in)
     implicit none
     integer :: i,j,len,ntol_features
-    double precision, allocatable,dimension(:) :: vtmp1
-    double precision, dimension(:,:,:) :: list_in
-    double precision, allocatable, dimension(:,:,:) :: list_out
-    double precision, dimension(:,:) :: tol_in
-    double precision, allocatable, dimension(:,:) :: tol_out,tmp_store
+    real(real32), allocatable,dimension(:) :: vtmp1
+    real(real32), dimension(:,:,:) :: list_in
+    real(real32), allocatable, dimension(:,:,:) :: list_out
+    real(real32), dimension(:,:) :: tol_in
+    real(real32), allocatable, dimension(:,:) :: tol_out,tmp_store
 
     ntol_features = size(tol_in(1,:)) 
     len = size(list_in(:,1,1))
@@ -147,12 +147,12 @@ contains
   subroutine datasortmain_tols(tol,mat1,mat2,trans1,trans2)
     implicit none
     integer :: i,j,len
-    double precision, dimension(3) :: vtmp1
-    double precision, dimension(2,2) :: dmat1
-    double precision, dimension(3,3) :: dmat2
-    double precision, dimension(:,:,:) :: mat1,mat2
-    double precision, dimension(:,:,:) :: trans1,trans2
-    double precision, dimension(:,:) :: tol
+    real(real32), dimension(3) :: vtmp1
+    real(real32), dimension(2,2) :: dmat1
+    real(real32), dimension(3,3) :: dmat2
+    real(real32), dimension(:,:,:) :: mat1,mat2
+    real(real32), dimension(:,:,:) :: trans1,trans2
+    real(real32), dimension(:,:) :: tol
 
 
     len=size(tol,dim=1)
@@ -198,11 +198,11 @@ contains
     implicit none
     integer :: i,len
     logical :: outval
-    double precision, dimension(:,:,:) :: list1,list2 ! The lists of already saved matrices
-    double precision, dimension(:,:) :: lat1,lat2 ! The pair of matrices we want to check
-    double precision, allocatable, dimension(:,:) :: dummy1,dummy2
-    double precision, allocatable, dimension(:,:) :: tmplat1,tmplat2
-    double precision, dimension(:,:,:), optional :: sym1,sym2
+    real(real32), dimension(:,:,:) :: list1,list2 ! The lists of already saved matrices
+    real(real32), dimension(:,:) :: lat1,lat2 ! The pair of matrices we want to check
+    real(real32), allocatable, dimension(:,:) :: dummy1,dummy2
+    real(real32), allocatable, dimension(:,:) :: tmplat1,tmplat2
+    real(real32), dimension(:,:,:), optional :: sym1,sym2
 
 
     len = size(list1(:,1,1))
@@ -212,12 +212,12 @@ contains
     allocate( tmplat1( size( lat1(:,1)), size(lat1(1,:)) ) )
     allocate( tmplat2( size( lat2(:,1)), size(lat2(1,:)) ) )
 
-    dummy1 = dble(find_tf(lat1,lat2))
+    dummy1 = real(find_tf(lat1,lat2),real32)
     LOOP: do i=1,len
        if(all(abs(list1(i,:,:)).lt.1.D-5)) cycle LOOP
        tmplat1(:,:) = list1(i,:,:)
        tmplat2(:,:) = list2(i,:,:)
-       dummy2 = dble(find_tf(tmplat1,tmplat2))
+       dummy2 = real(find_tf(tmplat1,tmplat2),real32)
 
        if ( all(abs( dummy1(:,:)-dummy2(:,:) ) .lt. 1.D-5) ) then
           outval = .true.
@@ -244,19 +244,19 @@ contains
   function is_unique(miller,sym) result(outval)
     implicit none
     integer :: i,j
-    double precision :: tol
+    real(real32) :: tol
     logical :: outval
     integer, dimension(3) :: miller
-    double precision, dimension(3) :: vec_in,vec_out,vec_tmp1,vec_tmp2
-    double precision, dimension(:,:,:) :: sym
+    real(real32), dimension(3) :: vec_in,vec_out,vec_tmp1,vec_tmp2
+    real(real32), dimension(:,:,:) :: sym
  
 !    if(dot_product(vec_out-vec_in,vec_out-vec_in).lt.1.D-5)
 !    if(all(abs(vec_out-vec_in).lt.1.D-5))
-!    any(vec_in.eq.3.D0)
-!    all(vec_in.eq.3.D0)
+!    any(vec_in.eq.3._real32)
+!    all(vec_in.eq.3._real32)
 
     outval = .true.
-    vec_in = dble(miller)
+    vec_in = real(miller,real32)
     vec_out = reduce_vec_gcd(vec_in)
 
     if (all(miller.eq.0)) then
@@ -270,13 +270,13 @@ contains
 
 
     tol=1.D-5
-    if(all(vec_in.le.0.D0))then
+    if(all(vec_in.le.0._real32))then
        outval=.false.
        return
     end if
     signloop1: do j=1,3
        if(abs(vec_in(j)).lt.tol) cycle signloop1
-       vec_in=sign(1.D0,vec_in(j))*vec_in
+       vec_in=sign(1._real32,vec_in(j))*vec_in
        exit signloop1
     end do signloop1
 
@@ -316,18 +316,18 @@ contains
   function is_unique_set(vec1,vec2,sym) result(outval)
     implicit none
     integer :: i,j
-    double precision :: tol
+    real(real32) :: tol
     integer, dimension(2) :: vec1,vec2
-    double precision, dimension(3) :: vec_in,vec_out,vec_tmp1,vec_tmp2
-    double precision, dimension(:,:,:) :: sym
+    real(real32), dimension(3) :: vec_in,vec_out,vec_tmp1,vec_tmp2
+    real(real32), dimension(:,:,:) :: sym
     logical :: outval
     
 
     tol=1.D-5
     outval=.true.
-    vec_in=(/ dble(vec1(1)), dble(vec1(2)), 0.D0/)
-    !vec_in1=(/ dble(vec1(1)), dble(vec1(2)), 0.D0/)
-    !vec_in2=(/ dble(vec2(1)), dble(vec2(2)), 0.D0/)
+    vec_in=(/ real(vec1(1),real32), real(vec1(2),real32), 0._real32/)
+    !vec_in1=(/ real(vec1(1),real32), real(vec1(2),real32), 0._real32/)
+    !vec_in2=(/ real(vec2(1),real32), real(vec2(2),real32), 0._real32/)
 
     symloop1: do i=1,size(sym(:,1,1),dim=1)
        ! matmul inmat with sym
@@ -349,7 +349,7 @@ contains
 
     !tol=1.D-5
     !outval=.true.
-    !vec_in=(/ dble(vec1(1)), dble(vec1(2)), 0.D0/)
+    !vec_in=(/ real(vec1(1),real32), real(vec1(2),real32), 0._real32/)
     !
     !symloop1: do i=1,size(sym(:,1,1),dim=1)
     !   vec_out=matmul(vec_in,sym(i,:3,:3))
@@ -380,18 +380,18 @@ contains
     implicit none
     integer :: i,isym,jsym
     integer :: nlist,matched_loc
-    double precision :: tol
+    real(real32) :: tol
     logical :: lunique
-    double precision, dimension(2,2) :: mat1,mat2,tf
-    double precision, dimension(2,4) :: inmat
-    double precision, allocatable, dimension(:,:,:) :: tf_testlist,mat_testlist
+    real(real32), dimension(2,2) :: mat1,mat2,tf
+    real(real32), dimension(2,4) :: inmat
+    real(real32), allocatable, dimension(:,:,:) :: tf_testlist,mat_testlist
 
-    double precision, dimension(:,:,:), intent(in) :: sym1,sym2
+    real(real32), dimension(:,:,:), intent(in) :: sym1,sym2
 
-    double precision, dimension(2,4), optional, intent(in) :: check_set
-    double precision, dimension(:,:,:), intent(inout), optional :: test_list
-    double precision, dimension(4), optional, intent(in) :: lw_check,up_check
-    double precision, dimension(:,:), optional, intent(inout) :: up_list
+    real(real32), dimension(2,4), optional, intent(in) :: check_set
+    real(real32), dimension(:,:,:), intent(inout), optional :: test_list
+    real(real32), dimension(4), optional, intent(in) :: lw_check,up_check
+    real(real32), dimension(:,:), optional, intent(inout) :: up_list
 
     !logical :: ltest_print
     !logical, optional, intent(in) :: ltest
@@ -400,7 +400,7 @@ contains
     !if(present(ltest)) ltest_print=ltest
     
     !! test set
-    !double precision, dimension(2,2) :: test1,test2
+    !real(real32), dimension(2,2) :: test1,test2
     !test1(1,:) = [ 0, 1 ]
     !test1(2,:) = [ 3, 0 ]
     !test2(1,:) = [ 1, 0 ]
@@ -571,20 +571,20 @@ contains
     implicit none
     integer :: i,j,l,m,total_list_count,nvec1,nvec2, k
     real :: tol_up_ang,tol_dw_ang,tol_up_vec,tol_dw_vec
-    double precision :: tiny
-    double precision :: reference_mag,considered_mag
-    double precision :: reference_angle,considered_angle
+    real(real32) :: tiny
+    real(real32) :: reference_mag,considered_mag
+    real(real32) :: reference_angle,considered_angle
     type(pm_tol_type) :: tol
-    double precision, dimension(3) :: lat1_veca,lat1_vecb,lat2_veca,lat2_vecb
-    double precision, dimension(tol%maxfit) :: MAIN_LOOP_LIST_TOLERANCES
-    !double precision, dimension(:) :: MAIN_LOOP_LIST_TOLERANCES
+    real(real32), dimension(3) :: lat1_veca,lat1_vecb,lat2_veca,lat2_vecb
+    real(real32), dimension(tol%maxfit) :: MAIN_LOOP_LIST_TOLERANCES
+    !real(real32), dimension(:) :: MAIN_LOOP_LIST_TOLERANCES
     integer, dimension(2,6) :: tmpmat
-    double precision, dimension(2,2) :: tf,mat1,mat2
-    double precision, dimension(2,3) :: considered_vectors
-    double precision, dimension(3,3) :: lat1,lat2
-    double precision, dimension(1000,3) :: tmp_tolerances
-    double precision, allocatable, dimension(:,:) :: matched_tols
-    double precision, dimension(tol%maxfit,2,4) :: MAIN_LOOP_LIST
+    real(real32), dimension(2,2) :: tf,mat1,mat2
+    real(real32), dimension(2,3) :: considered_vectors
+    real(real32), dimension(3,3) :: lat1,lat2
+    real(real32), dimension(1000,3) :: tmp_tolerances
+    real(real32), allocatable, dimension(:,:) :: matched_tols
+    real(real32), dimension(tol%maxfit,2,4) :: MAIN_LOOP_LIST
 
     integer :: ntransforms
     !! The 2x2 transformation matrices output by the code.
@@ -592,9 +592,9 @@ contains
     integer, allocatable, dimension(:,:,:) :: transforms1,transforms2
     integer, allocatable, dimension(:,:) :: numstore_1,numstore_2
     integer, allocatable, dimension(:,:) :: iarrtmp1
-    double precision, allocatable, dimension(:,:) :: latstore_1,latstore_2
-    double precision, allocatable, dimension(:,:) :: darrtmp1
-    double precision, dimension(:,:,:), optional :: sym1,sym2
+    real(real32), allocatable, dimension(:,:) :: latstore_1,latstore_2
+    real(real32), allocatable, dimension(:,:) :: darrtmp1
+    real(real32), dimension(:,:,:), optional :: sym1,sym2
   
 
 !!! Layout of each of the 1000 cells:
@@ -611,13 +611,13 @@ contains
   integer :: len_list_final !Length of final list of compatible vector pairs after angle check
 
   !! list of vec combins (of 2a and 2b) that fit vec lat1_a, mag of tol on fit
-  double precision, dimension(1000,3) :: list_1a 
+  real(real32), dimension(1000,3) :: list_1a 
   !! layout: int num of lat2_a, int num of lat2_b, tol
   !! list of vec combins (of 2a and 2b) that fit vec lat1_b, mag of tol on fit
-  double precision, dimension(1000,3) :: list_1b 
+  real(real32), dimension(1000,3) :: list_1b 
   !! layout: integer number of lat2_a, integer number of lat2_b, tol
 
-  double precision, dimension(1000,5) :: list_angle_fits
+  real(real32), dimension(1000,5) :: list_angle_fits
   !Layout:
   ! First 2 components(1-2); integer number of lat2_a, integer number of lat2_b
   ! Next 2 components(3-4); integer number of lat2_a, integer number of lat2_b
@@ -630,8 +630,8 @@ contains
   tiny = 1.D-5
   tol_up_ang = 1.E0 + real(tol%ang)/(2.E0*pi)
   tol_dw_ang = 1.E0 - real(tol%ang)/(2.E0*pi)
-  tol_up_vec = 1.E0 + real(tol%vec)!/100.D0
-  tol_dw_vec = 1.E0 - real(tol%vec)!/100.D0
+  tol_up_vec = 1.E0 + real(tol%vec)!/100._real32
+  tol_dw_vec = 1.E0 - real(tol%vec)!/100._real32
 
   if(allocated(matched_tols)) deallocate(matched_tols)
   allocate(matched_tols(tol%maxfit,3))
@@ -665,7 +665,7 @@ contains
            pmloop2: do j=1,-1,-2
               nvec1=nvec1+1
               numstore_1(nvec1,:) = (/ i*l, j*m /)
-              latstore_1(nvec1,:) = dble(i*l) * lat1_veca + dble(j*m) * lat1_vecb
+              latstore_1(nvec1,:) = real(i*l,real32) * lat1_veca + real(j*m,real32) * lat1_vecb
               if(abs(modu(latstore_1(nvec1,:))).gt.tol%maxlen)then
                  nvec1=nvec1-1
                  cycle pmloop1
@@ -695,7 +695,7 @@ contains
            pmloop4: do j=1,-1,-2
               nvec2=nvec2+1
               numstore_2(nvec2,:) = (/ i*l, j*m /)
-              latstore_2(nvec2,:) = dble(i*l) * lat2_veca + dble(j*m) * lat2_vecb
+              latstore_2(nvec2,:) = real(i*l,real32) * lat2_veca + real(j*m,real32) * lat2_vecb
               if(modu(latstore_2(nvec2,:)).gt.tol%maxlen)then
                  nvec2=nvec2-1
                  cycle vecmakeloop3
@@ -747,14 +747,14 @@ contains
         tmpmat(2,:2) = numstore_1(m,:2)
         if(all(latstore_1(l,:).eq.latstore_1(m,:))) cycle MAINLOOP2
         if(get_area([latstore_1(l,:)],[latstore_1(m,:)]).gt.tol%maxarea) cycle MAINLOOP2
-        if(all(cross([latstore_1(l,:)],[latstore_1(m,:)]).eq.0.D0)) cycle MAINLOOP2
+        if(all(cross([latstore_1(l,:)],[latstore_1(m,:)]).eq.0._real32)) cycle MAINLOOP2
         reference_angle = get_angle([latstore_1(l,:)],[latstore_1(m,:)])
         if (abs(reference_angle) .lt. tiny) cycle MAINLOOP2 
         
         !!! CHANGE IT TO TAKE IN A 2x2 MATRIX LATER !!!
         if(modu(latstore_1(l,:)).gt.modu(latstore_1(m,:))) cycle MAINLOOP2
         if(dot_product(latstore_1(l,:),latstore_1(m,:)).gt.&
-             (0.5D0*dot_product(latstore_1(l,:),latstore_1(l,:))))&
+             (0.5_real32*dot_product(latstore_1(l,:),latstore_1(l,:))))&
              cycle MAINLOOP2
         !SHOULD I REMOVE THIS? WHAT DOES IT WANT TO DO?
         !if(.not.is_unique_set(numstore_1(l,:),numstore_1(m,:),sym1)) &
@@ -809,13 +809,13 @@ contains
                  !     total_list_count,len_list_final, considered_angle
                  if(total_list_count.ne.0)then
                     if(.not.is_unique_match( sym1, sym2, &
-                         check_set = dble(tmpmat),&
+                         check_set = real(tmpmat,real32),&
                          test_list = MAIN_LOOP_LIST(:total_list_count,:2,:4)))&
                          cycle loop110
                  end if
                  if(len_list_final.ne.0)then
                     if(.not.is_unique_match( sym1, sym2, &
-                         check_set = dble(tmpmat),&
+                         check_set = real(tmpmat,real32),&
                          up_list = list_angle_fits(:len_list_final,:4)))&
                          cycle loop110
                  end if
@@ -828,7 +828,7 @@ contains
                       max(list_1a(i,3),list_1b(j,3))
                  tmp_tolerances(len_list_final,2) = &
                       abs(considered_angle-reference_angle)
-                 tmp_tolerances(len_list_final,3) = abs(1.D0 - &
+                 tmp_tolerances(len_list_final,3) = abs(1._real32 - &
                       get_area([considered_vectors(1,:)],[considered_vectors(2,:)])&
                       /get_area([latstore_1(l,:)],[latstore_1(m,:)]))
                  list_angle_fits(len_list_final,5) = &
@@ -845,14 +845,14 @@ contains
 !!! output list down to that size                             !!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         loop112: do i=1, len_list_final
-           mat1(1,:2)=dble(numstore_1(l,:2))
-           mat1(2,:2)=dble(numstore_1(m,:2))
-           mat2(1,:2)=dble(list_angle_fits(i,1:2))
-           mat2(2,:2)=dble(list_angle_fits(i,3:4))
+           mat1(1,:2)=real(numstore_1(l,:2),real32)
+           mat1(2,:2)=real(numstore_1(m,:2),real32)
+           mat2(1,:2)=real(list_angle_fits(i,1:2),real32)
+           mat2(2,:2)=real(list_angle_fits(i,3:4),real32)
            tf=find_tf(mat1,mat2)
            do j=1,tol%maxfit
-              if(all(abs(tf-find_tf(dble(MAIN_LOOP_LIST(j,:2,1:2)),&
-                   dble(MAIN_LOOP_LIST(j,:2,3:4)))).lt.1.D-6))then
+              if(all(abs(tf-find_tf(real(MAIN_LOOP_LIST(j,:2,1:2),real32),&
+                   real(MAIN_LOOP_LIST(j,:2,3:4),real32))).lt.1.D-6))then
                  cycle loop112
               end if
            end do

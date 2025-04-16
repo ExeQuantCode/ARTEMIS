@@ -8,12 +8,16 @@
 !!!#############################################################################
 !!! MAYBE HAVE FINDSYM IN HERE IN ORDER TO EDIT TOLSYM?
 module inputs
-  use constants, only: ierror,pi
-  use misc, only: flagmaker,file_check,to_lower,to_upper
-  use rw_geom, only: bas_type,geom_read,geom_write
-  use io
+  use artemis__constants, only: real32, ierror, pi
+  use artemis__misc, only: flagmaker,file_check
+  use artemis__geom_rw, only: basis_type,geom_read
+  use artemis__io_utils, only: &
+       artemis__version__, &
+       print_warning, print_header, &
+       err_abort
+  use artemis__io_utils_extd, only: setup_input_fmt, setup_output_fmt
   use aspect, only: aspect_type, edit_structure
-  use lat_compare, only: lreduce,get_best_match,latmatch_type,tol_type
+  use lat_compare, only: lreduce,tol_type
   use infile_tools
   use infile_print
   use mod_sym, only: set_symmetry_tolerance
@@ -23,10 +27,10 @@ module inputs
   integer :: lw_num_layers,up_num_layers
   integer :: nshift,nterm,nintf,nswap,nmiller
   real :: max_bondlength,swap_sigma,swap_depth
-  double precision :: lw_thickness, up_thickness
-  double precision :: lw_bulk_modulus, up_bulk_modulus
-  double precision :: c_scale,intf_depth,vacuum
-  double precision :: layer_sep,lw_layer_sep,up_layer_sep,swap_den,tol_sym
+  real(real32) :: lw_thickness, up_thickness
+  real(real32) :: lw_bulk_modulus, up_bulk_modulus
+  real(real32) :: c_scale,intf_depth,vacuum
+  real(real32) :: layer_sep,lw_layer_sep,up_layer_sep,swap_den,tol_sym
   character(len=20) :: input_fmt,output_fmt
   character(200) :: struc1_file,struc2_file,out_filename
   character(100) :: dirname,shiftdir,swapdir,subdir_prefix
@@ -39,15 +43,15 @@ module inputs
   logical :: lswap_mirror
   logical :: lc_fix
   logical :: lbreak_on_no_term
-  type(bas_type) :: struc1_bas,struc2_bas
+  type(basis_type) :: struc1_bas,struc2_bas
   type(tol_type) :: tolerance
   type(aspect_type) :: edits
   integer, dimension(2) :: lw_surf,up_surf
   integer, dimension(3) :: lw_mplane,up_mplane
   integer, allocatable, dimension(:) :: seed
-  double precision, dimension(2) :: udef_intf_loc
-  double precision, allocatable, dimension(:,:) :: offset
-  double precision, dimension(3,3) :: struc1_lat,struc2_lat
+  real(real32), dimension(2) :: udef_intf_loc
+  real(real32), allocatable, dimension(:,:) :: offset
+  real(real32), dimension(3,3) :: struc1_lat,struc2_lat
 
 
 !!!updated  2023/03/27
@@ -88,10 +92,10 @@ contains
     imatch=0
     ishift=4
     idepth=0   !!! SWAP DEFAULT DEPTH METHOD !!!
-    intf_depth=1.5D0
-    layer_sep=1.D0
-    lw_layer_sep=0.D0
-    up_layer_sep=0.D0
+    intf_depth=1.5_real32
+    layer_sep=1._real32
+    lw_layer_sep=0._real32
+    up_layer_sep=0._real32
     lortho = .true.
     lsurf_gen=.false.
     up_mplane=(/0,0,0/)
@@ -99,25 +103,25 @@ contains
     axis=3
     lw_num_layers=0
     up_num_layers=0
-    lw_thickness=-1.D0
-    up_thickness=-1.D0
-    vacuum=14.D0
+    lw_thickness=-1._real32
+    up_thickness=-1._real32
+    vacuum=14._real32
     lw_surf=0
     up_surf=0
-    c_scale=1.5D0
+    c_scale=1.5_real32
     max_bondlength=4.0
     nmiller=10
     nshift=5
     nterm=5
     nintf=100
     tolerance%nstore=5
-    tolerance%maxlen=20.D0
-    tolerance%maxarea=400.D0
+    tolerance%maxlen=20._real32
+    tolerance%maxarea=400._real32
     tolerance%maxfit=100
     tolerance%maxsize=10
-    tolerance%vec=5.D0
-    tolerance%ang=1.D0
-    tolerance%area=10.D0
+    tolerance%vec=5._real32
+    tolerance%ang=1._real32
+    tolerance%area=10._real32
     lprint_terms=.false.
     lprint_shifts=.false.
     lprint_matches=.false.
@@ -140,7 +144,7 @@ contains
     up_surf=0
     iintf=-1
     tol_sym = 1.D-6
-    udef_intf_loc = [ -1.D0, -1.D0 ]
+    udef_intf_loc = [ -1._real32, -1._real32 ]
     lw_use_pricel=.true.
     up_use_pricel=.true.
 
@@ -230,7 +234,7 @@ contains
           if(.not.empty) read(buffer,*) ierror
        elseif(index(buffer,'--version').eq.1)then
           flag="--version"
-          write(6,'(1X,"ARTEMIS version: ",A)') trim(version)
+          write(6,'(1X,"ARTEMIS version: ",A)') trim(artemis__version__)
           stop
        elseif(index(buffer,'-h').eq.1.or.index(buffer,'--help').eq.1)then
           flag="--help"
@@ -314,9 +318,9 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! readjust interface tolerances
 !!!-----------------------------------------------------------------------------
-    tolerance%vec=tolerance%vec/100.D0
-    tolerance%ang=tolerance%ang*pi/180.D0
-    tolerance%area=tolerance%area/100.D0
+    tolerance%vec=tolerance%vec/100._real32
+    tolerance%ang=tolerance%ang*pi/180._real32
+    tolerance%area=tolerance%area/100._real32
 
 
 !!!-----------------------------------------------------------------------------
@@ -335,7 +339,7 @@ contains
 !!!-----------------------------------------------------------------------------
     GEOMunit=10
     call file_check(GEOMunit,struc1_file)
-    call geom_read(GEOMunit,struc1_lat,struc1_bas,4)
+    call geom_read(GEOMunit,struc1_bas,4)
     close(GEOMunit)
     lpresent_struc2 = .false.
     !!--------------------------------------------------------------------------
@@ -357,7 +361,7 @@ contains
        lpresent_struc2 = .true.
        GEOMunit=11
        call file_check(GEOMunit,struc2_file)
-       call geom_read(GEOMunit,struc2_lat,struc2_bas,4)
+       call geom_read(GEOMunit,struc2_bas,4)
        close(GEOMunit)
     end if
 
@@ -365,7 +369,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! changes interface depth depending on IDEPTH method
 !!!-----------------------------------------------------------------------------
-    if(idepth.eq.0) intf_depth=0.D0
+    if(idepth.eq.0) intf_depth=0._real32
 
 
 
@@ -385,19 +389,19 @@ contains
 
     write(6,'(A)') repeat("#",50)
 
-    if(lw_thickness.gt.0.D0.and.lw_num_layers.gt.0)then
+    if(lw_thickness.gt.0._real32.and.lw_num_layers.gt.0)then
        write(0,'(1X,A)') "WARNING: SLAB THICKNESS AND NUMBER OF LAYERS BOTH DEFINED"
        write(0,'(1X,A)') "         SLAB THICKNESS OVERRIDES NUMBER OF LAYERS"
        lw_num_layers=0
-    elseif(lw_thickness.le.0.D0.and.lw_num_layers.le.0)then
-       lw_thickness = 10.D0
+    elseif(lw_thickness.le.0._real32.and.lw_num_layers.le.0)then
+       lw_thickness = 10._real32
     end if
-    if(up_thickness.gt.0.D0.and.up_num_layers.gt.0)then
+    if(up_thickness.gt.0._real32.and.up_num_layers.gt.0)then
        write(0,'(1X,A)') "WARNING: SLAB THICKNESS AND NUMBER OF LAYERS BOTH DEFINED"
        write(0,'(1X,A)') "         SLAB THICKNESS OVERRIDES NUMBER OF LAYERS"
        up_num_layers=0
-    elseif(up_thickness.le.0.D0.and.up_num_layers.le.0)then
-       up_thickness = 10.D0
+    elseif(up_thickness.le.0._real32.and.up_num_layers.le.0)then
+       up_thickness = 10._real32
     end if
 
     return
@@ -756,12 +760,12 @@ contains
              allocate(offset(1,3))
              select case(icount(store))
              case(1)
-                offset(1,:)=0.D0
+                offset(1,:)=0._real32
                 read(store,*) offset(1,3)
                 iudef_nshift = 1
              case(3)
                 read(store,*) offset(1,:)
-                if(all(offset.ge.0.D0)) iudef_nshift=1
+                if(all(offset.ge.0._real32)) iudef_nshift=1
              case default
                 call err_abort('ERROR: Invalid number of arguments provided to SHIFT&
                      &\nValid number of arguments is 1 or 3.&')
@@ -877,13 +881,13 @@ contains
     if(readvar(25).eq.0)then
        select case(ishift)
        case(0,4)
-          c_scale = 1.D0
+          c_scale = 1._real32
        end select
     end if
 
 
     if(ludef_offset)then
-       if(readvar(22).eq.1.and.ishift.ne.0.and.all(offset.ge.0.D0))then
+       if(readvar(22).eq.1.and.ishift.ne.0.and.all(offset.ge.0._real32))then
           write(0,*) "ISHIFT = ",ishift
           write(0,*) "SHIFT = ",offset
           call err_abort('ERROR: Contradictory tags used (ISHIFT and SHIFT) &
@@ -892,13 +896,13 @@ contains
        elseif(readvar(22).eq.1.and.ishift.ne.0.and.size(offset(:,1),dim=1).gt.1)then
           call err_abort('ERROR: Contradictory tags used (ISHIFT and SHIFT) &
                &\nExiting...',.true.)
-       elseif(all(offset.ge.0.D0))then
+       elseif(all(offset.ge.0._real32))then
           ishift=0
           nshift=iudef_nshift
        end if
     else
        allocate(offset(1,3))
-       offset(1,:)=(/-1.D0,-1.D0,-1.D0/)
+       offset(1,:)=(/-1._real32,-1._real32,-1._real32/)
     end if
 
     ! set lw_ and up_layer_sep if not defined

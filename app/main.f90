@@ -9,6 +9,9 @@ program artemis_executable
   implicit none
 
 
+  type(artemis_generator_type) :: generator
+
+
 
 !!!-----------------------------------------------------------------------------
 !!! set up global variables
@@ -28,8 +31,12 @@ program artemis_executable
      write(6,'(1X,"task ",I0," set",/,1X,"Performing Cell Edits")') task
      if(lsurf_gen)then
         write(0,'(1X,"Finding terminations for lower material.")')
-        call gen_terminations(struc1_lat,struc1_bas,lw_mplane,axis,&
-             num_layers=lw_num_layers, thickness=lw_thickness)
+        generator%layer_separation_cutoff(1) = layer_sep
+        call generator%gen_terminations(struc1_bas,lw_mplane,axis,&
+             num_layers = lw_num_layers, &
+             thickness = lw_thickness &
+        )
+        call generator%write_terminations(directory = "DTERMINATIONS")
         write(0,'(1X,"Terminations printed.",/,1X,"Exiting...")')
         stop
      end if
@@ -54,22 +61,22 @@ program artemis_executable
            write(6,'("Skipping...")')
         else
            write(6,'(1X,"Finding terminations for lower material.")')
-           call gen_terminations(struc1_lat,struc1_bas,lw_mplane,axis,&
-                directory="DLW_TERMS", &
-                num_layers=lw_num_layers, &
-                thickness=lw_thickness, &
-                udef_layer_sep=lw_layer_sep)
+           generator%layer_separation_cutoff(1) = lw_layer_sep
+           call generator%gen_terminations(struc1_bas,lw_mplane,axis,&
+                num_layers = lw_num_layers, &
+                thickness = lw_thickness &
+           )
         end if
         if(all(up_mplane.eq.0))then
            write(6,'("No Miller plane defined for upper material.")')
            write(6,'("Skipping...")')
         else
            write(6,'(1X,"Finding terminations for upper material.")')
-           call gen_terminations(struc2_lat,struc2_bas,up_mplane,axis,&
-                directory="DUP_TERMS", &
+           generator%layer_separation_cutoff(2) = up_layer_sep
+           call generator%gen_terminations(struc2_bas,up_mplane,axis,&
                 num_layers = up_num_layers, &
-                thickness = up_thickness, &
-                udef_layer_sep=up_layer_sep)
+                thickness = up_thickness &
+           )
         end if
         write(6,'(1X,"Terminations printed.",/,1X,"Exiting...")')
         stop

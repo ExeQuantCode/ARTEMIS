@@ -4,12 +4,13 @@
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
 module shifting
-  use constants, only: ierror,pi,INF
+  use artemis__constants, only: real32, ierror, pi, INF
   use misc_maths, only: get_nth_plane
   use misc_linalg, only: modu
-  use rw_geom, only: bas_type,clone_bas,geom_write
-  use edit_geom, only: split_bas,get_centre_atom,bas_merge,set_vacuum,shifter
-  use io
+  use artemis__geom_rw, only: basis_type,geom_write
+  use edit_geom, only: split_bas,get_centre_atom,set_vacuum,shifter
+  use artemis__io_utils
+  use artemis__io_utils_extd, only: err_abort_print_struc
   use interface_identifier
   implicit none
 
@@ -40,15 +41,15 @@ contains
   subroutine get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc,depth)
     implicit none
     integer :: i,is,ia,itop,ibot,axis,count1
-    double precision :: centre,dist,dist_max
-    double precision, optional :: depth
-    type(bas_type) :: bas,bas_top,bas_bot
-    double precision, dimension(:) :: intf_loc
-    double precision, dimension(3,3) :: lat
+    real(real32) :: centre,dist,dist_max
+    real(real32), optional :: depth
+    type(basis_type) :: bas,bas_top,bas_bot
+    real(real32), dimension(:) :: intf_loc
+    real(real32), dimension(3,3) :: lat
     integer, allocatable, dimension(:) :: vtmp1
     integer, allocatable, dimension(:,:) :: intf_list
-    double precision, allocatable, dimension(:,:) :: regions
-    type(bas_type), allocatable, dimension(:) :: splitbas
+    real(real32), allocatable, dimension(:,:) :: regions
+    type(basis_type), allocatable, dimension(:) :: splitbas
 
 
 !!!-----------------------------------------------------------------------------
@@ -90,8 +91,8 @@ contains
        LOOP105: do is=1,bas%nspec
           allocate(bas_top%spec(is)%atom(bas_top%spec(is)%num,3))
           allocate(bas_bot%spec(is)%atom(bas_bot%spec(is)%num,3))
-          bas_top%spec(is)%atom(:,:)=0.D0
-          bas_bot%spec(is)%atom(:,:)=0.D0
+          bas_top%spec(is)%atom(:,:)=0._real32
+          bas_bot%spec(is)%atom(:,:)=0._real32
        end do LOOP105
 
 
@@ -114,7 +115,7 @@ contains
           end do LOOP104
        end do LOOP103
     else
-       dist_max=4.D0/modu(lat(axis,:))
+       dist_max=4._real32/modu(lat(axis,:))
        allocate(vtmp1(bas%nspec))
        allocate(regions(size(intf_loc,dim=1),2))
        regions(1,1:2)=intf_loc(1:2)
@@ -215,23 +216,23 @@ contains
 !!! ... required minimum bulk bond length.            
 !!!#############################################################################
   function get_fit_shifts(lat,bas,bond,axis,intf_loc,depth,nstore,itmp1,itmp2) result(best_shifts)
-    double precision :: depth,bond ! the depth into the material we are interested (physical size in the c direction).
+    real(real32) :: depth,bond ! the depth into the material we are interested (physical size in the c direction).
     integer :: i
-    type(bas_type) :: bas_bot,bas_top
+    type(basis_type) :: bas_bot,bas_top
 
-    double precision :: depth_bascoord
-    double precision, dimension(:) :: intf_loc
-    double precision, allocatable, dimension(:,:) :: min_atom_sep
-    double precision, allocatable, dimension(:,:,:) :: avg_min_atom_sep
+    real(real32) :: depth_bascoord
+    real(real32), dimension(:) :: intf_loc
+    real(real32), allocatable, dimension(:,:) :: min_atom_sep
+    real(real32), allocatable, dimension(:,:,:) :: avg_min_atom_sep
 
     integer :: axis
     integer :: num_steps,num_c_shifts !number of pieces to divide the unit cell into in a and b direction.
-    double precision, allocatable, dimension(:,:) :: best_shifts
+    real(real32), allocatable, dimension(:,:) :: best_shifts
     integer :: nstore ! The required output number of the best shifts.
 
     integer, optional :: itmp1,itmp2
-    type(bas_type) :: bas !The basis input by interfaces.f90
-    double precision, dimension(3,3) :: lat !The lattice input by interfaces.f90
+    type(basis_type) :: bas !The basis input by interfaces.f90
+    real(real32), dimension(3,3) :: lat !The lattice input by interfaces.f90
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -245,7 +246,7 @@ contains
     allocate(best_shifts(nstore,4))
 
 
-    if(depth.eq.0.D0)then
+    if(depth.eq.0._real32)then
        call get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc)
     else
        call get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc,depth)
@@ -289,10 +290,10 @@ contains
 !!!#########################################################################
   function findbestfits(bulkbond,avg_min_sep,num_steps,num_c_shifts,num_best_shifts,depth) result(best_shifts)
     implicit none
-    double precision, dimension(:,:,:) :: avg_min_sep
-    double precision :: bulkbond,current_difference,min_difference,depth
+    real(real32), dimension(:,:,:) :: avg_min_sep
+    real(real32) :: bulkbond,current_difference,min_difference,depth
     integer :: i,ia,ib,ic,num_steps,num_c_shifts,num_best_shifts,c_shift_low,c_shift_high
-    double precision, allocatable, dimension(:,:) :: best_shifts
+    real(real32), allocatable, dimension(:,:) :: best_shifts
     integer, dimension(3) :: placeholder
 
     allocate(best_shifts(num_best_shifts,4))
@@ -306,16 +307,16 @@ contains
     end if
     shiftloop: do i=1,num_best_shifts 
 
-       min_difference = huge(0.D0)
+       min_difference = huge(0._real32)
        LOOP5A: do ia=0,num_steps-1 !loop through shifts in a
           LOOP5B: do ib=0,num_steps-1 !loop through shifts in b
              LOOP5C: do ic=c_shift_low,c_shift_high,1 !Loop through shifts of the top plane in c
                 current_difference = abs(avg_min_sep(ia+1,ib+1,ic-c_shift_low+1) - bulkbond)
                 if (current_difference.lt.min_difference) then
                    min_difference = current_difference
-                   best_shifts(i,1) = dble(ia)/dble(num_steps)
-                   best_shifts(i,2) = dble(ib)/dble(num_steps)
-                   best_shifts(i,3) = dble(ic)*depth*2.D0/dble(num_c_shifts)
+                   best_shifts(i,1) = real(ia,real32)/real(num_steps,real32)
+                   best_shifts(i,2) = real(ib,real32)/real(num_steps,real32)
+                   best_shifts(i,3) = real(ic,real32)*depth*2._real32/real(num_c_shifts,real32)
                    best_shifts(i,4) = min_difference
                    placeholder(1) = ia
                    placeholder(2) = ib
@@ -325,7 +326,7 @@ contains
              end do LOOP5C
           end do LOOP5B
        end do LOOP5A
-       avg_min_sep(placeholder(1)+1,placeholder(2)+1,placeholder(3)-c_shift_low+1) = huge(0.D0)
+       avg_min_sep(placeholder(1)+1,placeholder(2)+1,placeholder(3)-c_shift_low+1) = huge(0._real32)
     end do shiftloop
 
   end function findbestfits
@@ -338,17 +339,17 @@ contains
 !!!#############################################################################
   function avgminsep(lat,plane_up,plane_dw,num_steps,num_c_shifts,depth) result(avg_min_sep)
     implicit none
-    type(bas_type) :: plane_up,plane_dw,tplane_up,tplane_dw
-    double precision :: avg_sep_up,avg_sep_dw,depth
+    type(basis_type) :: plane_up,plane_dw,tplane_up,tplane_dw
+    real(real32) :: avg_sep_up,avg_sep_dw,depth
     integer :: num_steps,num_c_shifts !number of pieces to divide the unit cell into in a and b direction.
-    double precision, allocatable, dimension(:,:,:) :: avg_min_sep
+    real(real32), allocatable, dimension(:,:,:) :: avg_min_sep
     integer :: ia,ib,ic,is_up,ia_up,c_shift_low,c_shift_high
-    double precision, dimension(3,3) :: lat
+    real(real32), dimension(3,3) :: lat
 
 
     allocate(avg_min_sep(num_steps,num_steps,num_c_shifts))
-    call clone_bas(plane_up,tplane_up)
-    call clone_bas(plane_dw,tplane_dw)
+    call tplane_up%copy(plane_up)
+    call tplane_dw%copy(plane_dw)
     if (mod(num_c_shifts,2) .eq. 0) then
        c_shift_low = -nint(real(num_c_shifts)/2.0)+1
        c_shift_high = nint(real(num_c_shifts)/2.0)
@@ -358,7 +359,7 @@ contains
     end if
 
 
-    avg_min_sep = huge(0.D0)
+    avg_min_sep = huge(0._real32)
     LOOP4C: do ic=c_shift_low,c_shift_high,1 !Loop through shifts of the top plane in c
        LOOP4A: do ia=0,num_steps-1 !loop through shifts in a
           LOOP4B: do ib=0,num_steps-1 !loop through shifts in b
@@ -368,9 +369,9 @@ contains
                    plane_up%spec(is_up)%atom(ia_up,:) = &
                         plane_up%spec(is_up)%atom(ia_up,:) + &
                         (/&
-                        (dble(ia)/dble(num_steps)),&
-                        (dble(ib)/dble(num_steps)),&
-                        (dble(ic)*depth*2.D0/dble(num_c_shifts)) /)
+                        (real(ia,real32)/real(num_steps,real32)),&
+                        (real(ib,real32)/real(num_steps,real32)),&
+                        (real(ic,real32)*depth*2._real32/real(num_c_shifts,real32)) /)
                 end do
              end do
 
@@ -378,7 +379,7 @@ contains
              avg_sep_dw = find_avg_min_sep(lat, plane_dw,tplane_up)
 
              avg_min_sep(ia+1,ib+1,ic-c_shift_low+1) = &
-                  (avg_sep_up + avg_sep_dw)/2.D0
+                  (avg_sep_up + avg_sep_dw)/2._real32
 
           end do LOOP4B
        end do LOOP4A
@@ -395,17 +396,17 @@ contains
   function find_avg_min_sep(lat,plane_1,plane_2) result(avg_min_sep)
     implicit none
     integer :: is_1,ia_1,is_2,ia_2,j
-    double precision :: avg_min_sep,min_sep,cur_sep
-    type(bas_type) :: plane_1,plane_2
-    double precision, dimension(3) :: dvtmp1
-    double precision, dimension(3,3) :: lat
+    real(real32) :: avg_min_sep,min_sep,cur_sep
+    type(basis_type) :: plane_1,plane_2
+    real(real32), dimension(3) :: dvtmp1
+    real(real32), dimension(3,3) :: lat
 
 
-    avg_min_sep=0.D0
+    avg_min_sep=0._real32
     LOOP401: do is_1=1,plane_1%nspec ! Loop though 1st plane
        LOOP402: do ia_1=1,plane_1%spec(is_1)%num
 
-          min_sep = huge(0.D0)
+          min_sep = huge(0._real32)
           LOOP403: do is_2=1,plane_2%nspec ! Loop through 2nd plane
              LOOP404: do ia_2=1,plane_2%spec(is_2)%num
 
@@ -414,7 +415,7 @@ contains
                      plane_1%spec(is_1)%atom(ia_1,:)
 
                 do j=1,3
-                   dvtmp1(j) = dvtmp1(j) - ceiling( dvtmp1(j) - 0.5D0 )
+                   dvtmp1(j) = dvtmp1(j) - ceiling( dvtmp1(j) - 0.5_real32 )
                 end do
                 dvtmp1 = dvtmp1(1) * lat(1,:) &
                      + dvtmp1(2) * lat(2,:) &
@@ -455,13 +456,13 @@ contains
     implicit none
     integer :: is
     integer :: nstore,axis,num_steps
-    double precision :: bond,depth,cur_vac,c_shift
-    type(bas_type) :: bas,bas_bot,bas_top
-    double precision, dimension(3,3) :: lat
-    double precision, dimension(:) :: intf_loc
-    double precision, allocatable, dimension(:) :: specval_bot,specval_top
-    double precision, allocatable, dimension(:,:) :: res_shifts
-    double precision, optional :: c_scale
+    real(real32) :: bond,depth,cur_vac,c_shift
+    type(basis_type) :: bas,bas_bot,bas_top
+    real(real32), dimension(3,3) :: lat
+    real(real32), dimension(:) :: intf_loc
+    real(real32), allocatable, dimension(:) :: specval_bot,specval_top
+    real(real32), allocatable, dimension(:,:) :: res_shifts
+    real(real32), optional :: c_scale
     logical, optional :: lprint
 
 
@@ -470,7 +471,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! separates basis into atoms above and below interface within a depth window
 !!!-----------------------------------------------------------------------------
-    if(depth.eq.0.D0)then
+    if(depth.eq.0._real32)then
        call get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc)
     else
        call get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc,depth=depth)
@@ -482,8 +483,8 @@ contains
 !!!-----------------------------------------------------------------------------
     allocate(specval_bot(bas%nspec))
     allocate(specval_top(bas%nspec))
-    specval_bot=-huge(0.D0)
-    specval_top=huge(0.D0)
+    specval_bot=-huge(0._real32)
+    specval_top=huge(0._real32)
     do is=1,bas%nspec
        if(bas_bot%spec(is)%num.ne.0)then
           specval_bot(is)=maxval(bas_bot%spec(is)%atom(:,axis))
@@ -545,18 +546,18 @@ contains
     implicit none
     integer :: num_steps,count1
     integer :: ia,ib,is_up,ia_up,axis
-    double precision :: avg_sep_up,avg_sep_dw,bond,tol
-    double precision :: c_shift,prev_c_shift,new_c_shift
-    double precision :: prev_min_bond,min_bond
-    type(bas_type) :: plane_up,plane_dw,tplane_up
-    double precision, allocatable, dimension(:,:) :: avg_min_sep
-    double precision, dimension(3,3) :: lat
+    real(real32) :: avg_sep_up,avg_sep_dw,bond,tol
+    real(real32) :: c_shift,prev_c_shift,new_c_shift
+    real(real32) :: prev_min_bond,min_bond
+    type(basis_type) :: plane_up,plane_dw,tplane_up
+    real(real32), allocatable, dimension(:,:) :: avg_min_sep
+    real(real32), dimension(3,3) :: lat
 
 
 !!!-----------------------------------------------------------------------------
 !!! Clone upper basis for editing
 !!!-----------------------------------------------------------------------------
-    call clone_bas(plane_up,tplane_up)
+    call tplane_up%copy(plane_up)
     allocate(avg_min_sep(num_steps,num_steps))
 
 
@@ -565,10 +566,10 @@ contains
 !!!-----------------------------------------------------------------------------
     tol=1.D-2/modu(lat(axis,:))
     count1=0
-    prev_min_bond=0.D0
-    prev_c_shift=0.D0
-    c_shift=0.D0
-    avg_min_sep = huge(0.D0)
+    prev_min_bond=0._real32
+    prev_c_shift=0._real32
+    c_shift=0._real32
+    avg_min_sep = huge(0._real32)
 
 
 !!!-----------------------------------------------------------------------------
@@ -584,15 +585,15 @@ contains
                 do ia_up=1,plane_up%spec(is_up)%num
                    tplane_up%spec(is_up)%atom(ia_up,:) = plane_up%spec(is_up)%atom(ia_up,:) + &
                         (/&
-                        (dble(ia)/dble(num_steps)),&
-                        (dble(ib)/dble(num_steps)),&
+                        (real(ia,real32)/real(num_steps,real32)),&
+                        (real(ib,real32)/real(num_steps,real32)),&
                         c_shift /)
                 end do
              end do
 
              avg_sep_up = find_avg_min_sep(lat,tplane_up, plane_dw)
              avg_sep_dw = find_avg_min_sep(lat, plane_dw,tplane_up)
-             avg_min_sep(ia+1,ib+1) = (avg_sep_up + avg_sep_dw)/2.D0
+             avg_min_sep(ia+1,ib+1) = (avg_sep_up + avg_sep_dw)/2._real32
 
           end do LOOP5B
        end do LOOP5A
@@ -618,7 +619,7 @@ contains
                   (prev_c_shift - c_shift)*( prev_min_bond - bond )/( prev_min_bond - min_bond )
           end if
        else
-          new_c_shift = 0.5D0/modu(lat(axis,:))
+          new_c_shift = 0.5_real32/modu(lat(axis,:))
        end if
        !!-----------------------------------------------------------------------
        !! Breaks afer 50 failed steps
@@ -651,21 +652,21 @@ contains
     implicit none
     integer :: nstore,num_steps,count1
     integer :: ia,ib,is_up,ia_up,axis,iden,inum
-    double precision :: avg_sep_up,avg_sep_dw,bond
-    double precision :: min_sep,max_sep
-    type(bas_type) :: plane_up,plane_dw,tplane_up,tplane_dw
-    double precision, allocatable, dimension(:,:) :: ab_shifts,avg_min_sep
-    double precision, dimension(3,3) :: lat
+    real(real32) :: avg_sep_up,avg_sep_dw,bond
+    real(real32) :: min_sep,max_sep
+    type(basis_type) :: plane_up,plane_dw,tplane_up,tplane_dw
+    real(real32), allocatable, dimension(:,:) :: ab_shifts,avg_min_sep
+    real(real32), dimension(3,3) :: lat
 
 
-    call clone_bas(plane_up,tplane_up)
-    call clone_bas(plane_dw,tplane_dw)
+    call tplane_up%copy(plane_up)
+    call tplane_dw%copy(plane_dw)
     allocate(avg_min_sep(num_steps,num_steps))
     allocate(ab_shifts(nstore,2))
 
 
     count1=0
-    avg_min_sep = huge(0.D0)
+    avg_min_sep = huge(0._real32)
     LOOP5A: do ia=0,num_steps-1 !loop through shifts in a
        LOOP5B: do ib=0,num_steps-1 !loop through shifts in b
 
@@ -673,9 +674,9 @@ contains
              do ia_up=1,plane_up%spec(is_up)%num
                 tplane_up%spec(is_up)%atom(ia_up,:) = plane_up%spec(is_up)%atom(ia_up,:) + &
                      (/&
-                     (dble(ia)/dble(num_steps)),&
-                     (dble(ib)/dble(num_steps)),&
-                     0.D0 /)
+                     (real(ia,real32)/real(num_steps,real32)),&
+                     (real(ib,real32)/real(num_steps,real32)),&
+                     0._real32 /)
              end do
           end do
 
@@ -683,7 +684,7 @@ contains
           avg_sep_dw = find_avg_min_sep(lat, plane_dw,tplane_up)
 
 
-          avg_min_sep(ia+1,ib+1) = (avg_sep_up + avg_sep_dw)/2.D0
+          avg_min_sep(ia+1,ib+1) = (avg_sep_up + avg_sep_dw)/2._real32
        end do LOOP5B
     end do LOOP5A
 
@@ -694,8 +695,8 @@ contains
 
 
 
-    ab_shifts(1,:)=dble((/minloc(avg_min_sep)/))/dble(num_steps)
-    ab_shifts(2,:)=dble((/maxloc(avg_min_sep)/))/dble(num_steps)
+    ab_shifts(1,:)=real((/minloc(avg_min_sep)/),real32)/real(num_steps,real32)
+    ab_shifts(2,:)=real((/maxloc(avg_min_sep)/),real32)/real(num_steps,real32)
     iden=1
     count1=2
     denom_loop: do
@@ -704,10 +705,10 @@ contains
        do inum=1,iden,2
           count1=count1+1
           if(count1.gt.nstore) exit denom_loop
-          ab_shifts(count1,:) = dble((/ &
+          ab_shifts(count1,:) = real((/ &
                minloc( &
-               abs( avg_min_sep - ( min_sep + (max_sep-min_sep)*dble(inum)/dble(iden) ) ) )&
-               /))/dble(num_steps)
+               abs( avg_min_sep - ( min_sep + (max_sep-min_sep)*real(inum,real32)/real(iden,real32) ) ) )&
+               /),real32)/real(num_steps,real32)
 
        end do
     end do denom_loop
@@ -749,7 +750,7 @@ contains
     integer :: ntrans,iatom,nneigh,ncheck
     real :: stepsize,max_sep,dist_max
     real :: rtmp1,rtmp2,rtmp3
-    double precision :: val,dtmp1,dtmp2
+    real(real32) :: val,dtmp1,dtmp2
     logical :: lbulk, lpresent
     type(confine_type) :: confine
     integer, dimension(2) :: plane_loc
@@ -760,19 +761,19 @@ contains
     type(map_type), dimension(2) :: map
     type(wyck_spec_type), dimension(2) :: wyckoff
     real, allocatable, dimension(:) :: fit_store,tmp_neigh
-    type(bas_type), allocatable, dimension(:) :: splitbas
+    type(basis_type), allocatable, dimension(:) :: splitbas
     type(den_of_neigh_type), allocatable, dimension(:,:) :: DON_missing
     integer, allocatable, dimension(:,:) :: shift_store
-    double precision, allocatable, dimension(:,:) :: res_shifts,trans,regions
+    real(real32), allocatable, dimension(:,:) :: res_shifts,trans,regions
 
     integer, intent(in) :: axis,nstore
     real, intent(in), optional :: max_bondlength
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(:), intent(in) :: intf_loc
-    double precision, dimension(3,3), intent(in) :: lat
-    double precision, optional :: c_scale
+    type(basis_type), intent(in) :: bas
+    real(real32), dimension(:), intent(in) :: intf_loc
+    real(real32), dimension(3,3), intent(in) :: lat
+    real(real32), optional :: c_scale
     logical, optional :: lprint
-    double precision, dimension(3), optional, intent(in) :: offset
+    real(real32), dimension(3), optional, intent(in) :: offset
 
 
     integer, dimension(:,:,:), optional, intent(in) :: bulk_map
@@ -817,7 +818,7 @@ contains
 !!! sets up step size
 !!!-----------------------------------------------------------------------------
     allocate(res_shifts(nstore,3))
-    res_shifts=0.D0
+    res_shifts=0._real32
 
 
 !!!-----------------------------------------------------------------------------
@@ -845,7 +846,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! determines repeated translations within the cell (reduces shift by that)
 !!!-----------------------------------------------------------------------------
-    min_trans=1.D0
+    min_trans=1._real32
     do i=1,2
        call gldfnd(confine,splitbas(i),splitbas(i),trans,ntrans)
        if(ntrans.eq.0) cycle
@@ -857,7 +858,7 @@ contains
     end do
     min_trans=abs(min_trans)
     where(abs(min_trans).lt.1.D-5)
-       min_trans=1.D0
+       min_trans=1._real32
     end where
     if(ierror.eq.1) write(6,*) "repeated_trans:",min_trans
 
@@ -931,8 +932,8 @@ contains
              !!-----------------------------------------------------------------
              dtmp1 = splitbas(i)%spec(is)%atom(ia,axis) - intf_loc(1)
              dtmp2 = splitbas(i)%spec(is)%atom(ia,axis) - intf_loc(2)
-             if( abs(dtmp1 - ceiling(dtmp1 - 0.5D0)) .gt. &
-                  abs(dtmp2 - ceiling(dtmp2 - 0.5D0)))then
+             if( abs(dtmp1 - ceiling(dtmp1 - 0.5_real32)) .gt. &
+                  abs(dtmp2 - ceiling(dtmp2 - 0.5_real32)))then
                 cycle atom_loop1
              end if
 
@@ -953,8 +954,8 @@ contains
                      DON_missing(i,is)%atom(iatom,:) - &
                      DON_missing(i,is)%atom(ia,:)
              end if
-             !where(DON_missing(i,is)%atom(ia,:).lt.0.D0)
-             !   DON_missing(i,is)%atom(ia,:)=0.D0
+             !where(DON_missing(i,is)%atom(ia,:).lt.0._real32)
+             !   DON_missing(i,is)%atom(ia,:)=0._real32
              !end where
              if(all(abs(DON_missing(i,is)%atom(ia,:)).lt.1.D-2))&
                   cycle atom_loop1
@@ -964,7 +965,7 @@ contains
              !! checks only 1st missing bond
              !!-----------------------------------------------------------------
              plane_loc(:)=&
-                  get_nth_plane(invec=dble(DON_missing(i,is)%atom(ia,:)),&
+                  get_nth_plane(invec=real(DON_missing(i,is)%atom(ia,:),real32),&
                   nth=2,window=20,is_periodic=.false.) !! WINDOW WAS 10, NOW 20
              itmp1=nint( &
                   sum(DON_missing(i,is)%atom(ia,:plane_loc(1)))*&
@@ -973,7 +974,7 @@ contains
                 count1 = count1 +1
                 neighbour(i,count1)%pos = splitbas(i)%spec(is)%atom(ia,:3)
                 !neighbour(i,count1)%pos = neighbour(i,count1)%pos - &
-                !     ceiling(neighbour(i,count1)%pos - 1.D0)
+                !     ceiling(neighbour(i,count1)%pos - 1._real32)
                 neighbour(i,count1)%bond = &
                      ( maxloc(DON_missing(i,is)%atom(ia,:plane_loc(1)),dim=1) &
                      - 1 ) * dist_max/nstep_default
@@ -1011,9 +1012,9 @@ contains
                         bulk_DON(i)%spec(map(i)%spec(is,ia,1))%atom(map(i)%spec(is,ia,2),j)
                 end do
                 close(14)
-                call err_abort_print_struc(lat,splitbas(1),"lw_term.vasp",&
+                call err_abort_print_struc(splitbas(1),"lw_term.vasp",&
                      "",.false.)
-                call err_abort_print_struc(lat,splitbas(2),"up_term.vasp",&
+                call err_abort_print_struc(splitbas(2),"up_term.vasp",&
                      "",.false.)
                 call err_abort("ERROR: Internal error in get_shifts_DON\n&
                   &  More neighbours found in slab than in bulk.",.true.)
@@ -1057,14 +1058,14 @@ contains
 !!!-----------------------------------------------------------------------------
     lpresent=.false.
     if(present(offset))then
-       if(offset(axis).ge.0.D0)then
+       if(offset(axis).ge.0._real32)then
           max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(lat(axis,:))
           lpresent=.true.
        end if
     end if
     if(.not.lpresent)then
-       max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(lat(axis,:)) + 6.D0
-       add = 0.D0
+       max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(lat(axis,:)) + 6._real32
+       add = 0._real32
     end if
 
     stepsize=0.1
@@ -1080,7 +1081,7 @@ contains
     nstep(:2) = min_trans(:2)*ngrid(:2)
     nstep(3) = 0
     do jc=1,ngrid(3)
-       pos(3) = dble(jc-1)*gridsize(3)
+       pos(3) = real(jc-1,real32)*gridsize(3)
        if(pos(3)+highest_atom(2).gt.(ngrid(3)-1)*gridsize(3)) exit
        if(pos(3)-lowest_atom(1).gt.(ngrid(3)-1)*gridsize(3)) exit
        nstep(3) = nstep(3) + 1
@@ -1089,7 +1090,7 @@ contains
        if(ierror.ge.1) write(6,'(1X,"user-defined offset:",3(3X,F7.3))') offset
        add = -1.0
        do i=1,3
-          if(offset(i).ge.0.D0)then
+          if(offset(i).ge.0._real32)then
              nstep(i) = 1
              add(i) = offset(i)
           end if
@@ -1123,9 +1124,9 @@ contains
        write(0,*) "ERROR: Internal error in get_shifts_DON"
        write(0,*) "nstep:",nstep
        write(0,*) "ngrid:",ngrid
-       call err_abort_print_struc(lat,splitbas(1),"lw_term.vasp",&
+       call err_abort_print_struc(splitbas(1),"lw_term.vasp",&
             "",.false.)
-       call err_abort_print_struc(lat,splitbas(2),"up_term.vasp",&
+       call err_abort_print_struc(splitbas(2),"up_term.vasp",&
             "",.false.)
        call err_abort("ERROR: Internal error in get_shifts_DON",.true.)
     end if
@@ -1137,24 +1138,24 @@ contains
        nneigh = size(intf(k)%neigh,dim=1)
 
        do ja=1,ngrid(1)
-          pos(1) = dble(ja-1)*gridsize(1) + add(1)
+          pos(1) = real(ja-1,real32)*gridsize(1) + add(1)
           do jb=1,ngrid(2)
-             pos(2) = dble(jb-1)*gridsize(2) + add(2)
+             pos(2) = real(jb-1,real32)*gridsize(2) + add(2)
              do jc=1,ngrid(3)
 
                 count1 = 0
                 tmp_neigh = 0
-                pos(3) = dble(jc-1)*gridsize(3) + add(3)
+                pos(3) = real(jc-1,real32)*gridsize(3) + add(3)
                 do is=1,nneigh
                    vtmp1 = ( &
-                        pos*(-1)**dble(k-1) - &
-                        intf(k)%neigh(is)%pos(:3) )*(-1)**dble(k-1)
-                   !vtmp1 = ( pos - intf(k)%neigh(is)%pos(:3) )!*(-1)**dble(k)
+                        pos*(-1)**real(k-1,real32) - &
+                        intf(k)%neigh(is)%pos(:3) )*(-1)**real(k-1,real32)
+                   !vtmp1 = ( pos - intf(k)%neigh(is)%pos(:3) )!*(-1)**real(k,real32)
                    vtmp2(3) = vtmp1(3)
                    a_extend_loop: do i=-1,1,1
-                      vtmp2(1) = vtmp1(1) + dble(i)
+                      vtmp2(1) = vtmp1(1) + real(i,real32)
                       b_extend_loop: do j=-1,1,1
-                         vtmp2(2) = vtmp1(2) + dble(j)
+                         vtmp2(2) = vtmp1(2) + real(j,real32)
                          vtmp3 = matmul(vtmp2,lat)
                          if(modu(vtmp3).gt.dist_max) cycle b_extend_loop
                          count1 = count1 + 1
@@ -1180,24 +1181,24 @@ contains
     allocate(fit_store(nstore))
     allocate(shift_store(nstore,3))
     fit_store=huge(0.0)
-    shift_store=0.D0
+    shift_store=0._real32
 ! !$OMP PARALLEL DEFAULT(SHARED) NUM_NHREADS(nthreads) 
 ! !$OMP DO PRIVATE(ja,jb,jc,pos,val,l,is,nneigh,vtmp1,ivtmp1,ncheck,rtmp1,rtmp2,val) SCHEDULE(DYNAMIC,CHUNK)
     do ja=1,nstep(1)
-       pos(1) = dble(ja-1)*gridsize(1)
+       pos(1) = real(ja-1,real32)*gridsize(1)
        b_loop1: do jb=1,nstep(2)
-          pos(2) = dble(jb-1)*gridsize(2)
+          pos(2) = real(jb-1,real32)*gridsize(2)
           c_loop1: do jc=1,nstep(3)
-             pos(3) = dble(jc-1)*gridsize(3)
+             pos(3) = real(jc-1,real32)*gridsize(3)
 
-             val = 0.D0
+             val = 0._real32
              do k=1,2
                 l=minval([1,2],mask=[1,2].ne.k)
                 nneigh = size(intf(l)%neigh,dim=1)
                 do is=1,nneigh
                    vtmp1 = ( &
-                        pos*(-1)**dble(l) + &
-                        intf(l)%neigh(is)%pos  )*(-1)**dble(l)
+                        pos*(-1)**real(l,real32) + &
+                        intf(l)%neigh(is)%pos  )*(-1)**real(l,real32)
                    vtmp1(:2) = vtmp1(:2) - floor( vtmp1(:2) )
                    ivtmp1 = nint(vtmp1/gridsize)
                    ivtmp1 = ivtmp1 + 1
@@ -1270,7 +1271,7 @@ contains
     write(6,'("Determined shifts (gridsize:",3(2X,F6.4),")")') gridsize
     write(6,'(" num   fit_val   x    y    z")')
     do i=1,nstore
-       res_shifts(i,:) = dble(shift_store(i,:))/dble(ngrid(:)-1)
+       res_shifts(i,:) = real(shift_store(i,:),real32)/real(ngrid(:)-1,real32)
        res_shifts(i,:2) = res_shifts(i,:2) + add(:2)
        write(6,'(1X,I3,":",2X,F6.2,3(2X,I3))') i,fit_store(i),shift_store(i,:)
     end do
