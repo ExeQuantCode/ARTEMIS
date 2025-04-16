@@ -945,7 +945,7 @@ contains
 !!! Program to match lattices of two position cards.
 !!!#############################################################################
   subroutine lattice_matching(SAV,tol,bas1,bas2,plane1,plane2,nmiller,lprint)
-    use mod_sym
+    use artemis__sym
     use plane_matching
     implicit none
     

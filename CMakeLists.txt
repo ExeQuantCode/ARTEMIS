@@ -65,6 +65,7 @@ set(LIB_FILES
     mod_io_utils_extd.F90
     mod_sym.f90
     mod_tools_infile.f90
+    mod_terminations.f90
 )
 
 # Main source files

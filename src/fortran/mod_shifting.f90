@@ -742,7 +742,7 @@ contains
 !!!#############################################################################
   function get_shifts_DON(lat,bas,axis,intf_loc,nstore,c_scale,offset,&
        bulk_DON,bulk_map,lprint,max_bondlength) result(res_shifts)
-    use mod_sym, only: gldfnd,confine_type
+    use artemis__sym, only: gldfnd,confine_type
     use edit_geom, only: get_bulk,wyck_spec_type,get_wyckoff
     use interface_identifier, only: gen_single_DON,nstep_default,den_of_neigh_type
     implicit none

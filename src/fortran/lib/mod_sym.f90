@@ -16,24 +16,19 @@
 !!! basis_map         (finds symmetry equivalent atoms in two bases based on ...
 !!!                    ... the supplied transformation matrix)
 !!! setup_ladder      (sets up rungs of the layer ladder)
-!!! get_terminations  (finds all possible terminations along an axis)
-!!! print_terminations (prints the terminations to individual files)
 !!!#############################################################################
-module mod_sym
+module artemis__sym
   use artemis__constants,   only: real32, pi
-  use artemis__misc,        only: sort1D,sort2D,sort_col,set
-  use artemis__io_utils,          only: err_abort
-  use misc_linalg, only: modu,inverse_3x3,det,gcd,gen_group,cross,uvec
-  use artemis__geom_rw,     only: basis_type,geom_write
-  use edit_geom,   only: vacuumer,set_vacuum,shifter,&
-       get_closest_atom,ortho_axis,reducer,primitive_lat,get_min_dist
+  use artemis__misc,        only: sort2D
+  use misc_linalg,          only: modu,inverse_3x3,det,gcd,gen_group,cross
+  use artemis__geom_rw,     only: basis_type
+  use edit_geom,            only: reducer, primitive_lat
   implicit none
   integer :: ierror_sym=0
   integer :: s_start=1,s_end=0
   real(real32) :: tol_sym = 5.E-5_real32
-  character(1) :: verb_sym="n"
+  character(1) :: verb_sym = "n"
   integer, allocatable, dimension(:) :: symops_compare
-  real(real32), allocatable, dimension(:,:,:) :: savsym
 
   interface get_wyckoff_atoms
      procedure get_wyckoff_atoms_any,get_wyckoff_atoms_loc
@@ -61,23 +56,6 @@ module mod_sym
      type(spcmap_type), allocatable, dimension(:) :: spec
   end type basmap_type
 
-  type term_type
-     !real(real32) :: add
-     real(real32) :: hmin
-     real(real32) :: hmax
-     integer :: natom
-     integer :: nstep
-     real(real32), allocatable, dimension(:) :: ladder
-  end type term_type
-
-  type term_arr_type
-     integer :: nterm = 0, axis, nstep
-     real(real32) :: tol
-     logical :: lmirror=.false.
-     type(term_type), allocatable, dimension(:) :: arr
-  end type term_arr_type
-
-
   type confine_type
      !! apply any confinement/constraints on symmetries
      logical :: l=.false.
@@ -97,6 +75,7 @@ module mod_sym
      integer, allocatable, dimension(:) :: op
      real(real32), allocatable, dimension(:,:,:) :: sym
      type(confine_type) :: confine
+     real(real32), allocatable, dimension(:,:,:) :: sym_save
   end type sym_type
 
 
@@ -108,8 +87,7 @@ module mod_sym
 
   public :: get_primitive_cell
   
-  public :: term_arr_type,confine_type
-  public :: get_terminations
+  public :: confine_type
 
   public :: basmap_type,basis_map
 
@@ -145,13 +123,14 @@ contains
 !!!#############################################################################
   subroutine sym_setup(grp,lat,predefined,new_start,tolerance)
     implicit none
-    logical :: lpresent
-
-    type(sym_type) :: grp
 
     real(real32), dimension(3,3), intent(in) :: lat
     real(real32), optional, intent(in) :: tolerance
     logical, optional, intent(in) :: predefined,new_start
+
+    type(sym_type) :: grp
+
+    logical :: predefined_, new_start_
 
 
     if(present(tolerance)) call set_symmetry_tolerance(tolerance)
@@ -162,28 +141,23 @@ contains
        end if
     end if
 
-    if(present(predefined))then
-       if(predefined)then
-          call gen_fundam_sym_matrices(grp,lat)
-          goto 10
-       end if
+    predefined_ = .false.
+    if(present(predefined)) predefined_ = predefined
+    if(predefined_)then
+       call gen_fundam_sym_matrices(grp,lat)
+    else
+       call mksym(grp,lat)
     end if
-    call mksym(grp,lat)
 
-10  if(allocated(savsym)) deallocate(savsym)
     if(allocated(symops_compare)) deallocate(symops_compare)
     grp%nsymop=0
 
-    lpresent=.false.
-    if(present(new_start))then
-       if(new_start) lpresent=.true.
-    end if
-    if(.not.present(new_start).or.lpresent.or.s_end.eq.0)then
+    new_start_ = .true.
+    if(present(new_start)) new_start_ = new_start
+    if(new_start_.or.s_end.eq.0)then
        s_end=grp%nsym
     end if
 
-
-    return
   end subroutine sym_setup
 !!!#############################################################################
 
@@ -418,14 +392,14 @@ contains
 
 
 !!!-----------------------------------------------------------------------------
-!!! allocates and saves the array savsym if the first time submitted
+!!! allocates and saves the array sym_save if the first time submitted
 !!!-----------------------------------------------------------------------------
     if(lsaving)then
-       if(allocated(savsym)) deallocate(savsym)
-       allocate(savsym(grp%nsymop,4,4))
-       savsym=0._real32
-       savsym(:grp%nsymop,:,:)=tmpsav(:grp%nsymop,:,:)
-       savsym(:,4,4)=1._real32
+       if(allocated(grp%sym_save)) deallocate(grp%sym_save)
+       allocate(grp%sym_save(grp%nsymop,4,4))
+       grp%sym_save=0._real32
+       grp%sym_save(:grp%nsymop,:,:)=tmpsav(:grp%nsymop,:,:)
+       grp%sym_save(:,4,4)=1._real32
        deallocate(tmpsav)
     end if
 
@@ -439,7 +413,7 @@ contains
        case default
           if(.not.allocated(symops_compare))then
              write(0,'("ERROR: Internal error in check_sym")')
-             write(0,'(2X,"check_sym in mod_sym.f90 is trying to assign a &
+             write(0,'(2X,"check_sym in artemis__sym.f90 is trying to assign a &
                   &value to symops_compare, which hasn''t been allocated")')
              exit iperm_if
           end if
@@ -450,7 +424,7 @@ contains
 
     if(lsaving)then
        deallocate(grp%sym)
-       call move_alloc(savsym,grp%sym)
+       call move_alloc(grp%sym_save, grp%sym)
        grp%nsym = grp%nsymop
     end if
 
@@ -545,7 +519,7 @@ contains
        sav_trans = 0._real32
        if(lwyckoff.and.ntrans+1.gt.size(wyck_check))then
           write(0,'("ERROR: error encountered in gldfnd")')
-          write(0,'(2X,"Internal error in subroutine gldfnd in mod_sym.f90")')
+          write(0,'(2X,"Internal error in subroutine gldfnd in artemis__sym.f90")')
           write(0,'(2X,"ntrans is greater than wyck_check")')
           write(0,'(2X,"EXITING SUBROUTINE")')
           return
@@ -1465,463 +1439,4 @@ contains
   end function basis_map
 !!!#############################################################################
 
-
-!!!#############################################################################
-!!! finds all possible terminations along an axis
-!!!#############################################################################
-  function get_terminations(lat,bas,axis,lprint,layer_sep,break_on_fail) result(term)
-    implicit none
-    integer :: i,j,k,is,nterm,mterm,dim,ireject
-    integer :: itmp1,itmp2,init,min_loc
-    logical :: ludef_print,lunique,ltmp1,lmirror, break_on_fail_
-    real(real32) :: dtmp1,tol,height,max_sep,c_along,centre
-    type(sym_type) :: grp1,grp_store, grp_store_inv
-    type(term_arr_type) :: term
-    integer, dimension(3) :: abc=(/1,2,3/)
-    real(real32), dimension(3) :: vec_compare
-    real(real32), dimension(3,3) :: inv_mat,ident
-    type(basis_type),allocatable, dimension(:) :: bas_arr,bas_arr_reject
-    type(term_type), allocatable, dimension(:) :: term_arr,term_arr_uniq
-    integer, allocatable, dimension(:) :: success,tmpop
-    integer, allocatable, dimension(:,:) :: reject_match
-    real(real32), allocatable, dimension(:,:) :: bas_list
-    real(real32), allocatable, dimension(:,:,:) :: tmpsym
-
-    integer, intent(in) :: axis
-    type(basis_type), intent(in) :: bas
-    real(real32), dimension(3,3), intent(in) :: lat
-    character(len=256) :: err_msg
-
-    real(real32), optional, intent(in) :: layer_sep
-    logical, optional, intent(in) :: lprint, break_on_fail
-
-    integer, dimension(:), allocatable :: comparison_list
-
-
-
-!!!APPLY TRANSFORMATION MATRIX TO FIND TERMINATIONS ALONG OTHER PLANES
-!!! E.G. (1 0 1)
-    
-    term%nterm = 0
-    s_end=0
-    grp_store%confine%l=.false.
-    grp_store%confine%axis=axis
-    grp_store%confine%laxis=.false.
-!!!-----------------------------------------------------------------------------
-!!! Sets printing option
-!!!-----------------------------------------------------------------------------
-    if(present(lprint))then
-       ludef_print = lprint
-    else
-       ludef_print = .false.
-    end if
-    break_on_fail_ = .false.
-    if(present(break_on_fail)) break_on_fail_ = break_on_fail
-
-
-!!!-----------------------------------------------------------------------------
-!!! Sets the surface identification tolerance
-!!!-----------------------------------------------------------------------------
-    if(present(layer_sep))then
-       tol = layer_sep
-    else
-       tol = 1._real32  !!!tolerance of 1 Å for defining a layer
-    end if
-
-    abc=cshift(abc,3-axis)
-    c_along = abs(dot_product(lat(axis,:),&
-         uvec(cross([lat(abc(1),:)],[lat(abc(2),:)]))))
-    tol = tol / c_along
-    lmirror=.false.
-
-
-!!!-----------------------------------------------------------------------------
-!!! Set up basis list that will order them wrt distance along 'axis'
-!!!-----------------------------------------------------------------------------
-    allocate(bas_list(bas%natom,3))
-    init = 1
-    do is=1,bas%nspec
-       bas_list(init:init+bas%spec(is)%num-1,:3) = bas%spec(is)%atom(:,:3)
-       init = init + bas%spec(is)%num
-    end do
-    call sort_col(bas_list,col=axis)
-
-
-!!!-----------------------------------------------------------------------------
-!!! Find largest separation between atoms
-!!!-----------------------------------------------------------------------------
-    max_sep = bas_list(1,axis) - (bas_list(bas%natom,axis)-1._real32)
-    height = ( bas_list(1,axis) + (bas_list(bas%natom,axis)-1._real32) )/2._real32
-    do i=1,bas%natom-1
-       dtmp1 = bas_list(i+1,axis) - bas_list(i,axis)
-       if(dtmp1.gt.max_sep)then
-          max_sep = dtmp1
-          height = ( bas_list(i+1,axis) + bas_list(i,axis) )/2._real32
-       end if
-    end do
-    if(max_sep.lt.tol)then
-       if(break_on_fail_)then
-          write(0,'("ERROR: Error in mod_sym.f90")')
-       else
-          write(0,'("WARNING:")')
-       end if
-       write(0,'(2X,"get_terminations subroutine unable to find a separation &
-            &in the material that is greater than LAYER_SEP")')
-       write(0,'(2X,"Writing material to ''unlayerable.vasp''")')
-       open(13,file="unlayerable.vasp")
-       call geom_write(13,bas)
-       close(13)
-       write(0,'(2X,"We suggest reducing LAYER_SEP to less than ",F6.4)') &
-            max_sep
-       write(0,'(2X,"NOTE: If LAYER_SEP < 0.7, the material likely does not &
-            &support the Miller plane")')
-       write(0,'(2X,"Please inform the developers of this and give details &
-            &of what structure caused this")')
-       if(break_on_fail_)then
-          write( 0, &
-               '("To allow the program to continue, set &
-               &LBREAK_ON_NO_TERM = F")' &
-          )
-          write(0,'("Stopping...")')
-          call exit()
-       else
-          return
-       end if
-    end if
-    bas_list(:,axis) = bas_list(:,axis) - height
-    bas_list(:,axis) = bas_list(:,axis) - floor(bas_list(:,axis))
-    call sort_col(bas_list,col=axis)
-
-
-!!!-----------------------------------------------------------------------------
-!!! Finds number of non-unique terminations
-!!!-----------------------------------------------------------------------------
-    nterm=1
-    allocate(term_arr(bas%natom))
-    term_arr(:)%natom=0
-    term_arr(:)%hmin=0
-    term_arr(:)%hmax=0
-    term_arr(1)%hmin=bas_list(1,axis)
-    term_arr(1)%hmax=bas_list(1,axis)
-    min_loc = 1
-    itmp1 = 1
-    term_loop1: do
-
-       !! get the atom at that height.
-       !vtmp1 = get_min_dist(lat,bas,bas_list(itmp1,:3),.true.,axis,.true.,.false.)
-       !itmp1 = minloc(bas_list(:,axis) - vtmp1(axis), dim=1, &
-       !     mask = abs(bas_list(:,axis) - (bas_list(itmp1,axis) + vtmp1(axis))&
-       !     ).lt.tol_sym)
-       
-       itmp1 = minloc(bas_list(:,axis) - term_arr(nterm)%hmax, dim=1, &
-            mask = bas_list(:,axis) - term_arr(nterm)%hmax.gt.0._real32)
-       if(itmp1.gt.bas%natom.or.itmp1.le.0)then
-          term_arr(nterm)%natom = bas%natom - min_loc + 1
-          exit term_loop1
-       end if
-
-       !dtmp1 = modu(matmul(vtmp1,lat))
-       dtmp1 = bas_list(itmp1,axis) - term_arr(nterm)%hmax
-       if(dtmp1.le.tol)then
-          term_arr(nterm)%hmax = bas_list(itmp1,axis)
-       else
-          term_arr(nterm)%natom = itmp1 - min_loc
-          min_loc = itmp1
-          nterm = nterm + 1
-          term_arr(nterm)%hmin = bas_list(itmp1,axis)
-          term_arr(nterm)%hmax = bas_list(itmp1,axis)
-       end if
-       
-    end do term_loop1
-    term_arr(:nterm)%hmin = term_arr(:nterm)%hmin + height
-    term_arr(:nterm)%hmax = term_arr(:nterm)%hmax + height
-
-
-!!!-----------------------------------------------------------------------------
-!!! Set up system symmetries
-!!!-----------------------------------------------------------------------------
-    allocate(bas_arr(2*nterm))
-    allocate(bas_arr_reject(2*nterm))
-    dim = size(bas%spec(1)%atom(1,:))
-    do i=1,2*nterm
-       allocate(bas_arr(i)%spec(bas%nspec))
-       allocate(bas_arr_reject(i)%spec(bas%nspec))
-       do is=1,bas%nspec
-          allocate(bas_arr(i)%spec(is)%atom(&
-               bas%spec(is)%num,dim))
-          allocate(bas_arr_reject(i)%spec(is)%atom(&
-               bas%spec(is)%num,dim))
-       end do
-    end do
-
-
-!!!-----------------------------------------------------------------------------
-!!! Print location of unique terminations
-!!!-----------------------------------------------------------------------------
-    mterm = 0
-    ireject = 0
-    grp_store%lspace = .true.
-    grp_store%confine%l = .true.
-    grp_store%confine%laxis(axis) = .true.
-    call sym_setup(grp_store,lat,predefined=.false.,new_start=.true.)
-
-
-
-    !!--------------------------------------------------------------------------
-    !! Handle inversion matrix (centre of inversion must be accounted for)
-    !!--------------------------------------------------------------------------
-    !! change symmetry constraints after setting up symmetries
-    !! this is done to constrain the matching of two bases in certain directions
-    grp_store%confine%l = .false.
-    grp_store%confine%laxis(axis) = .false.
-    call check_sym(grp_store,bas1=bas,iperm=-1,lsave=.true.)
-    inv_mat = 0._real32
-    do i=1,3
-       inv_mat(i,i) = -1._real32
-    end do
-    itmp1 = 0
-    do i=1,grp_store%nsym
-       if(all(abs(grp_store%sym(i,:3,:3)-inv_mat).lt.tol_sym))then
-          itmp1 = i
-          exit
-       end if
-    end do
-    if(itmp1.eq.0)then
-       write(err_msg,*) "No inversion symmetry found!"
-       call err_abort(err_msg)
-    end if
-    do i=1,grp_store%nsymop
-       if(all(abs(savsym(i,:3,:3)-inv_mat).lt.tol_sym)) &
-            grp_store%sym(itmp1,4,:3) = savsym(i,4,:3)
-    end do
-
-
-
-    !!--------------------------------------------------------------------------
-    !! Determine unique surface terminations
-    !!--------------------------------------------------------------------------
-    grp_store%confine%l = .true.
-    grp_store%confine%laxis(axis) = .true.
-    allocate(term_arr_uniq(2*nterm))
-    allocate(reject_match(nterm,2))
-    shift_loop1:do i=1,nterm
-       mterm = mterm + 1
-
-       bas_arr(mterm) = bas
-       centre = term_arr(i)%hmin + (term_arr(i)%hmax - term_arr(i)%hmin)/2._real32
-       call shifter(bas_arr(mterm),axis,1-centre,.true.)
-       !if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
-       !     i,term_arr(i)%hmin,term_arr(i)%hmax,term_arr(i)%natom
-       sym_if: if(i.ne.1)then
-          sym_loop1:do j=1,mterm-1
-             if(abs(abs(term_arr(i)%hmax-term_arr(i)%hmin) - &
-                  abs(term_arr_uniq(j)%hmax-term_arr_uniq(j)%hmin)).gt.tol_sym) &
-                  cycle sym_loop1
-             call clone_grp(grp_store,grp1)
-             call check_sym(grp1,bas1=bas_arr(mterm),&
-                  iperm=-1,tmpbas2=bas_arr(j),lsave=.true.)
-             if(grp1%nsymop.ne.0)then
-                !write(0,*) "we have a possible reject"
-                !if(any(savsym(:grp1%nsymop,axis,axis).eq.-1.D0))then
-                if(abs(savsym(1,axis,axis)+1.D0).lt.tol_sym)then
-                  ireject = ireject + 1
-                   reject_match(ireject,:) = [ i, j ]
-                   bas_arr_reject(ireject) = bas_arr(mterm)
-                   lmirror=.true.
-                else
-                   term_arr_uniq(j)%nstep = term_arr_uniq(j)%nstep + 1
-                   term_arr_uniq(j)%ladder(term_arr_uniq(j)%nstep) = &
-                        term_arr(i)%hmin - term_arr_uniq(j)%hmin
-                end if
-                mterm = mterm - 1
-                cycle shift_loop1
-             end if
-          end do sym_loop1
-       end if sym_if
-       term_arr_uniq(mterm) = term_arr(i)
-       term_arr_uniq(mterm)%nstep = 1
-       allocate(term_arr_uniq(mterm)%ladder(nterm))
-       term_arr_uniq(mterm)%ladder(:) = 0._real32
-    end do shift_loop1
-
-
-    !!--------------------------------------------------------------------------
-    !! Set up mirror/inversion symmetries of the matrix
-    !!--------------------------------------------------------------------------
-    grp_store_inv%confine%axis=axis
-    grp_store_inv%confine%laxis=.false.
-    grp_store_inv%lspace = .true.
-    grp_store_inv%confine%l = .true.
-    grp_store_inv%confine%laxis(axis) = .true.
-    call sym_setup(grp_store_inv,lat,predefined=.false.,new_start=.true.)
-    itmp1 = count(abs(grp_store_inv%sym(:,3,3)+1._real32).lt.tol_sym)
-    allocate(tmpsym(itmp1,4,4))
-    allocate(tmpop(itmp1))
-    itmp1 = 0
-    do i=1,grp_store_inv%nsym
-       if(abs(grp_store_inv%sym(i,3,3)+1._real32).lt.tol_sym)then
-          itmp1=itmp1+1
-          tmpsym(itmp1,:,:) = grp_store_inv%sym(i,:,:)
-          tmpop(itmp1) = i
-       end if
-    end do
-    grp_store_inv%nsym = itmp1
-    grp_store_inv%nlatsym = itmp1
-    call move_alloc(tmpsym,grp_store_inv%sym)
-    allocate(grp_store_inv%op(itmp1))
-    grp_store_inv%op(:) = tmpop(:itmp1)
-    s_end = grp_store_inv%nsym
-
-
-    !!--------------------------------------------------------------------------
-    !! Check rejects for inverse surface termination of saved
-    !!--------------------------------------------------------------------------
-    ident = 0._real32
-    do i=1,3
-       ident(i,i) = 1._real32
-    end do
-    vec_compare = 0._real32
-    vec_compare(axis) = -1._real32
-    allocate(success(ireject))
-    success=0
-    reject_loop1: do i=1,ireject
-       lunique=.true.
-       itmp1=reject_match(i,1)
-       itmp2=reject_match(i,2)
-       !! Check if comparison termination has already been compared successfully
-       comparison_list = [ itmp2 ]
-       !! check against all previous reject-turned-unique terminations
-       prior_check: if(any(success(1:i-1:1).eq.itmp2))then
-          do j = 1, i-1, 1
-             if(success(j).eq.itmp2)then
-                s_end = grp_store%nsym
-                call clone_grp(grp_store,grp1)
-                call check_sym(grp1,bas1=bas_arr_reject(j),&
-                     iperm=-1,tmpbas2=bas_arr_reject(i),lsave=.true.)
-                if(grp1%nsymop.ne.0)then
-                   if(abs(savsym(1,axis,axis)+1._real32).gt.tol_sym)then
-                      lunique = .false.
-                      itmp2 = reject_match(j,2)
-                      exit prior_check
-                   end if
-                end if
-                comparison_list = [ comparison_list, reject_match(j,2) ]
-             end if
-          end do
-       end if prior_check
-
-       unique_condition1: if(lunique)then
-          s_end = grp_store_inv%nsym
-          lunique = .true.
-          do k = 1, size(comparison_list)
-             itmp2 = comparison_list(k)
-             call clone_grp(grp_store_inv,grp1)
-             call check_sym(grp1,bas_arr(itmp2),&
-                  iperm=-1,lsave=.true.,lcheck_all=.true.)
-   
-             !! Check if inversions are present in comparison termination
-             ltmp1=.false.
-             do j = 1, grp1%nsymop, 1
-                if(abs(det(savsym(j,:3,:3))+1.D0).le.tol_sym) ltmp1=.true.
-             end do
-             !! If they are not, then no point comparing. It is a new termination
-             if(.not.ltmp1) cycle
-   
-             call clone_grp(grp_store_inv,grp1)
-             call check_sym(grp1,bas_arr(itmp2),&
-                  tmpbas2=bas_arr_reject(i), &
-                  iperm=-1, &
-                  lsave=.true., &
-                  lcheck_all=.true. &
-             )
-   
-             !! Check det of all symmetry operations. If any are 1, move on
-             !! This is because they are just rotations as can be captured ...
-             !! ... through lattice matches.
-             !! Solely inversions are unique and must be captured.
-             do j = 1, grp1%nsymop, 1
-                if(abs(det(savsym(j,:3,:3))-1.D0).le.tol_sym) lunique=.false.
-             end do
-             if(savsym(1,4,axis).eq.&
-                  2.D0 * min( &
-                       term_arr_uniq(itmp2)%hmin, &
-                       0.5D0-term_arr_uniq(itmp2)%hmin &
-                  ) &
-             ) lunique=.false.
-   
-             if(.not.( &
-                  all(abs(savsym(1,axis,:3) - vec_compare(:)).lt.tol_sym).and.&
-                  all(abs(savsym(1,:3,axis) - vec_compare(:)).lt.tol_sym) &
-             ) ) lunique=.false.
-             
-             if(lunique) exit unique_condition1
-          end do
-       end if unique_condition1
-
-       if(lunique)then
-          mterm = mterm + 1
-          success(i) = itmp2
-          bas_arr(mterm) = bas_arr_reject(i)
-          term_arr_uniq(mterm) = term_arr(itmp1)
-          reject_match(i,2) = mterm
-          term_arr_uniq(mterm)%nstep = 1
-          allocate(term_arr_uniq(mterm)%ladder(ireject+1))
-          term_arr_uniq(mterm)%ladder(1) = 0._real32
-       else
-          term_arr_uniq(itmp2)%nstep = term_arr_uniq(itmp2)%nstep + 1
-          term_arr_uniq(itmp2)%ladder(term_arr_uniq(itmp2)%nstep) = &
-               term_arr(itmp1)%hmin - term_arr_uniq(itmp2)%hmin
-       end if
-    end do reject_loop1
-
-
-    !!--------------------------------------------------------------------------
-    !! Populate termination output
-    !!--------------------------------------------------------------------------
-    allocate(term%arr(mterm))
-    term%tol=tol
-    term%axis=axis
-    term%nterm=mterm
-    term%lmirror = lmirror
-    if(ludef_print)&
-         write(6,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
-    dtmp1 = term_arr_uniq(1)%hmin-1.E-6_real32
-    itmp1 = 1
-    do i=1,mterm
-       allocate(term%arr(i)%ladder(term_arr_uniq(i)%nstep))
-       term%arr(i)%hmin = term_arr_uniq(itmp1)%hmin
-       term%arr(i)%hmax = term_arr_uniq(itmp1)%hmax
-       term%arr(i)%natom = term_arr_uniq(itmp1)%natom
-       term%arr(i)%nstep = term_arr_uniq(itmp1)%nstep
-       term%arr(i)%ladder(:term%arr(i)%nstep) = &
-            term_arr_uniq(i)%ladder(:term%arr(i)%nstep)
-       if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
-            i,term%arr(i)%hmin,term%arr(i)%hmax,term%arr(i)%natom
-       itmp1 = minloc(term_arr_uniq(:)%hmin,&
-            mask=term_arr_uniq(:)%hmin.gt.dtmp1+tol,dim=1)
-       if(itmp1.eq.0) then
-          itmp1 = minloc(term_arr_uniq(:)%hmin,&
-               mask=term_arr_uniq(:)%hmin.gt.dtmp1+tol-1._real32,dim=1)
-       end if
-       dtmp1 = term_arr_uniq(itmp1)%hmin
-    end do
-    term%nstep = maxval(term%arr(:)%nstep)
-
-
-    !!--------------------------------------------------------------------------
-    !! Check to ensure equivalent number of steps for each termination
-    !!--------------------------------------------------------------------------
-    !! Not yet certain whether each termination should have samve number ...
-    !! ... of ladder rungs. That's why this check is here.
-    if(all(term%arr(:)%nstep.ne.term%nstep))then
-       write(0,'("ERROR: Number of rungs in terminations no equivalent for &
-            &every termination! Please report this to developers.\n&
-            &Exiting...")')
-       call exit()
-    end if
-
-
-  end function get_terminations
-!!!#############################################################################
-
-end module mod_sym
+end module artemis__sym
