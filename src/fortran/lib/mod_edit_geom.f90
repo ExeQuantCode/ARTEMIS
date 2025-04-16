@@ -65,6 +65,76 @@ module edit_geom
 
 
 contains
+
+!###############################################################################
+  function compare_stoichiometry(basis1, basis2) result(output)
+    !! Check if two basis structures have the same stoichiometry ratio
+    !!
+    !! This function compares the stoichiometry ratios of two basis structures
+    !! It returns true if the relative proportions of all atomic species are identical
+    !! and all species names match between both structures
+    implicit none
+    type(basis_type), intent(in) :: basis1, basis2
+    logical :: output
+   
+    integer :: is, js, total_atoms1, total_atoms2
+    real(real32) :: ratio1, ratio2, tol
+    logical :: found_match
+   
+    ! Set tolerance for floating-point comparisons
+    tol = 1.E-5_real32
+   
+    ! Initialize output to true, will set to false if any condition fails
+    output = .true.
+   
+    ! Check if both basis have the same number of species
+    if (basis1%nspec /= basis2%nspec) then
+       output = .false.
+       return
+    end if
+   
+    ! Get total number of atoms in each basis
+    total_atoms1 = sum(basis1%spec(:)%num)
+    total_atoms2 = sum(basis2%spec(:)%num)
+   
+    ! Compare each species in basis1 with corresponding species in basis2
+    do is = 1, basis1%nspec
+       found_match = .false.
+      
+       ! Find matching species in basis2
+       do js = 1, basis2%nspec
+          ! Check if species names match
+          if (basis1%spec(is)%name == basis2%spec(js)%name) then
+             found_match = .true.
+            
+             ! Calculate and compare stoichiometry ratios
+             ratio1 = real(basis1%spec(is)%num, real32) / real(total_atoms1, real32)
+             ratio2 = real(basis2%spec(js)%num, real32) / real(total_atoms2, real32)
+            
+             ! Check if ratios are equal within tolerance
+             if (abs(ratio1 - ratio2) .gt. tol) then
+                output = .false.
+                return
+             end if
+             
+             exit  ! Found matching species, continue to next species in basis1
+          end if
+       end do
+      
+       ! If no matching species found in basis2, stoichiometry can't be the same
+       if (.not. found_match) then
+          output = .false.
+          return
+       end if
+    end do
+
+  end function compare_stoichiometry
+
+
+
+
+
+
 !!!#############################################################################
 !!! Normalises a 3x3 matrix to the form:
 !!! a 0 0

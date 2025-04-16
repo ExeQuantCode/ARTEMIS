@@ -9,7 +9,7 @@ module swapping
   use misc_maths, only: gauss
   use misc_linalg, only: modu
   use artemis__geom_rw, only: basis_type
-  use mod_sym, only: sym_setup,check_sym,sym_type,basmap_type,basis_map
+  use artemis__sym, only: sym_setup,check_sym,sym_type,basmap_type,basis_map
   use artemis__io_utils, only: err_abort
   implicit none
   real(real32) :: tiny=5.0D-5

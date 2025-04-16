@@ -20,7 +20,7 @@ module inputs
   use lat_compare, only: lreduce,tol_type
   use infile_tools
   use infile_print
-  use mod_sym, only: set_symmetry_tolerance
+  use artemis__sym, only: set_symmetry_tolerance
   implicit none
   integer :: nout,clock,task,task_defect,axis,icheck_intf,iintf
   integer :: irestart,idepth,imatch,ishift,iswap
@@ -374,7 +374,7 @@ contains
 
 
 !!!-----------------------------------------------------------------------------
-!!! sets the symmetry tolerance for the mod_sym module
+!!! sets the symmetry tolerance for the artemis__sym module
 !!!-----------------------------------------------------------------------------
     call set_symmetry_tolerance(tol_sym)
 
