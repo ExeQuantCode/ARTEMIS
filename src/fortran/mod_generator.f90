@@ -482,6 +482,7 @@ contains
 
     ! Local variables
     type(basis_type) :: basis_lw_, basis_up_
+    !! Temporary basis structures
 
     integer :: j,iterm,jterm,ntrans,ifit,iunique,old_natom,itmp1,old_intf
     integer :: iterm_step,jterm_step

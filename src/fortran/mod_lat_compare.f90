@@ -297,7 +297,7 @@ contains
        do i=1,SAV%nfit
           if(all(abs(&
                match_tfs(SAV%nfit+1,:2,:3)-&
-               match_tfs(i,:2,:3)).lt.1.D-5)) goto 103
+               match_tfs(i,:2,:3)).lt.1.E-5_real32)) goto 103
        end do
 
 
@@ -398,7 +398,7 @@ contains
        it2_mat(3,:)=nint(t_mat(3,:))
        do i=1,2
           t_mat(i,:)=reduce_vec_gcd(t_mat(i,:))
-          if(any(abs(t_mat(i,:)-nint(t_mat(i,:))).gt.1.D-5)) exit reduce_if
+          if(any(abs(t_mat(i,:)-nint(t_mat(i,:))).gt.1.E-5_real32)) exit reduce_if
           it2_mat(i,:)=nint(t_mat(i,:))
           do j=1,3
              if(match_tfs(SAV%nfit+1,j,i).ne.0._real32)then
@@ -487,7 +487,7 @@ contains
        dtmp=get_area(t_mat(1,:),t_mat(2,:))
        t_area=1000._real32
        !! SORT OUT HANDLING OF AREA COMPARISON
-       if(dtmp.le.t_area.and.&!-1.D-8.and.&
+       if(dtmp.le.t_area.and.&!-1.E-8_real32.and.&
             abs(ang1-ang2).lt.t_ang)then
           if(i.ne.1) it_mat(:,:)=cshift(it_mat(:,:),shift=1-i,dim=2)
           tf=it_mat
@@ -779,7 +779,7 @@ contains
     real(real32), dimension(3,3) :: lat,tlat
 
 
-    tiny=1.D-6
+    tiny=1.E-6_real32
     lcheck=.false.
     lat_loop: do i=1,min(tol%nstore,SAV%nfit)
        tlat=matmul(SAV%tf1(i,:,:),SAV%lat1)
@@ -894,7 +894,7 @@ contains
 
 
     match=0._real32
-    tiny=1.D-8
+    tiny=1.E-8_real32
     mS1=modu(S1)
     mS1p=modu(S1p)
     mS2p=modu(S2p)
@@ -1159,8 +1159,8 @@ contains
        do i=1,grp1%nsym
           rmat1=real(matmul(tmpsym(i,:3,:3),templat1(:,:)))
           rvec2=cross([rmat1(1,:)],[rmat1(2,:)])
-          if(all(abs( rvec1(:) - rvec2(:) ).lt.1.D-8).or.&
-               all(abs( rvec1(:) + rvec2(:) ).lt.1.D-8))then
+          if(all(abs( rvec1(:) - rvec2(:) ).lt.1.E-8_real32).or.&
+               all(abs( rvec1(:) + rvec2(:) ).lt.1.E-8_real32))then
              nsym1=nsym1+1
              tmpsym1(nsym1,:3,:3) = tmpsym(i,:3,:3)
           else
@@ -1169,10 +1169,10 @@ contains
           ! redundant if a-b plane works instead.
           !if(all(&
           !     abs( templat1(3,:) - matmul(templat1(3,:),tmpsym(i,:3,:3)) )&
-          !     .lt.1.D-8).or.&
+          !     .lt.1.E-8_real32).or.&
           !     all(&
           !     abs( templat1(3,:) + matmul(templat1(3,:),tmpsym(i,:3,:3)) )&
-          !     .lt.1.D-8))then
+          !     .lt.1.E-8_real32))then
           !   nsym1=nsym1+1
           !   tmpsym1(nsym1,:3,:3) = tmpsym(i,:3,:3)
           !end if
@@ -1210,10 +1210,10 @@ contains
              !write(0,'(3(2X,F7.2))') (tmpsym(i,j,:3),j=1,3)
              if(all(&
                   abs( templat2(3,:) - matmul(templat2(3,:),tmpsym(i,:3,:3)) )&
-                  .lt.1.D-8).or.&
+                  .lt.1.E-8_real32).or.&
                   all(&
                   abs( templat2(3,:) + matmul(templat2(3,:),tmpsym(i,:3,:3)) )&
-                  .lt.1.D-8))then
+                  .lt.1.E-8_real32))then
                 nsym2=nsym2+1
                 tmpsym2(nsym2,:3,:3) = tmpsym(i,:3,:3)
              end if
@@ -1307,7 +1307,7 @@ contains
        SAV%tol(i,:) = saved_tolerances(i,:)
        if_reduce: if(lreduce)then
           tf = find_tf(comb_trans_1(i,:,:),comb_trans_2(i,:,:))
-          if(abs(abs(det(comb_trans_1(i,:,:)))-1._real32).lt.1.D-6) exit if_reduce
+          if(abs(abs(det(comb_trans_1(i,:,:)))-1._real32).lt.1.E-6_real32) exit if_reduce
           if(ierror.eq.1)then
              write(0,*) i
              write(0,'( 3( 3(F7.3,1X), /) )') tf
@@ -1321,10 +1321,10 @@ contains
              tmat2(:,:) = nint(tf)
              do j=1,3
                 dtmp1=1._real32
-                if(any(abs(tf(j,:3)-nint(tf(j,:3))).gt.1.D-6))then
+                if(any(abs(tf(j,:3)-nint(tf(j,:3))).gt.1.E-6_real32))then
                    dtmp1=get_vec_multiple(tf(j,:3),reduce_vec_gcd(tf(j,:3)))
                 end if
-                if(abs(dtmp1-nint(dtmp1)).gt.1.D-6)then
+                if(abs(dtmp1-nint(dtmp1)).gt.1.E-6_real32)then
                    dtmp1=get_frac_denom(1._real32/dtmp1)
                 end if
                 tmat1(j,:) = tmat1(j,:3)*nint(dtmp1)
