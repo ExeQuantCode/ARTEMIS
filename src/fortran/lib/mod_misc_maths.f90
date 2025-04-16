@@ -31,35 +31,11 @@
 !!! slater_array     (apply slater distribution to a set of points in array)
 !!!#############################################################################
 module misc_maths
+  use artemis__constants, only: real32
   implicit none
   integer, parameter :: QuadInt_K = selected_int_kind (16)
 
-  interface gauss
-     procedure rgauss,dgauss
-  end interface gauss
 
-  interface range
-     procedure rrange,drange
-  end interface range
-  interface normalise
-     procedure rnormalise,dnormalise
-  end interface normalise
-  interface running_avg
-     procedure rrunning_avg,drunning_avg
-  end interface running_avg
-
-  interface gauss_array
-    procedure rgauss_array,dgauss_array
-  end interface gauss_array
-  interface cauchy_array
-    procedure rcauchy_array,dcauchy_array
-  end interface cauchy_array
-  interface slater_array
-    procedure rslater_array,dslater_array
-  end interface slater_array
-
-
-!!!updated 2020/02/03
 
 
 contains
@@ -84,42 +60,23 @@ contains
 !!!#####################################################
 !!! evaluates a gausssian at a point
 !!!#####################################################
-  function rgauss(pos,centre,sigma,tol) result(gauss)
-    real :: gauss,x
-    real :: pos,centre,sigma
-    real :: udef_tol
-    real, optional :: tol
+  function gauss(pos,centre,sigma,tol) result(output)
+    real(real32) :: output,x
+    real(real32) :: pos,centre,sigma
+    real(real32) :: udef_tol
+    real(real32), optional :: tol
     if(present(tol))then
        udef_tol=tol
     else
-       udef_tol=16.D0
+       udef_tol=38._real32
     end if
-    x=(pos-centre)**2.E0/(2.E0*sigma)
+    x=(pos-centre)**2._real32/(2._real32*sigma)
     if(abs(x).lt.udef_tol) then
-       gauss=exp(-(x))
+       output=exp(-(x))
     else
-       gauss=0.D0
+       output=0._real32
     end if
-  end function rgauss
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  function dgauss(pos,centre,sigma,tol) result(gauss)
-    double precision :: gauss,x
-    double precision :: pos,centre,sigma
-    double precision :: udef_tol
-    double precision, optional :: tol
-    if(present(tol))then
-       udef_tol=tol
-    else
-       udef_tol=38.D0
-    end if
-    x=(pos-centre)**2.D0/(2.D0*sigma)
-    if(abs(x).lt.udef_tol) then
-       gauss=exp(-(x))
-    else
-       gauss=0.D0
-    end if
-  end function dgauss
+  end function gauss
 !!!#####################################################
 
 
@@ -142,7 +99,7 @@ contains
 !!!#####################################################
 !!! Sum of logs of range from 1 to n
 !!!#####################################################
-  double precision function lnsum(n) 
+  real(real32) function lnsum(n) 
     implicit none
     integer :: i,n
     lnsum=0
@@ -159,11 +116,11 @@ contains
 !!! safe cos
 !!!#####################################################
   pure elemental function safe_acos(inval) result(val)
-    double precision, intent(in) :: inval
-    double precision :: val
+    real(real32), intent(in) :: inval
+    real(real32) :: val
 
-    if(abs(inval).ge.1.D0)then
-       val=acos(sign(1.D0,inval))
+    if(abs(inval).ge.1._real32)then
+       val=acos(sign(1._real32,inval))
     else
        val=acos(inval)
     end if
@@ -326,52 +283,12 @@ contains
 !!!#####################################################
 !!! smooths a function using a running average
 !!!#####################################################
-  function rrunning_avg(in_array,window,lperiodic) result(out_array)
+  function running_avg(in_array,window,lperiodic) result(out_array)
     implicit none
     integer :: i,lw,up,nstep
     integer, intent(in) :: window
-    real, dimension(:), intent(in) :: in_array
-    real, dimension(size(in_array,dim=1)) :: out_array
-    logical, optional :: lperiodic
-    
-    nstep=size(in_array)
-    if(mod(real(window),2.0).eq.0.0)then
-       lw = nint(real(window)/2.0)-1
-       up = nint(real(window)/2.0)
-    else 
-       lw = (floor(real(window)/2.0))
-       up = (floor(real(window)/2.0))
-    end if
-
-    out_array=0.0
-    if(present(lperiodic))then
-       if(lperiodic)then
-          do i=1,lw
-             out_array(i)=sum(in_array(nstep-lw+i:nstep))+&
-                  sum(in_array(1:i+up))
-          end do
-          do i=lw+1,nstep-up
-             out_array(i)=sum(in_array(i-lw:i+up))
-          end do
-          do i=nstep-up+1,nstep
-             out_array(i)=sum(in_array(i-lw:nstep))+&
-                  sum(in_array(1:up-(nstep-i)))
-          end do
-          out_array=out_array/window
-          return
-       end if
-    end if
-    out_array=in_array
-
-  end function rrunning_avg
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  function drunning_avg(in_array,window,lperiodic) result(out_array)
-    implicit none
-    integer :: i,lw,up,nstep
-    integer, intent(in) :: window
-    double precision, dimension(:), intent(in) :: in_array
-    double precision, dimension(size(in_array,dim=1)) :: out_array
+    real(real32), dimension(:), intent(in) :: in_array
+    real(real32), dimension(size(in_array,dim=1)) :: out_array
     logical, optional :: lperiodic
     
     nstep=size(in_array)
@@ -403,7 +320,7 @@ contains
     end if
     out_array=in_array
 
-  end function drunning_avg
+  end function running_avg
 !!!#####################################################
 
 
@@ -478,60 +395,34 @@ contains
 !!!#####################################################
 !!! returns the range of a set of points
 !!!#####################################################
-  function rrange(in_array) result(range)
+  function range(in_array) result(output)
     implicit none
-    real :: range
-    real, dimension(:), intent(in) :: in_array
+    real(real32) :: output
+    real(real32), dimension(:), intent(in) :: in_array
 
-    range=maxval(in_array)-minval(in_array)
+    output=maxval(in_array)-minval(in_array)
 
-  end function rrange
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  function drange(in_array) result(range)
-    implicit none
-    double precision :: range
-    double precision, dimension(:), intent(in) :: in_array
-
-    range=maxval(in_array)-minval(in_array)
-
-  end function drange
+  end function range
 !!!#####################################################
 
 
 !!!#####################################################
 !!! returns an array normalised to one
 !!!#####################################################
-  function rnormalise(in_array) result(normal)
+  function normalise(in_array) result(output)
     implicit none
-    real :: sumval
-    real, dimension(:), intent(in) :: in_array
-    real, dimension(size(in_array)) :: normal
-
-    sumval=sum(in_array)
-    if(sumval.lt.1.D-8)then
-       normal=in_array
-    else
-       normal=in_array/sum(in_array)
-    end if
-
-  end function rnormalise
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  function dnormalise(in_array) result(normal)
-    implicit none
-    double precision :: sumval
-    double precision, dimension(:), intent(in) :: in_array
-    double precision, dimension(size(in_array)) :: normal
+    real(real32) :: sumval
+    real(real32), dimension(:), intent(in) :: in_array
+    real(real32), dimension(size(in_array)) :: output
     
     sumval=sum(in_array)
     if(sumval.lt.1.D-8)then
-       normal=in_array
+       output=in_array
     else
-       normal=in_array/sum(in_array)
+       output=in_array/sum(in_array)
     end if
 
-  end function dnormalise
+  end function normalise
 !!!#####################################################
 
 
@@ -544,8 +435,8 @@ contains
   function get_turn_points(invec,lperiodic,window) result(resvec)
     implicit none
     integer :: i,j,nturn,itmp1,itmp2
-    double precision :: l_grad,r_grad
-    double precision, dimension(:), intent(in) :: invec
+    real(real32) :: l_grad,r_grad
+    real(real32), dimension(:), intent(in) :: invec
     integer, allocatable, dimension(:) :: tvec1,resvec
     integer, optional :: window
     logical, optional :: lperiodic
@@ -554,13 +445,13 @@ contains
     nturn=0
     if(allocated(resvec)) deallocate(resvec)
     allocate(tvec1(size(invec)))
-    l_grad=0.D0
+    l_grad=0._real32
     r_grad=invec(2)-invec(1)
     if(present(lperiodic))then
        if(lperiodic)then
           l_grad=invec(1)-invec(size(invec))
-          if(sign(1.D0,l_grad).ne.sign(1.D0,r_grad).or.&
-               (r_grad.eq.0.D0.and.l_grad.ne.r_grad))then
+          if(sign(1._real32,l_grad).ne.sign(1._real32,r_grad).or.&
+               (r_grad.eq.0._real32.and.l_grad.ne.r_grad))then
              nturn=nturn+1
              tvec1(nturn)=1
           end if
@@ -571,8 +462,8 @@ contains
     do i=2,size(invec)-1
        l_grad=r_grad
        r_grad=invec(i+1)-invec(i)
-       if(sign(1.D0,l_grad).ne.sign(1.D0,r_grad).or.&
-            (r_grad.eq.0.D0.and.abs(l_grad-r_grad).gt.1.D-5))then
+       if(sign(1._real32,l_grad).ne.sign(1._real32,r_grad).or.&
+            (r_grad.eq.0._real32.and.abs(l_grad-r_grad).gt.1.D-5))then
           nturn=nturn+1
           tvec1(nturn)=i
        end if
@@ -582,8 +473,8 @@ contains
     if(present(lperiodic))then
        if(lperiodic)then
           r_grad=invec(1)-invec(size(invec))
-          if(sign(1.D0,l_grad).ne.sign(1.D0,r_grad).or.&
-               (r_grad.eq.0.D0.and.l_grad.ne.r_grad))then
+          if(sign(1._real32,l_grad).ne.sign(1._real32,r_grad).or.&
+               (r_grad.eq.0._real32.and.l_grad.ne.r_grad))then
              nturn=nturn+1
              tvec1(nturn)=size(invec)
           end if
@@ -626,11 +517,11 @@ contains
   function get_nth_plane(invec,nth,window,is_periodic) result(startend)
     implicit none
     integer :: i,nstep,nplane,udef_window
-    double precision :: tol
+    real(real32) :: tol
     logical :: is_in_plane
     integer, dimension(2) :: startend
     integer, allocatable, dimension(:,:) :: plane_loc
-    double precision, dimension(:), intent(in) :: invec
+    real(real32), dimension(:), intent(in) :: invec
     integer, intent(in) :: nth
     integer, optional, intent(in) :: window
     logical, optional, intent(in) :: is_periodic
@@ -639,7 +530,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Defines tolerance of plane height variation and initialises variables
 !!!-----------------------------------------------------------------------------
-    tol = 0.01D0*(maxval(invec)-minval(invec))
+    tol = 0.01_real32*(maxval(invec)-minval(invec))
     if(present(window))then
        udef_window=window
     else
@@ -744,16 +635,16 @@ contains
 !!!#####################################################
 !!! Ned's custom table function
 !!!#####################################################
-!!! BREAKS ON a = 1.D0
+!!! BREAKS ON a = 1._real32
 !!! ABOVE THIS, res WILL ALWAYS EQUAL 1
 !!! a should be between -1 and 1?
   function table_func(x,a) result(res)
     implicit none
-    double precision, intent(in) :: x,a
-    double precision :: res
+    real(real32), intent(in) :: x,a
+    real(real32) :: res
 
-    res=( ( cos(x) + a ) + abs( cos(x) - a ) - 2.D0 )/&
-         ( 2.D0*a - 2.D0 )
+    res=( ( cos(x) + a ) + abs( cos(x) - a ) - 2._real32 )/&
+         ( 2._real32*a - 2._real32 )
 
 
   end function table_func
@@ -763,41 +654,41 @@ contains
 !!!#####################################################
 !!! apply gaussians to a set of points in an array
 !!!#####################################################
-  function rgauss_array(distance,in_array,sigma,tol,norm,mask) &
+  function gauss_array(distance,in_array,sigma,tol,norm,mask) &
        result(gauss_func)
     implicit none
     integer :: i,n,init_step
-    real :: x,sigma,udef_tol,mult
-    real, optional :: tol
+    real(real32) :: x,sigma,udef_tol,mult
+    real(real32), optional :: tol
     logical, optional :: norm
-    real, dimension(:), intent(in) :: in_array,distance
-    real, dimension(size(distance)) :: gauss_func
-    real :: pi = 4.0*atan(1.0)
+    real(real32), dimension(:), intent(in) :: in_array,distance
+    real(real32), dimension(size(distance)) :: gauss_func
+    real(real32) :: pi = 4._real32*atan(1._real32)
 
     logical, dimension(size(distance)), optional, intent(in) :: mask
 
 
-    udef_tol=16.0
+    udef_tol=38._real32
     if(present(tol)) udef_tol=tol
-    mult=(1.0/(sqrt(pi*2.0)*sigma))
+    mult=(1._real32/(sqrt(pi*2._real32)*sigma))
     if(present(norm))then
-       if(.not.norm) mult=1.0
+       if(.not.norm) mult=1._real32
     end if
     
-    gauss_func=0.0
+    gauss_func=0._real32
     do n=1,size(in_array)
        if(present(mask))then
           if(.not.mask(n)) cycle
        end if
        init_step=minloc(abs( distance(:) - in_array(n) ),dim=1)
        forward: do i=init_step,size(distance),1
-          x=0.5*(( distance(i) - in_array(n) )/sigma)**2.0
+          x=0.5_real32*(( distance(i) - in_array(n) )/sigma)**2._real32
           if(x.gt.udef_tol) exit forward
           gauss_func(i) = gauss_func(i) + exp(-x) * mult
        end do forward
 
        backward: do i=init_step-1,1,-1
-          x=0.5*(( distance(i) - in_array(n) )/sigma)**2.0
+          x=0.5_real32*(( distance(i) - in_array(n) )/sigma)**2._real32
           if(x.gt.udef_tol) exit backward
           gauss_func(i) = gauss_func(i) + exp(-x) * mult
        end do backward
@@ -805,159 +696,75 @@ contains
 
 
 
-  end function rgauss_array
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  function dgauss_array(distance,in_array,sigma,tol,norm,mask) &
-       result(gauss_func)
-    implicit none
-    integer :: i,n,init_step
-    double precision :: x,sigma,udef_tol,mult
-    double precision, optional :: tol
-    logical, optional :: norm
-    double precision, dimension(:), intent(in) :: in_array,distance
-    double precision, dimension(size(distance)) :: gauss_func
-    double precision :: pi = 4.D0*atan(1.D0)
-
-    logical, dimension(size(distance)), optional, intent(in) :: mask
-
-
-    udef_tol=38.D0
-    if(present(tol)) udef_tol=tol
-    mult=(1.D0/(sqrt(pi*2.D0)*sigma))
-    if(present(norm))then
-       if(.not.norm) mult=1.D0
-    end if
-    
-    gauss_func=0.D0
-    do n=1,size(in_array)
-       if(present(mask))then
-          if(.not.mask(n)) cycle
-       end if
-       init_step=minloc(abs( distance(:) - in_array(n) ),dim=1)
-       forward: do i=init_step,size(distance),1
-          x=0.5D0*(( distance(i) - in_array(n) )/sigma)**2.D0
-          if(x.gt.udef_tol) exit forward
-          gauss_func(i) = gauss_func(i) + exp(-x) * mult
-       end do forward
-
-       backward: do i=init_step-1,1,-1
-          x=0.5D0*(( distance(i) - in_array(n) )/sigma)**2.D0
-          if(x.gt.udef_tol) exit backward
-          gauss_func(i) = gauss_func(i) + exp(-x) * mult
-       end do backward
-    end do
-
-
-
-  end function dgauss_array
+  end function gauss_array
 !!!#####################################################
 
 
 !!!#####################################################
 !!! apply cauchy distribution to a set of points in an array
 !!!#####################################################
-  function rcauchy_array(distance,in_array,gamma,tol,norm) result(c_func)
+  function cauchy_array(distance,in_array,gamma,tol,norm) result(c_func)
     implicit none
     integer :: i,n,init_step
-    real :: x,gamma,udef_tol,mult
-    real, optional :: tol
+    real(real32) :: x,gamma,udef_tol,mult
+    real(real32), optional :: tol
     logical, optional :: norm
-    real, dimension(:), intent(in) :: in_array,distance
-    real, dimension(size(distance)) :: c_func
-    real :: pi = 4.0*atan(1.0)
-
-
-    udef_tol=1.E16
-    if(present(tol)) udef_tol=tol
-    mult=(1.0/(pi*gamma))
-    if(present(norm))then
-       if(.not.norm) mult=1.0
-    end if
-    
-    c_func=0.0
-    do n=1,size(in_array)
-       init_step=minloc(abs( distance(:) - in_array(n) ),dim=1)
-       forward: do i=init_step,size(distance),1
-          x = 1.0 + (( distance(i) - in_array(n) )/gamma)**2.0
-          if(x.gt.udef_tol) exit forward
-          c_func(i) = c_func(i) + 1.0/(x) * mult
-       end do forward
-
-       backward: do i=init_step-1,1,-1
-          x = 1.0 + (( distance(i) - in_array(n) )/gamma)**2.0
-          if(x.gt.udef_tol) exit backward
-          c_func(i) = c_func(i) + 1.0/x * mult
-       end do backward
-    end do
-
-
-
-  end function rcauchy_array
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  function dcauchy_array(distance,in_array,gamma,tol,norm) result(c_func)
-    implicit none
-    integer :: i,n,init_step
-    double precision :: x,gamma,udef_tol,mult
-    double precision, optional :: tol
-    logical, optional :: norm
-    double precision, dimension(:), intent(in) :: in_array,distance
-    double precision, dimension(size(distance)) :: c_func
-    double precision :: pi = 4.D0*atan(1.D0)
+    real(real32), dimension(:), intent(in) :: in_array,distance
+    real(real32), dimension(size(distance)) :: c_func
+    real(real32) :: pi = 4._real32*atan(1._real32)
 
 
     udef_tol=1.D16
     if(present(tol)) udef_tol=tol
-    mult=(1.D0/(pi*gamma))
+    mult=(1._real32/(pi*gamma))
     if(present(norm))then
-       if(.not.norm) mult=1.D0
+       if(.not.norm) mult=1._real32
     end if
     
-    c_func=0.D0
+    c_func=0._real32
     do n=1,size(in_array)
        init_step=minloc(abs( distance(:) - in_array(n) ),dim=1)
        forward: do i=init_step,size(distance),1
-          x = 1.D0 + (( distance(i) - in_array(n) )/gamma)**2.D0
+          x = 1._real32 + (( distance(i) - in_array(n) )/gamma)**2._real32
           if(x.gt.udef_tol) exit forward
-          c_func(i) = c_func(i) + 1.D0/(x) * mult
+          c_func(i) = c_func(i) + 1._real32/(x) * mult
        end do forward
 
        backward: do i=init_step-1,1,-1
-          x = 1.D0 + (( distance(i) - in_array(n) )/gamma)**2.D0
+          x = 1._real32 + (( distance(i) - in_array(n) )/gamma)**2._real32
           if(x.gt.udef_tol) exit backward
-          c_func(i) = c_func(i) + 1.D0/x * mult
+          c_func(i) = c_func(i) + 1._real32/x * mult
        end do backward
     end do
 
 
 
-  end function dcauchy_array
+  end function cauchy_array
 !!!#####################################################
 
 
 !!!#####################################################
 !!! apply slater distribution to a set of points in an array
 !!!#####################################################
-  function rslater_array(distance,in_array,zeta,tol,norm) result(s_func)
+  function slater_array(distance,in_array,zeta,tol,norm) result(s_func)
     implicit none
     integer :: i,n,init_step
-    real :: x,zeta,udef_tol,mult
-    real, optional :: tol
+    real(real32) :: x,zeta,udef_tol,mult
+    real(real32), optional :: tol
     logical, optional :: norm
-    real, dimension(:), intent(in) :: in_array,distance
-    real, dimension(size(distance)) :: s_func
-    real :: pi = 4.0*atan(1.0)
+    real(real32), dimension(:), intent(in) :: in_array,distance
+    real(real32), dimension(size(distance)) :: s_func
+    real(real32) :: pi = 4._real32*atan(1._real32)
 
 
-    udef_tol=38.0
+    udef_tol=38._real32
     if(present(tol)) udef_tol=tol
-    mult=((zeta**3.0)/pi)**(0.5)
+    mult=((zeta**3._real32)/pi)**(0.5_real32)
     if(present(norm))then
-       if(.not.norm) mult=1.0
+       if(.not.norm) mult=1._real32
     end if
     
-    s_func=0.0
+    s_func=0._real32
     do n=1,size(in_array)
        init_step=minloc(abs( distance(:) - in_array(n) ),dim=1)
        forward: do i=init_step,size(distance),1
@@ -974,45 +781,7 @@ contains
     end do
 
 
-  end function rslater_array
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  function dslater_array(distance,in_array,zeta,tol,norm) result(s_func)
-    implicit none
-    integer :: i,n,init_step
-    double precision :: x,zeta,udef_tol,mult
-    double precision, optional :: tol
-    logical, optional :: norm
-    double precision, dimension(:), intent(in) :: in_array,distance
-    double precision, dimension(size(distance)) :: s_func
-    double precision :: pi = 4.D0*atan(1.D0)
-
-
-    udef_tol=38.D0
-    if(present(tol)) udef_tol=tol
-    mult=((zeta**3.D0)/pi)**(0.5D0)
-    if(present(norm))then
-       if(.not.norm) mult=1.D0
-    end if
-    
-    s_func=0.D0
-    do n=1,size(in_array)
-       init_step=minloc(abs( distance(:) - in_array(n) ),dim=1)
-       forward: do i=init_step,size(distance),1
-          x = zeta*abs( distance(i) - in_array(n) )
-          if(x.gt.udef_tol) exit forward
-          s_func(i) = s_func(i) + exp(-x) * mult
-       end do forward
-
-       backward: do i=init_step-1,1,-1
-          x = zeta*abs( distance(i) - in_array(n) )
-          if(x.gt.udef_tol) exit backward
-          s_func(i) = s_func(i) + exp(-x) * mult
-       end do backward
-    end do
-
-
-  end function dslater_array
+  end function slater_array
 !!!#####################################################
 
 end module misc_maths

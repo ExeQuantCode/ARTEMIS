@@ -5,8 +5,6 @@
 !!!#############################################################################
 !!! module contains various miscellaneous functions and subroutines.
 !!! module includes the following functions and subroutines:
-!!! closest_below    (returns closest element below input number)
-!!! closest_above    (returns closest element above input number)
 !!! sort1D           (sort 1st col of array by size. Opt:sort 2nd array wrt 1st)
 !!! sort2D           (sort 1st two columns of an array by size)
 !!! set              (return the sorted set of unique elements)
@@ -16,9 +14,7 @@
 !!! swap_vec         (swap two vectors around)
 !!!##################
 !!! Icount           (counts words on line)
-!!! readcl           (read string and separate into a char array using user fs)
 !!! grep             (finds 1st line containing the pattern)
-!!! count_occ        (count number of occurances of substring in string)
 !!! flagmaker        (read flag inputs supplied and stores variable if present)
 !!! loadbar          (writes out a loading bar to the terminal)
 !!! jump             (moves file to specified line number)
@@ -26,78 +22,26 @@
 !!! to_upper         (converts all characters in string to upper case)
 !!! to_lower         (converts all characters in string to lower case)
 !!!#############################################################################
-module misc
+module artemis__misc
+  use artemis__constants, only: real32
   implicit none
 
 
+  interface swap
+     procedure iswap, rswap, rswap_vec
+  end interface swap
+
   interface sort1D
-     procedure isort1D,rsort1D,dsort1D
+     procedure isort1D,rsort1D
   end interface sort1D
 
   interface set
-     procedure iset,rset,dset
+     procedure iset,rset
   end interface set
 
 
-!!!updated 2021/12/08
-
 
 contains
-!!!#####################################################
-!!! function to find closest -ve element in array
-!!!#####################################################
-  function closest_below(vec,val,optmask) result(int)
-    implicit none
-    integer :: i,int
-    double precision :: val,best,dtmp1
-    double precision, dimension(:) :: vec
-    logical, dimension(:), optional :: optmask
-
-    int=0
-    best=-huge(0.D0)
-    do i=1,size(vec)
-       dtmp1=vec(i)-val
-       if(present(optmask))then
-          if(.not.optmask(i)) cycle
-       end if
-       if(dtmp1.gt.best.and.dtmp1.lt.-1.D-8)then
-          best=dtmp1
-          int=i
-       end if
-    end do
-
-    return
-  end function closest_below
-!!!#####################################################
-
-
-!!!#####################################################
-!!! function to find closest +ve element in array
-!!!#####################################################
-  function closest_above(vec,val,optmask) result(int)
-    implicit none
-    integer :: i,int
-    double precision :: val,best,dtmp1
-    double precision, dimension(:) :: vec
-    logical, dimension(:), optional :: optmask
-
-    int=0
-    best=huge(0.D0)
-    do i=1,size(vec)
-       dtmp1=vec(i)-val
-       if(present(optmask))then
-          if(.not.optmask(i)) cycle
-       end if
-       if(dtmp1.lt.best.and.dtmp1.gt.1.D-8)then
-          best=dtmp1
-          int=i
-       end if
-    end do
-
-    return
-  end function closest_above
-!!!#####################################################
-
 
 !!!#####################################################
 !!! sorts two arrays from min to max
@@ -143,46 +87,9 @@ contains
   subroutine rsort1D(arr1,arr2,reverse)
     implicit none
     integer :: i,dim,loc,ibuff
-    real :: rbuff
+    real(real32) :: dbuff
     logical :: udef_reverse
-    real, dimension(:) :: arr1
-    integer, dimension(:),intent(inout),optional :: arr2
-    logical, optional, intent(in) :: reverse
-
-    if(present(reverse))then
-       udef_reverse=reverse
-    else
-       udef_reverse=.false.
-    end if
-
-    dim=size(arr1,dim=1)
-    do i=1,dim
-       if(udef_reverse)then
-          loc=maxloc(arr1(i:dim),dim=1)+i-1          
-       else
-          loc=minloc(arr1(i:dim),dim=1)+i-1
-       end if
-       rbuff=arr1(i)
-       arr1(i)=arr1(loc)
-       arr1(loc)=rbuff
-
-       if(present(arr2)) then
-          ibuff=arr2(i)
-          arr2(i)=arr2(loc)
-          arr2(loc)=ibuff
-       end if
-    end do
-
-    return
-  end subroutine rsort1D
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  subroutine dsort1D(arr1,arr2,reverse)
-    implicit none
-    integer :: i,dim,loc,ibuff
-    double precision :: dbuff
-    logical :: udef_reverse
-    double precision, dimension(:) :: arr1
+    real(real32), dimension(:) :: arr1
     integer, dimension(:),intent(inout),optional :: arr2
     logical, optional, intent(in) :: reverse
 
@@ -211,7 +118,7 @@ contains
     end do
 
     return
-  end subroutine dsort1D
+  end subroutine rsort1D
 !!!#####################################################
 
 
@@ -222,8 +129,8 @@ contains
     implicit none
     integer :: i,j,dim,loc,istart
     integer, dimension(3) :: a123
-    double precision, dimension(3) :: buff
-    double precision, dimension(dim,3) :: arr
+    real(real32), dimension(3) :: buff
+    real(real32), dimension(dim,3) :: arr
 
     a123(:)=(/1,2,3/)
     istart=1
@@ -280,41 +187,11 @@ contains
   subroutine rset(arr, tol)
     implicit none
     integer :: i,n
-    real :: tiny
-    real, allocatable, dimension(:) :: tmp_arr
+    real(real32) :: tiny
+    real(real32), allocatable, dimension(:) :: tmp_arr
     
-    real, allocatable, dimension(:) :: arr
-    real, optional :: tol
-
-    if(present(tol))then
-       tiny = tol
-    else
-       tiny = 1.E-4
-    end if
-    
-    call sort1D(arr)
-    allocate(tmp_arr(size(arr)))
-
-    tmp_arr(1) = arr(1)
-    n=1
-    do i=2,size(arr)
-       if(abs(arr(i)-tmp_arr(n)).lt.tiny) cycle
-       n = n + 1
-       tmp_arr(n) = arr(i)
-    end do
-    call move_alloc(tmp_arr, arr)
-    
-  end subroutine rset
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
-  subroutine dset(arr, tol)
-    implicit none
-    integer :: i,n
-    double precision :: tiny
-    double precision, allocatable, dimension(:) :: tmp_arr
-    
-    double precision, allocatable, dimension(:) :: arr
-    double precision, optional :: tol
+    real(real32), allocatable, dimension(:) :: arr
+    real(real32), optional :: tol
 
     if(present(tol))then
        tiny = tol
@@ -334,7 +211,7 @@ contains
     end do
     call move_alloc(tmp_arr, arr)
     
-  end subroutine dset
+  end subroutine rset
 !!!#####################################################
 
 
@@ -347,8 +224,8 @@ contains
     implicit none
     integer :: i,dim,loc
     logical :: udef_reverse
-    double precision, allocatable, dimension(:) :: dbuff
-    double precision, dimension(:,:) :: arr1
+    real(real32), allocatable, dimension(:) :: dbuff
+    real(real32), dimension(:,:) :: arr1
 
     integer, intent(in) :: col
     logical, optional, intent(in) :: reverse
@@ -383,44 +260,44 @@ contains
 !!!#####################################################
 !!! swap two ints
 !!!#####################################################
-  subroutine swap_i(i1,i2)
+  subroutine iswap(i1,i2)
     implicit none
     integer :: i1,i2,itmp
 
     itmp=i1
     i1=i2
     i2=itmp
-  end subroutine swap_i
+  end subroutine iswap
 !!!#####################################################
 
 
 !!!#####################################################
 !!! swap two doubles
 !!!#####################################################
-  subroutine swap_d(d1,d2)
+  subroutine rswap(d1,d2)
     implicit none
-    double precision :: d1,d2,dtmp
+    real(real32) :: d1,d2,dtmp
 
     dtmp=d1
     d1=d2
     d2=dtmp
-  end subroutine swap_d
+  end subroutine rswap
 !!!#####################################################
 
 
 !!!#####################################################
 !!! swap two vectors
 !!!#####################################################
-  subroutine swap_vec(vec1,vec2)
+  subroutine rswap_vec(vec1,vec2)
     implicit none
-    double precision,dimension(:)::vec1,vec2
-    double precision,allocatable,dimension(:)::tvec
+    real(real32),dimension(:)::vec1,vec2
+    real(real32),allocatable,dimension(:)::tvec
 
     allocate(tvec(size(vec1)))
     tvec=vec1(:)
     vec1(:)=vec2(:)
     vec2(:)=tvec
-  end subroutine swap_vec
+  end subroutine rswap_vec
 !!!#####################################################
 
 
@@ -468,52 +345,6 @@ contains
 
 
 !!!#####################################################
-!!! counts the number of words on a line
-!!!#####################################################
-  subroutine readcl(full_line,store,tmpchar)
-    character(*) :: full_line
-    !ONLY WORKS WITH IFORT COMPILER
-    !      character(1) :: fs
-    character(len=:),allocatable :: fs
-    character(*),optional :: tmpchar
-    character(100),dimension(1000) :: tmp_store
-    character(*),allocatable,dimension(:),optional :: store
-    integer ::items,pos,k,length
-    items=0
-    pos=1
-
-    length=1
-    if(present(tmpchar)) length=len(trim(tmpchar))
-    allocate(character(len=length) :: fs)
-    if(present(tmpchar)) then
-       fs=tmpchar
-    else
-       fs=" "
-    end if
-
-    loop: do
-       k=verify(full_line(pos:),fs)
-       if (k.eq.0) exit loop
-       pos=k+pos-1
-       k=scan(full_line(pos:),fs)
-       if (k.eq.0) exit loop
-       items=items+1
-       tmp_store(items)=full_line(pos:pos+k-1)
-       pos=k+pos-1
-    end do loop
-
-    if(present(store))then
-       if(.not.allocated(store)) allocate(store(items))
-       do k=1,items
-          store(k)=trim(tmp_store(k))
-       end do
-    end if
-
-  end subroutine readcl
-!!!#####################################################
-
-
-!!!#####################################################
 !!! grep 
 !!!#####################################################
 !!! searches a file untill it finds the mattching patern
@@ -529,32 +360,6 @@ contains
        if(index(trim(buffer),trim(input)).ne.0) exit greploop
     end do greploop
   end subroutine grep
-!!!#####################################################
-
-
-!!!#####################################################
-!!! count number of occurances of substring in string
-!!!#####################################################
-  function count_occ(string,substring)
-    implicit none
-    integer :: pos,i,count_occ
-    character(*) :: string,substring
-
-    pos=1
-    count_occ=0
-    countloop: do 
-       i=verify(string(pos:), substring)
-       if (i.eq.0) exit countloop
-       if(pos.eq.len(string)) exit countloop
-       count_occ=count_occ+1
-       pos=i+pos-1
-       i=scan(string(pos:), ' ')
-       if (i.eq.0) exit countloop
-       pos=i+pos-1
-    end do countloop
-
-    return
-  end function count_occ
 !!!#####################################################
 
 
@@ -722,4 +527,37 @@ contains
   end function to_lower
 !!!#####################################################
 
-end module misc
+
+!###############################################################################
+  function strip_null(buffer) result(stripped)
+    !! Strip null characters from a string.
+    !!
+    !! This is meant for handling strings passed from Python, which gain
+    !! null characters at the end. The procedure finds the first null
+    !! character and truncates the string at that point.
+    !! Null characters are represented by ASCII code 0.
+    implicit none
+
+    ! Arguments
+    character(*), intent(in) :: buffer
+    !! String to be stripped.
+    character(len=len(buffer)) :: stripped
+    !! Stripped string.
+
+    ! Local variables
+    integer :: i
+    !! Loop index.
+
+    stripped = ""
+    do i = 1, len(buffer)
+       if(iachar(buffer(i:i)).ne.0)then
+          stripped(i:i)=buffer(i:i)
+       else
+          exit
+       end if
+    end do
+
+  end function strip_null
+!###############################################################################
+
+end module artemis__misc

@@ -4,15 +4,15 @@
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
 module swapping
-  use constants, only: ierror
-  use misc, only: sort1D
+  use artemis__constants, only: real32, ierror
+  use artemis__misc, only: sort1D
   use misc_maths, only: gauss
   use misc_linalg, only: modu
-  use rw_geom, only: bas_type,clone_bas
+  use artemis__geom_rw, only: basis_type
   use mod_sym, only: sym_setup,check_sym,sym_type,basmap_type,basis_map
-  use io, only: err_abort
+  use artemis__io_utils, only: err_abort
   implicit none
-  double precision :: tiny=5.0D-5
+  real(real32) :: tiny=5.0D-5
   logical :: lmirror
   type(basmap_type) :: bas_map
 
@@ -35,28 +35,28 @@ contains
     integer :: axis,nswap
     integer :: nabove,nbelow,nswaps_per_cell,nfail !,nperm
     real :: udef_sigma,small_sigma
-    double precision :: dintf,dist
-    type(bas_type) :: tmpbas,store_bas
+    real(real32) :: dintf,dist
+    type(basis_type) :: tmpbas,store_bas
     type(sym_type) :: grp
-    !double precision, dimension(4,4) :: intf_sym
+    !real(real32), dimension(4,4) :: intf_sym
     integer, allocatable, dimension(:) :: spec_list
     integer, allocatable, dimension(:) :: lw_close_list,up_close_list
     real, allocatable, dimension(:) :: lw_dist_list,up_dist_list
     real, allocatable, dimension(:) :: lw_weight_list,up_weight_list
 
     integer, allocatable, dimension(:,:) :: pos_list,up_list,lw_list
-    double precision, allocatable, dimension(:,:) :: bas_list
-    double precision, dimension(4,4) :: intf_sym
+    real(real32), allocatable, dimension(:,:) :: bas_list
+    real(real32), dimension(4,4) :: intf_sym
 
     integer, intent(in) :: iswap
     real, intent(in) :: width
     real, optional, intent(in) :: sigma
     logical, optional, intent(in) :: require_mirror
-    type(bas_type), intent(in) :: bas
+    type(basis_type), intent(in) :: bas
     integer, allocatable, dimension(:), intent(in) :: seed
-    double precision, dimension(2), intent(in) :: intf_loc !USE 1
-    type(bas_type), allocatable, dimension(:) :: bas_arr
-    double precision, dimension(3,3), intent(in) :: lat
+    real(real32), dimension(2), intent(in) :: intf_loc !USE 1
+    type(basis_type), allocatable, dimension(:) :: bas_arr
+    real(real32), dimension(3,3), intent(in) :: lat
 
 
 !!!-----------------------------------------------------------------------------
@@ -65,7 +65,7 @@ contains
     grp%nsymop = 1
     nfail=50
     if(present(sigma))then
-       if(sigma.lt.0.D0)then
+       if(sigma.lt.0._real32)then
           udef_sigma = 0.05
        else
           udef_sigma = sigma
@@ -121,8 +121,8 @@ contains
 !!! set up symmetries
 !!!-----------------------------------------------------------------------------
     call sym_setup(grp,lat)
-    call clone_bas(bas,tmpbas,trans_dim=.true.)
-    call clone_bas(tmpbas,store_bas,trans_dim=.true.)
+    call tmpbas%copy(bas)
+    call store_bas%copy(tmpbas)
 
 
 !!!-----------------------------------------------------------------------------
@@ -148,7 +148,7 @@ contains
     intf_sym_loop: do i=1,grp%nsymop
        !if(symops(i).eq.1) cycle intf_sym_loop
        if(abs(grp%sym(i,4,axis)).lt.tiny) cycle intf_sym_loop
-       if(abs(grp%sym(i,axis,axis)+1.D0).gt.tiny) cycle intf_sym_loop
+       if(abs(grp%sym(i,axis,axis)+1._real32).gt.tiny) cycle intf_sym_loop
        intf_sym(1:4,1:4) = grp%sym(i,1:4,1:4)
        bas_map = basis_map(intf_sym,tmpbas)
        lmirror = .true.
@@ -285,10 +285,10 @@ end function rand_swapper
     implicit none
     integer :: i,itmp1,itmp2
     integer :: nbelow,nabove,axis
-    double precision :: dintf,width
-    type(bas_type) :: bas
-    double precision, dimension(3,3) :: lat
-    double precision, dimension(:,:) :: bas_list
+    real(real32) :: dintf,width
+    type(basis_type) :: bas
+    real(real32), dimension(3,3) :: lat
+    real(real32), dimension(:,:) :: bas_list
     integer, allocatable, dimension(:,:) :: lw_list,up_list,pos_list
 
 
@@ -334,7 +334,7 @@ end function rand_swapper
     integer :: lw_remove,up_remove,nabove,nbelow,nswaps_per_cell
     real :: r_rand
     integer, allocatable, dimension(:,:) :: swap_list,up_list,lw_list
-    type(bas_type) :: bas,swap_bas
+    type(basis_type) :: bas,swap_bas
 
 !!!-----------------------------------------------------------------------------
 !!! randomly select atoms above and below the interface
@@ -433,15 +433,15 @@ end function rand_swapper
     integer :: i,is,ia
     integer :: nbelow,nabove
     real :: rtol
-    double precision, dimension(2) :: midpoint
+    real(real32), dimension(2) :: midpoint
     integer, allocatable, dimension(:) :: tmp_list1,tmp_list2
     real, allocatable, dimension(:) :: tmp_dist_list1,tmp_dist_list2
 
     integer, intent(in) :: axis
     real, intent(in) :: sigma
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(2), intent(in) :: intf_loc
-    double precision, dimension(3,3), intent(in) :: lat
+    type(basis_type), intent(in) :: bas
+    real(real32), dimension(2), intent(in) :: intf_loc
+    real(real32), dimension(3,3), intent(in) :: lat
 
     integer, allocatable, dimension(:), intent(out) :: spec_list
     integer, allocatable, dimension(:), intent(out) :: lw_close_list,up_close_list
@@ -456,12 +456,12 @@ end function rand_swapper
     rtol = 0.1/modu(lat(axis,:))
 
     midpoint(1) = (intf_loc(1) + intf_loc(2))/2
-    midpoint(2) = (1.D0 + intf_loc(1) + intf_loc(2))/2
+    midpoint(2) = (1._real32 + intf_loc(1) + intf_loc(2))/2
 
     if(midpoint(1).lt.intf_loc(1)) &
-         midpoint(1) = midpoint(1) + 1.D0
+         midpoint(1) = midpoint(1) + 1._real32
     if(midpoint(2).gt.intf_loc(1)) &
-         midpoint(2) = midpoint(2) - 1.D0
+         midpoint(2) = midpoint(2) - 1._real32
 
 
 !!!-----------------------------------------------------------------------------
@@ -594,9 +594,9 @@ end function rand_swapper
     integer, dimension(:,:), intent(in) :: lw_list,up_list
 
     real, intent(in) :: sigma,small_sigma
-    type(bas_type), intent(inout) :: swap_bas
+    type(basis_type), intent(inout) :: swap_bas
     integer, intent(in) :: nswaps_per_cell
-    type(bas_type), intent(in) :: bas
+    type(basis_type), intent(in) :: bas
 
 
 ! make a list of natoms long, with each location pointing to a specific atomic species and number

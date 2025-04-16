@@ -55,17 +55,19 @@ set(LIB_DIR ${FORTRAN_SRC_DIR}/lib)
 set(LIB_FILES
     mod_constants.f90
     mod_misc.f90
+    mod_misc_types.f90
+    mod_io_utils.F90
     mod_misc_maths.f90
     mod_misc_linalg.f90
-    mod_tools_infile.f90
     mod_rw_geom.f90
     mod_edit_geom.f90
+    mod_io_utils_extd.F90
     mod_sym.f90
+    mod_tools_infile.f90
 )
 
 # Main source files
 set(SPECIAL_LIB_FILES
-    io.F90
     aspect.f90
     mod_help.f90
     mod_intf_identifier.f90
@@ -75,7 +77,7 @@ set(SPECIAL_LIB_FILES
     mod_shifting.f90
     default_infile.f90
     inputs.f90
-    interfaces.f90
+    mod_generator.f90
 )
 
 

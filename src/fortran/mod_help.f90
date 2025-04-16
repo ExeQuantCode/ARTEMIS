@@ -1,8 +1,13 @@
 module mod_help
-  use io
+  use artemis__io_utils, only: err_abort, tag_type, io_print_help
   implicit none
 
-  private   !everything is private unless explicitly defined as public
+
+  private
+
+  public :: settings_help
+  public :: cell_edits_help
+  public :: interface_help
 
 
   !  logical, save :: ltag_present(ntags)  !!!REPLACE READVAR WITH THIS
@@ -113,16 +118,8 @@ module mod_help
 
 
 
-
-  public :: settings_help
-  public :: cell_edits_help
-  public :: interface_help
-
-
-!!!updated 2023/03/27
-
-
 contains
+
 !!!#############################################################################
 !!! setup settings tag descriptions
 !!!#############################################################################
@@ -1056,7 +1053,5 @@ contains
 
   end subroutine interface_help
 !!!#############################################################################
-
-
 
 end module mod_help

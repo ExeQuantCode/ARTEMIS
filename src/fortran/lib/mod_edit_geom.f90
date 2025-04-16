@@ -36,8 +36,9 @@
 !!! get_shortest_bond
 !!!#############################################################################
 module edit_geom
-  use rw_geom, only: bas_type,geom_write,convert_bas,clone_bas
-  use misc, only: swap_i,swap_d,swap_vec
+  use artemis__constants, only: real32
+  use artemis__geom_rw, only: basis_type,geom_write
+  use artemis__misc, only: swap
   use misc_linalg, only: cross,outer_product,cross_matrix,uvec,modu,&
        get_vol,det,inverse,inverse_3x3,LUinv,reduce_vec_gcd,get_vec_multiple,&
        proj,GramSchmidt,LLL_reduce
@@ -50,7 +51,7 @@ module edit_geom
      type(wyck_atom_type), allocatable, dimension(:) :: spec
   end type wyck_spec_type
   type bond_type
-     double precision :: length
+     real(real32) :: length
      integer, dimension(2,2) :: atoms
   end type bond_type
 
@@ -73,7 +74,7 @@ contains
 !!!#############################################################################
   function MATNORM(lat) result(nlat)
     implicit none
-    double precision, dimension(3,3) :: lat, nlat
+    real(real32), dimension(3,3) :: lat, nlat
     nlat(1,1)=sqrt(lat(1,1)**2+lat(1,2)**2+lat(1,3)**2)
     nlat(1,2)=0.0
     nlat(1,3)=0.0
@@ -106,9 +107,9 @@ contains
   function min_dist(bas,axis,loc,above)
     implicit none
     integer :: is,axis
-    double precision :: min_dist,pos
-    double precision, intent(in) :: loc
-    type(bas_type) :: bas
+    real(real32) :: min_dist,pos
+    real(real32), intent(in) :: loc
+    type(basis_type) :: bas
     logical :: labove
     logical,optional :: above
 
@@ -117,25 +118,25 @@ contains
     labove=.false.
     if(present(above)) labove=above
     aboveloop: if(labove)then
-       min_dist=huge(0.D0)
+       min_dist=huge(0._real32)
        if(all( (/ (bas%spec(is)%atom(:,axis),is=1,bas%nspec) /).lt.pos))&
-            pos=pos-1.D0
+            pos=pos-1._real32
     else
-       min_dist=-huge(0.D0)
+       min_dist=-huge(0._real32)
        if(all( (/ (bas%spec(is)%atom(:,axis),is=1,bas%nspec) /).gt.pos))&
-            pos=pos-1.D0
+            pos=pos-1._real32
     end if aboveloop
 
 
     do is=1,bas%nspec
        if(.not.labove.and.maxval(bas%spec(is)%atom(:,axis)-pos,&
-            mask=(bas%spec(is)%atom(:,axis)-pos.le.0.D0)).gt.min_dist) then
+            mask=(bas%spec(is)%atom(:,axis)-pos.le.0._real32)).gt.min_dist) then
           min_dist=maxval(bas%spec(is)%atom(:,axis)-pos,&
-               mask=(bas%spec(is)%atom(:,axis)-pos.le.0.D0))
+               mask=(bas%spec(is)%atom(:,axis)-pos.le.0._real32))
        elseif(labove.and.minval(bas%spec(is)%atom(:,axis)-pos,&
-            mask=(bas%spec(is)%atom(:,axis)-pos.ge.0.D0)).lt.min_dist) then
+            mask=(bas%spec(is)%atom(:,axis)-pos.ge.0._real32)).lt.min_dist) then
           min_dist=minval(bas%spec(is)%atom(:,axis)-pos,&
-               mask=(bas%spec(is)%atom(:,axis)-pos.ge.0.D0))
+               mask=(bas%spec(is)%atom(:,axis)-pos.ge.0._real32))
        end if
     end do
 
@@ -149,10 +150,10 @@ contains
   function get_atom_height(bas,atom,axis) result(val)
     implicit none
     integer :: i,axis,atom,sum_atom
-    double precision :: val
-    type(bas_type) :: bas
+    real(real32) :: val
+    type(basis_type) :: bas
 
-    val=0.D0
+    val=0._real32
     sum_atom=0
     do i=1,bas%nspec
        if(atom.le.sum_atom+bas%spec(i)%num)then
@@ -173,13 +174,13 @@ contains
   function get_min_bulk_bond(lat,bas) result(min_bond)
     implicit none
     integer :: is,ia,js,ja
-    double precision :: dtmp1,min_bond
-    type(bas_type) :: bas
-    double precision, dimension(3) :: vdtmp1
-    double precision, dimension(3,3) :: lat
+    real(real32) :: dtmp1,min_bond
+    type(basis_type) :: bas
+    real(real32), dimension(3) :: vdtmp1
+    real(real32), dimension(3,3) :: lat
 
 
-    min_bond=huge(0.D0)
+    min_bond=huge(0._real32)
     if(bas%natom.eq.1)then
        min_bond = min(modu(lat(1,:3)),modu(lat(2,:3)),modu(lat(3,:3)))
        return
@@ -215,16 +216,16 @@ contains
     implicit none
     integer :: js,ja
     integer :: iaxis
-    double precision :: dtmp1,min_bond,dtol
+    real(real32) :: dtmp1,min_bond,dtol
     logical :: ludef_above
-    double precision, dimension(3) :: vdtmp1, vsave
+    real(real32), dimension(3) :: vdtmp1, vsave
 
     integer, intent(in) :: is,ia
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(3,3), intent(in) :: lat
+    type(basis_type), intent(in) :: bas
+    real(real32), dimension(3,3), intent(in) :: lat
 
     integer, intent(in), optional :: axis
-    double precision, intent(in), optional :: tol
+    real(real32), intent(in), optional :: tol
     logical, intent(in), optional :: labove
 
     if(present(tol))then
@@ -245,7 +246,7 @@ contains
        iaxis=0
     end if
 
-    min_bond=huge(0.D0)
+    min_bond=huge(0._real32)
     
     do js=1,bas%nspec
        atmloop: do ja=1,bas%spec(js)%num
@@ -254,9 +255,9 @@ contains
           if(iaxis.gt.0)then
              if(abs(vdtmp1(iaxis)).lt.dtol) cycle atmloop
              if(ludef_above)then
-                vdtmp1(iaxis) = 1.D0 + vdtmp1(iaxis)
+                vdtmp1(iaxis) = 1._real32 + vdtmp1(iaxis)
              else
-                vdtmp1(iaxis) = vdtmp1(iaxis) - 1.D0
+                vdtmp1(iaxis) = vdtmp1(iaxis) - 1._real32
              end if
           end if
           vdtmp1 = &
@@ -284,17 +285,17 @@ contains
     implicit none
     integer :: js,ja
     integer :: iaxis
-    double precision :: dtmp1,min_bond,dtol
+    real(real32) :: dtmp1,min_bond,dtol
     logical :: ludef_above,ludef_real
-    double precision, dimension(3) :: vdtmp1,vdtmp2,vsave
+    real(real32), dimension(3) :: vdtmp1,vdtmp2,vsave
 
     logical, intent(in) :: lignore_close
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(3), intent(in) :: loc
-    double precision, dimension(3,3), intent(in) :: lat
+    type(basis_type), intent(in) :: bas
+    real(real32), dimension(3), intent(in) :: loc
+    real(real32), dimension(3,3), intent(in) :: lat
 
     integer, intent(in), optional :: axis
-    double precision, intent(in), optional :: tol
+    real(real32), intent(in), optional :: tol
     logical, intent(in), optional :: labove, lreal
 
     !! CORRECT tol TO ACCOUNT FOR LATTICE SIZE
@@ -322,8 +323,8 @@ contains
        iaxis=0
     end if
 
-    min_bond=huge(0.D0)
-    vsave = 0.D0
+    min_bond=huge(0._real32)
+    vsave = 0._real32
     write(0,*) "tester"
     do js=1,bas%nspec
        atmloop: do ja=1,bas%spec(js)%num
@@ -333,9 +334,9 @@ contains
           if(iaxis.gt.0)then
              if(abs(vdtmp1(iaxis)).lt.dtol) cycle atmloop
              if(ludef_above)then
-                vdtmp1(iaxis) = 1.D0 + vdtmp1(iaxis)
+                vdtmp1(iaxis) = 1._real32 + vdtmp1(iaxis)
              else
-                vdtmp1(iaxis) = vdtmp1(iaxis) - 1.D0
+                vdtmp1(iaxis) = vdtmp1(iaxis) - 1._real32
              end if
           end if
           write(0,*) js,ja, vdtmp1
@@ -368,8 +369,8 @@ contains
   subroutine shifter(bas,axis,shift,ltmp)
     implicit none
     integer :: i,j,k,axis
-    double precision :: shift
-    type(bas_type) :: bas
+    real(real32) :: shift
+    type(basis_type) :: bas
     logical, optional ::ltmp
     logical :: lrenorm
 
@@ -395,8 +396,8 @@ contains
   subroutine shift_region(bas,region_axis,region_lw,region_up,shift_axis,shift,renorm)
     implicit none
     integer :: is,ia,shift_axis,region_axis
-    double precision :: shift,region_lw,region_up
-    type(bas_type) :: bas
+    real(real32) :: shift,region_lw,region_up
+    type(basis_type) :: bas
     logical, optional ::renorm
     logical :: lrenorm
 
@@ -425,16 +426,16 @@ contains
 !!!#############################################################################
   function get_surface_normal(lat,axis) result(normal)
     implicit none
-    double precision :: component
+    real(real32) :: component
     integer, dimension(3) :: order=(/1,2,3/)
-    double precision, dimension(3) :: normal
+    real(real32), dimension(3) :: normal
 
     integer, intent(in) :: axis
-    double precision, dimension(3,3), intent(in) :: lat
+    real(real32), dimension(3,3), intent(in) :: lat
 
     order = cshift(order,3-axis)
     normal = cross([lat(order(1),:)],[lat(order(2),:)])
-    component = dot_product(lat(3,:),normal) / modu(normal)**2.D0
+    component = dot_product(lat(3,:),normal) / modu(normal)**2._real32
     normal = normal * component
 
     return
@@ -449,16 +450,16 @@ contains
   subroutine vacuumer(lat,bas,axis,loc,add,tol)
     implicit none
     integer :: is,ia
-    double precision :: rtol,rloc,ortho_scale
-    double precision :: cur_vac,inc,diff,mag_old,mag_new
-    double precision,dimension(3) :: normal
+    real(real32) :: rtol,rloc,ortho_scale
+    real(real32) :: cur_vac,inc,diff,mag_old,mag_new
+    real(real32),dimension(3) :: normal
 
     integer, intent(in) :: axis
-    double precision, intent(in) :: add,loc
-    type(bas_type), intent(inout) :: bas
-    double precision,dimension(3,3), intent(inout) :: lat
+    real(real32), intent(in) :: add,loc
+    type(basis_type), intent(inout) :: bas
+    real(real32),dimension(3,3), intent(inout) :: lat
 
-    double precision, optional, intent(in) :: tol
+    real(real32), optional, intent(in) :: tol
 
 
     !! get surface normal vector
@@ -472,7 +473,7 @@ contains
     cur_vac = min_dist(bas,axis,loc,.true.) - min_dist(bas,axis,loc,.false.)
     cur_vac = cur_vac * modu(lat(axis,:))
     diff = cur_vac + inc
-    if(diff.lt.0.D0)then
+    if(diff.lt.0._real32)then
        write(0,*) "WARNING! Removing vacuum entirely"
     end if
 
@@ -502,49 +503,48 @@ contains
 !!! Adjusts the amount of vacuum at a location ...
 !!! ... within a cell and adjusts the basis accordingly
 !!!#############################################################################
-  subroutine set_vacuum(lat,bas,axis,loc,vac,tol)
+  subroutine set_vacuum(basis,axis,loc,vac,tol)
     implicit none
     integer :: is,ia
-    double precision :: rtol,rloc,ortho_scale
-    double precision :: cur_vac,diff,mag_old,mag_new
-    double precision,dimension(3) :: normal
+    real(real32) :: rtol,rloc,ortho_scale
+    real(real32) :: cur_vac,diff,mag_old,mag_new
+    real(real32),dimension(3) :: normal
 
     integer, intent(in) :: axis
-    double precision, intent(in) :: vac,loc
-    type(bas_type), intent(inout) :: bas
-    double precision,dimension(3,3), intent(inout) :: lat
+    real(real32), intent(in) :: vac,loc
+    type(basis_type), intent(inout) :: basis
 
-    double precision, optional, intent(in) :: tol
+    real(real32), optional, intent(in) :: tol
 
 
     !! get surface normal vector
-    normal = get_surface_normal(lat,axis)
-    ortho_scale = modu(lat(axis,:))/modu(normal)
+    normal = get_surface_normal(basis%lat,axis)
+    ortho_scale = modu(basis%lat(axis,:))/modu(normal)
 
 
-    rtol = 0.D0
+    rtol = 0._real32
     if(present(tol)) rtol = tol
-    if(vac.lt.0.D0)then
+    if(vac.lt.0._real32)then
        write(0,*) "WARNING! Removing vacuum entirely"
     end if
-    cur_vac = min_dist(bas,axis,loc,.true.) - min_dist(bas,axis,loc,.false.)
+    cur_vac = min_dist(basis,axis,loc,.true.) - min_dist(basis,axis,loc,.false.)
     cur_vac = cur_vac * modu(normal)
     diff = ( vac - cur_vac ) * ortho_scale
 
-    mag_old = modu(lat(axis,:))
+    mag_old = modu(basis%lat(axis,:))
     mag_new = ( mag_old + diff ) / mag_old
-    lat(axis,:) = lat(axis,:) * mag_new
-    diff = diff / modu(lat(axis,:))
+    basis%lat(axis,:) = basis%lat(axis,:) * mag_new
+    diff = diff / modu(basis%lat(axis,:))
     rtol = rtol / mag_old
     rloc = loc / mag_new + rtol
 
 
 
-    do is=1,bas%nspec
-       do ia=1,bas%spec(is)%num
-          bas%spec(is)%atom(ia,axis) = bas%spec(is)%atom(ia,axis) / mag_new
-          if(bas%spec(is)%atom(ia,axis).gt.rloc) then
-             bas%spec(is)%atom(ia,axis) = bas%spec(is)%atom(ia,axis) + diff
+    do is=1,basis%nspec
+       do ia=1,basis%spec(is)%num
+          basis%spec(is)%atom(ia,axis) = basis%spec(is)%atom(ia,axis) / mag_new
+          if(basis%spec(is)%atom(ia,axis).gt.rloc) then
+             basis%spec(is)%atom(ia,axis) = basis%spec(is)%atom(ia,axis) + diff
           end if
        end do
     end do
@@ -561,25 +561,23 @@ contains
   subroutine ortho_axis(lat,bas,axis)
     implicit none
     integer :: axis
-    double precision :: ortho_comp
-    type(bas_type) :: bas
+    real(real32) :: ortho_comp
+    type(basis_type) :: bas
     integer, dimension(3) :: order
-    double precision, dimension(3) :: ortho_vec
-    double precision, dimension(3,3) :: invlat,lat
+    real(real32), dimension(3) :: ortho_vec
+    real(real32), dimension(3,3) :: invlat,lat
 
 
-    bas=convert_bas(bas,transpose(lat))
+    call bas%convert()
     order=(/1,2,3/)
     order=cshift(order,3-axis)
 
     ortho_vec=cross(lat(order(1),:),lat(order(2),:))
-    ortho_comp=dot_product(lat(3,:),ortho_vec)/modu(ortho_vec)**2.D0
+    ortho_comp=dot_product(lat(3,:),ortho_vec)/modu(ortho_vec)**2._real32
     ortho_vec=ortho_vec*ortho_comp
 
     lat(3,:)=ortho_vec
-    invlat=inverse_3x3(lat)
-    bas=convert_bas(bas,transpose(invlat))
-
+    call bas%change_lattice(lat)
 
     return
   end subroutine ortho_axis
@@ -590,37 +588,38 @@ contains
 !!! Applies a transformation matrix to a lattice ...
 !!! ... and extends the basis where needed
 !!!#############################################################################
-  subroutine transformer(lat,bas,tfmat,map)
+  subroutine transformer(basis, tfmat, map)
     implicit none
     integer :: i,j,k,l,m,n,is,ia
     integer :: satom,dim
-    double precision :: tol,vol_inc
+    real(real32) :: tol,vol_inc
     logical :: lmap
-    type(bas_type) :: bas,sbas
+    type(basis_type), intent(inout) :: basis
+    type(basis_type) :: sbas
     integer, dimension(3) :: latmin,latmax
-    double precision, dimension(3):: translvec,tolvec
+    real(real32), dimension(3):: translvec,tolvec
     integer, allocatable, dimension(:) :: tmp_map_atom
     integer, allocatable, dimension(:,:,:) :: new_map
-    double precision, allocatable, dimension(:,:) :: tmpbas
-    double precision, dimension(3,3) :: lat,slat,tfmat,invmat
+    real(real32), allocatable, dimension(:,:) :: tmpbas
+    real(real32), dimension(3,3) :: tfmat,invmat
 
     integer, allocatable, dimension(:,:,:), optional, intent(inout) :: map
 
-    vol_inc = abs(det(lat))
-    if(vol_inc.lt.0.5D0)then
+    vol_inc = abs(det(basis%lat))
+    if(vol_inc.lt.0.5_real32)then
        write(0,'(1X,"ERROR: Internal error in transformer function")')
        write(0,'(2X,"transformer in mod_edit_geom.f90 been supplied a&
             & lattice with almost zero determinant")')
        write(0,'(2X,"determinant = ",F0.9)') vol_inc
-       write(0,'(3(1X,F7.2))') lat
+       write(0,'(3(1X,F7.2))') basis%lat
        stop
     end if
-    call normalise_basis(bas,1.D0,lfloor=.true.,lround=.false.)
+    call basis%normalise(ceil_val = 1._real32, floor_coords = .true., round_coords = .false.)
     vol_inc=abs(det(tfmat))
-    slat=matmul(tfmat,lat)
+    sbas%lat=matmul(tfmat,basis%lat)
     invmat=inverse_3x3(tfmat)
-    translvec=0.D0
-    dim=size(bas%spec(1)%atom(1,:))
+    translvec=0._real32
+    dim=size(basis%spec(1)%atom(1,:))
     
     
     !!--------------------------------------------------------------------------
@@ -633,13 +632,13 @@ contains
        end if
        lmap = .true.
        allocate(new_map(&
-            bas%nspec,&
-            ceiling(vol_inc)*maxval(bas%spec(:)%num,dim=1),2))
+            basis%nspec,&
+            ceiling(vol_inc)*maxval(basis%spec(:)%num,dim=1),2))
        new_map=0
        if(all(map.eq.0))then
-          do is=1,bas%nspec
-             map(is,:bas%spec(is)%num,1) = is
-             do ia=1,bas%spec(is)%num
+          do is=1,basis%nspec
+             map(is,:basis%spec(is)%num,1) = is
+             do ia=1,basis%spec(is)%num
                 map(is,ia,2) = ia
              end do
           end do
@@ -652,7 +651,7 @@ contains
     !!--------------------------------------------------------------------------
     tol=1.D-3 !! in Å
     do i=1,3
-       tolvec(i)=tol/modu(slat(i,:))
+       tolvec(i)=tol/modu(sbas%lat(i,:))
     end do
     if(vol_inc.lt.minval(tolvec))then
        write(0,'(1X,"ERROR: Internal error in transformer function")')
@@ -690,20 +689,20 @@ contains
     !!----------------------------------
     !latmin(i)=(minval(invmat(i,:))-ceiling(minval(invmat(i,:))))*vol
     !latmax(i)=(maxval(invmat(i,:))-floor(minval(invmat(i,:))))*vol
-    !latmin(i)=(min(minval(invmat(i,:)),0.D0)-ceiling(minval(invmat(i,:))))*vol
+    !latmin(i)=(min(minval(invmat(i,:)),0._real32)-ceiling(minval(invmat(i,:))))*vol
     !latmax(i)=(ceiling(maxval(invmat(i,:3)))-maxval(invmat(i,:3)) )*vol
     do i=1,3
-       latmin(i)=floor(sum(tfmat(:3,i),mask=tfmat(:3,i).lt.0.D0))-1
-       latmax(i)=ceiling(sum(tfmat(:3,i),mask=tfmat(:3,i).gt.0.D0))+1
+       latmin(i)=floor(sum(tfmat(:3,i),mask=tfmat(:3,i).lt.0._real32))-1
+       latmax(i)=ceiling(sum(tfmat(:3,i),mask=tfmat(:3,i).gt.0._real32))+1
     end do
     
     
     !!--------------------------------------------------------------------------
     !! transform the basis
     !!--------------------------------------------------------------------------
-    do i=1,bas%nspec
-       do j=1,bas%spec(i)%num
-          bas%spec(i)%atom(j,:3)=matmul(bas%spec(i)%atom(j,:3),invmat)
+    do i=1,basis%nspec
+       do j=1,basis%spec(i)%num
+          basis%spec(i)%atom(j,:3)=matmul(basis%spec(i)%atom(j,:3),invmat)
        end do
     end do
     
@@ -711,21 +710,21 @@ contains
     !!--------------------------------------------------------------------------
     !! generates atoms to fill the supercell
     !!--------------------------------------------------------------------------
-    allocate(sbas%spec(bas%nspec))
-    sbas%sysname=bas%sysname
-    sbas%nspec=0
-    sbas%natom=0
-    spec_loop1: do is=1,bas%nspec
+    allocate(sbas%spec(basis%nspec))
+    sbas%sysname = basis%sysname
+    sbas%nspec = 0
+    sbas%natom = 0
+    spec_loop1: do is = 1, basis%nspec
        if(allocated(tmpbas)) deallocate(tmpbas)
-       allocate(tmpbas(bas%spec(is)%num*(&
+       allocate(tmpbas(basis%spec(is)%num*(&
             (abs(latmax(3))+abs(latmin(3))+1)*&
             (abs(latmax(2))+abs(latmin(2))+1)*&
             (abs(latmax(1))+abs(latmin(1))+1)),3))
        satom=0
        if(lmap)then
-          allocate(tmp_map_atom(ceiling(vol_inc)*bas%spec(is)%num))
+          allocate(tmp_map_atom(ceiling(vol_inc)*basis%spec(is)%num))
        end if
-       do ia=1,bas%spec(is)%num
+       do ia = 1, basis%spec(is)%num
           do n=latmin(3),latmax(3)!,1
              translvec(3)=dble(n)
              do m=latmin(2),latmax(2)!,1
@@ -733,22 +732,22 @@ contains
                 inloop: do l=latmin(1),latmax(1)!,1
                    translvec(1)=dble(l)
                    tmpbas(satom+1,:3) = &
-                        bas%spec(is)%atom(ia,:3) + matmul(translvec,invmat)
+                        basis%spec(is)%atom(ia,:3) + matmul(translvec,invmat)
                    !!tmpbas(satom+1,:3)=&
-                   !!     matmul((bas%spec(is)%atom(ia,:3)+translvec),invmat)
+                   !!     matmul((basis%spec(is)%atom(ia,:3)+translvec),invmat)
                    !where(abs(tmpbas(satom+1,:3)-nint(tmpbas(satom+1,k))).lt.tol)
                    !   tmpbas(satom+1,:3)=nint(tmpbas(satom+1,:3))
                    !end where
-                   !if(any(tmpbas(satom+1,:).ge.1.D0).or.&
-                   !     any(tmpbas(satom+1,:).lt.0.D0)) cycle
-                   !if(any(tmpbas(satom+1,:).ge.1.D0+tol).or.&
-                   !     any(tmpbas(satom+1,:).lt.0.D0-tol)) cycle
-                   if(any(tmpbas(satom+1,:).ge.1.D0-tol).or.&
-                        any(tmpbas(satom+1,:).lt.0.D0-tol)) cycle inloop !??? cycle inloop or spec_loop1?
+                   !if(any(tmpbas(satom+1,:).ge.1._real32).or.&
+                   !     any(tmpbas(satom+1,:).lt.0._real32)) cycle
+                   !if(any(tmpbas(satom+1,:).ge.1._real32+tol).or.&
+                   !     any(tmpbas(satom+1,:).lt.0._real32-tol)) cycle
+                   if(any(tmpbas(satom+1,:).ge.1._real32-tol).or.&
+                        any(tmpbas(satom+1,:).lt.0._real32-tol)) cycle inloop !??? cycle inloop or spec_loop1?
                    tmpbas(satom+1,:3) = tmpbas(satom+1,:3) - &
                         dble(floor(tmpbas(satom+1,:3)))
                    do k=1,satom
-                      if(all(mod(abs(tmpbas(satom+1,:3)-tmpbas(k,:3)),1.D0).le.&
+                      if(all(mod(abs(tmpbas(satom+1,:3)-tmpbas(k,:3)),1._real32).le.&
                            tol)) cycle inloop
                    end do
                    if(lmap) tmp_map_atom(satom+1)=map(is,ia,2)
@@ -764,12 +763,12 @@ contains
        sbas%nspec=sbas%nspec+1
        sbas%spec(sbas%nspec)%num=satom
        sbas%natom=sbas%natom+satom
-       sbas%spec(sbas%nspec)%name=bas%spec(is)%name
+       sbas%spec(sbas%nspec)%name=basis%spec(is)%name
        allocate(sbas%spec(sbas%nspec)%atom(satom,dim))
        sbas%spec(sbas%nspec)%atom(1:satom,:3)=tmpbas(1:satom,:3)
-       if(dim.eq.4) sbas%spec(sbas%nspec)%atom(1:satom,4)=1.D0
+       if(dim.eq.4) sbas%spec(sbas%nspec)%atom(1:satom,4)=1._real32
        deallocate(tmpbas)
-       deallocate(bas%spec(is)%atom)
+       deallocate(basis%spec(is)%atom)
        if(lmap)then
           new_map(sbas%nspec,:satom,1) = is
           new_map(sbas%nspec,:satom,2) = tmp_map_atom(:satom)
@@ -782,16 +781,16 @@ contains
     !! check to see if successfully generated correct number of atoms
     !!--------------------------------------------------------------------------
     if(all(abs(tfmat-nint(tfmat)).lt.tol))then
-       if(nint(bas%natom*vol_inc).ne.sbas%natom)then
+       if(nint(basis%natom*vol_inc).ne.sbas%natom)then
           write(0,'(1X,"ERROR: Internal error in transformer function")')
           write(0,'(2X,"Transformer in mod_edit_geom.f90 has failed to &
                &generate enough atoms when extending the cell")')
           write(0,'(2X,"Generated ",I0," atoms, whilst expecting ",I0," atoms")') &
-               sbas%natom,nint(bas%natom*vol_inc)
-          write(0,*) bas%natom,nint(vol_inc)
+               sbas%natom,nint(basis%natom*vol_inc)
+          write(0,*) basis%natom,nint(vol_inc)
           write(0,'(3(1X,F7.2))') tfmat
           open(60,file="broken_cell.vasp")
-          call geom_write(60,slat,sbas)
+          call geom_write(60,sbas)
           close(60)
           stop
        end if
@@ -801,15 +800,15 @@ contains
     !!--------------------------------------------------------------------------
     !! saves new lattice and basis to original set
     !!--------------------------------------------------------------------------
-    lat=slat
-    deallocate(bas%spec)
-    allocate(bas%spec(sbas%nspec))
-    bas%sysname=sbas%sysname
-    bas%nspec=sbas%nspec
-    bas%natom=sbas%natom
+    basis%lat = sbas%lat
+    deallocate(basis%spec)
+    allocate(basis%spec(sbas%nspec))
+    basis%sysname=sbas%sysname
+    basis%nspec=sbas%nspec
+    basis%natom=sbas%natom
     do i=1,sbas%nspec
-       allocate(bas%spec(i)%atom(sbas%spec(i)%num,dim))
-       bas%spec(i)=sbas%spec(i)
+       allocate(basis%spec(i)%atom(sbas%spec(i)%num,dim))
+       basis%spec(i)=sbas%spec(i)
     end do
     
     
@@ -833,9 +832,9 @@ contains
 !!!#############################################################################
   function change_basis(vec,old_lat,new_lat)
     implicit none
-    double precision, dimension(3) :: change_basis,vec
-    double precision, dimension(3,3), intent(in) :: old_lat,new_lat
-    double precision, dimension(3,3) :: inew_lat
+    real(real32), dimension(3) :: change_basis,vec
+    real(real32), dimension(3,3), intent(in) :: old_lat,new_lat
+    real(real32), dimension(3,3) :: inew_lat
     inew_lat=inverse_3x3(new_lat)
     change_basis=matmul(transpose(inew_lat),matmul(old_lat,vec))
   end function change_basis
@@ -848,22 +847,22 @@ contains
   subroutine region_rot(bas,lat,angle,axis,bound1,bound2,tvec)
     implicit none
     integer :: axis,i,j
-    double precision :: angle,bound1,bound2
-    double precision, dimension(3) :: u,centre
-    double precision, dimension(3,3) :: rotmat,ident,lat,invlat
-    type(bas_type) :: bas
-    double precision, optional, dimension(3) :: tvec
+    real(real32) :: angle,bound1,bound2
+    real(real32), dimension(3) :: u,centre
+    real(real32), dimension(3,3) :: rotmat,ident,lat,invlat
+    type(basis_type) :: bas
+    real(real32), optional, dimension(3) :: tvec
 
     centre=(/0.5,0.5,0.0/)
     if(present(tvec)) centre=tvec
-    ident=0.D0
+    ident=0._real32
     do i=1,3
-       ident(i,i)=1.D0
+       ident(i,i)=1._real32
     end do
 
 !!! DEFINE ROTMAT BEFORE THIS
-    u=0.D0
-    u(axis)=-1.D0
+    u=0._real32
+    u(axis)=-1._real32
     rotmat=&
          (cos(angle)*ident)+&
          (sin(angle))*cross_matrix(u)+&
@@ -893,66 +892,15 @@ contains
 
 
 !!!#############################################################################
-!!! convert basis coordinates to be within +val -> val-1
-!!!#############################################################################
-  subroutine normalise_basis(bas,dtmp,lfloor,lround,zero_round)
-    implicit none
-    integer :: is,ia,j
-    double precision :: ceil,flr,dround
-    double precision, optional :: dtmp, zero_round
-    type(bas_type) :: bas
-    logical :: lfloor1,lround1
-    logical, optional :: lfloor,lround
-
-
-    ceil=1.D0
-    lfloor1=.false.
-    if(present(dtmp)) ceil=dtmp
-    if(present(lfloor)) lfloor1=lfloor
-    flr=ceil-1.D0
-    lround1=.false.
-    dround=1.D-8
-    if(present(lround)) lround1=lround
-
-    do is=1,bas%nspec
-       do ia=1,bas%spec(is)%num
-          do j=1,3
-             if(lfloor1)then
-                bas%spec(is)%atom(ia,j)=bas%spec(is)%atom(ia,j)&
-                     -floor(bas%spec(is)%atom(ia,j)-flr)
-             else
-                bas%spec(is)%atom(ia,j)=bas%spec(is)%atom(ia,j)&
-                     -ceiling(bas%spec(is)%atom(ia,j)-ceil)
-             end if
-             if(lround1)then
-                if(abs(bas%spec(is)%atom(ia,j)-ceil).lt.dround.or.&
-                     abs(bas%spec(is)%atom(ia,j)).lt.dround) &
-                     bas%spec(is)%atom(ia,j)=flr
-             end if
-             if(present(zero_round))then
-                if(abs(bas%spec(is)%atom(ia,j)).lt.dround) &
-                     bas%spec(is)%atom(ia,j)=zero_round
-             end if
-          end do
-       end do
-    end do
-
-
-    return
-  end subroutine normalise_basis
-!!!#############################################################################
-
-
-!!!#############################################################################
 !!! finds the centre of geometry of the supplied basis
 !!!#############################################################################
   function centre_of_geom(bas) result(centre)
     implicit none
     integer :: is,ia,j
-    double precision, dimension(3) :: centre
-    type(bas_type) :: bas
+    real(real32), dimension(3) :: centre
+    type(basis_type) :: bas
 
-    centre=0.D0
+    centre=0._real32
     do is=1,bas%nspec
        do ia=1,bas%spec(is)%num
           do j=1,3
@@ -974,12 +922,12 @@ contains
   function centre_of_mass(bas) result(centre)
     implicit none
     integer :: is,ia,j
-    double precision :: tot_mass
-    double precision, dimension(3) :: centre
-    type(bas_type) :: bas
+    real(real32) :: tot_mass
+    real(real32), dimension(3) :: centre
+    type(basis_type) :: bas
 
-    centre=0.D0
-    tot_mass=0.D0
+    centre=0._real32
+    tot_mass=0._real32
     do is=1,bas%nspec
        tot_mass=tot_mass+bas%spec(is)%mass*bas%spec(is)%num
        do ia=1,bas%spec(is)%num
@@ -1003,11 +951,11 @@ contains
   function primitive_lat(inlat) result(plat)
     implicit none
     integer :: i,j
-    double precision :: dtmp1
-    double precision, dimension(3) :: scal
-    double precision, dimension(3,3) :: lat,plat,tmat1,tmat2
-    double precision, dimension(3,3), intent(in) :: inlat
-    double precision, dimension(4,3,3) :: special
+    real(real32) :: dtmp1
+    real(real32), dimension(3) :: scal
+    real(real32), dimension(3,3) :: lat,plat,tmat1,tmat2
+    real(real32), dimension(3,3), intent(in) :: inlat
+    real(real32), dimension(4,3,3) :: special
 
 
     !!---------------------------------------------------------------
@@ -1025,23 +973,23 @@ contains
     !! sets up the special set of primitive lattices
     !!---------------------------------------------------------------
     special(1,:,:) = transpose( reshape( (/&
-         1.D0, 0.D0, 0.D0,&
-         0.D0, 1.D0, 0.D0,&
-         0.D0, 0.D0, 1.D0/), shape(lat) ) )
+         1._real32, 0._real32, 0._real32,&
+         0._real32, 1._real32, 0._real32,&
+         0._real32, 0._real32, 1._real32/), shape(lat) ) )
     special(2,:,:) = transpose( reshape( (/&
-         1.D0, 0.D0, 0.D0,&
-         -0.5D0, sqrt(3.D0)/2.D0, 0.D0,&
-         0.D0, 0.D0, 1.0D0/), shape(lat) ) )
+         1._real32, 0._real32, 0._real32,&
+         -0.5_real32, sqrt(3._real32)/2._real32, 0._real32,&
+         0._real32, 0._real32, 1.0_real32/), shape(lat) ) )
     special(3,:,:) = transpose( reshape( (/&
-         0.0D0, 1.D0, 1.D0,&
-         1.D0, 0.0D0, 1.D0,&
-         1.D0, 1.D0, 0.0D0/), shape(lat) ) )
-    special(3,:,:) = special(3,:,:)/sqrt(2.D0)
+         0.0_real32, 1._real32, 1._real32,&
+         1._real32, 0._real32, 1._real32,&
+         1._real32, 1._real32, 0.0_real32/), shape(lat) ) )
+    special(3,:,:) = special(3,:,:)/sqrt(2._real32)
     special(4,:,:) = transpose( reshape( (/&
-         -1.D0,  1.D0,  1.D0,&
-         1.D0, -1.D0,  1.D0,&
-         1.D0,  1.D0, -1.D0/), shape(lat) ) )
-    special(4,:,:) = special(4,:,:)/sqrt(3.D0)
+         -1._real32,  1._real32,  1._real32,&
+         1._real32, -1._real32,  1._real32,&
+         1._real32,  1._real32, -1._real32/), shape(lat) ) )
+    special(4,:,:) = special(4,:,:)/sqrt(3._real32)
 
 
     !!---------------------------------------------------------------
@@ -1074,12 +1022,12 @@ contains
     implicit none
     integer :: cell_type
     integer :: i,j,k,count,limit
-    double precision, dimension(3,3) :: lat,newlat,transmat,S,tmp_mat
-    double precision :: tiny,pi,pi2
+    real(real32), dimension(3,3) :: lat,newlat,transmat,S,tmp_mat
+    real(real32) :: tiny,pi,pi2
     logical :: verb,lreduced
     integer, optional :: tmptype
     logical, optional :: ltmp
-    type(bas_type) :: bas
+    type(basis_type) :: bas
 
 
 
@@ -1090,16 +1038,16 @@ contains
     if(present(ltmp)) verb=ltmp
     cell_type=2
     if(present(tmptype)) cell_type=tmptype
-    S=0.D0
+    S=0._real32
     count=0
     limit=100
     lreduced=.false.
     tiny=1E-5*(get_vol(lat))**(1.E0/3.E0)
-    pi=4.D0*atan(1.D0)
-    pi2=2.D0*atan(1.D0)
-    transmat=0.D0
+    pi=4._real32*atan(1._real32)
+    pi2=2._real32*atan(1._real32)
+    transmat=0._real32
     do i=1,3
-       transmat(i,i)=1.D0
+       transmat(i,i)=1._real32
     end do
     newlat=lat
 
@@ -1130,7 +1078,7 @@ contains
        do i=1,2
           j=i+1
           if(S(i,i)-S(j,j).gt.tiny) then
-             call swap_vec(transmat(i,:),transmat(j,:))
+             call swap(transmat(i,:),transmat(j,:))
              transmat=-transmat
              if(i.eq.2) cycle find_reduced
              call mkNiggli_lat(lat,newlat,transmat,S)
@@ -1166,12 +1114,12 @@ contains
        !! A5
        if(abs(2*S(2,3)).gt.S(2,2)+tiny.or.&
             (abs(2*S(2,3)-S(2,2)).le.tiny.and.2*S(1,3).lt.S(1,2)).or.&
-            (abs(2*S(2,3)+S(2,2)).le.tiny.and.S(1,2).lt.0.D0))then
+            (abs(2*S(2,3)+S(2,2)).le.tiny.and.S(1,2).lt.0._real32))then
           tmp_mat(2,3)=((-1)**(cell_type+1))*floor((2*S(2,3)+S(2,2))/(2*S(2,2)))
           transmat=matmul(transpose(tmp_mat),transmat)
           cycle find_reduced
-          !       elseif(cell_type.eq.1.and.S(2,3).lt.0.D0)then
-          !          tmp_mat(2,3)=1.D0
+          !       elseif(cell_type.eq.1.and.S(2,3).lt.0._real32)then
+          !          tmp_mat(2,3)=1._real32
           !          transmat=matmul(transpose(tmp_mat),transmat)
           !          cycle find_reduced
        end if
@@ -1180,12 +1128,12 @@ contains
        !! A6
        if(abs(2*S(1,3)).gt.S(1,1)+tiny.or.&
             (abs(2*S(1,3)-S(1,1)).le.tiny.and.2*S(2,3).lt.S(1,2)).or.&
-            (abs(2*S(1,3)+S(1,1)).le.tiny.and.S(1,2).lt.0.D0))then
+            (abs(2*S(1,3)+S(1,1)).le.tiny.and.S(1,2).lt.0._real32))then
           tmp_mat(1,3)=((-1)**(cell_type+1))*floor((2*S(1,3)+S(1,1))/(2*S(1,1)))
           transmat=matmul(transpose(tmp_mat),transmat)
           cycle find_reduced
-          !       elseif(cell_type.eq.1.and.S(1,3).lt.0.D0)then
-          !          tmp_mat(1,3)=1.D0
+          !       elseif(cell_type.eq.1.and.S(1,3).lt.0._real32)then
+          !          tmp_mat(1,3)=1._real32
           !          transmat=matmul(transpose(tmp_mat),transmat)
           !          cycle find_reduced
        end if
@@ -1194,12 +1142,12 @@ contains
        !! A7
        if(abs(2*S(1,2)).gt.S(1,1)+tiny.or.&
             (abs(2*S(1,2)-S(1,1)).le.tiny.and.2*S(2,3).lt.S(1,3)).or.&
-            (abs(2*S(1,2)+S(1,1)).le.tiny.and.S(1,3).lt.0.D0))then
+            (abs(2*S(1,2)+S(1,1)).le.tiny.and.S(1,3).lt.0._real32))then
           tmp_mat(1,2)=((-1)**(cell_type+1))*floor((2*S(1,2)+S(1,1))/(2*S(1,1)))
           transmat=matmul(transpose(tmp_mat),transmat)
           cycle find_reduced
-          !       elseif(cell_type.eq.1.and.S(1,2).lt.0.D0)then
-          !          tmp_mat(1,2)=1.D0
+          !       elseif(cell_type.eq.1.and.S(1,2).lt.0._real32)then
+          !          tmp_mat(1,2)=1._real32
           !          transmat=matmul(transpose(tmp_mat),transmat)
           !          cycle find_reduced
        end if
@@ -1222,7 +1170,7 @@ contains
     end do find_reduced
 
 
-    if(abs(det(transmat)+1.D0).le.tiny)then
+    if(abs(det(transmat)+1._real32).le.tiny)then
        tmp_mat=reshape((/-1,0,0,  0,-1,0,  0,0,-1/),shape(tmp_mat))
        transmat=matmul(transpose(tmp_mat),transmat)
     end if
@@ -1261,8 +1209,8 @@ contains
 !!! S(1,2) = a.b,   S(1,3) = a.c,   S(2,3) = b.c
   subroutine mkNiggli_lat(lat,newlat,transmat,S)
     implicit none
-    double precision, dimension(3,3) :: lat,newlat,transmat,S
-    double precision, dimension(3) :: a,b,c
+    real(real32), dimension(3,3) :: lat,newlat,transmat,S
+    real(real32), dimension(3) :: a,b,c
 
 
     newlat=matmul(transmat,lat)
@@ -1296,9 +1244,9 @@ contains
   function reduced_check(lat,cell_type,S,tchar) result(check)
     implicit none
     integer :: cell_type
-    double precision :: tiny,alpha,beta,gamma,pi2
-    double precision, dimension(3) :: a,b,c
-    double precision, dimension(3,3) :: lat,S
+    real(real32) :: tiny,alpha,beta,gamma,pi2
+    real(real32), dimension(3) :: a,b,c
+    real(real32), dimension(3,3) :: lat,S
     character(1) :: quiet
     character(1), optional :: tchar
     logical :: check
@@ -1308,7 +1256,7 @@ contains
     if(present(tchar)) quiet=tchar
     if(quiet.ne."y".and.quiet.ne."q") quiet="n"
 
-    pi2 = 2.D0*atan(1.D0)
+    pi2 = 2._real32*atan(1._real32)
     check=.false.
     tiny=1E-3
 
@@ -1332,22 +1280,22 @@ contains
     end if
     if(cell_type.eq.1.and.&
          alpha.le.pi2.and.beta.le.pi2.and.gamma.le.pi2.and.&
-         S(1,2)-0.5D0*S(1,1).lt.tiny.and.&
-         S(1,3)-0.5D0*S(1,1).lt.tiny.and.&
-         S(2,3)-0.5D0*S(2,2).lt.tiny) then !Type I
+         S(1,2)-0.5_real32*S(1,1).lt.tiny.and.&
+         S(1,3)-0.5_real32*S(1,1).lt.tiny.and.&
+         S(2,3)-0.5_real32*S(2,2).lt.tiny) then !Type I
        check=.true.
        if(quiet.eq."n") write(0,*) "Found Type I reduced Niggli cell"
     elseif(cell_type.eq.2.and.&
          alpha.ge.pi2-tiny.and.beta.ge.pi2-tiny.and.gamma.ge.pi2-tiny.and.&
-         abs(S(1,2))-0.5D0*S(1,1).lt.tiny.and.&
-         abs(S(1,3))-0.5D0*S(1,1).lt.tiny.and.&
-         abs(S(2,3))-0.5D0*S(2,2).lt.tiny.and.&
-         (abs(S(2,3))+abs(S(1,3))+abs(S(1,2)))-0.5D0*(S(1,1)+S(2,2)).lt.tiny) then !Type II
-       if(abs(S(1,2))-0.5D0*S(1,1).le.tiny.and.S(1,3).gt.tiny) return
-       if(abs(S(1,3))-0.5D0*S(1,1).le.tiny.and.S(1,2).gt.tiny) return
-       if(abs(S(2,3))-0.5D0*S(2,2).le.tiny.and.S(1,2).gt.tiny) return
-       if((abs(S(2,3))+abs(S(1,3))+abs(S(1,2)))-0.5D0*(S(1,1)+S(2,2)).gt.tiny.and.&
-            S(1,1)-(2.D0*abs(S(1,3))+abs(S(1,2))).gt.tiny) return
+         abs(S(1,2))-0.5_real32*S(1,1).lt.tiny.and.&
+         abs(S(1,3))-0.5_real32*S(1,1).lt.tiny.and.&
+         abs(S(2,3))-0.5_real32*S(2,2).lt.tiny.and.&
+         (abs(S(2,3))+abs(S(1,3))+abs(S(1,2)))-0.5_real32*(S(1,1)+S(2,2)).lt.tiny) then !Type II
+       if(abs(S(1,2))-0.5_real32*S(1,1).le.tiny.and.S(1,3).gt.tiny) return
+       if(abs(S(1,3))-0.5_real32*S(1,1).le.tiny.and.S(1,2).gt.tiny) return
+       if(abs(S(2,3))-0.5_real32*S(2,2).le.tiny.and.S(1,2).gt.tiny) return
+       if((abs(S(2,3))+abs(S(1,3))+abs(S(1,2)))-0.5_real32*(S(1,1)+S(2,2)).gt.tiny.and.&
+            S(1,1)-(2._real32*abs(S(1,3))+abs(S(1,2))).gt.tiny) return
        check=.true.
        if(quiet.eq."n") write(0,*) "Found Type II reduced Niggli cell"
     else
@@ -1365,12 +1313,12 @@ contains
   function planecutter(inlat,invec) result(tfmat)
     implicit none
     integer :: i,j,itmp1
-    double precision :: tol
+    real(real32) :: tol
     integer, dimension(3) :: order
-    double precision, dimension(3) :: vec,tvec1
-    double precision, dimension(3,3) :: lat,b,tfmat,invlat,reclat
-    double precision, dimension(3), intent(in) :: invec
-    double precision, dimension(3,3), intent(in) :: inlat
+    real(real32), dimension(3) :: vec,tvec1
+    real(real32), dimension(3,3) :: lat,b,tfmat,invlat,reclat
+    real(real32), dimension(3), intent(in) :: invec
+    real(real32), dimension(3,3), intent(in) :: inlat
 
 
 
@@ -1391,14 +1339,14 @@ contains
 !!!-----------------------------------------------------------------------------
     do i=1,2
        if(vec(i).eq.0)then
-          if(all(vec(i:).eq.0.D0)) exit
+          if(all(vec(i:).eq.0._real32)) exit
           itmp1=maxloc(vec(i+1:),mask=vec(i+1:).ne.0,dim=1)+i
-          call swap_i(order(i),order(itmp1))
-          call swap_d(vec(i),vec(itmp1))
-          call swap_vec(lat(:,i),lat(:,itmp1))
-          call swap_vec(lat(i,:),lat(itmp1,:))
-          call swap_vec(reclat(:,i),reclat(:,itmp1))
-          call swap_vec(reclat(i,:),reclat(itmp1,:))
+          call swap(order(i),order(itmp1))
+          call swap(vec(i),vec(itmp1))
+          call swap(lat(:,i),lat(:,itmp1))
+          call swap(lat(i,:),lat(itmp1,:))
+          call swap(reclat(:,i),reclat(:,itmp1))
+          call swap(reclat(i,:),reclat(itmp1,:))
        end if
     end do
     !vec=matmul(vec,reclat)
@@ -1407,8 +1355,8 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Perform Lenstra-Lenstra-Lovász reduction
 !!!-----------------------------------------------------------------------------
-    b(1,:) = (/-vec(2),vec(1),0.D0/)
-    b(2,:) = (/-vec(3),0.D0,vec(1)/)
+    b(1,:) = (/-vec(2),vec(1),0._real32/)
+    b(2,:) = (/-vec(3),0._real32,vec(1)/)
     b(3,:) = vec
     tfmat = b
     b(:2,:) = LLL_reduce(b(:2,:))
@@ -1464,10 +1412,10 @@ contains
 !!!-----------------------------------------------------------------------------
     do i=1,3
        if(i.eq.order(i)) cycle
-       call swap_vec(lat(i,:),lat(order(i),:))
-       call swap_vec(lat(:,i),lat(:,order(i)))
-       call swap_vec(b(:,i),b(:,order(i)))
-       call swap_i(order(order(i)),order(i))
+       call swap(lat(i,:),lat(order(i),:))
+       call swap(lat(:,i),lat(:,order(i)))
+       call swap(b(:,i),b(:,order(i)))
+       call swap(order(order(i)),order(i))
     end do
 
 
@@ -1477,7 +1425,7 @@ contains
 !!!-----------------------------------------------------------------------------
     !b=matmul(b,invlat)
     where(abs(b(:,:)).lt.tol)
-       b(:,:)=0.D0
+       b(:,:)=0._real32
     end where
     !write(0,'(3(2X,F9.3))') (b(j,:),j=1,3)
     !write(0,*) 
@@ -1491,11 +1439,11 @@ contains
           write(0,'(1X,"ERROR: Internal error in planecutter function")')
           write(0,'(2X,"Planecutter in mod_edit_geom.f90 is unable to find a&
                & perpendicular plane")')
-          b=0.D0
+          b=0._real32
           exit
        end if
     end do reduce_loop
-    if(det(b).lt.0.D0)then
+    if(det(b).lt.0._real32)then
        tvec1=b(2,:)
        b(2,:)=b(1,:)
        b(1,:)=tvec1
@@ -1505,7 +1453,7 @@ contains
        write(0,'(2X,"Planecutter in mod_edit_geom.f90 has generated a 0&
             & determinant matrix")')
        write(0,'(3(2X,F9.3))') (b(j,:),j=1,3)
-       b=0.D0
+       b=0._real32
        !stop
     end if
     tfmat=b
@@ -1516,209 +1464,270 @@ contains
 !!!#############################################################################
 
 
-!!!#############################################################################
-!!! merges two supplied bases
-!!!#############################################################################
-!!! Assumes the same lattice for each
-  function bas_merge(bas1,bas2,length,map1,map2) result(mergbas)
+!###############################################################################
+  function basis_merge(basis1,basis2,length,map1,map2) result(output)
+    !! Merge two supplied bases
+    !!
+    !! Merge two bases assuming that the lattice is the same
     implicit none
-    integer :: i,j,k,itmp,dim
-    logical :: lmap
-    integer, allocatable, dimension(:) :: match
-    integer, allocatable, dimension(:,:,:) :: new_map
 
-    type(bas_type) :: mergbas
-    type(bas_type), intent(in) :: bas1,bas2
+    ! Arguments
+    type(basis_type) :: output
+    !! Output merged basis.
+    class(basis_type), intent(in) :: basis1, basis2
+    !! Input bases to merge.
     integer, intent(in), optional :: length
+    !! Number of dimensions for atomic positions (default 3).
     integer, allocatable, dimension(:,:,:), optional, intent(inout) :: map1,map2
+    !! Maps for atoms in the two bases.
+
+    ! Local variables
+    integer :: i, j, k, itmp, dim
+    !! Loop counters.
+    logical :: lmap
+    !! Boolean for map presence.
+    integer, allocatable, dimension(:) :: match
+    !! Array to match species.
+    integer, allocatable, dimension(:,:,:) :: new_map
+    !! New map for merged basis.
 
 
-    !!--------------------------------------------------------------------------
-    !! Set up number of species
-    !!--------------------------------------------------------------------------
+
+    !---------------------------------------------------------------------------
+    ! set up number of species
+    !---------------------------------------------------------------------------
     dim=3
     if(present(length)) dim=length
 
-    allocate(match(bas2%nspec))
+    allocate(match(basis2%nspec))
     match=0
-    mergbas%nspec=bas1%nspec
-    do i=1,bas2%nspec
-       if(.not.any(bas2%spec(i)%name.eq.bas1%spec(:)%name))then
-          mergbas%nspec=mergbas%nspec+1
+    output%nspec=basis1%nspec
+    do i = 1, basis2%nspec
+       if(.not.any(basis2%spec(i)%name.eq.basis1%spec(:)%name))then
+          output%nspec=output%nspec+1
        end if
     end do
-    allocate(mergbas%spec(mergbas%nspec))
-    mergbas%spec(:bas1%nspec)%num=bas1%spec(:)%num
-    mergbas%spec(:bas1%nspec)%name=bas1%spec(:)%name
+    allocate(output%spec(output%nspec))
+    output%spec(:basis1%nspec)%num=basis1%spec(:)%num
+    output%spec(:basis1%nspec)%name=basis1%spec(:)%name
 
 
-    write(mergbas%sysname,'(A,"+",A)') &
-         trim(bas1%sysname),trim(bas2%sysname)
-    k=bas1%nspec
-    spec1check: do i=1,bas2%nspec
-       do j=1,bas1%nspec
-          if(bas2%spec(i)%name.eq.bas1%spec(j)%name)then
-             mergbas%spec(j)%num=mergbas%spec(j)%num+bas2%spec(i)%num
+    write(output%sysname,'(A,"+",A)') &
+         trim(basis1%sysname),trim(basis2%sysname)
+    k=basis1%nspec
+    spec1check: do i = 1, basis2%nspec
+       do j = 1, basis1%nspec
+          if(basis2%spec(i)%name.eq.basis1%spec(j)%name)then
+             output%spec(j)%num=output%spec(j)%num+basis2%spec(i)%num
              match(i)=j
              cycle spec1check
           end if
        end do
        k=k+1
        match(i)=k
-       mergbas%spec(k)%num=bas2%spec(i)%num
-       mergbas%spec(k)%name=bas2%spec(i)%name
+       output%spec(k)%num=basis2%spec(i)%num
+       output%spec(k)%name=basis2%spec(i)%name
     end do spec1check
 
 
-    !!--------------------------------------------------------------------------
-    !! If map is present, sets up new map
-    !!--------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! if map is present, sets up new map
+    !---------------------------------------------------------------------------
     lmap = .false.
     if_map: if(present(map1).and.present(map2))then
        if(all(map1.eq.-1)) exit if_map
        lmap = .true.
        allocate(new_map(&
-            mergbas%nspec,&
-            maxval(mergbas%spec(:)%num,dim=1),2))
+            output%nspec,&
+            maxval(output%spec(:)%num,dim=1),2))
        new_map = 0
     end if if_map
 
 
-    !!--------------------------------------------------------------------------
-    !! Set up atoms in merged basis
-    !!--------------------------------------------------------------------------
-    do i=1,bas1%nspec
-       allocate(mergbas%spec(i)%atom(mergbas%spec(i)%num,dim))
-       mergbas%spec(i)%atom(:,:)=0.D0
-       mergbas%spec(i)%atom(1:bas1%spec(i)%num,:3)=bas1%spec(i)%atom(:,:3)
-       if(lmap) new_map(i,:bas1%spec(i)%num,:)=map1(i,:bas1%spec(i)%num,:)
+    !---------------------------------------------------------------------------
+    ! set up atoms in merged basis
+    !---------------------------------------------------------------------------
+    do i = 1, basis1%nspec
+       allocate(output%spec(i)%atom(output%spec(i)%num,dim))
+       output%spec(i)%atom(:,:)=0._real32
+       output%spec(i)%atom(1:basis1%spec(i)%num,:3)=basis1%spec(i)%atom(:,:3)
+       if(lmap) new_map(i,:basis1%spec(i)%num,:)=map1(i,:basis1%spec(i)%num,:)
     end do
-    do i=1,bas2%nspec
-       if(match(i).gt.bas1%nspec)then
-          allocate(mergbas%spec(match(i))%atom(mergbas%spec(match(i))%num,dim))
-          mergbas%spec(match(i))%atom(:,:)=0.D0
-          mergbas%spec(match(i))%atom(:,:3)=bas2%spec(i)%atom(:,:3)
-          if(lmap) new_map(match(i),:bas2%spec(i)%num,:) = &
-               map2(i,:bas2%spec(i)%num,:)
+    do i = 1, basis2%nspec
+       if(match(i).gt.basis1%nspec)then
+          allocate(output%spec(match(i))%atom(output%spec(match(i))%num,dim))
+          output%spec(match(i))%atom(:,:)=0._real32
+          output%spec(match(i))%atom(:,:3)=basis2%spec(i)%atom(:,:3)
+          if(lmap) new_map(match(i),:basis2%spec(i)%num,:) = &
+               map2(i,:basis2%spec(i)%num,:)
        else
-          itmp=bas1%spec(match(i))%num
-          mergbas%spec(match(i))%atom(itmp+1:bas2%spec(i)%num+itmp,:3) = &
-               bas2%spec(i)%atom(:,:3)   
-          if(lmap) new_map(match(i),itmp+1:bas2%spec(i)%num+itmp,:) = &
-               map2(i,:bas2%spec(i)%num,:)      
+          itmp=basis1%spec(match(i))%num
+          output%spec(match(i))%atom(itmp+1:basis2%spec(i)%num+itmp,:3) = &
+               basis2%spec(i)%atom(:,:3)   
+          if(lmap) new_map(match(i),itmp+1:basis2%spec(i)%num+itmp,:) = &
+               map2(i,:basis2%spec(i)%num,:)      
        end if
     end do
-    mergbas%natom=sum(mergbas%spec(:)%num)
+    output%natom=sum(output%spec(:)%num)
 
 
     if(lmap) call move_alloc(new_map,map1)
 
     return
-  end function bas_merge
-!!!#############################################################################
+  end function basis_merge
+!###############################################################################
 
 
-!!!#############################################################################
-!!! merges two supplied bases and lattices
-!!! Does so by stitching one onto the top of the other
-!!!#############################################################################
-  subroutine bas_lat_merge(merglat,mergbas,inlat1,inlat2,inbas1,inbas2,axis,inoffset,map1,map2)
+!###############################################################################
+  function basis_stack(basis1,basis2,axis,offset,length,map1,map2) result(output)
+    !! Merge two supplied bases
+    !!
+    !! Merge two bases assuming that the lattice is the same
     implicit none
-    integer :: i,k,axis
-    double precision :: c1_ratio,c2_ratio,add,loc,zgap
-    type(bas_type) :: mergbas,bas1,bas2
-    type(bas_type), intent(in) :: inbas1,inbas2
-    integer, dimension(3) :: order
-    double precision, dimension(3) :: unit_vec,offset
-    double precision, dimension(3), intent(in) :: inoffset
-    double precision, dimension(3,3) :: merglat,lat1,lat2
-    double precision, dimension(3,3), intent(in) :: inlat1,inlat2
 
+    ! Arguments
+    type(basis_type) :: output
+    !! Output merged basis.
+    class(basis_type), intent(in) :: basis1, basis2
+    !! Input bases to merge.
+    integer, intent(in), optional :: length
+    !! Number of dimensions for atomic positions (default 3).
+    integer, intent(in) :: axis
+    !! Axis for the offset.
+    real(real32), dimension(3), intent(in) :: offset
+    !! Offset for the merged basis.
     integer, allocatable, dimension(:,:,:), optional, intent(inout) :: map1,map2
+    !! Maps for atoms in the two bases.
 
-    offset=inoffset
-    if(allocated(mergbas%spec))then
-       do i=1,mergbas%nspec
-          if(allocated(mergbas%spec(i)%atom)) deallocate(mergbas%spec(i)%atom)
-       end do
-       deallocate(mergbas%spec)
-    end if
-
-    call clone_bas(inbas1,bas1,inlat1,lat1)
-    call clone_bas(inbas2,bas2,inlat2,lat2)
-!!!-----------------------------------------------------------------------------
-!!! Shifts cells to 
-!!!-----------------------------------------------------------------------------
-    loc=0.D0
-    lat1=MATNORM(lat1)
-    add=-min_dist(bas1,axis,loc,.true.)
-    call shifter(bas1,axis,add,.true.)
-
-    add=-min_dist(bas2,axis,loc,.true.)
-    lat2=MATNORM(lat2)
-    call shifter(bas2,axis,add,.true.)
+    ! Local variables
+    integer :: i, j, k, itmp, length_
+    !! Loop counters.
+    real(real32) :: loc, c1_ratio, c2_ratio, zgap, add
+    !! Lattice parameters.
+    logical :: lmap
+    !! Boolean for map presence.
+    type(basis_type) :: basis1_, basis2_
+    integer, dimension(3) :: order
+    !! Order of axes.
+    real(real32), dimension(3) :: unit_vec
+    !! Unit vector for the axis.
+    real(real32), dimension(3) :: offset_
+    !! Offset for the merged basis.
+    integer, allocatable, dimension(:) :: match
+    !! Array to match species.
+    integer, allocatable, dimension(:,:,:) :: new_map
+    !! New map for merged basis.
 
 
-!!!-----------------------------------------------------------------------------
-!!! reduces vacuum between materials to desired sizes
-!!!-----------------------------------------------------------------------------
-    loc=1.D0
-    call set_vacuum(lat1,bas1,axis,loc,offset(axis))
-    call set_vacuum(lat2,bas2,axis,loc,offset(axis))
+    !---------------------------------------------------------------------------
+    ! copy basis1 and basis2
+    !---------------------------------------------------------------------------
+    call basis1_%copy(basis1)
+    call basis2_%copy(basis2)
 
-    order=(/1,2,3/)
-    order=cshift(order,3-axis)
-    do k=1,2
-       offset(order(k))=offset(order(k))/modu(lat1(order(k),:))
+
+    !---------------------------------------------------------------------------
+    ! set up number of species
+    !---------------------------------------------------------------------------
+    length_ = 3
+    if(present(length)) length_ = length
+
+    allocate(match(basis2_%nspec))
+    match=0
+    output%nspec=basis1_%nspec
+    do i = 1, basis2_%nspec
+       if(.not.any(basis2_%spec(i)%name.eq.basis1_%spec(:)%name))then
+          output%nspec=output%nspec+1
+       end if
     end do
-    unit_vec=uvec(lat1(order(3),:))
-    zgap=offset(order(3))/unit_vec(order(3))
-    !!NOT SET UP OFFSET FEATURE MADE ABOVE!!! MIGHT BE FIXED NOW! NEED TO TEST
-
-    !loc=1.D0
-    !add=zgap+min_dist(bas1,axis,loc)*modu(lat1(axis,:))
-    !call vacuumer(lat1,bas1,axis,loc,add)
-
-    !add=zgap+min_dist(bas2,axis,loc)*modu(lat2(axis,:))
-    !call vacuumer(lat2,bas2,axis,loc,add)
+    allocate(output%spec(output%nspec))
+    output%spec(:basis1_%nspec)%num=basis1_%spec(:)%num
+    output%spec(:basis1_%nspec)%name=basis1_%spec(:)%name
 
 
-!!!-----------------------------------------------------------------------------
-!!! makes supercell
-!!!-----------------------------------------------------------------------------
-    merglat(order(1),:)=lat1(order(1),:)
-    merglat(order(2),:)=lat1(order(2),:)
-    unit_vec=uvec(lat1(axis,:))
-    !  slat(axis,:)=lat1(axis,:) + ( modu(lat2(axis,:)) + zgap/unit_vec(axis) )*unit_vec
-    merglat(axis,:)=lat1(axis,:) + modu(lat2(axis,:))*unit_vec
-    c1_ratio=modu(lat1(axis,:))/modu(merglat(axis,:))
-    c2_ratio=modu(lat2(axis,:))/modu(merglat(axis,:))
+    write(output%sysname,'(A,"+",A)') &
+         trim(basis1_%sysname),trim(basis2_%sysname)
+    k=basis1_%nspec
+    spec1check: do i = 1, basis2_%nspec
+       do j = 1, basis1_%nspec
+          if(basis2_%spec(i)%name.eq.basis1_%spec(j)%name)then
+             output%spec(j)%num=output%spec(j)%num+basis2_%spec(i)%num
+             match(i)=j
+             cycle spec1check
+          end if
+       end do
+       k=k+1
+       match(i)=k
+       output%spec(k)%num=basis2_%spec(i)%num
+       output%spec(k)%name=basis2_%spec(i)%name
+    end do spec1check
+
+
+    !-----------------------------------------------------------------------------
+    ! Shifts cells to 
+    !-----------------------------------------------------------------------------
+    loc=0.D0
+    basis1_%lat=MATNORM(basis1_%lat)
+    add = -min_dist(basis1_,axis,loc,.true.)
+    call shifter(basis1_,axis,add,.true.)
+
+    basis2_%lat=MATNORM(basis2_%lat)
+    add = -min_dist(basis2_,axis,loc,.true.)
+    call shifter(basis2_,axis,add,.true.)
+
+
+
+    !---------------------------------------------------------------------------
+    ! handle offset
+    !---------------------------------------------------------------------------
+    loc = 1._real32
+    call set_vacuum(basis1_,axis,loc,offset(axis))
+    call set_vacuum(basis2_,axis,loc,offset(axis))
+  
+    order = [ 1, 2, 3 ]
+    order = cshift(order,3-axis)
+    do k = 1, 2
+       offset_(order(k)) = offset(order(k)) / modu(basis1_%lat(order(k),:))
+    end do
+    unit_vec = uvec(basis1_%lat(order(3),:))
+    zgap = offset_(order(3)) / unit_vec(order(3))
+
+
+
+    !---------------------------------------------------------------------------
+    ! makes supercell
+    !---------------------------------------------------------------------------
+    output%lat(order(1),:) = basis1_%lat(order(1),:)
+    output%lat(order(2),:) = basis1_%lat(order(2),:)
+    unit_vec = uvec(basis1_%lat(axis,:))
+    output%lat(axis,:) = basis1_%lat(axis,:) + modu(basis2_%lat(axis,:)) * unit_vec
+    c1_ratio = modu(basis1_%lat(axis,:)) / modu(output%lat(axis,:))
+    c2_ratio = modu(basis2_%lat(axis,:)) / modu(output%lat(axis,:))
 
 
 !!!-----------------------------------------------------------------------------
 !!! merge list of atomic types and respective numbers for both structures
 !!!-----------------------------------------------------------------------------
-    do i=1,bas1%nspec
-       bas1%spec(i)%atom(:,axis)=bas1%spec(i)%atom(:,axis)*c1_ratio
+    do i=1,basis1_%nspec
+       basis1_%spec(i)%atom(:,axis) = basis1_%spec(i)%atom(:,axis) * c1_ratio
     end do
-    do i=1,bas2%nspec
-       bas2%spec(i)%atom(:,axis)=bas2%spec(i)%atom(:,axis)*c2_ratio + c1_ratio
+    do i=1,basis2_%nspec
+       basis2_%spec(i)%atom(:,axis) = basis2_%spec(i)%atom(:,axis)*c2_ratio + c1_ratio
        do k=1,2
-          bas2%spec(i)%atom(:,order(k))=bas2%spec(i)%atom(:,order(k))+offset(order(k))
+          basis2_%spec(i)%atom(:,order(k)) = basis2_%spec(i)%atom(:,order(k)) + offset_(order(k))
        end do
     end do
 
     if(present(map1).and.present(map2))then
-       mergbas=bas_merge(bas1,bas2,map1=map1,map2=map2)
+       output = basis_merge(basis1_,basis2_,map1=map1,map2=map2)
     else
-       mergbas=bas_merge(bas1,bas2)
+       output = basis_merge(basis1_,basis2_)
     end if
-    call normalise_basis(mergbas,1.D0,.true.)
-
+    call output%normalise(ceil_val = 1._real32, floor_coords = .true.)
 
     return
-  end subroutine bas_lat_merge
-!!!#############################################################################
+  end function basis_stack
+!###############################################################################
 
 
 !!!#############################################################################
@@ -1729,13 +1738,13 @@ contains
     integer :: i,is,ia,itmp1,nregions,axis,nspec
     logical :: lsame
     logical :: lmap,lmove
-    type(bas_type) :: tbas
-    double precision, allocatable, dimension(:,:) :: dloc_vec
+    type(basis_type) :: tbas
+    real(real32), allocatable, dimension(:,:) :: dloc_vec
     logical, optional :: lall_same_nspec
 
-    type(bas_type),intent(in) :: inbas
-    double precision, dimension(:,:), intent(in) :: loc_vec
-    type(bas_type), allocatable, dimension(:) :: bas_arr
+    type(basis_type),intent(in) :: inbas
+    real(real32), dimension(:,:), intent(in) :: loc_vec
+    type(basis_type), allocatable, dimension(:) :: bas_arr
 
     type map_type   
        integer, allocatable, dimension(:,:,:) :: spec       
@@ -1763,7 +1772,7 @@ contains
     allocate(dloc_vec(nregions,2))
     dloc_vec(:,:)=loc_vec(:,:)-floor(loc_vec(:,:))
     where(dloc_vec(:,2).lt.dloc_vec(:,1))
-       dloc_vec(:,2)=dloc_vec(:,2)+1.D0
+       dloc_vec(:,2)=dloc_vec(:,2)+1._real32
     end where
     allocate(bas_arr(nregions))
 
@@ -1837,13 +1846,10 @@ contains
              end if
              nspec=nspec+1
           end do specloop2
-          call clone_bas(tbas,bas_arr(i))
+          call bas_arr(i)%copy(tbas)
           deallocate(tbas%spec)
        end do
     end if
-
-    
-
 
   end function split_bas
 !!!#############################################################################
@@ -1856,17 +1862,17 @@ contains
     implicit none
     integer :: is,ia,ja,len,itmp1
     integer :: minspecloc,minatomloc,nxtatomloc
-    double precision, dimension(3) :: transvec
-    double precision, dimension(2,2) :: regions
-    double precision, dimension(3,3) :: tf
+    real(real32), dimension(3) :: transvec
+    real(real32), dimension(2,2) :: regions
+    real(real32), dimension(3,3) :: tf
     logical, allocatable, dimension(:) :: atom_mask
-    type(bas_type), allocatable, dimension(:) :: splitbas
+    type(basis_type), allocatable, dimension(:) :: splitbas
 
     integer, intent(in) :: axis
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(3,3), intent(in):: lat
-    type(bas_type), intent(out) :: bulk_bas
-    double precision, dimension(3,3), intent(out) :: bulk_lat
+    type(basis_type), intent(in) :: bas
+    real(real32), dimension(3,3), intent(in):: lat
+    type(basis_type), intent(out) :: bulk_bas
+    real(real32), dimension(3,3), intent(out) :: bulk_lat
 
 
     minspecloc = minloc(bas%spec(:)%num,mask=bas%spec(:)%num.ne.0,dim=1)
@@ -1951,14 +1957,8 @@ contains
     bulk_lat(axis,:) = matmul(transvec,lat)
 
 
-    tf=matmul(inverse(bulk_lat),lat)
-    write(0,*) tf
-    call clone_bas(splitbas(1),bulk_bas)
-    bulk_bas = convert_bas(splitbas(1),tf)
-
-
-
-
+    call bulk_bas%copy(splitbas(1))
+    call bulk_bas%change_lattice(bulk_lat)
 
   end subroutine get_bulk
 !!!#############################################################################
@@ -1971,23 +1971,23 @@ contains
     implicit none
     integer :: ia
     integer :: iatom
-    double precision :: dtmp1,dtmp2,centre
-    double precision :: dlw,dup
+    real(real32) :: dtmp1,dtmp2,centre
+    real(real32) :: dlw,dup
     integer, intent(in) :: spec,axis
-    double precision, intent(in) :: lw,up
-    type(bas_type), intent(in) :: bas
+    real(real32), intent(in) :: lw,up
+    type(basis_type), intent(in) :: bas
 
 
     iatom=0
-    dtmp1 = 1.D0
+    dtmp1 = 1._real32
     if(lw.gt.up)then
        dlw = lw
-       dup = 1.D0 + up
+       dup = 1._real32 + up
     else
        dlw = lw
        dup = up
     end if
-    centre = (dlw + dup)/2.D0
+    centre = (dlw + dup)/2._real32
     do ia=1,bas%spec(spec)%num
        dtmp2=bas%spec(spec)%atom(ia,axis)&
             -ceiling(bas%spec(spec)%atom(ia,axis)-dup)
@@ -2009,19 +2009,19 @@ contains
     implicit none
     integer :: is,ia
     integer :: is_start,is_end
-    double precision :: dtmp1,dtmp2
+    real(real32) :: dtmp1,dtmp2
     logical :: labove,lbelow
     integer, intent(in) :: axis
-    double precision, intent(in) :: loc
+    real(real32), intent(in) :: loc
     integer, dimension(2) :: atom
-    type(bas_type), intent(in) :: bas
+    type(basis_type), intent(in) :: bas
 
     integer, optional, intent(in) :: species
     logical, optional, intent(in) :: above,below
 
     
     atom=[0,0]
-    dtmp1 = 1.D0
+    dtmp1 = 1._real32
     if(present(species))then
        is_start=species
        is_end=species
@@ -2042,7 +2042,7 @@ contains
              cycle atom_loop1
           end if
           dtmp2=bas%spec(is)%atom(ia,axis)&
-               -ceiling(bas%spec(is)%atom(ia,axis)-(loc+0.5D0))
+               -ceiling(bas%spec(is)%atom(ia,axis)-(loc+0.5_real32))
           if(abs(dtmp2-loc).lt.dtmp1)then
              dtmp1=abs(dtmp2-loc)
              atom=[is,ia]
@@ -2060,18 +2060,18 @@ contains
     implicit none
     integer :: is,ia
     integer :: is_start,is_end
-    double precision :: dtmp1,dtmp2
-    double precision, dimension(3) :: vtmp1
-    double precision, dimension(3), intent(in) :: loc
-    double precision, dimension(3,3), intent(in) :: lat
+    real(real32) :: dtmp1,dtmp2
+    real(real32), dimension(3) :: vtmp1
+    real(real32), dimension(3), intent(in) :: loc
+    real(real32), dimension(3,3), intent(in) :: lat
     integer, dimension(2) :: atom
-    type(bas_type), intent(in) :: bas
+    type(basis_type), intent(in) :: bas
 
     integer, optional, intent(in) :: species
 
     
     atom=[0,0]
-    dtmp1 = 1.D0
+    dtmp1 = 1._real32
     if(present(species))then
        is_start=species
        is_end=species
@@ -2083,7 +2083,7 @@ contains
     spec_loop1: do is=is_start,is_end
        atom_loop1: do ia=1,bas%spec(is)%num
           vtmp1 = bas%spec(is)%atom(ia,:) - loc
-          vtmp1 = vtmp1 - ceiling(vtmp1 - 0.5D0)
+          vtmp1 = vtmp1 - ceiling(vtmp1 - 0.5_real32)
           vtmp1 = matmul(vtmp1,lat)
           dtmp2 = modu(vtmp1)
           if(dtmp2.lt.dtmp1)then
@@ -2105,12 +2105,12 @@ contains
     implicit none
     integer :: is,ia,ja,itmp1,itmp2!ref_atom
     integer :: minspecloc,minatomloc,nxtatomloc
-    double precision :: up_loc,lw_loc,up_loc2,lw_loc2
-    double precision, dimension(3) :: transvec,tmp_vec1,tmp_vec2,tmp_vec3,tvec
+    real(real32) :: up_loc,lw_loc,up_loc2,lw_loc2
+    real(real32), dimension(3) :: transvec,tmp_vec1,tmp_vec2,tmp_vec3,tvec
     logical, allocatable, dimension(:) :: atom_mask
     type(wyck_spec_type) :: wyckoff
     integer, intent(in) :: axis
-    type(bas_type), intent(in) :: bas
+    type(basis_type), intent(in) :: bas
 
     type l_bulk_type
        logical, allocatable, dimension(:) :: atom
@@ -2130,8 +2130,8 @@ contains
     lw_loc = bas%spec(minspecloc)%atom(minatomloc,axis)
     up_loc = bas%spec(minspecloc)%atom(nxtatomloc,axis)
     minatomloc = &
-         maxloc(bas%spec(minspecloc)%atom(:,axis)-(lw_loc+up_loc)/2.D0,dim=1,&
-         mask=bas%spec(minspecloc)%atom(:,axis)-(lw_loc+up_loc)/2.D0.le.0.D0)
+         maxloc(bas%spec(minspecloc)%atom(:,axis)-(lw_loc+up_loc)/2._real32,dim=1,&
+         mask=bas%spec(minspecloc)%atom(:,axis)-(lw_loc+up_loc)/2._real32.le.0._real32)
     allocate(atom_mask(bas%spec(minspecloc)%num))
     atom_mask = .true.
 
@@ -2146,7 +2146,7 @@ contains
 !!!-----------------------------------------------------------------------------
     itmp1 = minatomloc
     lw_loc = bas%spec(minspecloc)%atom(minatomloc,axis)
-    up_loc = 1.D0
+    up_loc = 1._real32
     allocate(l_bulk_atoms(bas%nspec))
     do is=1,bas%nspec
        allocate(l_bulk_atoms(is)%atom(bas%spec(is)%num))
@@ -2216,7 +2216,7 @@ contains
                      bas%spec(is)%atom(ja,:3)
                 !! SAME ISSUE HERE AS BELOW
                 !! NEED TO TAKE INTO ACCOUNT THAT THEY WORK IN UNISON
-                tmp_vec2 = tmp_vec2 - ceiling( tmp_vec2 - 0.5D0 )
+                tmp_vec2 = tmp_vec2 - ceiling( tmp_vec2 - 0.5_real32 )
 
 
                 if( all( abs(tmp_vec2).lt.1.D-5 ) )then
@@ -2249,7 +2249,7 @@ contains
              if( all(bas%spec(is)%atom(:,axis).lt.tmp_vec1(axis)-1.D-5) ) cycle atom_loop3
              atom_loop4: do ja=1,bas%spec(is)%num
                 tmp_vec2 = tmp_vec1 - bas%spec(is)%atom(ja,:3)
-                tmp_vec2 = tmp_vec2 - ceiling( tmp_vec2 - 0.5D0 )
+                tmp_vec2 = tmp_vec2 - ceiling( tmp_vec2 - 0.5_real32 )
                 if( all( abs(tmp_vec2).lt.1.D-5 ) )then
                    cycle atom_loop3
                 end if
@@ -2294,14 +2294,14 @@ contains
              tmp_vec3 = tmp_vec2 - bas%spec(is)%atom(ja,:3)
              itmp1 = nint(tmp_vec3(axis)/transvec(axis))
              tvec = itmp1*transvec
-             tvec = tvec - ceiling(tvec-1.D0)
+             tvec = tvec - ceiling(tvec-1._real32)
              !tmp_vec3 = tmp_vec3/transvec
              !tmp_vec3 = reduce_vec_gcd(tmp_vec3)
              itmp2 = nint(get_vec_multiple(tvec,tmp_vec3))
 
              if(itmp1.eq.0) cycle atom_loop6
              tmp_vec3 = tmp_vec3 - tvec!itmp1*tvec
-             tmp_vec3 = tmp_vec3 - ceiling(tmp_vec3 - 0.5D0)
+             tmp_vec3 = tmp_vec3 - ceiling(tmp_vec3 - 0.5_real32)
              !THIS IS WHERE WE NEED TO MAKE IT RIGHT
              !! FIND THE GCD AND DIVIDE
              if(all(abs(tmp_vec3).lt.1.D-5))then
@@ -2342,14 +2342,14 @@ contains
   function get_shortest_bond(lat,bas) result(bond)
     implicit none
     integer :: is,js,ia,ja,ja_start
-    double precision :: dist,min_bond
-    type(bas_type), intent(in) :: bas
+    real(real32) :: dist,min_bond
+    type(basis_type), intent(in) :: bas
     type(bond_type) :: bond
-    double precision, dimension(3) :: vec
+    real(real32), dimension(3) :: vec
     integer, dimension(2,2) :: atoms
-    double precision, dimension(3,3) :: lat
+    real(real32), dimension(3,3) :: lat
     
-    min_bond = 100.D0
+    min_bond = 100._real32
     atoms = 0
     do is=1,bas%nspec
        do js=is,bas%nspec
@@ -2361,7 +2361,7 @@ contains
              end if
              do ja=ja_start,bas%spec(js)%num
                 vec = bas%spec(is)%atom(ia,:3) - bas%spec(js)%atom(ja,:3)
-                vec = vec - ceiling(vec - 0.5D0)
+                vec = vec - ceiling(vec - 0.5_real32)
                 vec = matmul(vec,lat)
                 dist = modu(vec)
                 if(dist.lt.min_bond)then
@@ -2388,12 +2388,12 @@ contains
     implicit none
     integer :: i
     integer :: iaxis
-    double precision :: area1,area2,delta1,delta2
+    real(real32) :: area1,area2,delta1,delta2
     integer, dimension(3) :: abc=(/1,2,3/)
-    double precision, dimension(3) :: strain
+    real(real32), dimension(3) :: strain
 
-    double precision, intent(in) :: bulk_mod1,bulk_mod2
-    double precision, dimension(3,3), intent(inout) :: lat1,lat2
+    real(real32), intent(in) :: bulk_mod1,bulk_mod2
+    real(real32), dimension(3,3), intent(inout) :: lat1,lat2
 
     integer, optional, intent(in) :: axis
     logical, optional, intent(in) :: lcompensate
@@ -2404,22 +2404,22 @@ contains
     abc=cshift(abc,3-iaxis)
     area1 = modu(cross(lat1(abc(1),:),lat1(abc(2),:)))
     area2 = modu(cross(lat2(abc(1),:),lat2(abc(2),:)))
-    delta1 = - (1.D0 - area2/area1)/(1.D0 + (area2/area1)*(bulk_mod1/bulk_mod2))
-    delta2 = - (1.D0 - area1/area2)/(1.D0 + (area1/area2)*(bulk_mod2/bulk_mod1))
+    delta1 = - (1._real32 - area2/area1)/(1._real32 + (area2/area1)*(bulk_mod1/bulk_mod2))
+    delta2 = - (1._real32 - area1/area2)/(1._real32 + (area1/area2)*(bulk_mod2/bulk_mod1))
     write(0,*) "areas", area1,area2
     write(0,*) "deltas", delta1,delta2
     write(0,*) "modulus", bulk_mod1,bulk_mod2
     do i=1,3
        if(i.eq.iaxis) cycle
        strain(:) = lat1(i,:)-lat2(i,:)
-       lat1(i,:) = lat1(i,:) * (1.D0 + delta1)
+       lat1(i,:) = lat1(i,:) * (1._real32 + delta1)
        lat2(i,:) = lat1(i,:)
     end do
     
     if(present(lcompensate))then
        if(lcompensate)then
-          lat1(abc(3),:) =  lat1(abc(3),:) * (1.D0 - delta1/(1.D0 + delta1))  
-          lat2(abc(3),:) =  lat2(abc(3),:) * (1.D0 - delta2/(1.D0 + delta2))
+          lat1(abc(3),:) =  lat1(abc(3),:) * (1._real32 - delta1/(1._real32 + delta1))  
+          lat2(abc(3),:) =  lat2(abc(3),:) * (1._real32 - delta2/(1._real32 + delta2))
        end if
     end if
 

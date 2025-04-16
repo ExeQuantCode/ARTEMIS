@@ -8,7 +8,7 @@
 !!! val              (outputs contents of string occuring after "=")
 !!! getline          (gets the line using grep and goes back to start of line)
 !!! assignI          (assign an integer to variable)
-!!! assignD          (assign a double precision to variable)
+!!! assignD          (assign a real(real32) to variable)
 !!! assignIvec       (assign an arbitrary length vector of integers to variable)
 !!! assignDvec       (assign an arbitrary length vector of DP to variable)
 !!! assignS          (assign a string to variable)
@@ -19,14 +19,15 @@
 !!! cat              (cat lines until user-defined end string is encountered)
 !!!#############################################################################
 module infile_tools
-  use misc, only: grep,icount
+  use artemis__constants, only: real32
+  use artemis__misc, only: grep,icount
   implicit none
 
   interface assign
-     procedure assignI,assignR,assignD,assignS,assignL
+     procedure assignI,assignR,assignS,assignL
   end interface assign
   interface assign_vec
-     procedure assignIvec,assignRvec,assignDvec
+     procedure assignIvec,assignRvec
   end interface assign_vec
 
 
@@ -97,13 +98,13 @@ contains
 
 
 !!!#############################################################################
-!!! assigns a real value to variable if the line contains the right keyword
+!!! assigns a DP value to variable if the line contains the right keyword
 !!!#############################################################################
   subroutine assignR(buffer,variable,found)
     integer :: found
     character(1024) :: buffer1,buffer2
     character(*) :: buffer
-    real :: variable
+    real(real32) :: variable
     buffer1=buffer(:scan(buffer,"=")-1)
     if(scan("=",buffer).ne.0) buffer2=val(buffer)
     if(trim(adjustl(buffer2)).ne.'') then
@@ -121,7 +122,7 @@ contains
     integer :: found,i
     character(1024) :: buffer1,buffer2
     character(*) :: buffer
-    real, dimension(:) :: variable
+    real(real32), dimension(:) :: variable
     buffer1=buffer(:scan(buffer,"=")-1)
     if(scan("=",buffer).ne.0) buffer2=val(buffer)
     if(trim(adjustl(buffer2)).ne.'') then
@@ -129,42 +130,6 @@ contains
        read(buffer2,*) (variable(i),i=1,size(variable))
     end if
   end subroutine assignRvec
-!!!#############################################################################
-
-
-!!!#############################################################################
-!!! assigns a DP value to variable if the line contains the right keyword
-!!!#############################################################################
-  subroutine assignD(buffer,variable,found)
-    integer :: found
-    character(1024) :: buffer1,buffer2
-    character(*) :: buffer
-    double precision :: variable
-    buffer1=buffer(:scan(buffer,"=")-1)
-    if(scan("=",buffer).ne.0) buffer2=val(buffer)
-    if(trim(adjustl(buffer2)).ne.'') then
-       found=found+1
-       read(buffer2,*) variable
-    end if
-  end subroutine assignD
-!!!#############################################################################
-
-
-!!!#############################################################################
-!!! assigns a DP value to variable
-!!!#############################################################################
-  subroutine assignDvec(buffer,variable,found)
-    integer :: found,i
-    character(1024) :: buffer1,buffer2
-    character(*) :: buffer
-    double precision, dimension(:) :: variable
-    buffer1=buffer(:scan(buffer,"=")-1)
-    if(scan("=",buffer).ne.0) buffer2=val(buffer)
-    if(trim(adjustl(buffer2)).ne.'') then
-       found=found+1
-       read(buffer2,*) (variable(i),i=1,size(variable))
-    end if
-  end subroutine assignDvec
 !!!#############################################################################
 
 
@@ -219,7 +184,7 @@ contains
   function assign_list(buffer,tag_list,num) result(var)
     implicit none
     integer :: nlist,loc2,i
-    double precision :: var
+    real(real32) :: var
     character(len=1024) :: new_buffer
     integer, allocatable, dimension(:) :: loc_list
     integer, intent(in) :: num
@@ -256,7 +221,7 @@ contains
   function assign_listvec(buffer,tag_list,num) result(var)
     implicit none
     integer :: nlist,loc2,i
-    double precision, allocatable, dimension(:) :: var
+    real(real32), allocatable, dimension(:) :: var
     character(len=1024) :: new_buffer
     integer, allocatable, dimension(:) :: loc_list
     integer, intent(in) :: num

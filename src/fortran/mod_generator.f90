@@ -5,191 +5,352 @@
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
 module artemis__generator
-  use io
+  use artemis__constants, only: real32, ierror, pi
+  use artemis__misc, only: to_lower,to_upper
+  use artemis__geom_rw, only: basis_type,geom_write
+  use lat_compare, only: get_best_match,latmatch_type,tol_type
+  use artemis__io_utils, only: err_abort
+  use artemis__io_utils_extd, only: err_abort_print_struc
   use misc_linalg,          only: uvec,modu,get_area,inverse,cross
   use inputs
   use interface_identifier, only: intf_info_type,&
        get_interface,get_layered_axis,gen_DON
   use edit_geom,            only: planecutter,primitive_lat,ortho_axis,&
        shift_region,set_vacuum,transformer,shifter,reducer,&
-       get_min_bulk_bond,clone_bas,bas_lat_merge,get_shortest_bond,bond_type,&
-       share_strain, normalise_basis, MATNORM
+       get_min_bulk_bond,get_shortest_bond,bond_type,&
+       share_strain, MATNORM, basis_stack
   use mod_sym,              only: term_arr_type,confine_type,gldfnd,&
        get_terminations,get_primitive_cell
   use swapping,              only: rand_swapper
   use shifting !!! CHANGE TO SHIFTER?
   implicit none
   integer, private :: intf=0
-  double precision, private, parameter :: tmp_vac = 14.D0
+  real(real32), private, parameter :: tmp_vac = 14._real32
 
   
   type term_list_type
      integer :: term
-     double precision :: loc
+     real(real32) :: loc
   end type term_list_type
   private :: term_list_type
 
   type(bulk_DON_type), dimension(2) :: bulk_DON
 
 
-!!!updated  2023/02/16
+  type :: artemis_generator_type
+    integer :: max_num_structures = 100
+    integer :: match_method = 0
+    integer :: max_num_matches = 5
+    integer :: max_num_term = 5
+    integer :: num_miller_planes = 10
+    
+    integer :: num_shifts = 5
+    integer :: shift_method = 4
+    real(real32) :: bondlength_cutoff = 6._real32
+    real(real32), dimension(2) :: layer_separation_cutoff = 1._real32
+
+    real(real32) :: tol_cart
+    real(real32), dimension(3) :: tol_crys
+
+    type(tol_type) :: tolerance
+
+    type(basis_type), dimension(:), allocatable :: term_structures_lw
+    type(basis_type), dimension(:), allocatable :: term_structures_up
+    type(basis_type), dimension(:), allocatable :: structures
+   contains
+    procedure, pass(this) :: set_tolerance
+    procedure, pass(this) :: gen_terminations
+    procedure, pass(this) :: write_terminations
+  end type artemis_generator_type
 
 
 contains
-!!!#############################################################################
-!!! Generates and prints terminations parallel to the supplied miller plane
-!!!#############################################################################
-  subroutine gen_terminations(lat,bas,miller_plane,axis,directory,&
-       num_layers,thickness,udef_layer_sep)
+
+!###############################################################################
+  subroutine set_tolerance( &
+       this, &
+       vector_mismatch, angle_mismatch, area_mismatch, &
+       max_length, max_area, max_fit, max_extension, &
+       angle_weight, area_weight &
+  )
+    !! Set tolerance for the best match
     implicit none
-    integer :: unit
-    integer :: itmp1,iterm,term_start,term_end,iterm_step
-    integer :: old_natom,ncells,num_layers_,ntrans
-    double precision :: height
-    character(len=1024) :: dirname,filename,pwd
-    logical :: ludef_surf,lignore
-    type(bas_type) :: tmp_bas1,tmp_bas2
+
+    ! Arguments
+    class(artemis_generator_type), intent(inout) :: this
+    !! Instance of artemis generator type
+    real(real32), intent(in), optional :: vector_mismatch
+    !! Tolerance for the vector mismatch
+    real(real32), intent(in), optional :: angle_mismatch
+    !! Tolerance for the angle mismatch
+    real(real32), intent(in), optional :: area_mismatch
+    !! Tolerance for the area mismatch
+    real(real32), intent(in), optional :: max_length
+    !! Maximum allowed length of a lattice vector
+    real(real32), intent(in), optional :: max_area
+    !! Maximum allowed area parallel to the surface
+    integer, intent(in), optional :: max_fit
+    !! Maximum allowed number of matches for each individial ... ???? area mapped out on a plane
+    integer, intent(in), optional :: max_extension
+    !! Maximum allowed integer extension of each lattice vector
+    real(real32), intent(in), optional :: angle_weight
+    !! Importance weighting of angle mismatch
+    real(real32), intent(in), optional :: area_weight
+    !! Importance weighting of area mismatch
+
+    if(present(vector_mismatch)) then
+       this%tolerance%vec = vector_mismatch
+    else
+       this%tolerance%vec = 5._real32
+    end if
+
+    if(present(angle_mismatch)) then
+       this%tolerance%ang = angle_mismatch
+    else
+       this%tolerance%ang = 5._real32
+    end if
+
+    if(present(area_mismatch)) then
+       this%tolerance%area = area_mismatch
+    else
+       this%tolerance%area = 10._real32
+    end if
+
+    if(present(max_length)) then
+       this%tolerance%maxlen = max_length
+    else
+       this%tolerance%maxlen = 20._real32
+    end if
+
+    if(present(max_area)) then
+       this%tolerance%maxarea = max_area
+    else
+       this%tolerance%maxarea = 400._real32
+    end if
+
+    if(present(max_fit)) then
+       this%tolerance%maxfit = max_fit
+    else
+       this%tolerance%maxfit = 5
+    end if
+
+    if(present(max_extension)) then
+       this%tolerance%maxsize = max_extension
+    else
+       this%tolerance%maxsize = 5
+    end if
+
+    if(present(angle_weight)) then
+       this%tolerance%ang_weight = angle_weight
+    else
+       this%tolerance%ang_weight = 1._real32
+    end if
+
+    if(present(area_weight)) then
+       this%tolerance%area_weight = area_weight
+    else
+       this%tolerance%area_weight = 1._real32
+    end if
+
+  end subroutine set_tolerance
+!###############################################################################
+
+
+!###############################################################################
+  subroutine gen_terminations( &
+       this, basis, miller_plane, axis, num_layers, thickness &
+  )
+    !! Generate and prints terminations parallel to the supplied miller plane
+    implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(inout) :: this
+    !! Instance of artemis generator type
+    type(basis_type), intent(in) :: basis
+    !! Atomic structure data
+    integer, dimension(3), intent(in) :: miller_plane
+    !! Miller plane
+    integer, intent(in) :: axis
+    !! Axis along which to align the slab
+    integer, intent(in), optional :: num_layers
+    !! Number of layers in the slab
+    real(real32), intent(in), optional :: thickness
+    !! Thickness of the slab (in Å)
+
+    ! Local variables
+    integer :: itmp1, iterm, term_start, term_end, iterm_step
+    !! Termination loop variables
+    integer :: old_natom, ncells, ntrans
+    !! Number of cells in the slab
+    integer :: num_layers_
+    !! Number of layers in the slab
+    real(real32) :: height
+    !! Height of the slab
+    logical :: ludef_surf, lignore
+    !! User-defined surface
+    type(basis_type) :: tmp_bas1,tmp_bas2
+    !! Temporary basis structures
     type(confine_type) :: confine
+    !! Confine structure along the specified axis
     type(term_arr_type) :: term
-    double precision, dimension(3,3) :: tfmat,tmp_lat1,tmp_lat2
+    !! List of terminations
+    real(real32), dimension(3,3) :: tfmat
+    !! Transformation matrix
+
+    character(len=256) :: warn_msg
 
     integer, allocatable, dimension(:,:,:) :: bas_map,t1bas_map
-    double precision, allocatable, dimension(:,:) :: trans
-
-    integer, intent(in) :: axis
-    double precision, intent(in) :: thickness
-    type(bas_type), intent(in) :: bas
-    integer, dimension(3), intent(in) :: miller_plane
-    double precision, dimension(3,3), intent(in) :: lat
-
-    integer, optional, intent(in) :: num_layers
-    double precision, optional, intent(in) :: udef_layer_sep
-    character(len=*), optional, intent(in) :: directory
+    real(real32), allocatable, dimension(:,:) :: trans
 
 
     !! copy lattice and basis for manipulating
-    call clone_bas(bas,tmp_bas1,lat,tmp_lat1)
+    call tmp_bas1%copy(basis)
     allocate(bas_map(tmp_bas1%nspec,maxval(tmp_bas1%spec(:)%num,dim=1),2))
-    bas_map=-1
+    bas_map = -1
 
 
     write(6,'(1X,"Using supplied plane...")')
-    tfmat=planecutter(tmp_lat1,dble(miller_plane))
-    call transformer(tmp_lat1,tmp_bas1,tfmat,bas_map)
-    !call err_abort_print_struc(lat,bas,"check.vasp","stop")
+    tfmat = planecutter(tmp_bas1%lat,real(miller_plane,real32))
+    call transformer(tmp_bas1,tfmat,bas_map)
+    !call err_abort_print_struc(bas,"check.vasp","stop")
 
-    !!-----------------------------------------------------------------------
-    !! Finds smallest thickness of the slab and increases to ...
-    !! ... user-defined thickness
-    !!-----------------------------------------------------------------------
-    confine%l=.false.
-    confine%axis=axis
-    confine%laxis=.false.
-    confine%laxis(axis)=.true.
-    old_natom=tmp_bas1%natom
+    !---------------------------------------------------------------------------
+    ! Finds smallest thickness of the slab and increases to ...
+    ! ... user-defined thickness
+    !---------------------------------------------------------------------------
+    confine%l = .false.
+    confine%axis = axis
+    confine%laxis = .false.
+    confine%laxis(axis) = .true.
+    old_natom = tmp_bas1%natom
     if(allocated(trans)) deallocate(trans)
     allocate(trans(minval(tmp_bas1%spec(:)%num+2),3))
-    call gldfnd(confine,tmp_bas1,tmp_bas1,trans,ntrans)
-    tfmat(:,:)=0.D0
-    tfmat(1,1)=1.D0
-    tfmat(2,2)=1.D0
+    call gldfnd(confine, tmp_bas1, tmp_bas1, trans, ntrans)
+    tfmat(:,:) = 0._real32
+    tfmat(1,1) = 1._real32
+    tfmat(2,2) = 1._real32
     if(ntrans.eq.0)then
-       tfmat(3,3)=1.D0
+       tfmat(3,3)=1._real32
     else
        itmp1=minloc(abs(trans(:ntrans,axis)),dim=1,&
-            mask=abs(trans(:ntrans,axis)).gt.1.D-3/modu(tmp_lat1(axis,:)))
+            mask=abs(trans(:ntrans,axis)).gt.1.D-3/modu(tmp_bas1%lat(axis,:)))
        tfmat(3,:)=trans(itmp1,:)
     end if
-    if(all(abs(tfmat(3,:)).lt.1.D-5)) tfmat(3,3) = 1.D0
-    call transformer(tmp_lat1,tmp_bas1,tfmat,bas_map)
+    if(all(abs(tfmat(3,:)).lt.1.D-5)) tfmat(3,3) = 1._real32
+    call transformer(tmp_bas1,tfmat,bas_map)
 
-    !! get the terminations
-    if(present(udef_layer_sep)) then
-       term = get_terminations( &
-            tmp_lat1, tmp_bas1, axis, &
-            lprint = .true., layer_sep = udef_layer_sep, &
-            break_on_fail = lbreak_on_no_term &
-       )
-    else
-       term = get_terminations( &
-            tmp_lat1, tmp_bas1, axis, &
-            lprint = .true., layer_sep = layer_sep, &
-            break_on_fail = lbreak_on_no_term &
-       )
-    end if
+    ! get the terminations
+    term = get_terminations( &
+         tmp_bas1%lat, tmp_bas1, axis, &
+         lprint = .true., layer_sep = this%layer_separation_cutoff(1), &
+         break_on_fail = lbreak_on_no_term &
+    )
     if(term%nterm .eq. 0)then
-       write(0,'("WARNING: &
-            &No terminations found for Miller plane (",3(1X,I0)," )")' &
-       ) miller_plane
+       write(warn_msg, '(A,I0,1X,I0,1X,I0,A)') &
+            "No terminations found for Miller plane (",miller_plane,")"
+       call print_warning(trim(warn_msg))
        return
     end if
 
-    !! set thickness if provided by user
+    ! set thickness if provided by user
     if(present(num_layers))then
        num_layers_ = num_layers
     else
        num_layers_ = 1
     end if
 
-    !! make directory and change to that directory
-    if(present(directory))then
-       dirname = directory
-    else
-       dirname = "DTERMINATIONS"
-    end if
-    call system('mkdir -p '//trim(adjustl(dirname)))
-    call getcwd(pwd)
-    call chdir(dirname)
-
-    !! determine tolerance for layer separations (termination tolerance)
-    !! ... this is different from layer_sep
+    ! determine tolerance for layer separations (termination tolerance)
+    ! ... this is different from layer_sep
     call set_layer_tol(term)
 
-    !! determine required extension and perform that
-    call set_slab_height(tmp_lat1,tmp_bas1,bas_map,term,lw_surf,old_natom,&
+    ! determine required extension and perform that
+    call set_slab_height(tmp_bas1%lat,tmp_bas1,bas_map,term,lw_surf,old_natom,&
          height,num_layers_, thickness, ncells,&
          term_start,term_end,iterm_step,ludef_surf,&
-         dirname,"lw",lignore)
+         "lw",lignore)
 
     
-    !!--------------------------------------------------------------------------
-    !! Normalise lattice
-    !!--------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Normalise lattice
+    !---------------------------------------------------------------------------
     if(lnorm_lat)then
-       call reducer(tmp_lat1,tmp_bas1)
-       tmp_lat1=MATNORM(tmp_lat1)
+       call reducer(tmp_bas1%lat,tmp_bas1)
+       tmp_bas1%lat = MATNORM(tmp_bas1%lat)
     end if
     
 
-    !!--------------------------------------------------------------------------
-    !! loop over terminations and write them
-    !!--------------------------------------------------------------------------
-    do iterm=term_start,term_end,iterm_step
-       call clone_bas(tmp_bas1,tmp_bas2,tmp_lat1,tmp_lat2)
+    !---------------------------------------------------------------------------
+    ! loop over terminations and write them
+    !---------------------------------------------------------------------------
+    if(.not.allocated(this%term_structures_lw))then
+       allocate(this%term_structures_lw(0))
+    end if
+    do iterm = term_start, term_end, iterm_step
+       call tmp_bas2%copy(tmp_bas1)
        if(allocated(t1bas_map)) deallocate(t1bas_map)
        allocate(t1bas_map,source=bas_map)
-       call prepare_slab(tmp_lat2,tmp_bas2,bas_map,term,iterm,&
+       call prepare_slab(tmp_bas2%lat,tmp_bas2,bas_map,term,iterm,&
             num_layers_,ncells, thickness, height,ludef_surf,lw_surf(2),&
             "lw",lignore,lortho,vacuum)
-
-
-       !!-----------------------------------------------------------------------
-       !! Print structure
-       !!-----------------------------------------------------------------------
-       unit=100+iterm
-       write(filename,'("POSCAR_term",I0)') iterm
-       open(unit,file=trim(filename))
-       call geom_write(unit,tmp_lat2,tmp_bas2)
-       close(unit)
+       this%term_structures_lw = [ this%term_structures_lw, tmp_bas2 ]
     end do
 
-    !! return to parent directory
-    call chdir(pwd)
-
-
-    return
   end subroutine gen_terminations
-!!!#############################################################################
+!###############################################################################
+
+
+!###############################################################################
+  subroutine write_terminations( &
+       this, directory &
+  )
+    !! Write the generated terminations to file
+    implicit none
+   
+    ! Arguments
+    class(artemis_generator_type), intent(in) :: this
+    !! Instance of artemis generator type
+    character(len=*), intent(in) :: directory
+    !! Directory to write the files to
+   
+    ! Local variables
+    integer :: i
+    !! Loop variable
+    integer :: unit
+    !! File unit number
+    character(len=256) :: filename
+    !! File name for the output files
+
+
+
+    if(trim(directory).ne."") then
+       call system('mkdir -p '//trim(adjustl(directory)))
+    end if
+
+    if(allocated(this%term_structures_lw))then
+       do i = 1, size(this%term_structures_lw)
+          write(filename,'("POSCAR_term_lw",I0)') i
+          if(trim(directory).ne."") then
+             filename = trim(directory) // "/" // trim(filename)
+          end if
+          open(newunit=unit,file=filename)
+          call geom_write(unit, this%term_structures_lw(i))
+          close(unit)
+       end do
+    end if
+    if(allocated(this%term_structures_up))then
+       do i = 1, size(this%term_structures_up)
+          write(filename,'("POSCAR_term_up",I0)') i
+          if(trim(directory).ne."") then
+             filename = trim(directory) // "/" // trim(filename)
+          end if
+          open(newunit=unit,file=filename)
+          call geom_write(unit, this%term_structures_up(i))
+          close(unit)
+       end do
+    end if
+   
+  end subroutine write_terminations
+!###############################################################################
 
 
 !!!#############################################################################
@@ -198,19 +359,19 @@ contains
   subroutine gen_interfaces_restart(lat,bas)
     implicit none
     integer :: is,ia,js,ja
-    double precision :: dtmp1,min_bond,min_bond1,min_bond2
-    type(bas_type) :: bas
+    real(real32) :: dtmp1,min_bond,min_bond1,min_bond2
+    type(basis_type) :: bas
     type(intf_info_type) :: intf
-    double precision, dimension(3) :: vtmp1
-    double precision, dimension(3,3) :: lat
+    real(real32), dimension(3) :: vtmp1
+    real(real32), dimension(3,3) :: lat
 
 
     call system('mkdir -p '//trim(adjustl(dirname)))
     call chdir(dirname)
 
-    min_bond1=huge(0.D0)
-    min_bond2=huge(0.D0)
-    if(any(udef_intf_loc.lt.0.D0))then
+    min_bond1=huge(0._real32)
+    min_bond2=huge(0._real32)
+    if(any(udef_intf_loc.lt.0._real32))then
        if(ludef_axis)then
           intf=get_interface(lat,bas,axis)
        else
@@ -260,7 +421,7 @@ contains
        end do atomloop1
     end do specloop1
 
-    min_bond = ( min_bond1 + min_bond2 )/2.D0
+    min_bond = ( min_bond1 + min_bond2 )/2._real32
     write(6,'(1X,"Avg min bulk bond: ",F0.3," Å")') min_bond
     write(6,'(1X,"Trans-interfacial scaling factor:",F0.3)') c_scale
     call gen_shifts_and_swaps(lat,bas,intf%axis,intf%loc,min_bond,&
@@ -283,27 +444,27 @@ contains
     integer :: lw_layered_axis,up_layered_axis
     integer :: intf_start,intf_end
     integer :: lw_term_start,lw_term_end,up_term_start,up_term_end
-    double precision :: avg_min_bond
-    double precision :: lw_height,up_height
+    real(real32) :: avg_min_bond
+    real(real32) :: lw_height,up_height
     character(3) :: abc
     character(1024) :: pwd,intf_dir,dirpath,msg
     logical :: ludef_lw_surf,ludef_up_surf,lcycle
-    type(bas_type) :: sbas
-    type(bas_type) :: inlw_bas,inup_bas
-    type(bas_type) :: lw_bas,up_bas,tlw_bas,tup_bas
+    type(basis_type) :: sbas
+    type(basis_type) :: inlw_bas,inup_bas
+    type(basis_type) :: lw_bas,up_bas,tlw_bas,tup_bas
     type(tol_type) :: tolerance
     type(confine_type) :: confine
     type(latmatch_type) :: SAV
     type(term_arr_type) :: lw_term,up_term
     integer, dimension(3) :: ivtmp1
-    double precision, dimension(2) :: intf_loc
-    double precision, dimension(3) :: init_offset=[0.D0,0.D0,2.D0]
-    !double precision, dimension(3,3) :: mtmp1,DONup_lat
-    double precision, dimension(3,3) :: tfmat,slat,inlw_lat,inup_lat
-    double precision, dimension(3,3) :: lw_lat,up_lat,tlw_lat,tup_lat
+    real(real32), dimension(2) :: intf_loc
+    real(real32), dimension(3) :: init_offset=[0._real32,0._real32,2._real32]
+    !real(real32), dimension(3,3) :: mtmp1,DONup_lat
+    real(real32), dimension(3,3) :: tfmat,slat,inlw_lat,inup_lat
+    real(real32), dimension(3,3) :: lw_lat,up_lat,tlw_lat,tup_lat
     integer, allocatable, dimension(:,:,:) :: lw_map,t1lw_map,t2lw_map
     integer, allocatable, dimension(:,:,:) :: up_map,t1up_map,t2up_map
-    double precision, allocatable, dimension(:,:) :: trans
+    real(real32), allocatable, dimension(:,:) :: trans
     character(len=256) :: err_msg
 
 
@@ -336,7 +497,7 @@ contains
 !!!-----------------------------------------------------------------------------
     avg_min_bond = &
          ( get_min_bulk_bond(inlw_lat,inlw_bas) + &
-         get_min_bulk_bond(inup_lat,inup_bas) )/2.D0
+         get_min_bulk_bond(inup_lat,inup_bas) )/2._real32
     write(6,'(1X,"Avg min bulk bond: ",F0.3," Å")') avg_min_bond
     write(6,'(1X,"Trans-interfacial scaling factor: ",F0.3)') c_scale
     if(ishift.eq.-1) nshift=1
@@ -353,7 +514,7 @@ contains
             dist_max=max_bondlength,&
             scale_dist=.false.,&
             norm=.true.)
-       if(all(abs(bulk_DON(1)%spec(1)%atom(:,:)).lt.1.D0))then
+       if(all(abs(bulk_DON(1)%spec(1)%atom(:,:)).lt.1._real32))then
           open(unit=13,file="lw_DON.dat")
           do j=1,1000
              write(13,*) &
@@ -374,7 +535,7 @@ contains
             dist_max=max_bondlength,&
             scale_dist=.false.,&
             norm=.true.)
-       if(all(abs(bulk_DON(2)%spec(1)%atom(:,:)).lt.1.D0))then
+       if(all(abs(bulk_DON(2)%spec(1)%atom(:,:)).lt.1._real32))then
           open(unit=13,file="up_DON.dat")
           do j=1,1000
              write(13,*) &
@@ -453,8 +614,8 @@ contains
     if(any(lw_mplane.ne.0))then
        if(imatch.ne.0)then
           abc="ab"
-          tfmat=planecutter(inlw_lat,dble(lw_mplane))
-          call transformer(inlw_lat,inlw_bas,tfmat,lw_map)
+          tfmat=planecutter(inlw_lat,real(lw_mplane,real32))
+          call transformer(inlw_bas,tfmat,lw_map)
           SAV=get_best_match(&
                tolerance,&
                inlw_lat,inup_lat,&
@@ -528,8 +689,8 @@ contains
 !!!-----------------------------------------------------------------------------
     intf_loop: do ifit=intf_start,intf_end
        write(6,'("Fit number: ",I0)') ifit
-       call clone_bas(inlw_bas,lw_bas,inlw_lat,lw_lat)
-       call clone_bas(inup_bas,up_bas,inup_lat,up_lat)
+       call lw_bas%copy(inlw_bas)
+       call up_bas%copy(inup_bas)
        if(allocated(t1lw_map)) deallocate(t1lw_map)
        if(allocated(t1up_map)) deallocate(t1up_map)
        allocate(t1lw_map,source=lw_map)
@@ -539,8 +700,8 @@ contains
        !!-----------------------------------------------------------------------
        !! Applies the best match transformations
        !!-----------------------------------------------------------------------
-       call transformer(lw_lat,lw_bas,dble(SAV%tf1(ifit,:,:)),t1lw_map)
-       call transformer(up_lat,up_bas,dble(SAV%tf2(ifit,:,:)),t1up_map)
+       call transformer(lw_bas,real(SAV%tf1(ifit,:,:),real32),t1lw_map)
+       call transformer(up_bas,real(SAV%tf2(ifit,:,:),real32),t1up_map)
 
 
        !!-----------------------------------------------------------------------
@@ -556,7 +717,7 @@ contains
           !        ( modu(lw_lat(i,:)) )*uvec(up_lat(i,:))
           !end do
           !mtmp1(3,:) = up_lat(3,:)
-          !DONup_lat = matmul(mtmp1,inverse(dble(SAV%tf2(ifit,:,:))))
+          !DONup_lat = matmul(mtmp1,inverse(real(SAV%tf2(ifit,:,:),real32)))
           !if(ierror.eq.1)then
           !   write(0,*) "#####################################"
           !   write(0,*) "ifit", ifit
@@ -572,7 +733,7 @@ contains
                dist_max=max_bondlength,&
                scale_dist=.false.,&
                norm=.true.)
-          !call err_abort_print_struc(DONup_lat,inup_bas,"bulk_up_term.vasp",&
+          !call err_abort_print_struc(inup_bas,"bulk_up_term.vasp",&
           !     "",.false.)
        end if
 
@@ -590,18 +751,18 @@ contains
        if(allocated(trans)) deallocate(trans)
        allocate(trans(minval(lw_bas%spec(:)%num+2),3))
        call gldfnd(confine,lw_bas,lw_bas,trans,ntrans)
-       tfmat(:,:)=0.D0
-       tfmat(1,1)=1.D0
-       tfmat(2,2)=1.D0
+       tfmat(:,:)=0._real32
+       tfmat(1,1)=1._real32
+       tfmat(2,2)=1._real32
        if(ntrans.eq.0)then
-          tfmat(3,3)=1.D0
+          tfmat(3,3)=1._real32
        else
           itmp1=minloc(abs(trans(:ntrans,axis)),dim=1,&
                mask=abs(trans(:ntrans,axis)).gt.1.D-3/modu(lw_lat(axis,:)))
           tfmat(3,:)=trans(itmp1,:)
        end if
-       if(all(abs(tfmat(3,:)).lt.1.D-5)) tfmat(3,3) = 1.D0
-       call transformer(lw_lat,lw_bas,tfmat,t1lw_map)
+       if(all(abs(tfmat(3,:)).lt.1.D-5)) tfmat(3,3) = 1._real32
+       call transformer(lw_bas,tfmat,t1lw_map)
 
        
        !!-----------------------------------------------------------------------
@@ -640,7 +801,7 @@ contains
        call set_slab_height(lw_lat,lw_bas,t1lw_map,lw_term,lw_surf, old_natom,&
             lw_height,lw_num_layers, lw_thickness,lw_ncells,&
             lw_term_start,lw_term_end,iterm_step,ludef_lw_surf,&
-            intf_dir,"lw",lcycle)
+            "lw",lcycle)
        if(lcycle) cycle intf_loop
 
 
@@ -653,18 +814,18 @@ contains
        deallocate(trans)
        allocate(trans(minval(up_bas%spec(:)%num+2),3))
        call gldfnd(confine,up_bas,up_bas,trans,ntrans)
-       tfmat(:,:)=0.D0
-       tfmat(1,1)=1.D0
-       tfmat(2,2)=1.D0
+       tfmat(:,:)=0._real32
+       tfmat(1,1)=1._real32
+       tfmat(2,2)=1._real32
        if(ntrans.eq.0)then
-          tfmat(3,3)=1.D0
+          tfmat(3,3)=1._real32
        else
           itmp1=minloc(abs(trans(:ntrans,axis)),dim=1,&
                mask=abs(trans(:ntrans,axis)).gt.1.D-3/modu(lw_lat(axis,:)))
           tfmat(3,:)=trans(itmp1,:)
        end if
-       if(all(abs(tfmat(3,:)).lt.1.D-5)) tfmat(3,3) = 1.D0
-       call transformer(up_lat,up_bas,tfmat,t1up_map)
+       if(all(abs(tfmat(3,:)).lt.1.D-5)) tfmat(3,3) = 1._real32
+       call transformer(up_bas,tfmat,t1up_map)
 
        
        !!-----------------------------------------------------------------------
@@ -703,7 +864,7 @@ contains
        call set_slab_height(up_lat,up_bas,t1up_map,up_term,up_surf,old_natom,&
             up_height,up_num_layers, up_thickness, up_ncells,&
             up_term_start,up_term_end,jterm_step,ludef_up_surf,&
-            intf_dir,"up",lcycle)
+            "up",lcycle)
        if(lcycle) cycle intf_loop
 
 
@@ -718,7 +879,7 @@ contains
        !! ... composed of all of the possible combinations of the two
        !!-----------------------------------------------------------------------
        lw_term_loop: do iterm=lw_term_start,lw_term_end,iterm_step
-          call clone_bas(lw_bas,tlw_bas,lw_lat,tlw_lat)
+          call tlw_bas%copy(lw_bas)
           if(allocated(t2lw_map)) deallocate(t2lw_map)
           allocate(t2lw_map,source=t1lw_map)
           !!--------------------------------------------------------------------
@@ -734,7 +895,7 @@ contains
           !! Cycles over terminations of upper material
           !!--------------------------------------------------------------------
           up_term_loop: do jterm=up_term_start,up_term_end,jterm_step
-             call clone_bas(up_bas,tup_bas,up_lat,tup_lat)
+             call tup_bas%copy(up_bas)
              if(allocated(t2up_map)) deallocate(t2up_map)
              allocate(t2up_map,source=t1up_map)
              call prepare_slab(tup_lat,tup_bas,t2up_map,up_term,jterm,&
@@ -784,27 +945,27 @@ contains
              !!-----------------------------------------------------------------
              !! Merge the two bases and lattices and define the interface loc
              !!-----------------------------------------------------------------
-             call bas_lat_merge(&
-                  slat,sbas,&
-                  tlw_lat,tup_lat,&
-                  tlw_bas,tup_bas,axis,init_offset(:),&
-                  t2lw_map,t2up_map)
-             intf_loc(1) = ( modu(tlw_lat(axis,:)) + 0.5D0*init_offset(axis) - &
+             sbas = basis_stack(&
+                  basis1 = tlw_bas, basis2 = tup_bas, &
+                  axis = axis, offset = init_offset(:), &
+                  map1 = t2lw_map, map2 = t2up_map &
+             )
+             intf_loc(1) = ( modu(tlw_lat(axis,:)) + 0.5_real32*init_offset(axis) - &
                   tmp_vac)/modu(slat(axis,:))
              intf_loc(2) = ( modu(tlw_lat(axis,:)) + modu(tup_lat(axis,:)) + &
-                  1.5D0*init_offset(axis) - 2.D0*tmp_vac )/modu(slat(axis,:))
+                  1.5_real32*init_offset(axis) - 2._real32*tmp_vac )/modu(slat(axis,:))
              if(ierror.ge.1)then
                 write(0,*) "interface:",intf_loc
                 if(ierror.eq.1.and.iunique.eq.icheck_intf-1)then
                    call chdir(intf_dir)
-                   call err_abort_print_struc(tlw_lat,tlw_bas,"lw_term.vasp",&
+                   call err_abort_print_struc(tlw_bas,"lw_term.vasp",&
                         "",.false.)
-                   call err_abort_print_struc(tup_lat,tup_bas,"up_term.vasp",&
+                   call err_abort_print_struc(tup_bas,"up_term.vasp",&
                         "As IPRINT = 1 and ICHECK has been set, &
                         &code is now exiting...")
                 elseif(ierror.eq.2.and.iunique.eq.icheck_intf-1)then
                    call chdir(intf_dir)
-                   call err_abort_print_struc(slat,sbas,"test_intf.vasp",&
+                   call err_abort_print_struc(sbas,"test_intf.vasp",&
                         "As IPRINT = 2 and ICHECK has been set, &
                         &code is now exiting...")
                 end if
@@ -878,23 +1039,23 @@ contains
     integer :: shift_unit=10
     integer :: ounit,iaxis,k,l
     integer :: ngen_swaps,nswaps_per_cell
-    double precision :: dtmp1
-    type(bas_type) :: tbas
+    real(real32) :: dtmp1
+    type(basis_type) :: tbas
     type(bond_type) :: min_bond
     character(1024) :: filename,dirpath,pwd1,pwd2,msg
     integer, dimension(3) :: abc
-    double precision, dimension(2) :: intf_loc
-    double precision, dimension(3) :: toffset
-    double precision, dimension(3,3) :: tlat
-    type(bas_type), allocatable, dimension(:) :: bas_arr
-    double precision, allocatable, dimension(:,:) :: output_shifts
+    real(real32), dimension(2) :: intf_loc
+    real(real32), dimension(3) :: toffset
+    real(real32), dimension(3,3) :: tlat
+    type(basis_type), allocatable, dimension(:) :: bas_arr
+    real(real32), allocatable, dimension(:,:) :: output_shifts
 
     integer, intent(in) :: axis
     integer, intent(in) :: nshift,nswap
     integer, intent(in) :: ishift,iswap
-    double precision, intent(in) :: bond,swap_den
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(3,3), intent(in) :: lat
+    real(real32), intent(in) :: bond,swap_den
+    type(basis_type), intent(in) :: bas
+    real(real32), dimension(3,3), intent(in) :: lat
 
     integer, dimension(:,:,:), optional, intent(in) :: map
 
@@ -926,7 +1087,7 @@ contains
     if(ishift.eq.0.or.ishift.eq.1) allocate(output_shifts(nshift,3))
     select case(ishift)
     case(1)
-       output_shifts(1,:3)=0.D0
+       output_shifts(1,:3)=0._real32
        do k=2,nshift
           do iaxis=1,2
              call random_number(output_shifts(k,iaxis))
@@ -1005,7 +1166,7 @@ contains
 !!! Prints each unique shift structure
 !!!-----------------------------------------------------------------------------
     shift_loop: do k=1,nshift
-       call clone_bas(bas,tbas,lat,tlat)
+       call tbas%copy(bas)
        toffset=output_shifts(k,:3)
        do iaxis=1,2
           call shift_region(tbas,axis,&
@@ -1014,16 +1175,16 @@ contains
        end do
        dtmp1=modu(tlat(axis,:))
        call set_vacuum(&
-            lat=tlat,bas=tbas,&
+            basis=tbas,&
             axis=axis,loc=maxval(intf_loc(:)),&
             vac=toffset(axis))
        dtmp1=minval(intf_loc(:))*dtmp1/modu(tlat(axis,:))
        call set_vacuum(&
-            lat=tlat,bas=tbas,&
+            basis=tbas,&
             axis=axis,loc=dtmp1,&
             vac=toffset(axis))
        min_bond = get_shortest_bond(tlat,tbas)
-       if(min_bond%length.le.1.5D0)then
+       if(min_bond%length.le.1.5_real32)then
           write(msg,'("Smallest bond in the interface structure is\nless than 1.5 Å.")')
           call print_warning(trim(msg))
           write(6,'(2X,"bond length: ",F9.6)') min_bond%length
@@ -1054,7 +1215,7 @@ contains
        end if
        write(6,'(2X,"Writing interface ",I0,"...")') intf
        open(unit=ounit,file=trim(adjustl(filename)))
-       call geom_write(ounit,tlat,tbas)
+       call geom_write(ounit,tbas)
        close(ounit)
        if(intf.ge.nintf) return
 
@@ -1088,7 +1249,7 @@ contains
              ounit=100+l
              write(6,'(3X,"Writing swap ",I0,"...")') l
              open(unit=ounit,file=trim(adjustl(filename)))
-             call geom_write(ounit,tlat,bas_arr(l))
+             call geom_write(ounit,bas_arr(l))
              close(ounit)
           end do
           deallocate(bas_arr)
@@ -1133,7 +1294,7 @@ contains
              itmp1=itmp1+1
              list(itmp1)%loc = term%arr(i)%hmin+term%arr(i)%ladder(j)
              list(itmp1)%loc = list(itmp1)%loc - &
-                  ceiling( list(itmp1)%loc - 1.D0 )
+                  ceiling( list(itmp1)%loc - 1._real32 )
              list(itmp1)%term=i
           end do
        end do
@@ -1159,35 +1320,34 @@ contains
   subroutine set_slab_height(lat, bas, map, term, surf, old_natom,&
        height, num_layers, thickness, ncells,&
        term_start, term_end, term_step, ludef_surf,&
-       intf_dir, lwup_in, lcycle)
+       lwup_in, lcycle)
     implicit none
     integer :: i,itmp1
-    double precision :: dtmp1, slab_thickness, largest_sep
+    real(real32) :: dtmp1, slab_thickness, largest_sep
     character(2) :: lwup
     character(5) :: lowerupper
     character(1024) :: msg
-    double precision, dimension(3,3) :: tfmat
-    double precision, allocatable, dimension(:) :: vtmp1
+    real(real32), dimension(3,3) :: tfmat
+    real(real32), allocatable, dimension(:) :: vtmp1
     type(term_list_type), allocatable, dimension(:) :: list
 
     integer, intent(in) :: num_layers, old_natom
     integer, intent(inout) :: term_start, term_end, ncells
     integer, intent(out) :: term_step
-    double precision, intent(in) :: thickness
-    double precision, intent(out) :: height
+    real(real32), intent(in) :: thickness
+    real(real32), intent(out) :: height
     character(2), intent(in) :: lwup_in
-    character(1024), intent(in) :: intf_dir
     logical, intent(inout) :: ludef_surf
     logical, intent(out) :: lcycle
-    type(bas_type), intent(inout) :: bas
+    type(basis_type), intent(inout) :: bas
     type(term_arr_type), intent(inout) :: term
     integer, dimension(2), intent(in) :: surf
-    double precision, dimension(3,3), intent(inout) :: lat
+    real(real32), dimension(3,3), intent(inout) :: lat
 
     integer, allocatable, dimension(:,:,:), intent(inout) :: map
 
     integer :: icell, istep, iterm
-    double precision :: layer_thickness
+    real(real32) :: layer_thickness
     logical :: success
     
 
@@ -1199,7 +1359,7 @@ contains
     if(lwup.eq."up") lowerupper="UPPER"
 
     lcycle = .false.
-    height = 0.D0
+    height = 0._real32
 
 
     !!-----------------------------------------------------------------------
@@ -1231,7 +1391,7 @@ contains
        height = term%arr(term_start)%hmin
        do i=num_layers,2,-1
           vtmp1 = list(:)%loc - height
-          vtmp1 = vtmp1 - ceiling( vtmp1 - 1.D0 )
+          vtmp1 = vtmp1 - ceiling( vtmp1 - 1._real32 )
           itmp1 = minloc( vtmp1(:), dim=1,&
                mask=&
                vtmp1(:).gt.0.and.&
@@ -1239,9 +1399,9 @@ contains
           height = height + vtmp1(itmp1)
        end do
        vtmp1 = list(:)%loc - height
-       !vtmp1 = vtmp1 - ceiling( vtmp1 - 1.D0 )
+       !vtmp1 = vtmp1 - ceiling( vtmp1 - 1._real32 )
        where(vtmp1.lt.-1.D-5)
-          vtmp1 = vtmp1 - ceiling( vtmp1 + 1.D-5 - 1.D0 )
+          vtmp1 = vtmp1 - ceiling( vtmp1 + 1.D-5 - 1._real32 )
        end where
        itmp1 = minloc( vtmp1(:), dim=1,&
             mask=&
@@ -1252,12 +1412,12 @@ contains
        !if(.not.term%lmirror)then
           ! get thickness of top/surface layer
           dtmp1 = term%arr(surf(2))%hmax - term%arr(surf(2))%hmin
-          if(dtmp1.lt.-1.D-5) dtmp1 = dtmp1 + 1.D0
-          height = height + dtmp1 !(1.D0 - dtmp1)
+          if(dtmp1.lt.-1.D-5) dtmp1 = dtmp1 + 1._real32
+          height = height + dtmp1 !(1._real32 - dtmp1)
        !end if
 
        ncells = ceiling(height)
-       height = height/dble(ncells)
+       height = height/real(ncells,real32)
     end if
 
     
@@ -1276,7 +1436,7 @@ contains
     !!-----------------------------------------------------------------------
     if(.not.ludef_surf) ncells = int((num_layers-1)/term%nstep)+1
     !! convert thickness, in angstroms to number of cells
-    if(thickness.gt.0.D0)then
+    if(thickness.gt.0._real32)then
        select case(term%axis)
        case(1)
           slab_thickness = dot_product(uvec(cross(lat(2,:),lat(3,:))), lat(1,:))
@@ -1291,8 +1451,8 @@ contains
           height = 0.E0
           largest_sep = abs( term%arr(surf(1))%hmin - &
                term%arr(surf(2))%ladder(term%nstep) - &
-               term%arr(surf(2))%hmax + 1.D0 )
-          if(largest_sep.lt.0.D0) largest_sep = 1.D0 + largest_sep
+               term%arr(surf(2))%hmax + 1._real32 )
+          if(largest_sep.lt.0._real32) largest_sep = 1._real32 + largest_sep
           ! check for all terminations that a certain step is sufficiently large to reproduce thickness
           cell_loop1: do icell = 0, ceiling(thickness/slab_thickness), 1
              layer_thickness = term%arr(surf(2))%hmax - term%arr(surf(1))%hmin - 2.E0 * term%tol
@@ -1335,8 +1495,8 @@ contains
        else
           largest_sep = abs( term%arr(1)%hmin - &
                term%arr(1)%ladder(term%nstep) - &
-               term%arr(1)%hmax + 1.D0 )
-          if(largest_sep.lt.0.D0) largest_sep = 1.D0 + largest_sep
+               term%arr(1)%hmax + 1._real32 )
+          if(largest_sep.lt.0._real32) largest_sep = 1._real32 + largest_sep
           ! check for all terminations that a certain step is sufficiently large to reproduce thickness
           cell_loop2: do icell = 0, ceiling(thickness/slab_thickness), 1
              term_loop: do iterm = 1, term%nterm, 1
@@ -1356,13 +1516,13 @@ contains
           end do cell_loop2
 
        end if
-       height = height/dble(ncells * slab_thickness)
+       height = height/real(ncells * slab_thickness,real32)
     end if
-    tfmat(:,:) = 0.D0
-    tfmat(1,1) = 1.D0
-    tfmat(2,2) = 1.D0
+    tfmat(:,:) = 0._real32
+    tfmat(1,1) = 1._real32
+    tfmat(2,2) = 1._real32
     tfmat(3,3) = ncells
-    call transformer(lat,bas,tfmat,map)
+    call transformer(bas,tfmat,map)
     if(mod(real(old_natom*ncells)/real(bas%natom),1.0).gt.1.D-5)then
        write(0,'(1X,"ERROR: Internal error in interfaces subroutine")')
        write(0,'(2X,"gldfnd subroutine did not reproduce a sensible &
@@ -1371,8 +1531,7 @@ contains
             &I0," atoms")') &
             bas%natom/itmp1,old_natom
        if(ierror.eq.1)then
-          call chdir(intf_dir)
-          call err_abort_print_struc(lat,bas,&
+          call err_abort_print_struc(bas,&
                "broken_primitive.vasp",&
                "As IPRINT = 1, code is now exiting...")
        end if
@@ -1385,9 +1544,9 @@ contains
     !! Readjust termination plane locations
     !! ... i.e. divide all termination values by the number of cells
     !!-----------------------------------------------------------------------
-    term%arr(:)%hmin = term%arr(:)%hmin/dble(ncells)
-    term%arr(:)%hmax = term%arr(:)%hmax/dble(ncells)
-    term%tol = term%tol/dble(ncells)
+    term%arr(:)%hmin = term%arr(:)%hmin/real(ncells,real32)
+    term%arr(:)%hmax = term%arr(:)%hmax/real(ncells,real32)
+    term%tol = term%tol/real(ncells,real32)
     
 
   end subroutine set_slab_height
@@ -1400,7 +1559,7 @@ contains
   subroutine set_layer_tol(term)
     implicit none
     integer :: i
-    double precision :: dtmp1
+    real(real32) :: dtmp1
 
     type(term_arr_type), intent(inout) :: term
     
@@ -1408,10 +1567,10 @@ contains
     do i=1,term%nterm
        if(i.eq.1)then
           dtmp1 = abs(term%arr(i)%hmin - &
-               (term%arr(term%nterm)%hmax+term%arr(i)%ladder(term%nstep)-1.D0)&
-               )/4.D0
+               (term%arr(term%nterm)%hmax+term%arr(i)%ladder(term%nstep)-1._real32)&
+               )/4._real32
        else
-          dtmp1 = abs(term%arr(i)%hmin-term%arr(i-1)%hmax)/4.D0
+          dtmp1 = abs(term%arr(i)%hmin-term%arr(i-1)%hmax)/4._real32
        end if
        if(dtmp1.lt.term%tol)then
           term%tol = dtmp1
@@ -1438,31 +1597,31 @@ contains
        ludef_ortho, udef_vacuum)
     implicit none
     integer :: j, j_start, istep, natom_check
-    double precision :: vacuum, dtmp1, slab_thickness, shift_val
+    real(real32) :: vacuum, dtmp1, slab_thickness, shift_val
     character(2) :: lwup
     character(5) :: lowerupper
     character(1024) :: msg
     logical :: lortho
     integer, dimension(3) :: abc=(/1,2,3/)
-    double precision, dimension(3) :: surface_normal_vec
-    double precision, dimension(3,3) :: tfmat
+    real(real32), dimension(3) :: surface_normal_vec
+    real(real32), dimension(3,3) :: tfmat
     integer, allocatable, dimension(:) :: iterm_list
 
     integer, intent(in) :: iterm, udef_top_iterm, num_layers, ncells
-    double precision, intent(in) :: height, thickness
+    real(real32), intent(in) :: height, thickness
     character(2), intent(in) :: lwup_in
     logical, intent(in) :: ludef_surf
     logical, intent(out) :: lcycle
-    type(bas_type), intent(inout) :: bas
+    type(basis_type), intent(inout) :: bas
     type(term_arr_type), intent(in) :: term
-    double precision, dimension(3,3), intent(inout) :: lat
+    real(real32), dimension(3,3), intent(inout) :: lat
 
     integer, allocatable, dimension(:,:,:), intent(inout) :: map
     logical, optional, intent(in) :: ludef_ortho
-    double precision, optional, intent(in) :: udef_vacuum
+    real(real32), optional, intent(in) :: udef_vacuum
 
     integer :: icell, num_cells, jterm
-    double precision :: layer_thickness
+    real(real32) :: layer_thickness, ladder_adjust
 
     !!--------------------------------------------------------------------
     !! Initialise variables
@@ -1471,40 +1630,43 @@ contains
     if(lwup.eq."lw") lowerupper="LOWER"
     if(lwup.eq."up") lowerupper="UPPER"
     lcycle = .false.
-    dtmp1=0.D0
-    tfmat=0.D0
+    dtmp1=0._real32
+    tfmat=0._real32
+    if(ludef_surf)then
+       jterm = udef_top_iterm
+    else
+       jterm = iterm
+    end if
     select case(term%axis)
     case(1)
-       surface_normal_vec = uvec(cross(lat(2,:),lat(3,:)))
-       slab_thickness = abs( dot_product(surface_normal_vec, lat(1,:)) )
+       surface_normal_vec = uvec(cross( [ lat(2,:) ], [ lat(3,:) ]))
+       slab_thickness = abs( dot_product(surface_normal_vec, [ lat(1,:) ]) )
     case(2)
-       surface_normal_vec = uvec(cross(lat(1,:),lat(3,:)))
-       slab_thickness = abs( dot_product(surface_normal_vec, lat(2,:)) )
+       surface_normal_vec = uvec(cross( [ lat(1,:) ], [ lat(3,:) ]))
+       slab_thickness = abs( dot_product(surface_normal_vec, [ lat(2,:) ]) )
     case(3)
-       surface_normal_vec = uvec(cross(lat(1,:),lat(2,:)))
-       slab_thickness = abs( dot_product(surface_normal_vec, lat(3,:)) )
+       surface_normal_vec = uvec(cross( [ lat(1,:) ], [ lat(2,:)] ))
+       slab_thickness = abs( dot_product(surface_normal_vec, [ lat(3,:) ]) )
     end select
-    if(thickness.gt.0.D0)then
+    if(thickness.gt.0._real32)then
        dtmp1 = slab_thickness / ncells * ( ncells - 1 )
        istep = term%nstep
        num_cells = ncells - 1
-       if(ludef_surf)then
-          jterm = udef_top_iterm
-       else
-          jterm = iterm
-       end if
        cell_loop: do icell = 0, ncells, 1
-          layer_thickness = term%arr(udef_top_iterm)%hmax - term%arr(iterm)%hmin - 2.E0 * term%tol
+          layer_thickness = term%arr(jterm)%hmax - term%arr(iterm)%hmin - 2.E0 * term%tol
+          ladder_adjust = 0._real32
           step_loop: do j = 1, term%nstep
-             if(udef_top_iterm.lt.iterm)then
+             if(jterm.lt.iterm)then
                 if(j.eq.term%nstep)then
-                   layer_thickness = term%arr(udef_top_iterm)%hmax - term%arr(iterm)%hmin - 2.E0 * term%tol + ( 1.E0 + term%arr(udef_top_iterm)%ladder(1) - term%arr(iterm)%ladder(term%nstep) )
+                   layer_thickness = term%arr(jterm)%hmax - term%arr(iterm)%hmin - 2.E0 * term%tol
+                   ladder_adjust = 1.E0 + term%arr(jterm)%ladder(1) - term%arr(iterm)%ladder(term%nstep)
                 else
-                   layer_thickness = term%arr(udef_top_iterm)%hmax - term%arr(iterm)%hmin - 2.E0 * term%tol + ( term%arr(udef_top_iterm)%ladder(j+1) - term%arr(iterm)%ladder(j) )
+                   layer_thickness = term%arr(jterm)%hmax - term%arr(iterm)%hmin - 2.E0 * term%tol
+                   ladder_adjust = term%arr(jterm)%ladder(j+1) - term%arr(iterm)%ladder(j)
                 end if
              end if
-             dtmp1 = ( icell / real(ncells) + layer_thickness ) * slab_thickness + &
-                  term%arr(udef_top_iterm)%ladder(j) * slab_thickness / real(ncells)
+             dtmp1 = ( icell / real(ncells,real32) + layer_thickness ) * slab_thickness + &
+                  ( ladder_adjust + term%arr(jterm)%ladder(j) - term%arr(iterm)%ladder(1) ) * slab_thickness / real(ncells,real32)
              if(dtmp1.ge.thickness)then
                 istep = j
                 num_cells = icell
@@ -1540,7 +1702,7 @@ contains
     end do
     iterm_list=cshift(iterm_list,iterm-1)
     if(ludef_surf)then
-       j_start = udef_top_iterm - iterm + 1
+       j_start = jterm - iterm + 1
        if(j_start.le.0) j_start = j_start + term%nterm
        j_start = j_start + 1 !+ (istep-1)*term%nterm/term%nstep
     else
@@ -1553,9 +1715,6 @@ contains
     !! Shift lower material to specified termination
     !!--------------------------------------------------------------------
     call shifter(bas,term%axis,-term%arr(iterm)%hmin,.true.)
-    !open(20,file="test.vasp")
-    !call geom_write(20,lat,bas)
-    !close(20)
 
 
     !!--------------------------------------------------------------------
@@ -1563,7 +1722,7 @@ contains
     !!--------------------------------------------------------------------
     !write(0,*) "LUDEF_SURF?", ludef_surf
     do j=1,3
-       tfmat(j,j)=1.D0
+       tfmat(j,j)=1._real32
        if(j.eq.term%axis)then
           if(ludef_surf)then
              tfmat(j,j) = height
@@ -1578,7 +1737,7 @@ contains
           !else
           !   tfmat(j,j) = tfmat(j,j) + (&
           !        term%arr(iterm)%hmax - &
-          !        term%arr(iterm)%hmin) + term%tol*2.D0
+          !        term%arr(iterm)%hmin) + term%tol*2._real32
           end if
        end if
     end do
@@ -1600,7 +1759,7 @@ contains
     !! ... hmin and hmax
     !!--------------------------------------------------------------------
     shift_val = term%tol * slab_thickness / modu(lat(term%axis,:))
-    call transformer(lat,bas,tfmat,map)
+    call transformer(bas,tfmat,map)
     call shifter(bas,term%axis,-shift_val/tfmat(term%axis,term%axis),.true.)
 
 
@@ -1608,10 +1767,10 @@ contains
     !! Check number of atoms is expected
     !!--------------------------------------------------------------------
     if(term%nterm.gt.1.or.term%nstep.gt.1)then
-       do j=1,max(0,term%nstep-istep),1
+       do j = 1, max(0,term%nstep-istep), 1
           natom_check = natom_check - sum(term%arr(:)%natom)
        end do
-       do j=j_start,term%nterm,1
+       do j = j_start, term%nterm, 1
           natom_check = natom_check - term%arr(iterm_list(j))%natom
        end do
     end if
@@ -1619,12 +1778,12 @@ contains
        write(msg, '("NUMBER OF ATOMS IN '//to_upper(lowerupper)//' SLAB! &
             &Expected ",I0," but generated ",I0," instead")') &
             natom_check,bas%natom
-       if(tfmat(term%axis,term%axis).gt.1.D0)then
+       if(tfmat(term%axis,term%axis).gt.1._real32)then
           write(0,'("THE TRANSFORMATION IS GREATER THAN ONE ",F0.9)') &
                tfmat(term%axis,term%axis)
        end if
        !call err_abort(trim(msg),fmtd=.true.)
-       call err_abort_print_struc(lat,bas,lwup//"_term.vasp",&
+       call err_abort_print_struc(bas,lwup//"_term.vasp",&
             trim(msg),.true.)
        lcycle = .true.
     end if
@@ -1633,8 +1792,8 @@ contains
     !!--------------------------------------------------------------------
     !! Apply slab_cuber to orthogonalise lower material
     !!--------------------------------------------------------------------
-    call set_vacuum(lat,bas,term%axis,1.D0-term%tol/tfmat(term%axis,term%axis),vacuum)
-    !call err_abort_print_struc(lat,bas,"check.vasp","stop")
+    call set_vacuum(bas,term%axis,1._real32-term%tol/tfmat(term%axis,term%axis),vacuum)
+    !call err_abort_print_struc(bas,"check.vasp","stop")
     abc=cshift(abc,3-term%axis)
     if(lortho)then
        ortho_check: do j=1,2
@@ -1644,7 +1803,7 @@ contains
           end if
        end do ortho_check
     end if
-    call normalise_basis(bas,dtmp=0.9999D0,lfloor=.true.,zero_round=0.D0)
+    call bas%normalise(ceil_val=0.9999_real32,floor_coords=.true.,zero_round=0._real32)
 
 
   end subroutine prepare_slab

@@ -14,10 +14,11 @@
 !!! convert_n_tf1!!! endcode
 !!!#############################################################################
 module lat_compare
-  use constants
+  use artemis__constants
+  use artemis__misc_types, only: latmatch_type, tol_type
   use misc_linalg, only: cross,uvec,modu,get_area,find_tf,det,reduce_vec_gcd,&
        inverse_3x3,get_vec_multiple,get_frac_denom
-  use rw_geom, only: bas_type
+  use artemis__geom_rw, only: basis_type
   use edit_geom, only: MATNORM,planecutter
   implicit none
   integer :: ierr_compare
@@ -25,25 +26,6 @@ module lat_compare
   logical :: lreduce=.true.
   integer, private :: match_method=0
 
-  type latmatch_type
-     integer :: nfit
-     logical :: lreduced
-     character(1) :: abc(3)=(/'a','b','c'/)
-
-     integer, dimension(2) :: axes
-     integer, allocatable, dimension(:,:,:) :: tf1,tf2
-     double precision, allocatable, dimension(:,:) :: tol
-     double precision, dimension(3,3) :: lat1,lat2
-  end type latmatch_type
-
-  type tol_type
-     integer :: maxsize,maxfit,nstore
-     double precision :: maxlen=20.D0
-     double precision :: maxarea=400.D0
-     double precision :: vec,ang,area
-     double precision :: ang_weight = 10.D0
-     double precision :: area_weight = 100.D0
-  end type tol_type
 
   
 !!!updated  2021/11/19
@@ -59,9 +41,9 @@ contains
     character(3) :: str1,str2
     logical :: lprint
     type(tol_type) :: tol
-    type(bas_type) :: bas1,bas2
+    type(basis_type) :: bas1,bas2
     type(latmatch_type) :: SAV
-    double precision, dimension(3,3) :: lat1,lat2
+    real(real32), dimension(3,3) :: lat1,lat2
     integer, optional :: ierr,imatch,nmiller
     integer, dimension(3), optional :: plane1,plane2
     
@@ -190,8 +172,8 @@ contains
     type(latmatch_type) :: SAV
     integer, dimension(3,3) :: tf1,tf2
     integer, dimension(2,3) :: n
-    double precision, dimension(3,3) :: tlat1,tlat2
-    double precision, allocatable, dimension(:,:,:) :: match_tfs
+    real(real32), dimension(3,3) :: tlat1,tlat2
+    real(real32), allocatable, dimension(:,:,:) :: match_tfs
     logical, optional :: ltmp
 
     
@@ -201,7 +183,7 @@ contains
     lprint=.false.
     if(present(ltmp)) lprint=ltmp
     allocate(match_tfs(tol%maxfit,3,3))
-    match_tfs=0.D0
+    match_tfs=0._real32
     SAV%nfit=0
     count1=0
     n=0
@@ -271,11 +253,11 @@ contains
 !!! Creates transformation matrix using n array
 !!!-----------------------------------------------------------------------------
        tf1=convert_n_tf1(n,SAV%axes(1))
-!       if(abs(nint(get_area(dble(tf1(1,:)),dble(tf1(2,:))))).gt.tol%area)then
+!       if(abs(nint(get_area(real(tf1(1,:),real32),real(tf1(2,:),real32)))).gt.tol%area)then
 !          n(1,1)=n(1,1)-1
 !          l1change=.true.
 !          cycle
-       if(abs(get_area(dble(tf1(1,:)),dble(tf1(2,:)))).lt.0.99D0) goto 103
+       if(abs(get_area(real(tf1(1,:),real32),real(tf1(2,:),real32))).lt.0.99_real32) goto 103
 
 
 !       tf1(1,:)=(/1,0,0/)
@@ -375,8 +357,8 @@ contains
     type(latmatch_type) :: SAV
     integer, dimension(3,3) :: tf1,tf2
     integer, dimension(3,3) :: it1_mat,it2_mat
-    double precision, dimension(3,3) :: t_mat,tlat1,tlat2
-    double precision, dimension(:,:,:) :: match_tfs
+    real(real32), dimension(3,3) :: t_mat,tlat1,tlat2
+    real(real32), dimension(:,:,:) :: match_tfs
 
 
     select case(match_method)
@@ -395,7 +377,7 @@ contains
 !!! ... transformation of lat1 and the corresponding transformation of lat2.
 !!!-----------------------------------------------------------------------------
     SAV%lreduced=.false.
-    match_tfs(SAV%nfit+1,:,:)=find_tf((dble(tf1)),(dble(tf2)))
+    match_tfs(SAV%nfit+1,:,:)=find_tf((real(tf1,real32)),(real(tf2,real32)))
     if(any(isnan(match_tfs(SAV%nfit+1,:,:)))) goto 201
     t_mat(:,:)=match_tfs(SAV%nfit+1,:,:)
     if(ierr_compare.ge.1) then
@@ -419,7 +401,7 @@ contains
           if(any(abs(t_mat(i,:)-nint(t_mat(i,:))).gt.1.D-5)) exit reduce_if
           it2_mat(i,:)=nint(t_mat(i,:))
           do j=1,3
-             if(match_tfs(SAV%nfit+1,j,i).ne.0.D0)then
+             if(match_tfs(SAV%nfit+1,j,i).ne.0._real32)then
                 it1_mat(i,i)=nint(t_mat(i,j)/match_tfs(SAV%nfit+1,j,i))
                 exit
              end if
@@ -427,8 +409,8 @@ contains
           if(all(it2_mat(i,:).eq.0)) exit reduce_if
           if(it1_mat(i,i).eq.0) exit reduce_if
        end do
-       if(abs(get_area(dble(tf1(1,:)),dble(tf1(2,:)))).lt.&
-            abs(get_area(dble(it1_mat(1,:)),dble(it1_mat(2,:)))))&
+       if(abs(get_area(real(tf1(1,:),real32),real(tf1(2,:),real32))).lt.&
+            abs(get_area(real(it1_mat(1,:),real32),real(it1_mat(2,:),real32))))&
             exit reduce_if
        SAV%lreduced=.true.
        tf1=it1_mat
@@ -455,10 +437,10 @@ contains
   function get_lat2(SAV,tlat1) result(tf)
     implicit none
     integer :: i,kmax
-    double precision :: dtmp,t_area,ang1,ang2,t_ang
+    real(real32) :: dtmp,t_area,ang1,ang2,t_ang
     type(latmatch_type) :: SAV
     integer, dimension(3,3) :: tf,it_mat
-    double precision, dimension(3,3) :: t_mat,t_lat,tlat1,tlat2
+    real(real32), dimension(3,3) :: t_mat,t_lat,tlat1,tlat2
 
 
     tf=0
@@ -473,8 +455,8 @@ contains
 !!!-----------------------------------------------------------------------------
     ang1=acos(dot_product(tlat1(1,:),tlat1(2,:))/&
          (modu(tlat1(1,:)*modu(tlat1(2,:)))))
-    t_area=1000.D0
-    t_ang=5.D0
+    t_area=1000._real32
+    t_ang=5._real32
     kmax=1
     if(SAV%axes(2).eq.3) kmax=3
     t_lat=SAV%lat2
@@ -498,12 +480,12 @@ contains
        t_mat=find_tf(t_lat,tlat1)
        it_mat=nint(t_mat)
 
-       tlat2=matmul(dble(it_mat),t_lat)
+       tlat2=matmul(real(it_mat,real32),t_lat)
        ang2=acos(dot_product(tlat2(1,:),tlat2(2,:))/&
             (modu(tlat2(1,:))*modu(tlat2(2,:))))
        t_mat=tlat1-tlat2
        dtmp=get_area(t_mat(1,:),t_mat(2,:))
-       t_area=1000.D0
+       t_area=1000._real32
        !! SORT OUT HANDLING OF AREA COMPARISON
        if(dtmp.le.t_area.and.&!-1.D-8.and.&
             abs(ang1-ang2).lt.t_ang)then
@@ -530,8 +512,8 @@ contains
     type(latmatch_type) :: SAV
     integer, dimension(2,3) :: m
     integer, dimension(3,3) :: tf
-    double precision, dimension(3,3) :: tlat1
-    double precision, dimension(3,3) :: mA,mB,S,newlat
+    real(real32), dimension(3,3) :: tlat1
+    real(real32), dimension(3,3) :: mA,mB,S,newlat
     logical :: lchange
 
     
@@ -549,10 +531,10 @@ contains
           mB(i,j)=dot_product(SAV%lat2(i,:),SAV%lat2(j,:))
        end do
     end do
-    S=1.D0
-    S(:,:)=sqrt(mA(1,1))*sqrt(mA(2,2))*cos(pi/2.D0-tol%ang)
+    S=1._real32
+    S(:,:)=sqrt(mA(1,1))*sqrt(mA(2,2))*cos(pi/2._real32-tol%ang)
     do i=1,3
-       S(i,i)=(2.D0*tol%vec)*mA(i,i)
+       S(i,i)=(2._real32*tol%vec)*mA(i,i)
     end do
 
 
@@ -627,7 +609,7 @@ contains
 
 !!!using 1 Å as the tolerance
 !!! probably want smaller off, diagonal differences
-       if(all((abs(newlat(:2,:2)-mA(:2,:2))-S(:2,:2)).lt.0.D0))then
+       if(all((abs(newlat(:2,:2)-mA(:2,:2))-S(:2,:2)).lt.0._real32))then
           if(ierr_compare.gt.1)then
              write(0,*) "success"
              write(0,'(3(I0,1X))') tf
@@ -654,14 +636,14 @@ contains
   function tol_check(SAV,tol,tlat1,tlat2,tf1,tf2,lprint) result(lmatch)
     implicit none
     integer :: i,j
-    double precision :: ang1,ang2,t_area1,t_area2,diff
+    real(real32) :: ang1,ang2,t_area1,t_area2,diff
     logical :: la1a2,la1b2,l12,lmatch
     type(tol_type) :: tol
     type(latmatch_type) :: SAV
     integer, dimension(3,3) :: tf1,tf2
-    double precision, dimension(2) :: mag_mat1,mag_mat2
-    double precision, dimension(3) :: tvec
-    double precision, dimension(3,3) :: tlat1,tlat2
+    real(real32), dimension(2) :: mag_mat1,mag_mat2
+    real(real32), dimension(3) :: tvec
+    real(real32), dimension(3,3) :: tlat1,tlat2
     logical, optional :: lprint
 
 
@@ -689,8 +671,8 @@ contains
        !!-----------------------------------------------------------------------
        !! Changed angles to all less than pi/2 to deal with negative vectors
        !!-----------------------------------------------------------------------
-       if(ang1.gt.pi/2.D0) ang1=pi-ang1
-       if(ang2.gt.pi/2.D0) ang2=pi-ang2
+       if(ang1.gt.pi/2._real32) ang1=pi-ang1
+       if(ang2.gt.pi/2._real32) ang2=pi-ang2
        if(ierr_compare.gt.1) write(0,*) ang1,ang2
        !!-----------------------------------------------------------------------
        la1a2=(abs((mag_mat1(1)-mag_mat2(1))/mag_mat1(1)).lt.tol%vec.and.&
@@ -720,8 +702,8 @@ contains
        !! Generating unit vector c axis for both superlattices ...
        !! ... perpendicular to the interface plane.
        !!-----------------------------------------------------------------------
-       tf1(3,:)=nint(uvec(cross(dble(tf1(1,:)),dble(tf1(2,:)))))
-       tf2(3,:)=nint(uvec(cross(dble(tf2(1,:)),dble(tf2(2,:)))))
+       tf1(3,:)=nint(uvec(cross(real(tf1(1,:),real32),real(tf1(2,:),real32))))
+       tf2(3,:)=nint(uvec(cross(real(tf2(1,:),real32),real(tf2(2,:),real32))))
        !!-----------------------------------------------------------------------
        !! Prints the mismatches for the current successful match
        !!-----------------------------------------------------------------------
@@ -730,17 +712,17 @@ contains
              write(6,'(/,A,I0,2X,A,I0)') &
                   "Fit number: ",SAV%nfit+1,&
                   "Area increase: ",&
-                  nint(get_area(dble(tf1(1,:)),dble(tf1(2,:))))
+                  nint(get_area(real(tf1(1,:),real32),real(tf1(2,:),real32)))
              write(6,'("   Transmat 1:    Transmat 2:")')
              write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
              write(6,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
                   tf1(1,1:3),tf2(1,1:3),&
                   tf1(2,1:3),tf2(2,1:3),&
                   tf1(3,1:3),tf2(3,1:3)
-             write(6,'(" vector mismatch (%) = ",F0.9)') diff*100.D0
+             write(6,'(" vector mismatch (%) = ",F0.9)') diff*100._real32
              write(6,'(" angle mismatch (°)  = ",F0.9)') abs(ang1-ang2)*180/pi
              write(6,'(" area mismatch (%)   = ",F0.9)') (&
-                  1-abs(t_area1/t_area2))*100.D0
+                  1-abs(t_area1/t_area2))*100._real32
              write(6,*) "reduced:",SAV%lreduced
           end if
        end if
@@ -749,27 +731,27 @@ contains
        !!-----------------------------------------------------------------------
        best_check: do i=1,tol%nstore
           if(i.gt.SAV%nfit)then
-             SAV%tol(i,1)=diff*100.D0
+             SAV%tol(i,1)=diff*100._real32
              SAV%tol(i,2)=abs(ang1-ang2)
-             SAV%tol(i,3)=(1-abs(t_area1/t_area2))*100.D0
+             SAV%tol(i,3)=(1-abs(t_area1/t_area2))*100._real32
              SAV%tf1(i,:,:)=tf1(:,:)
              SAV%tf2(i,:,:)=tf2(:,:)
              exit best_check
           end if
-          if(diff*100.D0.le.SAV%tol(i,1).and.&
+          if(diff*100._real32.le.SAV%tol(i,1).and.&
                abs(ang1-ang2).le.SAV%tol(i,2).and.&
-               (1-abs(t_area1/t_area2))*100.D0.le.SAV%tol(i,3)) then
-             if(nint(get_area(dble(tf1(1,:)),dble(tf1(2,:)))).ge.&
-                  nint(get_area(dble(SAV%tf1(i,1,:)),dble(SAV%tf1(i,2,:)))))&
+               (1-abs(t_area1/t_area2))*100._real32.le.SAV%tol(i,3)) then
+             if(nint(get_area(real(tf1(1,:),real32),real(tf1(2,:),real32))).ge.&
+                  nint(get_area(real(SAV%tf1(i,1,:),real32),real(SAV%tf1(i,2,:),real32))))&
                   cycle best_check
              do j=tol%nstore,i+1,-1
                 SAV%tol(j,:)=SAV%tol(j-1,:)
                 SAV%tf1(j,:,:)=SAV%tf1(j-1,:,:)
                 SAV%tf2(j,:,:)=SAV%tf2(j-1,:,:)
              end do
-             SAV%tol(i,1)=diff*100.D0
+             SAV%tol(i,1)=diff*100._real32
              SAV%tol(i,2)=abs(ang1-ang2)
-             SAV%tol(i,3)=(1-abs(t_area1/t_area2))*100.D0
+             SAV%tol(i,3)=(1-abs(t_area1/t_area2))*100._real32
              SAV%tf1(i,:,:)=tf1(:,:)
              SAV%tf2(i,:,:)=tf2(:,:)
              exit best_check
@@ -790,11 +772,11 @@ contains
   function lat_check(SAV,tol,lat) result(lcheck)
     implicit none
     integer :: i
-    double precision :: ang1,ang2,tiny
+    real(real32) :: ang1,ang2,tiny
     logical :: lcheck,lmatch_aa,lmatch_ab
     type(tol_type) :: tol
     type(latmatch_type) :: SAV
-    double precision, dimension(3,3) :: lat,tlat
+    real(real32), dimension(3,3) :: lat,tlat
 
 
     tiny=1.D-6
@@ -807,8 +789,8 @@ contains
        ang2=acos(dot_product(tlat(1,:),tlat(2,:))/(&
             sqrt(dot_product(tlat(1,:),tlat(1,:)))*&
             sqrt(dot_product(tlat(2,:),tlat(2,:)))))
-       if(ang1.gt.pi/2.D0) ang1=pi-ang1
-       if(ang2.gt.pi/2.D0) ang2=pi-ang2
+       if(ang1.gt.pi/2._real32) ang1=pi-ang1
+       if(ang2.gt.pi/2._real32) ang2=pi-ang2
        if(abs(ang1-ang2).lt.tiny)then
           lmatch_aa=&
                (abs(dot_product(lat(1,:),lat(1,:))-&
@@ -879,7 +861,7 @@ contains
     end if
 
     write(6,'(1X,"BEST MATCH      Area increase: ",I0)') &
-         nint(get_area(real(SAV%tf1(1,1,:),real12),real(SAV%tf1(1,2,:),real12)))
+         nint(get_area(real(SAV%tf1(1,1,:),real32),real(SAV%tf1(1,2,:),real32)))
     write(6,'("   Transmat 1:    Transmat 2:")')
     write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
          SAV%abc,SAV%abc,&
@@ -904,14 +886,14 @@ contains
 !!!#############################################################################
   function vec_comp(S1,S1p,S2p,delta) result(match)
     implicit none
-    double precision :: ct,cp,cv,th,ph,va
-    double precision :: beta,pm1,alpha,pm2
-    double precision :: mS1,mS1p,mS2p,tiny,md
-    double precision, dimension(2) :: match
-    double precision, dimension(3) :: S1,S1p,S2p,delta
+    real(real32) :: ct,cp,cv,th,ph,va
+    real(real32) :: beta,pm1,alpha,pm2
+    real(real32) :: mS1,mS1p,mS2p,tiny,md
+    real(real32), dimension(2) :: match
+    real(real32), dimension(3) :: S1,S1p,S2p,delta
 
 
-    match=0.D0
+    match=0._real32
     tiny=1.D-8
     mS1=modu(S1)
     mS1p=modu(S1p)
@@ -926,9 +908,9 @@ contains
     va=acos(dot_product(S1,S2p) /(mS1* mS2p))
 
     beta=mS1*(cv-ct*cp)/(mS2p*sin(acos(ct))**2.0)
-    pm1=(cv-ct*cp)**2.0 - (sin(th)*sin(ph))**2.0 !- md*(sin(th)/mS1)**2.D0
-    if(abs(pm1).lt.tiny.or.pm1+(md*sin(th)/mS1)**2.D0.gt.0.D0) pm1=0.D0
-    pm1=mS1*sqrt(pm1)/( mS2p*(1-ct**2.D0) )
+    pm1=(cv-ct*cp)**2.0 - (sin(th)*sin(ph))**2.0 !- md*(sin(th)/mS1)**2._real32
+    if(abs(pm1).lt.tiny.or.pm1+(md*sin(th)/mS1)**2._real32.gt.0._real32) pm1=0._real32
+    pm1=mS1*sqrt(pm1)/( mS2p*(1-ct**2._real32) )
     if(abs(beta+pm1-nint(beta+pm1)).lt.&
          abs(beta-pm1-nint(beta-pm1)))then
        match(1)=beta+pm1
@@ -937,12 +919,12 @@ contains
     end if
     beta=match(1)
 
-    !t_beta=beta+pm1*(-1.0)**dble(i)
+    !t_beta=beta+pm1*(-1.0)**real(i,real32)
     alpha=-( beta*mS2p*ct - mS1*cp )/mS1p
-    pm2=-(beta*mS2p*sin(th))**2.D0 &
-         -(mS1*sin(ph))**2.D0 + &
-         2.D0*beta*mS1*mS2p*(cv - ct*cp) !- md
-    if(abs(pm2).lt.tiny.or.pm2+md**2.D0.gt.0.D0) pm2=0.D0
+    pm2=-(beta*mS2p*sin(th))**2._real32 &
+         -(mS1*sin(ph))**2._real32 + &
+         2._real32*beta*mS1*mS2p*(cv - ct*cp) !- md
+    if(abs(pm2).lt.tiny.or.pm2+md**2._real32.gt.0._real32) pm2=0._real32
     pm2=sqrt(pm2)/mS1p
 
 
@@ -971,14 +953,14 @@ contains
     type(tol_type) :: tol
     type(pm_tol_type) :: pm_tol
     type(latmatch_type) :: SAV
-    double precision, dimension(3,3) :: tf
-    double precision, dimension(3,3) :: lat1,lat2 !original lattices.
-    double precision, dimension(3,3) :: templat1,templat2 !tmp lattices to feed into plane matching.
+    real(real32), dimension(3,3) :: tf
+    real(real32), dimension(3,3) :: lat1,lat2 !original lattices.
+    real(real32), dimension(3,3) :: templat1,templat2 !tmp lattices to feed into plane matching.
     integer :: itmp1,nsym1,nsym2
     integer :: m1,m2,m3,i1,i2,i3,loc
     integer :: loopsize !size of the main loops
     integer :: i,j,num_of_transforms ! n = number of output transforms
-    double precision :: dtmp1
+    real(real32) :: dtmp1
     logical, allocatable, dimension(:) :: lvec1
 
     integer, dimension(3,3) :: tmat1,tmat2
@@ -987,21 +969,21 @@ contains
     real, dimension(3) :: rvec1, rvec2
     real, dimension(3,3) :: rmat1
     
-    double precision, allocatable, dimension(:,:,:) :: tmpsym1,tmpsym2,tmpsym
-    double precision, allocatable, dimension(:,:,:) :: transform1_saved,transform2_saved !The transformations output by plane cutter
+    real(real32), allocatable, dimension(:,:,:) :: tmpsym1,tmpsym2,tmpsym
+    real(real32), allocatable, dimension(:,:,:) :: transform1_saved,transform2_saved !The transformations output by plane cutter
 
     integer, allocatable, dimension(:,:,:) :: Tcellmatch_1,Tcellmatch_2 !The transformation matrices output from the cell_match program for lattices 1 and 2.
-    double precision, allocatable, dimension(:,:,:) :: Tsaved_1,Tsaved_2
-    double precision, allocatable, dimension(:,:,:) :: big_T_1,big_T_2 ! 3x3 versions of the matrices output by cell_match
-    double precision, dimension(3,3) :: dummy_mat1,dummy_mat2 ! temporary matrices used when the info is stored in a tensor.
-    double precision, dimension(2,2) :: temp_mat1,temp_mat2 ! temporary matrices used when the info is stored in a tensor.
-    double precision, allocatable, dimension(:,:,:) :: comb_trans_1,comb_trans_2 !The combined transformations (planecutter output)x(cellmatch output).
+    real(real32), allocatable, dimension(:,:,:) :: Tsaved_1,Tsaved_2
+    real(real32), allocatable, dimension(:,:,:) :: big_T_1,big_T_2 ! 3x3 versions of the matrices output by cell_match
+    real(real32), dimension(3,3) :: dummy_mat1,dummy_mat2 ! temporary matrices used when the info is stored in a tensor.
+    real(real32), dimension(2,2) :: temp_mat1,temp_mat2 ! temporary matrices used when the info is stored in a tensor.
+    real(real32), allocatable, dimension(:,:,:) :: comb_trans_1,comb_trans_2 !The combined transformations (planecutter output)x(cellmatch output).
 
-    double precision, allocatable, dimension(:,:) :: tolerances,saved_tolerances
+    real(real32), allocatable, dimension(:,:) :: tolerances,saved_tolerances
     integer, allocatable, dimension(:,:) :: ivtmp1,miller1,miller2
     integer, dimension(3) :: ivtmp2
 
-    type(bas_type), intent(in) :: bas1,bas2
+    type(basis_type), intent(in) :: bas1,bas2
     integer, intent(in) :: nmiller
     logical, optional, intent(in) :: lprint
     integer, dimension(3), optional, intent(in) :: plane1,plane2
@@ -1015,10 +997,10 @@ contains
     allocate(transform2_saved(tol%nstore,3,3))
     allocate(Tsaved_1(tol%nstore,2,2))
     allocate(Tsaved_2(tol%nstore,2,2))
-    transform1_saved = 0.D0
-    transform2_saved = 0.D0
-    Tsaved_1 = 0.D0
-    Tsaved_2 = 0.D0
+    transform1_saved = 0._real32
+    transform2_saved = 0._real32
+    Tsaved_1 = 0._real32
+    Tsaved_2 = 0._real32
     allocate(tolerances(tol%nstore,3))
     allocate(saved_tolerances(tol%nstore,3))
     saved_tolerances = INF
@@ -1157,20 +1139,20 @@ contains
     !!--------------------------------------------------------------------------
     allocate(tmpsym(max(grp1%nsym,grp2%nsym),3,3))
     MAINLOOP1: do m1=1,size(miller1(:,1),dim=1)
-       transform1 = nint(planecutter(lat1,dble(miller1(m1,:))))
+       transform1 = nint(planecutter(lat1,real(miller1(m1,:),real32)))
        if (all(transform1 .eq. 0)) cycle MAINLOOP1
        templat1 = matmul(transform1,lat1)
-       tmpsym=0.D0
+       tmpsym=0._real32
        do i=1,grp1%nsym
           tmpsym(i,:3,:3) = &
-               matmul(grp1%sym(i,:3,:3),inverse_3x3(dble(transform1)))
+               matmul(grp1%sym(i,:3,:3),inverse_3x3(real(transform1,real32)))
           ! next step required to transform properly into the space?
           tmpsym(i,:3,:3) = &
-               matmul(dble(transform1),tmpsym(i,:3,:3))
+               matmul(real(transform1,real32),tmpsym(i,:3,:3))
        end do
 
        nsym1=0
-       tmpsym1=0.D0
+       tmpsym1=0._real32
 !!! IS THIS REASONABLE TO DO IT THIS WAY? OR DO WE NEED TO CHANGE sym TO BE IN THE NEW LAT?
 !!! Wait, should it be instead that the cross product of the a-b plane is always consistent?
        rvec1=real(cross([templat1(1,:)],[templat1(2,:)]))
@@ -1206,20 +1188,20 @@ contains
 
 
        MAINLOOP2: do m2=1,size(miller2(:,1),dim=1)
-          transform2 = nint(planecutter(lat2,dble(miller2(m2,:))))
+          transform2 = nint(planecutter(lat2,real(miller2(m2,:),real32)))
           if (all(transform2 .eq. 0)) cycle MAINLOOP2
           templat2 = matmul(transform2,lat2)
           
-          tmpsym=0.D0
+          tmpsym=0._real32
           do i=1,grp2%nsym
              tmpsym(i,:3,:3) = &
-                  matmul(grp2%sym(i,:3,:3),inverse_3x3(dble(transform2)))
+                  matmul(grp2%sym(i,:3,:3),inverse_3x3(real(transform2,real32)))
              ! next step required to transform properly into the space?
              tmpsym(i,:3,:3) = &
-                  matmul(dble(transform2),tmpsym(i,:3,:3))
+                  matmul(real(transform2,real32),tmpsym(i,:3,:3))
           end do
           nsym2=0
-          tmpsym2=0.D0
+          tmpsym2=0._real32
           do i=1,grp2%nsym
              !write(0,*) "################################"
              !write(0,*) i
@@ -1257,8 +1239,8 @@ contains
           loop110: do i=1,num_of_transforms
              IF101: if ( dot_product(tolerances(i,:),vaa_weighting).le.&
                   dot_product(saved_tolerances(tol%nstore,:),vaa_weighting) )then
-                temp_mat1(:,:) = dble(Tcellmatch_1(i,:,:))
-                temp_mat2(:,:) = dble(Tcellmatch_2(i,:,:))
+                temp_mat1(:,:) = real(Tcellmatch_1(i,:,:),real32)
+                temp_mat2(:,:) = real(Tcellmatch_2(i,:,:),real32)
                 IF102: if (.not.is_duplicate(&
                      (Tsaved_1),(Tsaved_2),&
                      (temp_mat1),(temp_mat2),&
@@ -1266,8 +1248,8 @@ contains
                    saved_tolerances(tol%nstore,:) = tolerances(i,:)
                    Tsaved_1(tol%nstore,:,:) = temp_mat1(:,:)
                    Tsaved_2(tol%nstore,:,:) = temp_mat2(:,:)
-                   transform1_saved(tol%nstore,:,:) = dble(transform1(:,:))
-                   transform2_saved(tol%nstore,:,:) = dble(transform2(:,:))
+                   transform1_saved(tol%nstore,:,:) = real(transform1(:,:),real32)
+                   transform2_saved(tol%nstore,:,:) = real(transform2(:,:),real32)
 
 
                    if(SAV%nfit.lt.tol%nstore) SAV%nfit = SAV%nfit + 1
@@ -1325,25 +1307,25 @@ contains
        SAV%tol(i,:) = saved_tolerances(i,:)
        if_reduce: if(lreduce)then
           tf = find_tf(comb_trans_1(i,:,:),comb_trans_2(i,:,:))
-          if(abs(abs(det(comb_trans_1(i,:,:)))-1.D0).lt.1.D-6) exit if_reduce
+          if(abs(abs(det(comb_trans_1(i,:,:)))-1._real32).lt.1.D-6) exit if_reduce
           if(ierror.eq.1)then
              write(0,*) i
              write(0,'( 3( 3(F7.3,1X), /) )') tf
           end if
           if(any( (/ (maxval(abs(reduce_vec_gcd(tf(j,:3)))),j=1,3) /)&
-               .eq.0.D0))then
+               .eq.0._real32))then
              exit if_reduce
           else
              tmat1(:,:) = &
                   reshape((/ 1, 0, 0, 0, 1, 0, 0, 0, 1 /),shape(tmat1(:,:)))
              tmat2(:,:) = nint(tf)
              do j=1,3
-                dtmp1=1.D0
+                dtmp1=1._real32
                 if(any(abs(tf(j,:3)-nint(tf(j,:3))).gt.1.D-6))then
                    dtmp1=get_vec_multiple(tf(j,:3),reduce_vec_gcd(tf(j,:3)))
                 end if
                 if(abs(dtmp1-nint(dtmp1)).gt.1.D-6)then
-                   dtmp1=get_frac_denom(1.D0/dtmp1)
+                   dtmp1=get_frac_denom(1._real32/dtmp1)
                 end if
                 tmat1(j,:) = tmat1(j,:3)*nint(dtmp1)
                 tmat2(j,:) = nint(tf(j,:3)*dtmp1)
@@ -1358,8 +1340,8 @@ contains
        SAV%tf1(i,:,:) = nint(comb_trans_1(i,:,:))
        SAV%tf2(i,:,:) = nint(comb_trans_2(i,:,:))
     end do OUTLOOP
-    SAV%tol(:,1) = SAV%tol(:,1)*100.D0
-    SAV%tol(:,3) = SAV%tol(:,3)*100.D0
+    SAV%tol(:,1) = SAV%tol(:,1)*100._real32
+    SAV%tol(:,3) = SAV%tol(:,3)*100._real32
     write(6,*) "Total number of matches saved:",SAV%nfit
 
 
@@ -1372,7 +1354,7 @@ contains
              write(6,'(/,A,I0,2X,A,I0)') &
                   "Fit number: ",i,&
                   "Area increase: ",&
-                  nint(get_area(dble(SAV%tf1(i,1,:)),dble(SAV%tf1(i,2,:))))
+                  nint(get_area(real(SAV%tf1(i,1,:),real32),real(SAV%tf1(i,2,:),real32)))
              write(6,'("   Transmat 1:    Transmat 2:")')
              write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
              write(6,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
@@ -1407,16 +1389,16 @@ contains
 !  function compensate_strains(tfmat,w_elastic_tensor,up_elastic_tensor)
 !    implicit none
 !    integer :: i
-!    double precision, dimension(3) :: strain_vec
+!    real(real32), dimension(3) :: strain_vec
 !
 !    integer, intent(in) :: axis
-!    double precision, dimension(3,3), intent(in) :: lat1,lat2
-!    double precision, dimension(6,6), intent(in) :: elastic_tensor
+!    real(real32), dimension(3,3), intent(in) :: lat1,lat2
+!    real(real32), dimension(6,6), intent(in) :: elastic_tensor
 !
 !    
-!    ident = 0.D0
+!    ident = 0._real32
 !    do i=1,3
-!       ident(i,i) = 1.D0
+!       ident(i,i) = 1._real32
 !    end do
 !
 !    do i=1,3
@@ -1448,12 +1430,12 @@ contains
 !  function tester(lw_lat,up_lat,lw_tfmat,up_tfmat,lw_elastic,up_elastic) result(stress_vec)
 !    implicit none
 !    integer :: i
-!    double precision, dimension(6) :: strain_vec, stress_vec
+!    real(real32), dimension(6) :: strain_vec, stress_vec
 !
 !    integer, intent(in) :: axis
-!    double precision, dimension(2,3), intent(in) :: lw_tfmat,up_tfmat
-!    double precision, dimension(3,3), intent(in) :: lw_lat,up_lat
-!    double precision, dimension(6,6), intent(in) :: lw_elastic,up_elastic
+!    real(real32), dimension(2,3), intent(in) :: lw_tfmat,up_tfmat
+!    real(real32), dimension(3,3), intent(in) :: lw_lat,up_lat
+!    real(real32), dimension(6,6), intent(in) :: lw_elastic,up_elastic
 !
 !
 !    ! turn lw_elastic and up_elastic into 3x3x3x3 matrices
@@ -1469,18 +1451,18 @@ contains
 !    lw_tflat = matmul(lw_lat,lw_tfmat)
 !    up_tflat = matmul(up_lat,up_tfmat)
 !    
-!    ident = 0.D0
+!    ident = 0._real32
 !    do i=1,3
-!       ident(i,i) = 1.D0
+!       ident(i,i) = 1._real32
 !    end do
 !    
 !    strain_mat = matmul(lat1,inverse(lat2))-ident
 !    do i=1,3
 !       strain_vec(i) = strain_mat(i,i)
 !    end do
-!    strain_vec(4) = 2.D0*strain_mat(2,3)
-!    strain_vec(5) = 2.D0*strain_mat(3,1)
-!    strain_vec(6) = 2.D0*strain_mat(1,2)
+!    strain_vec(4) = 2._real32*strain_mat(2,3)
+!    strain_vec(5) = 2._real32*strain_mat(3,1)
+!    strain_vec(6) = 2._real32*strain_mat(1,2)
 !
 !    stress_vec = matmul(strain_vec,elastic_tensor)
 !
@@ -1504,25 +1486,25 @@ contains
 !  function get_stress(lat1,lat2,axis,elastic_tensor) result(stress_vec)
 !    implicit none
 !    integer :: i
-!    double precision, dimension(6) :: strain_vec, stress_vec
+!    real(real32), dimension(6) :: strain_vec, stress_vec
 !
 !    integer, intent(in) :: axis
-!    double precision, dimension(3,3), intent(in) :: lat1,lat2
-!    double precision, dimension(6,6), intent(in) :: elastic_tensor
+!    real(real32), dimension(3,3), intent(in) :: lat1,lat2
+!    real(real32), dimension(6,6), intent(in) :: elastic_tensor
 !
 !    
-!    ident = 0.D0
+!    ident = 0._real32
 !    do i=1,3
-!       ident(i,i) = 1.D0
+!       ident(i,i) = 1._real32
 !    end do
 !    
 !    strain_mat = matmul(lat1,inverse(lat2))-ident
 !    do i=1,3
 !       strain_vec(i) = strain_mat(i,i)
 !    end do
-!    strain_vec(4) = 2.D0*strain_mat(2,3)
-!    strain_vec(5) = 2.D0*strain_mat(3,1)
-!    strain_vec(6) = 2.D0*strain_mat(1,2)
+!    strain_vec(4) = 2._real32*strain_mat(2,3)
+!    strain_vec(5) = 2._real32*strain_mat(3,1)
+!    strain_vec(6) = 2._real32*strain_mat(1,2)
 !
 !    stress_vec = matmul(strain_vec,elastic_tensor)
 !

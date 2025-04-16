@@ -20,20 +20,20 @@
 !!! print_terminations (prints the terminations to individual files)
 !!!#############################################################################
 module mod_sym
-  use constants,   only: pi
-  use misc,        only: sort1D,sort2D,sort_col,set
+  use artemis__constants,   only: real32, pi
+  use artemis__misc,        only: sort1D,sort2D,sort_col,set
+  use artemis__io_utils,          only: err_abort
   use misc_linalg, only: modu,inverse_3x3,det,gcd,gen_group,cross,uvec
-  use rw_geom,     only: bas_type,geom_write
-  use edit_geom,   only: transformer,vacuumer,set_vacuum,shifter,&
-       clone_bas,get_closest_atom,ortho_axis,reducer,primitive_lat,get_min_dist
-  use io,          only: err_abort
+  use artemis__geom_rw,     only: basis_type,geom_write
+  use edit_geom,   only: vacuumer,set_vacuum,shifter,&
+       get_closest_atom,ortho_axis,reducer,primitive_lat,get_min_dist
   implicit none
   integer :: ierror_sym=0
   integer :: s_start=1,s_end=0
-  double precision :: tol_sym=5.D-5
+  real(real32) :: tol_sym=5.D-5
   character(1) :: verb_sym="n"
   integer, allocatable, dimension(:) :: symops_compare
-  double precision, allocatable, dimension(:,:,:) :: savsym
+  real(real32), allocatable, dimension(:,:,:) :: savsym
 
   interface get_wyckoff_atoms
      procedure get_wyckoff_atoms_any,get_wyckoff_atoms_loc
@@ -62,17 +62,17 @@ module mod_sym
   end type basmap_type
 
   type term_type
-     !double precision :: add
-     double precision :: hmin
-     double precision :: hmax
+     !real(real32) :: add
+     real(real32) :: hmin
+     real(real32) :: hmax
      integer :: natom
      integer :: nstep
-     double precision, allocatable, dimension(:) :: ladder
+     real(real32), allocatable, dimension(:) :: ladder
   end type term_type
 
   type term_arr_type
      integer :: nterm = 0, axis, nstep
-     double precision :: tol
+     real(real32) :: tol
      logical :: lmirror=.false.
      type(term_type), allocatable, dimension(:) :: arr
   end type term_arr_type
@@ -95,7 +95,7 @@ module mod_sym
      logical :: lspace=.true.
      logical :: lmolec=.false.
      integer, allocatable, dimension(:) :: op
-     double precision, allocatable, dimension(:,:,:) :: sym
+     real(real32), allocatable, dimension(:,:,:) :: sym
      type(confine_type) :: confine
   end type sym_type
 
@@ -128,7 +128,7 @@ contains
 !!!#############################################################################
   subroutine set_symmetry_tolerance(tolerance)
     implicit none
-    double precision, optional, intent(in) :: tolerance
+    real(real32), optional, intent(in) :: tolerance
 
     if(present(tolerance))then
        tol_sym = tolerance
@@ -149,8 +149,8 @@ contains
 
     type(sym_type) :: grp
 
-    double precision, dimension(3,3), intent(in) :: lat
-    double precision, optional, intent(in) :: tolerance
+    real(real32), dimension(3,3), intent(in) :: lat
+    real(real32), optional, intent(in) :: tolerance
     logical, optional, intent(in) :: predefined,new_start
 
 
@@ -199,22 +199,22 @@ contains
     integer :: is,isym,jsym,count,ntrans
     integer :: samecount,oldnpntop
     logical :: lpresent,lsaving,lwyckoff,ltransformed
-    type(bas_type) :: bas2,tfbas
-    double precision, dimension(3) :: diff
-    double precision, dimension(3,3) :: ident
+    type(basis_type) :: bas2,tfbas
+    real(real32), dimension(3) :: diff
+    real(real32), dimension(3,3) :: ident
     type(wyck_type), allocatable, dimension(:) :: wyck_check
-    double precision, allocatable, dimension(:,:) :: trans
-    double precision, allocatable, dimension(:,:,:) :: tmpsav
+    real(real32), allocatable, dimension(:,:) :: trans
+    real(real32), allocatable, dimension(:,:,:) :: tmpsav
 
-    type(bas_type), intent(in) :: bas1
+    type(basis_type), intent(in) :: bas1
     type(sym_type), intent(inout) :: grp
 
     integer, optional, intent(in) :: iperm
     logical, optional, intent(in) :: lsave,lcheck_all
-    type(bas_type), optional, intent(in) :: tmpbas2
+    type(basis_type), optional, intent(in) :: tmpbas2
     type(wyck_type), optional, intent(inout) :: wyckoff
-    double precision, dimension(3), optional, intent(in) :: loc
-    double precision, dimension(3,3), optional, intent(in) :: lat
+    real(real32), dimension(3), optional, intent(in) :: loc
+    real(real32), dimension(3,3), optional, intent(in) :: lat
 
 
 204 format(4(F11.6),/,4(F11.6),/,4(F11.6),/,4(F11.6))
@@ -255,7 +255,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! initialises variables
 !!!-----------------------------------------------------------------------------
-    allocate(trans(minval(bas1%spec(:)%num+2),3)); trans = 0.D0
+    allocate(trans(minval(bas1%spec(:)%num+2),3)); trans = 0._real32
     allocate(tfbas%spec(bas1%nspec))
     itmp1 = size(bas1%spec(1)%atom(1,:),dim=1)
     do is=1,bas1%nspec
@@ -298,9 +298,9 @@ contains
 !!! set up identity matrix as reference
 !!!-----------------------------------------------------------------------------
     ltransformed = .false.
-    ident = 0.D0
+    ident = 0._real32
     do i=1,3
-       ident(i,i) = 1.D0
+       ident(i,i) = 1._real32
     end do
 
 
@@ -323,7 +323,7 @@ contains
              do j=1,3
                 tfbas%spec(ispec)%atom(iatom,j) = &
                      tfbas%spec(ispec)%atom(iatom,j) - &
-                     ceiling(tfbas%spec(ispec)%atom(iatom,j)-0.5D0)
+                     ceiling(tfbas%spec(ispec)%atom(iatom,j)-0.5_real32)
              end do
           end do
        end do
@@ -332,7 +332,7 @@ contains
        !------------------------------------------------------------------------
        count=0
        spcheck: do ispec=1,bas1%nspec
-          diff = 0.D0
+          diff = 0._real32
           samecount = 0
           wyck_check(itmp1)%spec(ispec)%atom = 0
           atmcheck: do iatom=1,bas1%spec(ispec)%num
@@ -341,8 +341,8 @@ contains
                 diff = tfbas%spec(ispec)%atom(iatom,1:3) - &
                      bas2%spec(ispec)%atom(jatom,1:3)
                 diff(:) = diff(:) - floor(diff(:))
-                where((abs(diff(:)-1.D0)).lt.(tol_sym))
-                   diff(:)=0.D0
+                where((abs(diff(:)-1._real32)).lt.(tol_sym))
+                   diff(:)=0._real32
                 end where
                 if(sqrt(dot_product(diff,diff)).lt.tol_sym)then
                    samecount = samecount + 1
@@ -363,7 +363,7 @@ contains
        tmpsav(grp%nsymop,:,:) = grp%sym(isym,:,:)
        grp%op(grp%nsymop) = isym
        if(grp%nsymop.ne.0.and.lpresent) exit symloop
-10     trans = 0.D0
+10     trans = 0._real32
        ntrans = 0
        !------------------------------------------------------------------------
        ! checks if translations are valid with the current symmetry operation
@@ -396,7 +396,7 @@ contains
                          diff = trans(i,1:3) - tmpsav(jsym,4,1:3)
                          do j=1,3
                             diff(j) = diff(j) - floor(diff(j))
-                            if(diff(j).gt.0.5) diff(j) = diff(j) - 1.D0
+                            if(diff(j).gt.0.5) diff(j) = diff(j) - 1._real32
                          end do
                          do k=1,i
                             if(all(abs(diff-trans(k,1:3)).lt.tol_sym)) &
@@ -424,9 +424,9 @@ contains
     if(lsaving)then
        if(allocated(savsym)) deallocate(savsym)
        allocate(savsym(grp%nsymop,4,4))
-       savsym=0.D0
+       savsym=0._real32
        savsym(:grp%nsymop,:,:)=tmpsav(:grp%nsymop,:,:)
-       savsym(:,4,4)=1.D0
+       savsym(:,4,4)=1._real32
        deallocate(tmpsav)
     end if
 
@@ -483,13 +483,13 @@ contains
     integer :: i,j,ispec,iatom,jatom,katom,itmp1
     integer :: minspecloc,samecount
     logical :: lwyckoff
-    double precision, dimension(3) :: ttrans,tmpbas,diff
-    double precision, allocatable, dimension(:,:) :: sav_trans
+    real(real32), dimension(3) :: ttrans,tmpbas,diff
+    real(real32), allocatable, dimension(:,:) :: sav_trans
 
     integer, intent(out) :: ntrans
-    type(bas_type), intent(in) :: bas,tfbas
+    type(basis_type), intent(in) :: bas,tfbas
     type(confine_type), intent(in) :: confine
-    double precision, dimension(:,:), intent(out) :: trans
+    real(real32), dimension(:,:), intent(out) :: trans
 
     logical, optional, intent(in) :: transformed
 
@@ -499,8 +499,8 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Allocate arrays and initialise variables
 !!!-----------------------------------------------------------------------------
-    ttrans=0.D0
-    trans=0.D0
+    ttrans=0._real32
+    trans=0._real32
     samecount=0
     ntrans=0
     minspecloc=minloc(bas%spec(:)%num,mask=bas%spec(:)%num.ne.0,dim=1)
@@ -533,7 +533,7 @@ contains
 !!! ... as a translation vector for the symmetry.
 !!!-----------------------------------------------------------------------------
     trloop: do iatom=1,bas%spec(minspecloc)%num
-       ttrans(:)=0.D0
+       ttrans(:)=0._real32
        ttrans(1:3)=bas%spec(minspecloc)%atom(1,1:3)-&
             tfbas%spec(minspecloc)%atom(iatom,1:3)
        if(all(abs(ttrans(1:3)-anint(ttrans(1:3))).lt.tol_sym)) cycle trloop
@@ -543,7 +543,7 @@ contains
                .gt.tol_sym) cycle trloop
        end if
        itmp1 = 0
-       sav_trans = 0.D0
+       sav_trans = 0._real32
        if(lwyckoff.and.ntrans+1.gt.size(wyck_check))then
           write(0,'("ERROR: error encountered in gldfnd")')
           write(0,'(2X,"Internal error in subroutine gldfnd in mod_sym.f90")')
@@ -557,15 +557,15 @@ contains
           atmcyc2: do jatom=1,bas%spec(ispec)%num
              itmp1 = itmp1 + 1
              tmpbas(1:3) = tfbas%spec(ispec)%atom(jatom,1:3) + ttrans(1:3)
-             tmpbas(:) = tmpbas(:) - ceiling(tmpbas(:)-0.5D0)
+             tmpbas(:) = tmpbas(:) - ceiling(tmpbas(:)-0.5_real32)
              atmcyc3: do katom=1,bas%spec(ispec)%num
                 !if(lwyckoff.and.&
                 !     wyck_check(ntrans+1)%spec(ispec)%atom(katom).ne.0) &
                 !     cycle atmcyc3
                 diff = tmpbas(1:3) - bas%spec(ispec)%atom(katom,1:3)
                 do j=1,3
-                   diff(j) = mod((diff(j)+100.D0),1.0)
-                   if((abs(diff(j)-1.D0)).lt.(tol_sym)) diff(j) = 0.D0
+                   diff(j) = mod((diff(j)+100._real32),1.0)
+                   if((abs(diff(j)-1._real32)).lt.(tol_sym)) diff(j) = 0._real32
                 end do
                 if(sqrt(dot_product(diff,diff)).lt.tol_sym)then
                    samecount = samecount + 1
@@ -574,7 +574,7 @@ contains
                    sav_trans(itmp1,:) = bas%spec(ispec)%atom(katom,1:3) - &
                         tfbas%spec(ispec)%atom(jatom,1:3)
                    sav_trans(itmp1,:) = sav_trans(itmp1,:) - &
-                        ceiling(sav_trans(itmp1,:)-0.5D0)
+                        ceiling(sav_trans(itmp1,:)-0.5_real32)
                    if(lwyckoff) &
                         wyck_check(ntrans+1)%spec(ispec)%atom(jatom) = katom
                    cycle atmcyc2
@@ -590,7 +590,7 @@ contains
        do j=1,3
           itmp1 = maxloc(abs(sav_trans(:,j)),dim=1)
           ttrans(j) = sav_trans(itmp1,j)
-          ttrans(j) = ttrans(j) - ceiling(ttrans(j)-0.5D0)
+          ttrans(j) = ttrans(j) - ceiling(ttrans(j)-0.5_real32)
        end do
 !!!-----------------------------------------------------------------------------
 !!! If axis is confined, removes all symmetries not confined to the axis plane
@@ -632,148 +632,148 @@ contains
     implicit none
     integer :: i
     type(sym_type) :: grp
-    double precision :: cosPi3,sinPi3,mcosPi3,msinPi3
-    double precision, dimension(3,3) :: inversion,invlat,tmat1
-    double precision, dimension(64,3,3) :: fundam_mat
-    double precision, dimension(3,3), intent(in) :: lat
+    real(real32) :: cosPi3,sinPi3,mcosPi3,msinPi3
+    real(real32), dimension(3,3) :: inversion,invlat,tmat1
+    real(real32), dimension(64,3,3) :: fundam_mat
+    real(real32), dimension(3,3), intent(in) :: lat
 
 
-    cosPi3 = 0.5D0
-    sinPi3 = sin(pi/3.D0)
+    cosPi3 = 0.5_real32
+    sinPi3 = sin(pi/3._real32)
     mcosPi3 = -cosPi3
     msinPi3 = -sinPi3
 
 
     fundam_mat(1,1:3,1:3)=transpose(reshape((/&
-         1.D0,  0.D0,  0.D0,  0.D0,  1.D0,  0.D0,  0.D0,  0.D0,  1.D0 /),&
+         1._real32,  0._real32,  0._real32,  0._real32,  1._real32,  0._real32,  0._real32,  0._real32,  1._real32 /),&
          shape(inversion)))
 
     fundam_mat(2,1:3,1:3)=transpose(reshape((/&
-         -1.D0,  0.D0,  0.D0,  0.D0, -1.D0,  0.D0,  0.D0, 0.D0,  1.D0 /),&
+         -1._real32,  0._real32,  0._real32,  0._real32, -1._real32,  0._real32,  0._real32, 0._real32,  1._real32 /),&
          shape(inversion)))
 
     fundam_mat(3,1:3,1:3)=transpose(reshape((/&
-         -1.D0,  0.D0,  0.D0,  0.D0,  1.D0,  0.D0,  0.D0, 0.D0, -1.D0 /),&
+         -1._real32,  0._real32,  0._real32,  0._real32,  1._real32,  0._real32,  0._real32, 0._real32, -1._real32 /),&
          shape(inversion)))
 
     fundam_mat(4,1:3,1:3)=transpose(reshape((/&
-         1.D0,  0.D0,  0.D0,  0.D0, -1.D0,  0.D0,  0.D0,  0.D0, -1.D0 /),&
+         1._real32,  0._real32,  0._real32,  0._real32, -1._real32,  0._real32,  0._real32,  0._real32, -1._real32 /),&
          shape(inversion)))
 
     fundam_mat(5,1:3,1:3)=transpose(reshape((/&
-         0.D0,  1.D0,  0.D0,  1.D0,  0.D0,  0.D0,  0.D0,  0.D0, -1.D0 /),&
+         0._real32,  1._real32,  0._real32,  1._real32,  0._real32,  0._real32,  0._real32,  0._real32, -1._real32 /),&
          shape(inversion)))
 
     fundam_mat(6,1:3,1:3)=transpose(reshape((/&
-         0.D0, -1.D0,  0.D0,  -1.D0,  0.D0,  0.D0,  0.D0, 0.D0, -1.D0 /),&
+         0._real32, -1._real32,  0._real32,  -1._real32,  0._real32,  0._real32,  0._real32, 0._real32, -1._real32 /),&
          shape(inversion)))
 
     fundam_mat(7,1:3,1:3)=transpose(reshape((/&
-         0.D0, -1.D0,  0.D0,  1.D0,  0.D0,  0.D0,  0.D0,  0.D0,  1.D0 /),&
+         0._real32, -1._real32,  0._real32,  1._real32,  0._real32,  0._real32,  0._real32,  0._real32,  1._real32 /),&
          shape(inversion)))
 
     fundam_mat(8,1:3,1:3)=transpose(reshape((/&
-         0.D0,  1.D0,  0.D0,  -1.D0,  0.D0,  0.D0,  0.D0, 0.D0,  1.D0 /),&
+         0._real32,  1._real32,  0._real32,  -1._real32,  0._real32,  0._real32,  0._real32, 0._real32,  1._real32 /),&
          shape(inversion)))
 
     fundam_mat(9,1:3,1:3)=transpose(reshape((/&
-         0.D0,  0.D0,  1.D0,  0.D0, -1.D0,  0.D0,  1.D0,  0.D0,  0.D0 /),&
+         0._real32,  0._real32,  1._real32,  0._real32, -1._real32,  0._real32,  1._real32,  0._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(10,1:3,1:3)=transpose(reshape((/&
-         0.D0,  0.D0, -1.D0,  0.D0, -1.D0,  0.D0,  -1.D0, 0.D0,  0.D0 /),&
+         0._real32,  0._real32, -1._real32,  0._real32, -1._real32,  0._real32,  -1._real32, 0._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(11,1:3,1:3)=transpose(reshape((/&
-         0.D0,  0.D0, -1.D0,   0.D0,  1.D0,  0.D0,  1.D0, 0.D0,  0.D0 /),&
+         0._real32,  0._real32, -1._real32,   0._real32,  1._real32,  0._real32,  1._real32, 0._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(12,1:3,1:3)=transpose(reshape((/&
-         0.D0,  0.D0,  1.D0,  0.D0,  1.D0,  0.D0,  -1.D0, 0.D0,  0.D0 /),&
+         0._real32,  0._real32,  1._real32,  0._real32,  1._real32,  0._real32,  -1._real32, 0._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(13,1:3,1:3)=transpose(reshape((/&
-         -1.D0,  0.D0,  0.D0,  0.D0,  0.D0,  1.D0,  0.D0, 1.D0,  0.D0 /),&
+         -1._real32,  0._real32,  0._real32,  0._real32,  0._real32,  1._real32,  0._real32, 1._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(14,1:3,1:3)=transpose(reshape((/&
-         -1.D0,  0.D0,  0.D0,  0.D0,  0.D0, -1.D0,  0.D0, -1.D0,  0.D0 /),&
+         -1._real32,  0._real32,  0._real32,  0._real32,  0._real32, -1._real32,  0._real32, -1._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(15,1:3,1:3)=transpose(reshape((/&
-         1.D0,  0.D0,  0.D0,  0.D0,  0.D0, -1.D0,  0.D0,  1.D0,  0.D0 /),&
+         1._real32,  0._real32,  0._real32,  0._real32,  0._real32, -1._real32,  0._real32,  1._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(16,1:3,1:3)=transpose(reshape((/&
-         1.D0,  0.D0,  0.D0,  0.D0,  0.D0,  1.D0,  0.D0, -1.D0,  0.D0/),&
+         1._real32,  0._real32,  0._real32,  0._real32,  0._real32,  1._real32,  0._real32, -1._real32,  0._real32/),&
          shape(inversion)))
 
     fundam_mat(17,1:3,1:3)=transpose(reshape((/&
-         0.D0,  0.D0,  1.D0,  1.D0,  0.D0,  0.D0,  0.D0,  1.D0,  0.D0 /),&
+         0._real32,  0._real32,  1._real32,  1._real32,  0._real32,  0._real32,  0._real32,  1._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(18,1:3,1:3)=transpose(reshape((/&
-         0.D0,  0.D0, -1.D0, -1.D0,  0.D0,  0.D0,  0.D0,  1.D0,  0.D0 /),&
+         0._real32,  0._real32, -1._real32, -1._real32,  0._real32,  0._real32,  0._real32,  1._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(19,1:3,1:3)=transpose(reshape((/&
-         0.D0,  0.D0, -1.D0,  1.D0,  0.D0,  0.D0,  0.D0, -1.D0,  0.D0 /),&
+         0._real32,  0._real32, -1._real32,  1._real32,  0._real32,  0._real32,  0._real32, -1._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(20,1:3,1:3)=transpose(reshape((/&
-         0.D0,  0.D0,  1.D0, -1.D0,  0.D0,  0.D0,  0.D0, -1.D0,  0.D0 /),&
+         0._real32,  0._real32,  1._real32, -1._real32,  0._real32,  0._real32,  0._real32, -1._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(21,1:3,1:3)=transpose(reshape((/&
-         0.D0,  1.D0,  0.D0,  0.D0,  0.D0,  1.D0,  1.D0,  0.D0,  0.D0 /),&
+         0._real32,  1._real32,  0._real32,  0._real32,  0._real32,  1._real32,  1._real32,  0._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(22,1:3,1:3)=transpose(reshape((/&
-         0.D0, -1.D0,  0.D0,  0.D0,  0.D0, -1.D0,  1.D0,  0.D0,  0.D0 /),&
+         0._real32, -1._real32,  0._real32,  0._real32,  0._real32, -1._real32,  1._real32,  0._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(23,1:3,1:3)=transpose(reshape((/&
-         0.D0, -1.D0,  0.D0,  0.D0,  0.D0,  1.D0, -1.D0,  0.D0,  0.D0 /),&
+         0._real32, -1._real32,  0._real32,  0._real32,  0._real32,  1._real32, -1._real32,  0._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(24,1:3,1:3)=transpose(reshape((/&
-         0.D0,  1.D0,  0.D0,  0.D0,  0.D0, -1.D0, -1.D0,  0.D0,  0.D0 /),&
+         0._real32,  1._real32,  0._real32,  0._real32,  0._real32, -1._real32, -1._real32,  0._real32,  0._real32 /),&
          shape(inversion)))
 
     fundam_mat(25,1:3,1:3)=transpose(reshape((/&
-         cosPi3,  sinPi3, 0.D0, msinPi3,  cosPi3, 0.D0, 0.D0, 0.D0,  1.D0 /),&
+         cosPi3,  sinPi3, 0._real32, msinPi3,  cosPi3, 0._real32, 0._real32, 0._real32,  1._real32 /),&
          shape(inversion)))
 
     fundam_mat(26,1:3,1:3)=transpose(reshape((/&
-         cosPi3, msinPi3, 0.D0,  sinPi3,  cosPi3, 0.D0, 0.D0, 0.D0,  1.D0 /),&
+         cosPi3, msinPi3, 0._real32,  sinPi3,  cosPi3, 0._real32, 0._real32, 0._real32,  1._real32 /),&
          shape(inversion)))
 
     fundam_mat(27,1:3,1:3)=transpose(reshape((/&
-         mcosPi3,  sinPi3, 0.D0, msinPi3, mcosPi3, 0.D0, 0.D0, 0.D0, 1.D0 /),&
+         mcosPi3,  sinPi3, 0._real32, msinPi3, mcosPi3, 0._real32, 0._real32, 0._real32, 1._real32 /),&
          shape(inversion)))
 
     fundam_mat(28,1:3,1:3)=transpose(reshape((/&
-         mcosPi3, msinPi3, 0.D0,  sinPi3, mcosPi3, 0.D0, 0.D0, 0.D0, 1.D0 /),&
+         mcosPi3, msinPi3, 0._real32,  sinPi3, mcosPi3, 0._real32, 0._real32, 0._real32, 1._real32 /),&
          shape(inversion)))
 
     fundam_mat(29,1:3,1:3)=transpose(reshape((/&
-         cosPi3, msinPi3, 0.D0, msinPi3, mcosPi3, 0.D0, 0.D0, 0.D0, -1.D0 /),&
+         cosPi3, msinPi3, 0._real32, msinPi3, mcosPi3, 0._real32, 0._real32, 0._real32, -1._real32 /),&
          shape(inversion)))
 
     fundam_mat(30,1:3,1:3)=transpose(reshape((/&
-         cosPi3,  sinPi3, 0.D0,  sinPi3, mcosPi3, 0.D0, 0.D0, 0.D0, -1.D0 /),&
+         cosPi3,  sinPi3, 0._real32,  sinPi3, mcosPi3, 0._real32, 0._real32, 0._real32, -1._real32 /),&
          shape(inversion)))
 
     fundam_mat(31,1:3,1:3)=transpose(reshape((/&
-         mcosPi3, msinPi3, 0.D0, msinPi3,  cosPi3, 0.D0, 0.D0, 0.D0, -1.D0 /),&
+         mcosPi3, msinPi3, 0._real32, msinPi3,  cosPi3, 0._real32, 0._real32, 0._real32, -1._real32 /),&
          shape(inversion)))
 
     fundam_mat(32,1:3,1:3)=transpose(reshape((/&
-         mcosPi3,  sinPi3, 0.D0,  sinPi3,  cosPi3, 0.D0, 0.D0, 0.D0, -1.D0 /),&
+         mcosPi3,  sinPi3, 0._real32,  sinPi3,  cosPi3, 0._real32, 0._real32, 0._real32, -1._real32 /),&
          shape(inversion)))
 
     inversion(:3,:3)=transpose(reshape((/&
-         -1.D0,  0.D0,  0.D0,   0.D0,  -1.D0,  0.D0,   0.D0,  0.D0,  -1.D0 /),&
+         -1._real32,  0._real32,  0._real32,   0._real32,  -1._real32,  0._real32,   0._real32,  0._real32,  -1._real32 /),&
          shape(inversion)))
 
 
@@ -789,7 +789,7 @@ contains
        tmat1=matmul(tmat1,(invlat))
        !! ensure that the matrix preserves size of 1
        !! this is likely redundant
-       if(abs(abs(det(tmat1))-1.D0).gt.tol_sym) cycle
+       if(abs(abs(det(tmat1))-1._real32).gt.tol_sym) cycle
        if(all(abs(tmat1-nint(tmat1)).le.tol_sym))then
           grp%nsym=grp%nsym+1
           fundam_mat(grp%nsym,:,:)=fundam_mat(i,:,:)
@@ -798,8 +798,8 @@ contains
 
 
     allocate(grp%sym(grp%nsym,4,4))
-    grp%sym(:,:,:)=0.D0
-    grp%sym(:,4,4)=1.D0
+    grp%sym(:,:,:)=0._real32
+    grp%sym(:,4,4)=1._real32
     grp%sym(:grp%nsym,:3,:3)=fundam_mat(:grp%nsym,:3,:3)
     grp%nlatsym=grp%nsym
 
@@ -820,10 +820,10 @@ contains
     implicit none
     integer :: amin,bmin,cmin
     integer :: i,j,ia,ib,ic,n,count,irot,nrot,isym,jsym
-    double precision :: tht,a,b,c
+    real(real32) :: tht,a,b,c
     type(sym_type) :: grp
-    double precision, dimension(3,3) :: rotmat,refmat,inlat,lat,invlat,tmat1
-    double precision, allocatable, dimension(:,:,:) :: tsym1,tsym2
+    real(real32), dimension(3,3) :: rotmat,refmat,inlat,lat,invlat,tmat1
+    real(real32), allocatable, dimension(:,:,:) :: tsym1,tsym2
     logical, dimension(3) :: laxis
 
 
@@ -839,8 +839,8 @@ contains
 !!!-----------------------------------------------------------------------------
     lat=inlat
     if(grp%lmolec)then
-       invlat=0.D0
-       lat=0.D0
+       invlat=0._real32
+       lat=0._real32
     else
        invlat=inverse_3x3(lat)
     end if
@@ -850,8 +850,8 @@ contains
 !!! initialise values and symmetry matrix
 !!!-----------------------------------------------------------------------------
     allocate(tsym1(50000,4,4))
-    tsym1=0.D0
-    tsym1(:,4,4)=1.D0
+    tsym1=0._real32
+    tsym1(:,4,4)=1._real32
     count=0
 
 
@@ -862,17 +862,17 @@ contains
        mksyml: do n=1,10
           count=count+1
           if(n.gt.6)then
-             tht = -2.D0*pi/real(n-4) !=2*pi/(n-4)
+             tht = -2._real32*pi/real(n-4) !=2*pi/(n-4)
           else
-             tht = 2.D0*pi/real(n) !=2*pi/n          
+             tht = 2._real32*pi/real(n) !=2*pi/n          
           end if
           tsym1(count,1:3,1:3)=transpose(reshape((/&
-               cos(tht) ,  sin(tht),   0.D0,&
-               -sin(tht),  cos(tht),   0.D0,&
-               0.D0     ,      0.D0,   1.D0/), shape(rotmat)))
+               cos(tht) ,  sin(tht),   0._real32,&
+               -sin(tht),  cos(tht),   0._real32,&
+               0._real32     ,      0._real32,   1._real32/), shape(rotmat)))
           do i=1,3
              do j=1,3
-                if(abs(tsym1(count,i,j)).lt.tol_sym) tsym1(count,i,j)=0.D0
+                if(abs(tsym1(count,i,j)).lt.tol_sym) tsym1(count,i,j)=0._real32
              end do
           end do
        end do mksyml
@@ -886,14 +886,14 @@ contains
     if(laxis(1))then
        philoop: do n=1,10
           if(n.gt.6)then
-             tht = -2.D0*pi/real(n-4) !=2*pi/n
+             tht = -2._real32*pi/real(n-4) !=2*pi/n
           else
-             tht = 2.D0*pi/real(n) !=2*pi/n
+             tht = 2._real32*pi/real(n) !=2*pi/n
           end if
           rotmat=transpose(reshape((/&
-               1.D0,      0.D0,      0.D0,  &
-               0.D0,  cos(tht),  sin(tht),&
-               0.D0, -sin(tht),  cos(tht)/), shape(rotmat)))
+               1._real32,      0._real32,      0._real32,  &
+               0._real32,  cos(tht),  sin(tht),&
+               0._real32, -sin(tht),  cos(tht)/), shape(rotmat)))
           rot2: do irot=1,nrot
              count=count+1
              tsym1(count,1:3,1:3)=matmul(rotmat(1:3,1:3),tsym1(irot,1:3,1:3))
@@ -909,20 +909,20 @@ contains
     if(laxis(2))then
        psiloop: do n=1,10
           if(n.gt.6)then
-             tht = -2.D0*pi/real(n-4) !=2*pi/n 
+             tht = -2._real32*pi/real(n-4) !=2*pi/n 
           else
-             tht = 2.D0*pi/real(n) !=2*pi/n 
+             tht = 2._real32*pi/real(n) !=2*pi/n 
           end if
           rotmat=transpose(reshape((/&
-               cos(tht) ,  0.D0,  sin(tht),&
-               0.D0     ,  1.D0,      0.D0,    &
-               -sin(tht),  0.D0,  cos(tht)/), shape(rotmat)))
+               cos(tht) ,  0._real32,  sin(tht),&
+               0._real32     ,  1._real32,      0._real32,    &
+               -sin(tht),  0._real32,  cos(tht)/), shape(rotmat)))
           rot3: do irot=1,nrot
              count=count+1
              tsym1(count,1:3,1:3)=matmul(rotmat(1:3,1:3),tsym1(irot,1:3,1:3))
              do i=1,3
                 do j=1,3
-                   if(abs(tsym1(count,i,j)).lt.tol_sym) tsym1(count,i,j)=0.D0
+                   if(abs(tsym1(count,i,j)).lt.tol_sym) tsym1(count,i,j)=0._real32
                 end do
              end do
           end do rot3
@@ -941,16 +941,16 @@ contains
        if(laxis(3)) cmin=2
     end if
     aloop: do ia=amin,2
-       a=(-1.D0)**ia
+       a=(-1._real32)**ia
        bloop: do ib=bmin,2
-          b=(-1.D0)**ib
+          b=(-1._real32)**ib
           cloop: do ic=cmin,2
-             c=(-1.D0)**ic
-             !           if((a*b*c).ne.(-1.D0)) cycle cloop
+             c=(-1._real32)**ic
+             !           if((a*b*c).ne.(-1._real32)) cycle cloop
              refmat(1:3,1:3)=transpose(reshape((/&
-                  a,     0.D0,  0.D0,&
-                  0.D0,  b   ,  0.D0,&
-                  0.D0,  0.D0,     c/), shape(rotmat)))
+                  a,     0._real32,  0._real32,&
+                  0._real32,  b   ,  0._real32,&
+                  0._real32,  0._real32,     c/), shape(rotmat)))
              refloop: do irot=1,nrot
                 count=count+1
                 tsym1(count,1:3,1:3)=matmul(refmat(1:3,1:3),tsym1(irot,1:3,1:3))
@@ -974,23 +974,23 @@ contains
 !!! checks all made symmetries to see if they apply to the supplied lattice
 !!!-----------------------------------------------------------------------------
     allocate(tsym2(grp%nsym,4,4))
-    tsym2=0.D0
-    tsym2(:,4,4)=1.D0
+    tsym2=0._real32
+    tsym2(:,4,4)=1._real32
     count=0
     samecheck: do isym=1,grp%nsym
        tmat1=matmul((invlat),tsym1(isym,:3,:3))
        tmat1=matmul(tmat1,(lat))
        do i=1,3
           do j=1,3
-             if(abs(tmat1(i,j)).lt.tol_sym) tmat1(i,j)=0.D0
-             if(abs(1.D0-abs(tmat1(i,j))).lt.tol_sym) &
-                  tmat1(i,j)=sign(1.D0,tmat1(i,j))
+             if(abs(tmat1(i,j)).lt.tol_sym) tmat1(i,j)=0._real32
+             if(abs(1._real32-abs(tmat1(i,j))).lt.tol_sym) &
+                  tmat1(i,j)=sign(1._real32,tmat1(i,j))
           end do
        end do
        !!-----------------------------------------------------------------------
        !! Precautionary measure
        if(all(abs(tmat1).lt.tol_sym)) cycle samecheck
-       if(abs(abs(det(tmat1))-1.D0).gt.tol_sym) cycle samecheck
+       if(abs(abs(det(tmat1))-1._real32).gt.tol_sym) cycle samecheck
        !!-----------------------------------------------------------------------
        if(.not.all(abs(tmat1-nint(tmat1)).lt.tol_sym)) cycle samecheck
        do jsym=1,count
@@ -1038,22 +1038,22 @@ contains
     implicit none
     integer :: is,ia,ja,i,j,k,itmp1
     integer :: ntrans,len
-    double precision :: scale,proj,dtmp1
+    real(real32) :: scale,proj,dtmp1
     type(confine_type) :: confine
-    double precision, dimension(3,3) :: dmat1,invlat
-    double precision, allocatable, dimension(:,:) :: trans,atom_store
+    real(real32), dimension(3,3) :: dmat1,invlat
+    real(real32), allocatable, dimension(:,:) :: trans,atom_store
     
     type(sym_type) :: grp
-    type(bas_type) :: bas,pbas
-    double precision, dimension(3,3) :: lat
+    type(basis_type) :: bas,pbas
+    real(real32), dimension(3,3) :: lat
 
     
     !!-----------------------------------------------------------------------
     !! Allocate and initialise
     !!-----------------------------------------------------------------------
     ntrans = 0
-    dmat1=0.D0
-    allocate(trans(minval(bas%spec(:)%num+2),3)); trans=0.D0
+    dmat1=0._real32
+    allocate(trans(minval(bas%spec(:)%num+2),3)); trans=0._real32
 
     
     !!-----------------------------------------------------------------------
@@ -1068,8 +1068,8 @@ contains
     !!-----------------------------------------------------------------------
     if(ntrans.ge.1)then
        do i=ntrans+1,ntrans+3
-          trans(i,:)=0.D0
-          trans(i,i-ntrans)=1.D0
+          trans(i,:)=0._real32
+          trans(i,i-ntrans)=1._real32
        end do
        !  trans=matmul(trans(1:ntrans,1:3),lat)
        call sort2D(trans(1:ntrans+3,:),ntrans+3)
@@ -1089,7 +1089,7 @@ contains
              if(dtmp1.lt.proj)then
                 proj=dtmp1
                 dmat1(i,:) = trans(j,:)
-                trans(j,:) = 0.D0
+                trans(j,:) = 0._real32
              end if
           end do trans_loop
        end do
@@ -1111,8 +1111,8 @@ contains
              do j=1,3
                 bas%spec(is)%atom(ia,j)=&
                      bas%spec(is)%atom(ia,j)-floor(bas%spec(is)%atom(ia,j))
-                if(bas%spec(is)%atom(ia,j).gt.1.D0-tol_sym) &
-                     bas%spec(is)%atom(ia,j)=0.D0
+                if(bas%spec(is)%atom(ia,j).gt.1._real32-tol_sym) &
+                     bas%spec(is)%atom(ia,j)=0._real32
              end do
              !!-----------------------------------------------------------------
              !! Check for duplicates in the cell
@@ -1166,7 +1166,7 @@ contains
   subroutine symwrite (sym,symchar)
     implicit none
     integer :: i,j,nt,nr,div
-    double precision, dimension(4,4) :: sym
+    real(real32), dimension(4,4) :: sym
     character(1024) :: symchar
     character(2) :: rm,c
     character(1), dimension(3) :: xyz
@@ -1291,17 +1291,17 @@ contains
     implicit none
     integer :: i,is,ia,isym,imin,itmp1
     integer :: nsym
-    double precision :: dist
+    real(real32) :: dist
     logical :: lfound_closer
     type(wyck_type) :: wyckoff_atoms
-    double precision, dimension(3) :: diff
-    double precision, allocatable, dimension(:) :: dists
+    real(real32), dimension(3) :: diff
+    real(real32), allocatable, dimension(:) :: dists
     integer, allocatable, dimension(:) :: ivtmp1
 
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(3), intent(in) :: loc
+    type(basis_type), intent(in) :: bas
+    real(real32), dimension(3), intent(in) :: loc
     type(wyck_type), dimension(:), intent(in) :: wyckoff
-    double precision, dimension(3,3), intent(in) :: lat
+    real(real32), dimension(3,3), intent(in) :: lat
 
 
     nsym = size(wyckoff)
@@ -1314,13 +1314,13 @@ contains
        allocate(dists(bas%spec(is)%num))
        do ia=1,bas%spec(is)%num
           diff = loc - bas%spec(is)%atom(ia,:3)
-          diff = diff - ceiling(diff - 0.5D0)
+          diff = diff - ceiling(diff - 0.5_real32)
           dists(ia) = modu(matmul(diff,lat))
        end do
 
        wyckoff_loop1: do ia=1,size(wyckoff(1)%spec(is)%atom)
 
-          dist = huge(0.D0)
+          dist = huge(0._real32)
           imin = wyckoff(1)%spec(is)%atom(ia)
           sym_loop1: do isym=1,nsym
              if(wyckoff(isym)%spec(is)%atom(ia).eq.0) cycle sym_loop1
@@ -1389,11 +1389,11 @@ contains
     implicit none
     integer :: j,ispec,iatom,jatom,dim
     type(basmap_type) :: bas_map
-    type(bas_type) :: bas2,tfbas
-    double precision, dimension(3) :: diff
-    type(bas_type), intent(in) :: bas1
-    double precision, dimension(4,4), intent(in) :: sym
-    type(bas_type), optional, intent(in) :: tmpbas2
+    type(basis_type) :: bas2,tfbas
+    real(real32), dimension(3) :: diff
+    type(basis_type), intent(in) :: bas1
+    real(real32), dimension(4,4), intent(in) :: sym
+    type(basis_type), optional, intent(in) :: tmpbas2
 
 
 !!!-----------------------------------------------------------------------------
@@ -1435,10 +1435,10 @@ contains
           do j=1,3
              tfbas%spec(ispec)%atom(iatom,j) = &
                   tfbas%spec(ispec)%atom(iatom,j) - &
-                  ceiling(tfbas%spec(ispec)%atom(iatom,j) - 0.5D0)
+                  ceiling(tfbas%spec(ispec)%atom(iatom,j) - 0.5_real32)
              bas2%spec(ispec)%atom(iatom,j) = &
                   bas2%spec(ispec)%atom(iatom,j) - &
-                  ceiling(bas2%spec(ispec)%atom(iatom,j) - 0.5D0)
+                  ceiling(bas2%spec(ispec)%atom(iatom,j) - 0.5_real32)
           end do
        end do
     end do
@@ -1448,13 +1448,13 @@ contains
 !!! check whether transformed basis matches original basis
 !!!-----------------------------------------------------------------------------
     spcheck2: do ispec=1,bas1%nspec
-       diff=0.D0
+       diff=0._real32
        atmcheck2: do iatom=1,bas1%spec(ispec)%num
           atmcyc2: do jatom=1,bas1%spec(ispec)%num
              if(any(bas_map%spec(ispec)%atom(:).eq.jatom)) cycle atmcyc2
              diff = tfbas%spec(ispec)%atom(iatom,1:3) - &
                   bas2%spec(ispec)%atom(jatom,1:3)
-             diff = diff - ceiling(diff - 0.5D0)
+             diff = diff - ceiling(diff - 0.5_real32)
              if(sqrt(dot_product(diff,diff)).lt.tol_sym)then
                 bas_map%spec(ispec)%atom(iatom) = jatom
              end if
@@ -1476,25 +1476,25 @@ contains
     integer :: i,j,is,nterm,mterm,dim,ireject
     integer :: itmp1,itmp2,init,min_loc
     logical :: ludef_print,lunique,ltmp1,lmirror, break_on_fail_
-    double precision :: dtmp1,tol,height,max_sep,c_along,centre
+    real(real32) :: dtmp1,tol,height,max_sep,c_along,centre
     type(sym_type) :: grp1,grp_store
     type(term_arr_type) :: term
     integer, dimension(3) :: abc=(/1,2,3/)
-    double precision, dimension(3) :: vec_compare,vtmp1
-    double precision, dimension(3,3) :: inv_mat,ident
-    type(bas_type),allocatable, dimension(:) :: bas_arr,bas_arr_reject
+    real(real32), dimension(3) :: vec_compare,vtmp1
+    real(real32), dimension(3,3) :: inv_mat,ident
+    type(basis_type),allocatable, dimension(:) :: bas_arr,bas_arr_reject
     type(term_type), allocatable, dimension(:) :: term_arr,term_arr_uniq
     integer, allocatable, dimension(:) :: success,tmpop
     integer, allocatable, dimension(:,:) :: reject_match
-    double precision, allocatable, dimension(:,:) :: bas_list
-    double precision, allocatable, dimension(:,:,:) :: tmpsym
+    real(real32), allocatable, dimension(:,:) :: bas_list
+    real(real32), allocatable, dimension(:,:,:) :: tmpsym
 
     integer, intent(in) :: axis
-    type(bas_type), intent(in) :: bas
-    double precision, dimension(3,3), intent(in) :: lat
+    type(basis_type), intent(in) :: bas
+    real(real32), dimension(3,3), intent(in) :: lat
     character(len=256) :: err_msg
 
-    double precision, optional, intent(in) :: layer_sep
+    real(real32), optional, intent(in) :: layer_sep
     logical, optional, intent(in) :: lprint, break_on_fail
 
 
@@ -1525,7 +1525,7 @@ contains
     if(present(layer_sep))then
        tol = layer_sep
     else
-       tol = 1.D0  !!!tolerance of 1 Å for defining a layer
+       tol = 1._real32  !!!tolerance of 1 Å for defining a layer
     end if
 
     abc=cshift(abc,3-axis)
@@ -1550,13 +1550,13 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Find largest separation between atoms
 !!!-----------------------------------------------------------------------------
-    max_sep = bas_list(1,axis) - (bas_list(bas%natom,axis)-1.D0)
-    height = ( bas_list(1,axis) + (bas_list(bas%natom,axis)-1.D0) )/2.D0
+    max_sep = bas_list(1,axis) - (bas_list(bas%natom,axis)-1._real32)
+    height = ( bas_list(1,axis) + (bas_list(bas%natom,axis)-1._real32) )/2._real32
     do i=1,bas%natom-1
        dtmp1 = bas_list(i+1,axis) - bas_list(i,axis)
        if(dtmp1.gt.max_sep)then
           max_sep = dtmp1
-          height = ( bas_list(i+1,axis) + bas_list(i,axis) )/2.D0
+          height = ( bas_list(i+1,axis) + bas_list(i,axis) )/2._real32
        end if
     end do
     if(max_sep.lt.tol)then
@@ -1569,7 +1569,7 @@ contains
             &in the material that is greater than LAYER_SEP")')
        write(0,'(2X,"Writing material to ''unlayerable.vasp''")')
        open(13,file="unlayerable.vasp")
-       call geom_write(13,lat,bas)
+       call geom_write(13,bas)
        close(13)
        write(0,'(2X,"We suggest reducing LAYER_SEP to less than ",F6.4)') &
             max_sep
@@ -1614,7 +1614,7 @@ contains
        !     ).lt.tol_sym)
        
        itmp1 = minloc(bas_list(:,axis) - term_arr(nterm)%hmax, dim=1, &
-            mask = bas_list(:,axis) - term_arr(nterm)%hmax.gt.0.D0)
+            mask = bas_list(:,axis) - term_arr(nterm)%hmax.gt.0._real32)
        if(itmp1.gt.bas%natom.or.itmp1.le.0)then
           term_arr(nterm)%natom = bas%natom - min_loc + 1
           exit term_loop1
@@ -1675,9 +1675,9 @@ contains
     grp_store%confine%l = .false.
     grp_store%confine%laxis(axis) = .false.
     call check_sym(grp_store,bas1=bas,iperm=-1,lsave=.true.)
-    inv_mat = 0.D0
+    inv_mat = 0._real32
     do i=1,3
-       inv_mat(i,i) = -1.D0
+       inv_mat(i,i) = -1._real32
     end do
     itmp1 = 0
     do i=1,grp_store%nsym
@@ -1708,7 +1708,7 @@ contains
        mterm = mterm + 1
 
        bas_arr(mterm) = bas
-       centre = term_arr(i)%hmin + (term_arr(i)%hmax - term_arr(i)%hmin)/2.D0
+       centre = term_arr(i)%hmin + (term_arr(i)%hmax - term_arr(i)%hmin)/2._real32
        call shifter(bas_arr(mterm),axis,1-centre,.true.)
        !if(ludef_print) write(6,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
        !     i,term_arr(i)%hmin,term_arr(i)%hmax,term_arr(i)%natom
@@ -1722,8 +1722,8 @@ contains
                   iperm=-1,tmpbas2=bas_arr(j),lsave=.true.)
              if(grp1%nsymop.ne.0)then
                 !write(0,*) "we have a possible reject"
-                !if(any(savsym(:grp1%nsymop,axis,axis).eq.-1.D0))then
-                if(savsym(1,axis,axis).eq.-1.D0)then
+                !if(any(savsym(:grp1%nsymop,axis,axis).eq.-1._real32))then
+                if(savsym(1,axis,axis).eq.-1._real32)then
                    ireject = ireject + 1
                    reject_match(ireject,:) = [ i, j ]
                    bas_arr_reject(ireject) = bas_arr(mterm)
@@ -1741,9 +1741,9 @@ contains
        term_arr_uniq(mterm) = term_arr(i)
        term_arr_uniq(mterm)%nstep = 1
        allocate(term_arr_uniq(mterm)%ladder(nterm))
-       term_arr_uniq(mterm)%ladder(:) = 0.D0
+       term_arr_uniq(mterm)%ladder(:) = 0._real32
        !open(100+mterm)
-       !call geom_write(100+mterm,lat,bas_arr(mterm))
+       !call geom_write(100+mterm,bas_arr(mterm))
        !close(100+mterm)
     end do shift_loop1
 
@@ -1752,11 +1752,11 @@ contains
     !! Set up mirror/inversion symmetries of the matrix
     !!--------------------------------------------------------------------------
     call sym_setup(grp_store,lat,predefined=.false.,new_start=.true.)
-    allocate(tmpsym(count(grp_store%sym(:,3,3).eq.-1.D0),4,4))
-    allocate(tmpop(count(grp_store%sym(:,3,3).eq.-1.D0)))
+    allocate(tmpsym(count(grp_store%sym(:,3,3).eq.-1._real32),4,4))
+    allocate(tmpop(count(grp_store%sym(:,3,3).eq.-1._real32)))
     itmp1 = 0
     do i=1,grp_store%nsym
-       if(grp_store%sym(i,3,3).eq.-1.D0)then
+       if(grp_store%sym(i,3,3).eq.-1._real32)then
           itmp1=itmp1+1
           tmpsym(itmp1,:,:) = grp_store%sym(i,:,:)
           tmpop(itmp1) = i
@@ -1773,12 +1773,12 @@ contains
     !!--------------------------------------------------------------------------
     !! Check rejects for inverse surface termination of saved
     !!--------------------------------------------------------------------------
-    ident = 0.D0
+    ident = 0._real32
     do i=1,3
-       ident(i,i) = 1.D0
+       ident(i,i) = 1._real32
     end do
-    vec_compare = 0.D0
-    vec_compare(axis) = -1.D0
+    vec_compare = 0._real32
+    vec_compare(axis) = -1._real32
     allocate(success(ireject))
     success=0
     reject_loop1: do i=1,ireject
@@ -1804,7 +1804,7 @@ contains
           !end do
           !! Check if inversions are present in comparison termination
           do j=1,grp1%nsymop
-             if(abs(det(savsym(j,:3,:3))+1.D0).le.tol_sym) ltmp1=.true.
+             if(abs(det(savsym(j,:3,:3))+1._real32).le.tol_sym) ltmp1=.true.
           end do
           !! If they are not, then no point comparing. It is a new termination
           if(.not.ltmp1) exit prior_check 
@@ -1820,10 +1820,10 @@ contains
           do j=1,grp1%nsymop
              !write(0,'(4(2X,F9.4))') savsym(j,:,:)
              !write(0,*) det(savsym(j,:3,:3))
-             if(abs(det(savsym(j,:3,:3))-1.D0).le.tol_sym) lunique=.false.
+             if(abs(det(savsym(j,:3,:3))-1._real32).le.tol_sym) lunique=.false.
           end do
           if(savsym(1,4,axis).eq.&
-               2.D0*min(term_arr_uniq(itmp2)%hmin,0.5D0-term_arr_uniq(itmp2)%hmin))then
+               2._real32*min(term_arr_uniq(itmp2)%hmin,0.5_real32-term_arr_uniq(itmp2)%hmin))then
              lunique=.false.
           end if
 
@@ -1843,7 +1843,7 @@ contains
           reject_match(i,2)=0
           term_arr_uniq(mterm)%nstep = 1
           allocate(term_arr_uniq(mterm)%ladder(ireject+1))
-          term_arr_uniq(mterm)%ladder(1) = 0.D0
+          term_arr_uniq(mterm)%ladder(1) = 0._real32
        else
           term_arr_uniq(itmp2)%nstep = term_arr_uniq(itmp2)%nstep + 1
           term_arr_uniq(itmp2)%ladder(term_arr_uniq(itmp2)%nstep) = &
@@ -1877,7 +1877,7 @@ contains
             mask=term_arr_uniq(:)%hmin.gt.dtmp1+tol,dim=1)
        if(itmp1.eq.0) then
           itmp1 = minloc(term_arr_uniq(:)%hmin,&
-               mask=term_arr_uniq(:)%hmin.gt.dtmp1+tol-1.D0,dim=1)
+               mask=term_arr_uniq(:)%hmin.gt.dtmp1+tol-1._real32,dim=1)
        end if
        dtmp1 = term_arr_uniq(itmp1)%hmin
     end do
