@@ -36,9 +36,29 @@ module artemis__generator
 
   type(bulk_DON_type), dimension(2) :: bulk_DON
 
+  type :: abstract_artemis_generator_type
+     integer :: max_num_structures = 100
 
-  type :: artemis_generator_type
-    integer :: max_num_structures = 100
+     real(real32) :: tol_cart
+     real(real32), dimension(3) :: tol_crys
+
+     type(basis_type), dimension(:), allocatable :: structures
+   contains
+     procedure, pass(this) :: write_structures
+  end type abstract_artemis_generator_type
+
+
+
+  type, extends(abstract_artemis_generator_type) :: artemis_termination_generator_type
+    
+    real(real32) :: layer_separation_cutoff = 1._real32
+
+   contains
+     procedure, pass(this) :: generate => gen_terminations
+  end type artemis_termination_generator_type
+
+
+  type, extends(abstract_artemis_generator_type) :: artemis_interface_generator_type
     integer :: match_method = 0
     integer :: max_num_matches = 5
     integer :: max_num_term = 5
@@ -49,20 +69,13 @@ module artemis__generator
     real(real32) :: bondlength_cutoff = 6._real32
     real(real32), dimension(2) :: layer_separation_cutoff = 1._real32
 
-    real(real32) :: tol_cart
-    real(real32), dimension(3) :: tol_crys
-
     type(tol_type) :: tolerance
 
-    type(basis_type), dimension(:), allocatable :: term_structures_lw
-    type(basis_type), dimension(:), allocatable :: term_structures_up
-    type(basis_type), dimension(:), allocatable :: structures
+   !  type(basis_type), dimension(:), allocatable :: term_structures_lw
+   !  type(basis_type), dimension(:), allocatable :: term_structures_up
    contains
     procedure, pass(this) :: set_tolerance
-    procedure, pass(this) :: gen_terminations
-    procedure, pass(this) :: write_terminations
-  end type artemis_generator_type
-
+  end type artemis_interface_generator_type
 
 contains
 
@@ -77,7 +90,7 @@ contains
     implicit none
 
     ! Arguments
-    class(artemis_generator_type), intent(inout) :: this
+    class(artemis_interface_generator_type), intent(inout) :: this
     !! Instance of artemis generator type
     real(real32), intent(in), optional :: vector_mismatch
     !! Tolerance for the vector mismatch
@@ -164,7 +177,7 @@ contains
     implicit none
 
     ! Arguments
-    class(artemis_generator_type), intent(inout) :: this
+    class(artemis_termination_generator_type), intent(inout) :: this
     !! Instance of artemis generator type
     type(basis_type), intent(in) :: basis
     !! Atomic structure data
@@ -177,11 +190,16 @@ contains
     real(real32), intent(in), optional :: thickness
     !! Thickness of the slab (in Å)
 
+    type(basis_type), dimension(:), allocatable :: output
+    !! Output structures
+
     ! Local variables
-    integer :: itmp1, iterm, term_start, term_end, iterm_step
+    integer :: itmp1, iterm, term_start, term_end, iterm_step, i
     !! Termination loop variables
     integer :: old_natom, ncells, ntrans
     !! Number of cells in the slab
+    integer :: num_structures
+    !! Number of structures to be generated
     integer :: num_layers_
     !! Number of layers in the slab
     real(real32) :: height
@@ -242,7 +260,7 @@ contains
     ! get the terminations
     term = get_terminations( &
          tmp_bas1%lat, tmp_bas1, axis, &
-         lprint = .true., layer_sep = this%layer_separation_cutoff(1), &
+         lprint = .true., layer_sep = this%layer_separation_cutoff, &
          break_on_fail = lbreak_on_no_term &
     )
     if(term%nterm .eq. 0)then
@@ -282,43 +300,51 @@ contains
     !---------------------------------------------------------------------------
     ! loop over terminations and write them
     !---------------------------------------------------------------------------
-    if(.not.allocated(this%term_structures_lw))then
-       allocate(this%term_structures_lw(0))
-    end if
+    num_structures = ( term_end - term_start ) / iterm_step + 1
+    allocate(output(num_structures))
     do iterm = term_start, term_end, iterm_step
-       call tmp_bas2%copy(tmp_bas1)
+       i = ( iterm - term_start ) / iterm_step + 1 
+       call output(i)%copy(tmp_bas1)
        if(allocated(t1bas_map)) deallocate(t1bas_map)
        allocate(t1bas_map,source=bas_map)
-       call prepare_slab(tmp_bas2%lat,tmp_bas2,bas_map,term,iterm,&
+       call prepare_slab(output(i)%lat,output(i),bas_map,term,iterm,&
             num_layers_,ncells, thickness, height,ludef_surf,lw_surf(2),&
             "lw",lignore,lortho,vacuum)
-       this%term_structures_lw = [ this%term_structures_lw, tmp_bas2 ]
     end do
+    if(.not.allocated(this%structures))then
+       call move_alloc(output,this%structures)
+    else
+       this%structures = [ this%structures, output ]
+    end if
 
-  end subroutine gen_terminations
+   end subroutine gen_terminations
 !###############################################################################
 
 
 !###############################################################################
-  subroutine write_terminations( &
-       this, directory &
+  subroutine write_structures( &
+       this, directory, prefix &
   )
     !! Write the generated terminations to file
     implicit none
    
     ! Arguments
-    class(artemis_generator_type), intent(in) :: this
+    class(abstract_artemis_generator_type), intent(in) :: this
     !! Instance of artemis generator type
     character(len=*), intent(in) :: directory
     !! Directory to write the files to
+    character(len=*), intent(in), optional :: prefix
+    !! Prefix for the output files
    
     ! Local variables
     integer :: i
     !! Loop variable
     integer :: unit
     !! File unit number
-    character(len=256) :: filename
+    character(len=256) :: filename, filename_template
     !! File name for the output files
+    character(len=:), allocatable :: prefix_
+    !! Prefix for the output files
 
 
 
@@ -326,30 +352,26 @@ contains
        call system('mkdir -p '//trim(adjustl(directory)))
     end if
 
-    if(allocated(this%term_structures_lw))then
-       do i = 1, size(this%term_structures_lw)
-          write(filename,'("POSCAR_term_lw",I0)') i
-          if(trim(directory).ne."") then
-             filename = trim(directory) // "/" // trim(filename)
-          end if
-          open(newunit=unit,file=filename)
-          call geom_write(unit, this%term_structures_lw(i))
-          close(unit)
-       end do
+    filename_template = "POSCAR"
+    if(present(prefix)) then
+       prefix_ = trim(to_lower(prefix))
+       filename_template = trim(filename_template) // "_" // trim(prefix_)
     end if
-    if(allocated(this%term_structures_up))then
-       do i = 1, size(this%term_structures_up)
-          write(filename,'("POSCAR_term_up",I0)') i
+    if(allocated(this%structures))then
+       do i = 1, size(this%structures)
+          write(filename,'(A,I0)') trim(filename_template), i
           if(trim(directory).ne."") then
              filename = trim(directory) // "/" // trim(filename)
           end if
           open(newunit=unit,file=filename)
-          call geom_write(unit, this%term_structures_up(i))
+          call geom_write(unit, this%structures(i))
           close(unit)
        end do
+    else
+       write(0,'(1X,"No structures to write.")')
     end if
    
-  end subroutine write_terminations
+  end subroutine write_structures
 !###############################################################################
 
 
