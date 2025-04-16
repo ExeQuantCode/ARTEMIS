@@ -47,7 +47,6 @@ contains
     implicit none
     integer :: GEOMunit,i
     type(basis_type) :: edited_bas
-    real(real32), dimension(3,3) :: edited_lat
     character(len=*), intent(in) :: ofile
     logical, optional, intent(in) :: lnorm
     type(basis_type), intent(in) :: bas

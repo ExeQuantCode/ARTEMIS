@@ -196,7 +196,7 @@ contains
     if(present(tol))then
        tiny = tol
     else
-       tiny = 1.D-4
+       tiny = 1.E-4_real32
     end if
     
     call sort1D(arr)

@@ -235,7 +235,7 @@ contains
     if(present(tol))then
        dtol = tol
     else
-       dtol = 1.D-5
+       dtol = 1.E-5_real32
     end if
 
     if(present(labove))then
@@ -306,7 +306,7 @@ contains
     if(present(tol))then
        dtol = tol
     else
-       dtol = 1.D-5
+       dtol = 1.E-5_real32
     end if
 
     if(present(labove))then
@@ -471,7 +471,7 @@ contains
     ortho_scale = modu(lat(axis,:))/modu(normal)
 
 
-    rtol = 1.D-5
+    rtol = 1.E-5_real32
     inc = add
     if(present(tol)) rtol = tol
     cur_vac = min_dist(bas,axis,loc,.true.) - min_dist(bas,axis,loc,.false.)
@@ -569,12 +569,12 @@ contains
     type(basis_type) :: bas
     integer, dimension(3) :: order
     real(real32), dimension(3) :: ortho_vec
-    real(real32), dimension(3,3) :: invlat,lat
+    real(real32), dimension(3,3) :: lat
 
 
     call bas%convert()
-    order=(/1,2,3/)
-    order=cshift(order,3-axis)
+    order = [ 1, 2, 3 ]
+    order = cshift( order, 3 - axis )
 
     ortho_vec=cross(lat(order(1),:),lat(order(2),:))
     ortho_comp=dot_product(lat(3,:),ortho_vec)/modu(ortho_vec)**2._real32
@@ -653,7 +653,7 @@ contains
     !!--------------------------------------------------------------------------
     !! Convert tolerance from Å to a fraction of each direction
     !!--------------------------------------------------------------------------
-    tol=1.D-3 !! in Å
+    tol = 1.E-3_real32 !! in Å
     do i=1,3
        tolvec(i)=tol/modu(sbas%lat(i,:))
     end do
@@ -730,11 +730,11 @@ contains
        end if
        do ia = 1, basis%spec(is)%num
           do n=latmin(3),latmax(3)!,1
-             translvec(3)=dble(n)
+             translvec(3)=real(n, real32)
              do m=latmin(2),latmax(2)!,1
-                translvec(2)=dble(m)
+                translvec(2)=real(m, real32)
                 inloop: do l=latmin(1),latmax(1)!,1
-                   translvec(1)=dble(l)
+                   translvec(1)=real(l, real32)
                    tmpbas(satom+1,:3) = &
                         basis%spec(is)%atom(ia,:3) + matmul(translvec,invmat)
                    !!tmpbas(satom+1,:3)=&
@@ -749,7 +749,7 @@ contains
                    if(any(tmpbas(satom+1,:).ge.1._real32-tol).or.&
                         any(tmpbas(satom+1,:).lt.0._real32-tol)) cycle inloop !??? cycle inloop or spec_loop1?
                    tmpbas(satom+1,:3) = tmpbas(satom+1,:3) - &
-                        dble(floor(tmpbas(satom+1,:3)))
+                        real(floor(tmpbas(satom+1,:3)),real32)
                    do k=1,satom
                       if(all(mod(abs(tmpbas(satom+1,:3)-tmpbas(k,:3)),1._real32).le.&
                            tol)) cycle inloop
@@ -1005,8 +1005,8 @@ contains
        !tfmat=matmul(tfmat,transpose(tfmat))
        tmat2=matmul(special(i,:,:),transpose(special(i,:,:)))
        dtmp1=tmat2(1,1)/tmat1(1,1)
-       !if(all(abs(tfmat-nint(tfmat)).lt.1.D-8))then
-       if(all(abs(tmat1*dtmp1-tmat2).lt.1.D-8))then
+       !if(all(abs(tfmat-nint(tfmat)).lt.1.E-8_real32))then
+       if(all(abs(tmat1*dtmp1-tmat2).lt.1.E-8_real32))then
           do j=1,3
              plat(j,:)=scal(j)*special(i,j,:)
           end do
@@ -1329,7 +1329,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Initialise variables and matrices
 !!!-----------------------------------------------------------------------------
-    tol=1.D-4
+    tol = 1.E-4_real32
     vec=invec
     lat=inlat
     invlat=inverse(lat)
@@ -1604,12 +1604,10 @@ contains
     !! Maps for atoms in the two bases.
 
     ! Local variables
-    integer :: i, j, k, itmp, length_
+    integer :: i, j, k, length_
     !! Loop counters.
     real(real32) :: loc, c1_ratio, c2_ratio, zgap, add
     !! Lattice parameters.
-    logical :: lmap
-    !! Boolean for map presence.
     type(basis_type) :: basis1_, basis2_
     integer, dimension(3) :: order
     !! Order of axes.
@@ -1619,8 +1617,6 @@ contains
     !! Offset for the merged basis.
     integer, allocatable, dimension(:) :: match
     !! Array to match species.
-    integer, allocatable, dimension(:,:,:) :: new_map
-    !! New map for merged basis.
 
 
     !---------------------------------------------------------------------------
@@ -1933,7 +1929,7 @@ contains
              atom_loop2: do ja=1,splitbas(2)%spec(is)%num
 
                 if( all( abs( ( splitbas(1)%spec(is)%atom(ia,:3) + transvec ) - &
-                     splitbas(2)%spec(is)%atom(ja,:3) ).lt.1.D-5 ) )then
+                     splitbas(2)%spec(is)%atom(ja,:3) ).lt.1.E-5_real32 ) )then
                    write(0,*) ia,ja
                    cycle atom_loop1
 
@@ -2197,7 +2193,7 @@ contains
        !! Checks atoms within a region to see if they reproduce layer above
        !!-----------------------------------------------------------------------
        up_loc = lw_loc + transvec(axis)
-       !if(lw_loc.eq.up_loc) up_loc = up_loc + 1.D-8  !! IS THIS NEEDED?
+       !if(lw_loc.eq.up_loc) up_loc = up_loc + 1.E-8_real32  !! IS THIS NEEDED?
        if(lw_loc.gt.up_loc)then
           write(0,'("ERROR: Internal error in get_wyckoff")')
           write(0,'(2X,"Error in subroutine get_wyckoff in mod_edit_geom.f90")')
@@ -2223,7 +2219,7 @@ contains
                 tmp_vec2 = tmp_vec2 - ceiling( tmp_vec2 - 0.5_real32 )
 
 
-                if( all( abs(tmp_vec2).lt.1.D-5 ) )then
+                if( all( abs(tmp_vec2).lt.1.E-5_real32 ) )then
                    cycle atom_loop1
                 end if
 
@@ -2250,11 +2246,11 @@ contains
              if(bas%spec(is)%atom(ia,axis).lt.lw_loc2.or.&
                   bas%spec(is)%atom(ia,axis).ge.up_loc2) cycle atom_loop3
              tmp_vec1 = bas%spec(is)%atom(ia,:3) + transvec
-             if( all(bas%spec(is)%atom(:,axis).lt.tmp_vec1(axis)-1.D-5) ) cycle atom_loop3
+             if( all(bas%spec(is)%atom(:,axis).lt.tmp_vec1(axis)-1.E-5_real32) ) cycle atom_loop3
              atom_loop4: do ja=1,bas%spec(is)%num
                 tmp_vec2 = tmp_vec1 - bas%spec(is)%atom(ja,:3)
                 tmp_vec2 = tmp_vec2 - ceiling( tmp_vec2 - 0.5_real32 )
-                if( all( abs(tmp_vec2).lt.1.D-5 ) )then
+                if( all( abs(tmp_vec2).lt.1.E-5_real32 ) )then
                    cycle atom_loop3
                 end if
              end do atom_loop4
@@ -2308,7 +2304,7 @@ contains
              tmp_vec3 = tmp_vec3 - ceiling(tmp_vec3 - 0.5_real32)
              !THIS IS WHERE WE NEED TO MAKE IT RIGHT
              !! FIND THE GCD AND DIVIDE
-             if(all(abs(tmp_vec3).lt.1.D-5))then
+             if(all(abs(tmp_vec3).lt.1.E-5_real32))then
                 if(wyckoff%spec(is)%atom(ja).ne.0)then
                    wyckoff%spec(is)%atom(ia) = wyckoff%spec(is)%atom(ja)
                 else

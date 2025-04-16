@@ -214,12 +214,12 @@ contains
 
     dummy1 = real(find_tf(lat1,lat2),real32)
     LOOP: do i=1,len
-       if(all(abs(list1(i,:,:)).lt.1.D-5)) cycle LOOP
+       if(all(abs(list1(i,:,:)).lt.1.E-5_real32)) cycle LOOP
        tmplat1(:,:) = list1(i,:,:)
        tmplat2(:,:) = list2(i,:,:)
        dummy2 = real(find_tf(tmplat1,tmplat2),real32)
 
-       if ( all(abs( dummy1(:,:)-dummy2(:,:) ) .lt. 1.D-5) ) then
+       if ( all(abs( dummy1(:,:)-dummy2(:,:) ) .lt. 1.E-5_real32) ) then
           outval = .true.
  !         write(0,*) "error"
           exit LOOP
@@ -250,8 +250,8 @@ contains
     real(real32), dimension(3) :: vec_in,vec_out,vec_tmp1,vec_tmp2
     real(real32), dimension(:,:,:) :: sym
  
-!    if(dot_product(vec_out-vec_in,vec_out-vec_in).lt.1.D-5)
-!    if(all(abs(vec_out-vec_in).lt.1.D-5))
+!    if(dot_product(vec_out-vec_in,vec_out-vec_in).lt.1.E-5_real32)
+!    if(all(abs(vec_out-vec_in).lt.1.E-5_real32))
 !    any(vec_in.eq.3._real32)
 !    all(vec_in.eq.3._real32)
 
@@ -261,7 +261,7 @@ contains
 
     if (all(miller.eq.0)) then
        outval = .false.
-    else if (all(abs(vec_out-vec_in).lt.1.D-5)) then
+    else if (all(abs(vec_out-vec_in).lt.1.E-5_real32)) then
        outval = .true.
     else 
        outval = .false.
@@ -269,7 +269,7 @@ contains
     if(.not.outval) return
 
 
-    tol=1.D-5
+    tol = 1.E-5_real32
     if(all(vec_in.le.0._real32))then
        outval=.false.
        return
@@ -323,7 +323,7 @@ contains
     logical :: outval
     
 
-    tol=1.D-5
+    tol = 1.E-5_real32
     outval=.true.
     vec_in=(/ real(vec1(1),real32), real(vec1(2),real32), 0._real32/)
     !vec_in1=(/ real(vec1(1),real32), real(vec1(2),real32), 0._real32/)
@@ -347,7 +347,7 @@ contains
        end do symloop2
     end do symloop1
 
-    !tol=1.D-5
+    !tol = 1.E-5_real32
     !outval=.true.
     !vec_in=(/ real(vec1(1),real32), real(vec1(2),real32), 0._real32/)
     !
@@ -569,7 +569,7 @@ contains
        transforms1,transforms2,&
        ntransforms,matched_tols,sym1,sym2)
     implicit none
-    integer :: i,j,l,m,total_list_count,nvec1,nvec2, k
+    integer :: i,j,l,m,total_list_count,nvec1,nvec2
     real :: tol_up_ang,tol_dw_ang,tol_up_vec,tol_dw_vec
     real(real32) :: tiny
     real(real32) :: reference_mag,considered_mag

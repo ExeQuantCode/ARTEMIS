@@ -30,7 +30,7 @@ module mod_sym
   implicit none
   integer :: ierror_sym=0
   integer :: s_start=1,s_end=0
-  real(real32) :: tol_sym=5.D-5
+  real(real32) :: tol_sym = 5.E-5_real32
   character(1) :: verb_sym="n"
   integer, allocatable, dimension(:) :: symops_compare
   real(real32), allocatable, dimension(:,:,:) :: savsym
@@ -133,7 +133,7 @@ contains
     if(present(tolerance))then
        tol_sym = tolerance
     else
-       tol_sym = 1.D-6
+       tol_sym = 1.E-6_real32
     end if
 
   end subroutine set_symmetry_tolerance
@@ -1043,8 +1043,7 @@ contains
     real(real32), dimension(3,3) :: dmat1,invlat
     real(real32), allocatable, dimension(:,:) :: trans,atom_store
     
-    type(sym_type) :: grp
-    type(basis_type) :: bas,pbas
+    type(basis_type) :: bas
     real(real32), dimension(3,3) :: lat
 
     
@@ -1082,7 +1081,7 @@ contains
              if(dtmp1.lt.tol_sym) cycle trans_loop
 
              do k=1,i-1,1
-                if(modu(abs(cross(trans(j,:),dmat1(k,:)))).lt.1.D-8) cycle trans_loop
+                if(modu(abs(cross(trans(j,:),dmat1(k,:)))).lt.1.E-8_real32) cycle trans_loop
              end do
 
              dtmp1 = modu(trans(j,:))
@@ -1289,7 +1288,7 @@ contains
 !!!-----------------------------------------------------------------------------
   function get_wyckoff_atoms_loc(wyckoff,lat,bas,loc) result(wyckoff_atoms)
     implicit none
-    integer :: i,is,ia,isym,imin,itmp1
+    integer :: is,ia,isym,imin,itmp1
     integer :: nsym
     real(real32) :: dist
     logical :: lfound_closer
@@ -1480,7 +1479,7 @@ contains
     type(sym_type) :: grp1,grp_store
     type(term_arr_type) :: term
     integer, dimension(3) :: abc=(/1,2,3/)
-    real(real32), dimension(3) :: vec_compare,vtmp1
+    real(real32), dimension(3) :: vec_compare
     real(real32), dimension(3,3) :: inv_mat,ident
     type(basis_type),allocatable, dimension(:) :: bas_arr,bas_arr_reject
     type(term_type), allocatable, dimension(:) :: term_arr,term_arr_uniq
@@ -1862,7 +1861,7 @@ contains
     term%lmirror = lmirror
     if(ludef_print)&
          write(6,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
-    dtmp1 = term_arr_uniq(1)%hmin-1.D-6
+    dtmp1 = term_arr_uniq(1)%hmin-1.E-6_real32
     itmp1 = 1
     do i=1,mterm
        allocate(term%arr(i)%ladder(term_arr_uniq(i)%nstep))

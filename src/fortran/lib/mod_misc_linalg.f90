@@ -241,7 +241,7 @@ contains
     vec=0._real32
     allocate(vec(size(a)))
     do j=1,size(a)
-       vec(:)=vec(:)+dble(a(j))*mat(j,:)
+       vec(:)=vec(:)+real(a(j),real32)*mat(j,:)
     end do
 
     return
@@ -366,12 +366,13 @@ contains
 !!!#####################################################
 !!! finds trace of an arbitrary dimension square matrix
 !!!#####################################################
-  function trace(mat)
+  function trace(mat) result(output)
     integer::j
-    real(real32),dimension(:,:)::mat
-    real(real32)::trace
-    do j=1,size(mat,1)
-       trace=trace+mat(j,j)
+    real(real32), dimension(:,:), intent(in) :: mat
+    real(real32) :: output
+    output = 0._real32
+    do j = 1, size(mat,1)
+      output = output + mat(j,j)
     end do
   end function trace
 !!!#####################################################
@@ -380,22 +381,22 @@ contains
 !!!#####################################################
 !!! returns determinant of 3 x 3 matrix
 !!!#####################################################
-  function idet(mat) result(det)
-    integer :: det
-    integer, dimension(3,3) :: mat
+  function idet(mat) result(output)
+    integer :: output
+    integer, dimension(3,3), intent(in) :: mat
 
-    det=mat(1,1)*mat(2,2)*mat(3,3)-mat(1,1)*mat(2,3)*mat(3,2)&
+    output = mat(1,1)*mat(2,2)*mat(3,3)-mat(1,1)*mat(2,3)*mat(3,2)&
          - mat(1,2)*mat(2,1)*mat(3,3)+mat(1,2)*mat(2,3)*mat(3,1)&
          + mat(1,3)*mat(2,1)*mat(3,2)-mat(1,3)*mat(2,2)*mat(3,1)
 
   end function idet
 !!!-----------------------------------------------------
 !!!-----------------------------------------------------
-  function ddet(mat) result(det)
-    real(real32) :: det
-    real(real32), dimension(3,3) :: mat
+  function ddet(mat) result(output)
+    real(real32) :: output
+    real(real32), dimension(3,3), intent(in) :: mat
 
-    det=mat(1,1)*mat(2,2)*mat(3,3)-mat(1,1)*mat(2,3)*mat(3,2)&
+    output = mat(1,1)*mat(2,2)*mat(3,3)-mat(1,1)*mat(2,3)*mat(3,2)&
          - mat(1,2)*mat(2,1)*mat(3,3)+mat(1,2)*mat(2,3)*mat(3,1)&
          + mat(1,3)*mat(2,1)*mat(3,2)-mat(1,3)*mat(2,2)*mat(3,1)
 
@@ -411,9 +412,9 @@ contains
     real(real32), dimension(size(mat(:,1),dim=1),size(mat(1,:),dim=1)) :: inverse
 
     if(size(mat(1,:),dim=1).eq.2)then
-       inverse=inverse_2x2(mat)
+       inverse = inverse_2x2(mat)
     elseif(size(mat(1,:),dim=1).eq.3)then
-       inverse=inverse_3x3(mat)
+       inverse = inverse_3x3(mat)
     end if
 
   end function inverse
@@ -423,12 +424,12 @@ contains
 !!!#####################################################
 !!! returns inverse of 2 x 2 matrix
 !!!#####################################################
-  pure function inverse_2x2(mat) result(inverse)
+  pure function inverse_2x2(mat) result(output)
     real(real32) :: det
-    real(real32), dimension(2,2) :: inverse
+    real(real32), dimension(2,2) :: output
     real(real32), dimension(2,2), intent(in) :: mat
 
-    det=mat(1,1)*mat(2,2)-mat(1,2)*mat(2,1)
+    det = mat(1,1)*mat(2,2)-mat(1,2)*mat(2,1)
     !if(det.eq.0._real32)then
     !   write(0,'("ERROR: Internal error in inverse_2x2")')
     !   write(0,'(2X,"inverse_2x2 in mod_misc_linalg found determinant of 0")')
@@ -436,10 +437,10 @@ contains
     !   stop
     !end if
 
-    inverse(1,1)=+1._real32/det*(mat(2,2))
-    inverse(2,1)=-1._real32/det*(mat(1,2))
-    inverse(1,2)=-1._real32/det*(mat(2,1))
-    inverse(2,2)=+1._real32/det*(mat(1,1))
+    output(1,1) = +1._real32 / det * ( mat(2,2) )
+    output(2,1) = -1._real32 / det * ( mat(1,2) )
+    output(1,2) = -1._real32 / det * ( mat(2,1) )
+    output(2,2) = +1._real32 / det * ( mat(1,1) )
 
   end function inverse_2x2
 !!!#####################################################
@@ -448,12 +449,12 @@ contains
 !!!#####################################################
 !!! returns inverse of 3 x 3 matrix
 !!!#####################################################
-  pure function inverse_3x3(mat) result(inverse)
+  pure function inverse_3x3(mat) result(output)
     real(real32) :: det
-    real(real32), dimension(3,3) :: inverse
+    real(real32), dimension(3,3) :: output
     real(real32), dimension(3,3), intent(in) :: mat
 
-    det=mat(1,1)*mat(2,2)*mat(3,3)-mat(1,1)*mat(2,3)*mat(3,2)&
+    det = mat(1,1)*mat(2,2)*mat(3,3)-mat(1,1)*mat(2,3)*mat(3,2)&
          - mat(1,2)*mat(2,1)*mat(3,3)+mat(1,2)*mat(2,3)*mat(3,1)&
          + mat(1,3)*mat(2,1)*mat(3,2)-mat(1,3)*mat(2,2)*mat(3,1)
 
@@ -464,15 +465,15 @@ contains
     !   stop
     !end if
 
-    inverse(1,1)=+1._real32/det*(mat(2,2)*mat(3,3)-mat(2,3)*mat(3,2))
-    inverse(2,1)=-1._real32/det*(mat(2,1)*mat(3,3)-mat(2,3)*mat(3,1))
-    inverse(3,1)=+1._real32/det*(mat(2,1)*mat(3,2)-mat(2,2)*mat(3,1))
-    inverse(1,2)=-1._real32/det*(mat(1,2)*mat(3,3)-mat(1,3)*mat(3,2))
-    inverse(2,2)=+1._real32/det*(mat(1,1)*mat(3,3)-mat(1,3)*mat(3,1))
-    inverse(3,2)=-1._real32/det*(mat(1,1)*mat(3,2)-mat(1,2)*mat(3,1))
-    inverse(1,3)=+1._real32/det*(mat(1,2)*mat(2,3)-mat(1,3)*mat(2,2))
-    inverse(2,3)=-1._real32/det*(mat(1,1)*mat(2,3)-mat(1,3)*mat(2,1))
-    inverse(3,3)=+1._real32/det*(mat(1,1)*mat(2,2)-mat(1,2)*mat(2,1))
+    output(1,1) = +1._real32 / det * ( mat(2,2) * mat(3,3) - mat(2,3) * mat(3,2) )
+    output(2,1) = -1._real32 / det * ( mat(2,1) * mat(3,3) - mat(2,3) * mat(3,1) )
+    output(3,1) = +1._real32 / det * ( mat(2,1) * mat(3,2) - mat(2,2) * mat(3,1) )
+    output(1,2) = -1._real32 / det * ( mat(1,2) * mat(3,3) - mat(1,3) * mat(3,2) )
+    output(2,2) = +1._real32 / det * ( mat(1,1) * mat(3,3) - mat(1,3) * mat(3,1) )
+    output(3,2) = -1._real32 / det * ( mat(1,1) * mat(3,2) - mat(1,2) * mat(3,1) )
+    output(1,3) = +1._real32 / det * ( mat(1,2) * mat(2,3) - mat(1,3) * mat(2,2) )
+    output(2,3) = -1._real32 / det * ( mat(1,1) * mat(2,3) - mat(1,3) * mat(2,1) )
+    output(3,3) = +1._real32 / det * ( mat(1,1) * mat(2,2) - mat(1,2) * mat(2,1) )
 
   end function inverse_3x3
 !!!#####################################################
@@ -685,14 +686,14 @@ contains
     P=0._real32
     do i=1,n
        do j=1,n
-          P(i,j)=(qX(i)**dble(n-j))
+          P(i,j)=(qX(i)**real(n-j,real32))
        end do
     end do
     !  P(1,1)=qX(1)**2 ;P(1,2)=qX(1)   ;P(1,3)=1.0;
     !  P(2,1)=qX(2)**2 ;P(2,2)=qX(2)   ;P(2,3)=1.0;
     !  P(3,2)=qX(3)**2 ;P(3,2)=qX(3)   ;P(3,3)=1.0;
 
-    if(any(qX.lt.1.D-5)) then
+    if(any(qX.lt.1.E-5_real32)) then
        loc=minloc(abs(qX),dim=1)
        tmpqY=funcY
        tmpP=P
@@ -704,7 +705,7 @@ contains
 
     !  invP=inverse(P)
     invP=LUinv((P))
-    !  invP=LUinv(dble(P))
+    !  invP=LUinv(real(P,real32))
     simeq=matmul(invP,funcY)
 
   end function simeq
@@ -1046,7 +1047,7 @@ contains
 
     a=mod(val,1._real32)
     b=1._real32
-    tiny=1.D-6
+    tiny = 1.E-6_real32
     i=0
     do 
        i=i+1
@@ -1081,7 +1082,7 @@ contains
 
 !!! MAKE IT DO SOMETHING IF IT CANNOT FULLY INTEGERISE
 
-    tol=1.D-5
+    tol=1.E-5_real32
     allocate(vec(size(invec)))
     vec=invec
     if(any(abs(vec(:)-nint(vec(:))).gt.tol))then
@@ -1138,7 +1139,7 @@ contains
     if(present(tol))then
        tiny = tol
     else
-       tiny = 1.D-5
+       tiny = 1.E-5_real32
     end if
     nelem = size(elem(:,1,1))
     dim1 = size(elem(1,:,1))
