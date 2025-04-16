@@ -1023,7 +1023,6 @@ contains
     !! Apply slab_cuber to orthogonalise lower material
     !!--------------------------------------------------------------------
     call set_vacuum(basis,term%axis,1._real32-term%tol/tfmat(term%axis,term%axis),vacuum_)
-    !call err_abort_print_struc(basis,"check.vasp","stop")
     abc=cshift(abc,3-term%axis)
     if(orthogonalise_)then
        ortho_check: do j=1,2
