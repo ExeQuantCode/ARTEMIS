@@ -1149,7 +1149,7 @@ contains
     !!-----------------------------------------------------------------------
     !! Reduce the lattice to symmetry definition
     !!-----------------------------------------------------------------------
-    call reducer(lat, bas)
+    call reducer(bas)
     !! next line necessary as FCC and BCC do not conform to Niggli reduced ...
     !! ... cell definitions.
     lat = primitive_lat(lat)
