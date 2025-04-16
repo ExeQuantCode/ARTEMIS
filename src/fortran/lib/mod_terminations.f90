@@ -934,7 +934,7 @@ contains
        iterm_list(j) = j
     end do
     iterm_list = cshift( iterm_list, term_btm_idx - 1 )
-    if(equivalent_surfaces)then
+    if(.not.equivalent_surfaces)then
        j_start = term_top_idx - term_btm_idx + 1
        if(j_start.le.0) j_start = j_start + term%nterm
        j_start = j_start + 1 !+ (istep-1)*term%nterm/term%nstep
@@ -956,14 +956,13 @@ contains
     do j = 1, 3
        tfmat(j,j) = 1._real32
        if(j.eq.term%axis)then
-          if(equivalent_surfaces)then
+          if(.not.equivalent_surfaces)then
              tfmat(j,j) = height
           else!if(term%lmirror)then
              if(istep.ne.0)then
                 rtmp1 = num_cells + term%arr(term_btm_idx)%ladder(istep)
-                rtmp1 = rtmp1/(ncells)
-                tfmat(j,j) = rtmp1
-                tfmat(j,j) = tfmat(j,j) + &
+                rtmp1 = rtmp1/real(ncells, real32)
+                tfmat(j,j) = rtmp1 + &
                      (term%arr(term_btm_idx)%hmax - term%arr(term_btm_idx)%hmin)
              end if
           !else
@@ -1014,7 +1013,6 @@ contains
           write(0,'("THE TRANSFORMATION IS GREATER THAN ONE ",F0.9)') &
                tfmat(term%axis,term%axis)
        end if
-       !call err_abort(trim(msg),fmtd=.true.)
        call err_abort_print_struc(basis,lwup//"_term.vasp",&
             trim(msg),.true.)
        lcycle = .true.
