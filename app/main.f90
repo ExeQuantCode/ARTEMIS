@@ -93,7 +93,11 @@ program artemis_executable
         call intf_gen%set_tolerance( &
                tolerance = tolerance &
         )
-        call intf_gen%generate(struc1_bas, struc2_bas)
+        call intf_gen%generate( &
+             struc1_bas, struc2_bas, &
+             miller_lw = lw_mplane, miller_up = up_mplane, &
+             surface_lw = lw_surf, surface_up = up_surf &
+        )
      else
         call intf_gen%restart(struc1_bas)
      end if
