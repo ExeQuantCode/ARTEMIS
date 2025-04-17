@@ -641,8 +641,8 @@ contains
     order = [ 1, 2, 3 ]
     order = cshift( order, 3 - axis )
 
-    ortho_vec=cross(lat(order(1),:),lat(order(2),:))
-    ortho_comp=dot_product(lat(3,:),ortho_vec)/modu(ortho_vec)**2._real32
+    ortho_vec=cross( [ lat(order(1),:) ] , [ lat(order(2),:) ] )
+    ortho_comp=dot_product([ lat(3,:) ],ortho_vec)/modu(ortho_vec)**2._real32
     ortho_vec=ortho_vec*ortho_comp
 
     lat(3,:)=ortho_vec
@@ -1639,6 +1639,7 @@ contains
        end if
     end do
     output%natom=sum(output%spec(:)%num)
+    output%lat = basis1%lat
 
 
     if(lmap) call move_alloc(new_map,map1)
@@ -1683,6 +1684,8 @@ contains
     !! Offset for the merged basis.
     integer, allocatable, dimension(:) :: match
     !! Array to match species.
+    real(real32), dimension(3,3) :: output_lat
+    !! Output lattice.
 
 
     !---------------------------------------------------------------------------
@@ -1763,12 +1766,12 @@ contains
     !---------------------------------------------------------------------------
     ! makes supercell
     !---------------------------------------------------------------------------
-    output%lat(order(1),:) = basis1_%lat(order(1),:)
-    output%lat(order(2),:) = basis1_%lat(order(2),:)
+    output_lat(order(1),:) = basis1_%lat(order(1),:)
+    output_lat(order(2),:) = basis1_%lat(order(2),:)
     unit_vec = uvec(basis1_%lat(axis,:))
-    output%lat(axis,:) = basis1_%lat(axis,:) + modu(basis2_%lat(axis,:)) * unit_vec
-    c1_ratio = modu(basis1_%lat(axis,:)) / modu(output%lat(axis,:))
-    c2_ratio = modu(basis2_%lat(axis,:)) / modu(output%lat(axis,:))
+    output_lat(axis,:) = basis1_%lat(axis,:) + modu(basis2_%lat(axis,:)) * unit_vec
+    c1_ratio = modu(basis1_%lat(axis,:)) / modu(output_lat(axis,:))
+    c2_ratio = modu(basis2_%lat(axis,:)) / modu(output_lat(axis,:))
 
 
 !!!-----------------------------------------------------------------------------
@@ -1789,9 +1792,9 @@ contains
     else
        output = basis_merge(basis1_,basis2_)
     end if
+    output%lat = output_lat
     call output%normalise(ceil_val = 1._real32, floor_coords = .true.)
 
-    return
   end function basis_stack
 !###############################################################################
 

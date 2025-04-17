@@ -276,7 +276,7 @@ contains
        write(err_msg,*) "No inversion symmetry found!"
        call err_abort(err_msg)
     end if
-    do i=1,grp_store%nsymop
+    do i = 1, grp_store%nsym
        if(all(abs(grp_store%sym(i,:3,:3)-inv_mat).lt.tolerance)) &
             grp_store%sym(itmp1,4,:3) = grp_store%sym(i,4,:3)
     end do
