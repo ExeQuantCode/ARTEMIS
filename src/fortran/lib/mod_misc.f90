@@ -136,7 +136,7 @@ contains
     istart=1
     do j=1,3
        do i=j,dim
-          loc=minloc(abs(arr(i:dim,a123(1))),dim=1,mask=(abs(arr(i:dim,a123(1))).gt.1.D-5))+i-1
+          loc=minloc(abs(arr(i:dim,a123(1))),dim=1,mask=(abs(arr(i:dim,a123(1))).gt.1.E-5_real32))+i-1
           buff(:)=arr(i,:)
           arr(i,:)=arr(loc,:)
           arr(loc,:)=buff(:)
@@ -395,7 +395,7 @@ contains
   subroutine loadbar(count,div,loaded)
     implicit none
     integer :: count,div !div=10
-    real :: tiny=1.E-5
+    real(real32) :: tiny=1.E-5
     character(1) :: yn,creturn = achar(13)
     character(1), optional :: loaded
 

@@ -14,8 +14,8 @@ module shifting
   use interface_identifier
   implicit none
 
-  real :: f_scale = 0.5
-  real :: g_scale = 8.0/3.0
+  real(real32) :: f_scale = 0.5
+  real(real32) :: g_scale = 8.0/3.0
 
   private
 
@@ -126,7 +126,7 @@ contains
        !!-----------------------------------------------------------------------
        !! Finds lower interfacial atoms near interface defined by intf_loc(1)
        !!-----------------------------------------------------------------------
-       intf_list=gen_DONsim(gen_DON(lat,splitbas(1)),cutoff=4.0)
+       intf_list=gen_DONsim(gen_DON(lat,splitbas(1)),cutoff=4._real32)
 101    do is=1,bas%nspec
           bas_bot%sysname=splitbas(1)%sysname
           bas_bot%spec(is)%name=splitbas(1)%spec(is)%name
@@ -156,7 +156,7 @@ contains
        !! ... method 2
        !!-----------------------------------------------------------------------
        if(bas_bot%natom.eq.0)then
-          intf_list=gen_DONsim(gen_DON(lat,splitbas(1)),cutoff=4.0,avg_mthd=2)
+          intf_list=gen_DONsim(gen_DON(lat,splitbas(1)),cutoff=4._real32,avg_mthd=2)
           do is=1,bas%nspec
              deallocate(bas_bot%spec(is)%atom)
           end do
@@ -167,7 +167,7 @@ contains
        !!-----------------------------------------------------------------------
        !! Finds upper interfacial atoms near interface defined by intf_loc(1)
        !!-----------------------------------------------------------------------
-       intf_list=gen_DONsim(gen_DON(lat,splitbas(2)),cutoff=4.0)
+       intf_list=gen_DONsim(gen_DON(lat,splitbas(2)),cutoff=4._real32)
 102    do is=1,bas%nspec
           bas_top%sysname=splitbas(2)%sysname
           bas_top%spec(is)%name=splitbas(2)%spec(is)%name
@@ -197,7 +197,7 @@ contains
        !! ... method 2
        !!-----------------------------------------------------------------------
        if(bas_top%natom.eq.0)then
-          intf_list=gen_DONsim(gen_DON(lat,splitbas(2)),cutoff=4.0,avg_mthd=2)
+          intf_list=gen_DONsim(gen_DON(lat,splitbas(2)),cutoff=4._real32,avg_mthd=2)
           do is=1,bas%nspec
              deallocate(bas_top%spec(is)%atom)
           end do
@@ -748,26 +748,26 @@ contains
     implicit none
     integer :: i,j,k,l,is,ia,ja,jb,jc,count1,itmp1
     integer :: ntrans,iatom,nneigh,ncheck
-    real :: stepsize,max_sep,dist_max
-    real :: rtmp1,rtmp2,rtmp3
+    real(real32) :: stepsize,max_sep,dist_max
+    real(real32) :: rtmp1,rtmp2,rtmp3
     real(real32) :: val,dtmp1,dtmp2
     logical :: lbulk, lpresent
     type(confine_type) :: confine
     integer, dimension(2) :: plane_loc
     integer, dimension(3) :: ngrid,nstep,ivtmp1
-    real, dimension(2) :: min_trans,lowest_atom,highest_atom
-    real, dimension(3) :: pos,vtmp1,vtmp2,vtmp3,gridsize,add
+    real(real32), dimension(2) :: min_trans,lowest_atom,highest_atom
+    real(real32), dimension(3) :: pos,vtmp1,vtmp2,vtmp3,gridsize,add
     logical, dimension(2) :: lwyckoff
     type(map_type), dimension(2) :: map
     type(wyck_spec_type), dimension(2) :: wyckoff
-    real, allocatable, dimension(:) :: fit_store,tmp_neigh
+    real(real32), allocatable, dimension(:) :: fit_store,tmp_neigh
     type(basis_type), allocatable, dimension(:) :: splitbas
     type(den_of_neigh_type), allocatable, dimension(:,:) :: DON_missing
     integer, allocatable, dimension(:,:) :: shift_store
     real(real32), allocatable, dimension(:,:) :: res_shifts,trans,regions
 
     integer, intent(in) :: axis,nstore
-    real, intent(in), optional :: max_bondlength
+    real(real32), intent(in), optional :: max_bondlength
     type(basis_type), intent(in) :: bas
     real(real32), dimension(:), intent(in) :: intf_loc
     real(real32), dimension(3,3), intent(in) :: lat
@@ -786,8 +786,8 @@ contains
 
     type neighbour_type
        integer :: num
-       real :: bond
-       real, dimension(3) :: pos
+       real(real32) :: bond
+       real(real32), dimension(3) :: pos
     end type neighbour_type
     type(neighbour_type), allocatable, dimension(:,:) :: neighbour
     type intf_type
@@ -797,7 +797,7 @@ contains
 
 
     type grid_type
-       real, allocatable, dimension(:) :: neigh
+       real(real32), allocatable, dimension(:) :: neigh
     end type grid_type
     type(grid_type), allocatable, dimension(:,:,:,:) :: course_grid
 
@@ -857,7 +857,7 @@ contains
        end do
     end do
     min_trans=abs(min_trans)
-    where(abs(min_trans).lt.1.D-5)
+    where(abs(min_trans).lt.1.E-5_real32)
        min_trans=1._real32
     end where
     if(ierror.eq.1) write(6,*) "repeated_trans:",min_trans
@@ -1301,10 +1301,10 @@ contains
   subroutine sort_shifts(fits,shifts)
     implicit none
     integer :: i,loc,num
-    real :: dbuff
+    real(real32) :: dbuff
     integer, dimension(3) :: ivtmp1
     integer, dimension(:,:), intent(inout) :: shifts
-    real, dimension(:), intent(inout) :: fits
+    real(real32), dimension(:), intent(inout) :: fits
 
 
     num = size(fits,dim=1)

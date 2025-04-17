@@ -410,7 +410,7 @@ contains
 !!!------------------------------------------------------------------------
 !!! initialises tolerance and output
 !!!------------------------------------------------------------------------
-    tol=1.D-5
+    tol=1.E-5_real32
     lunique = .true.
 
 
@@ -570,7 +570,7 @@ contains
        ntransforms,matched_tols,sym1,sym2)
     implicit none
     integer :: i,j,l,m,total_list_count,nvec1,nvec2
-    real :: tol_up_ang,tol_dw_ang,tol_up_vec,tol_dw_vec
+    real(real32) :: tol_up_ang,tol_dw_ang,tol_up_vec,tol_dw_vec
     real(real32) :: tiny
     real(real32) :: reference_mag,considered_mag
     real(real32) :: reference_angle,considered_angle
@@ -627,7 +627,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Setting up tolerances !!! 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  tiny = 1.D-5
+  tiny = 1.E-5_real32
   tol_up_ang = 1.E0 + real(tol%ang)/(2.E0*pi)
   tol_dw_ang = 1.E0 - real(tol%ang)/(2.E0*pi)
   tol_up_vec = 1.E0 + real(tol%vec)!/100._real32

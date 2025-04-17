@@ -966,8 +966,8 @@ contains
     integer, dimension(3,3) :: tmat1,tmat2
     integer, dimension(3,3) :: transform1,transform2 !The transformations output by planecutter.
 
-    real, dimension(3) :: rvec1, rvec2
-    real, dimension(3,3) :: rmat1
+    real(real32), dimension(3) :: rvec1, rvec2
+    real(real32), dimension(3,3) :: rmat1
     
     real(real32), allocatable, dimension(:,:,:) :: tmpsym1,tmpsym2,tmpsym
     real(real32), allocatable, dimension(:,:,:) :: transform1_saved,transform2_saved !The transformations output by plane cutter

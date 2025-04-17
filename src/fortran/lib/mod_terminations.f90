@@ -666,19 +666,19 @@ contains
        end do
        vtmp1 = list(:)%loc - height
        !vtmp1 = vtmp1 - ceiling( vtmp1 - 1._real32 )
-       where(vtmp1.lt.-1.D-5)
-          vtmp1 = vtmp1 - ceiling( vtmp1 + 1.D-5 - 1._real32 )
+       where(vtmp1.lt.-1.E-5_real32)
+          vtmp1 = vtmp1 - ceiling( vtmp1 + 1.E-5_real32 - 1._real32 )
        end where
        itmp1 = minloc( vtmp1(:), dim=1,&
             mask=&
-            vtmp1(:).ge.-1.D-5.and.&
+            vtmp1(:).ge.-1.E-5_real32.and.&
             list(:)%term.eq.surf(2))
        height = height + vtmp1(itmp1) - term%arr(term_start)%hmin
 
        !if(.not.term%lmirror)then
           ! get thickness of top/surface layer
           rtmp1 = term%arr(surf(2))%hmax - term%arr(surf(2))%hmin
-          if(rtmp1.lt.-1.D-5) rtmp1 = rtmp1 + 1._real32
+          if(rtmp1.lt.-1.E-5_real32) rtmp1 = rtmp1 + 1._real32
           height = height + rtmp1 !(1._real32 - rtmp1)
        !end if
 
@@ -1026,7 +1026,7 @@ contains
     abc=cshift(abc,3-term%axis)
     if(orthogonalise_)then
        ortho_check: do j=1,2
-          if(abs(dot_product(basis%lat(abc(j),:),basis%lat(term%axis,:))).gt.1.D-5)then
+          if(abs(dot_product(basis%lat(abc(j),:),basis%lat(term%axis,:))).gt.1.E-5_real32)then
              call ortho_axis(basis%lat,basis,term%axis)
              exit ortho_check
           end if
