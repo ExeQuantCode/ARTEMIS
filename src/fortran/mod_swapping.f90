@@ -29,7 +29,7 @@ contains
 !!! Main function to be called from ARTEMIS
 !!!#############################################################################
   function rand_swapper(lat,bas,axis,width,nswaps_per_cell,nswap,intf_loc,&
-       iswap,seed,sigma,require_mirror) result(bas_arr)
+       iswap,seed_arr,sigma,require_mirror) result(bas_arr)
     implicit none
     integer :: i,j,is,iout,itmp,count1
     integer :: axis,nswap
@@ -53,7 +53,7 @@ contains
     real(real32), optional, intent(in) :: sigma
     logical, optional, intent(in) :: require_mirror
     type(basis_type), intent(in) :: bas
-    integer, allocatable, dimension(:), intent(in) :: seed
+    integer, dimension(:), intent(in) :: seed_arr
     real(real32), dimension(2), intent(in) :: intf_loc !USE 1
     type(basis_type), allocatable, dimension(:) :: bas_arr
     real(real32), dimension(3,3), intent(in) :: lat
@@ -75,7 +75,7 @@ contains
     end if
     udef_sigma = udef_sigma/modu(lat(axis,:))
     small_sigma = 0.01/modu(lat(axis,:))
-    call random_seed(put=seed)
+    call random_seed(put=seed_arr)
 
 
 !!!-----------------------------------------------------------------------------
