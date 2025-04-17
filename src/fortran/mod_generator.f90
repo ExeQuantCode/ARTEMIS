@@ -102,60 +102,19 @@ contains
     real(real32), intent(in), optional :: area_weight
     !! Importance weighting of area mismatch
 
-    if(present(tolerance)) this%tolerance = tolerance
-
-    if(present(vector_mismatch)) then
-       this%tolerance%vec = vector_mismatch
+    if(present(tolerance))then
+       this%tolerance = tolerance
     else
-       this%tolerance%vec = 5._real32
-    end if
-
-    if(present(angle_mismatch)) then
-       this%tolerance%ang = angle_mismatch
-    else
-       this%tolerance%ang = 5._real32
-    end if
-
-    if(present(area_mismatch)) then
-       this%tolerance%area = area_mismatch
-    else
-       this%tolerance%area = 10._real32
-    end if
-
-    if(present(max_length)) then
-       this%tolerance%maxlen = max_length
-    else
-       this%tolerance%maxlen = 20._real32
-    end if
-
-    if(present(max_area)) then
-       this%tolerance%maxarea = max_area
-    else
-       this%tolerance%maxarea = 400._real32
-    end if
-
-    if(present(max_fit)) then
-       this%tolerance%maxfit = max_fit
-    else
-       this%tolerance%maxfit = 5
-    end if
-
-    if(present(max_extension)) then
-       this%tolerance%maxsize = max_extension
-    else
-       this%tolerance%maxsize = 5
-    end if
-
-    if(present(angle_weight)) then
-       this%tolerance%ang_weight = angle_weight
-    else
-       this%tolerance%ang_weight = 1._real32
-    end if
-
-    if(present(area_weight)) then
-       this%tolerance%area_weight = area_weight
-    else
-       this%tolerance%area_weight = 1._real32
+       if(present(vector_mismatch)) this%tolerance%vec = vector_mismatch
+       if(present(angle_mismatch)) this%tolerance%ang = angle_mismatch
+       if(present(area_mismatch)) this%tolerance%area = area_mismatch
+       if(present(max_length)) this%tolerance%maxlen = max_length
+       if(present(max_area)) this%tolerance%maxarea = max_area
+       if(present(max_fit)) this%tolerance%maxfit = max_fit
+       ! if(present(nstore)) this%tolerance%nstore = nstore
+       if(present(max_extension)) this%tolerance%maxsize = max_extension
+       if(present(angle_weight)) this%tolerance%ang_weight = angle_weight
+       if(present(area_weight)) this%tolerance%area_weight = area_weight
     end if
 
   end subroutine set_tolerance
@@ -668,20 +627,17 @@ contains
           call transformer(basis_lw_,tfmat,lw_map)
           SAV=get_best_match(&
                this%tolerance,&
-               basis_lw_%lat,basis_up_%lat,&
                basis_lw_,basis_up_,&
                trim(abc),"abc",lprint_matches,ierror,imatch=imatch)
        elseif(any(up_mplane.ne.0))then
           SAV=get_best_match(&
                this%tolerance,&
-               basis_lw_%lat,basis_up_%lat,&
                basis_lw_,basis_up_,&
                trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
                plane1=lw_mplane,plane2=up_mplane,nmiller=nmiller)
        else
           SAV=get_best_match(&
                this%tolerance,&
-               basis_lw_%lat,basis_up_%lat,&
                basis_lw_,basis_up_,&
                trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
                plane1=lw_mplane,nmiller=nmiller)
@@ -689,14 +645,12 @@ contains
     elseif(any(up_mplane.ne.0))then
        SAV=get_best_match(&
             this%tolerance,&
-            basis_lw_%lat,basis_up_%lat,&
             basis_lw_,basis_up_,&
             trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
             plane2=up_mplane,nmiller=nmiller)
     else
        SAV=get_best_match(&
             this%tolerance,&
-            basis_lw_%lat,basis_up_%lat,&
             basis_lw_,basis_up_,&
             trim(abc),"abc",lprint_matches,ierror,imatch=imatch,&
             nmiller=nmiller)

@@ -25,7 +25,9 @@ module artemis__misc_types
   end type latmatch_type
 
   type tol_type
-     integer :: maxsize,maxfit,nstore
+     integer :: nstore = 5
+     integer :: maxfit = 100
+     integer :: maxsize = 10
      real(real32) :: maxlen=20._real32
      real(real32) :: maxarea=400._real32
      real(real32) :: vec = 5._real32

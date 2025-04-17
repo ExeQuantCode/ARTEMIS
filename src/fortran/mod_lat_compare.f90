@@ -35,15 +35,14 @@ contains
 !!!#############################################################################
 !!! 
 !!!#############################################################################
-  function get_best_match(tol,lat1,lat2,bas1,bas2,str1,str2,lprint,ierr,plane1,plane2,nmiller,imatch) result(SAV)
+  function get_best_match(tol,basis1,basis2,str1,str2,lprint,ierr,plane1,plane2,nmiller,imatch) result(SAV)
     implicit none
     integer :: num_miller
     character(3) :: str1,str2
     logical :: lprint
     type(tol_type) :: tol
-    type(basis_type) :: bas1,bas2
+    type(basis_type) :: basis1,basis2
     type(latmatch_type) :: SAV
-    real(real32), dimension(3,3) :: lat1,lat2
     integer, optional :: ierr,imatch,nmiller
     integer, dimension(3), optional :: plane1,plane2
     
@@ -61,30 +60,30 @@ contains
     allocate(SAV%tol(tol%nstore,3))
 
     SAV%tol(:,:)=10000
-    SAV%lat1=MATNORM(lat1)
-    SAV%lat2=MATNORM(lat2)
-    
+    SAV%lat1=MATNORM(basis1%lat)
+    SAV%lat2=MATNORM(basis2%lat)
+
     if(match_method.eq.0)then
        if(present(plane1))then
           if(present(plane2))then
              call lattice_matching(&
-                  SAV,tol,bas1,bas2,&
+                  SAV,tol,basis1,basis2,&
                   plane1=plane1,plane2=plane2,nmiller=num_miller,&
                   lprint=lprint)
           else
              call lattice_matching(&
-                  SAV,tol,bas1,bas2,&
+                  SAV,tol,basis1,basis2,&
                   plane1=plane1,nmiller=num_miller,&
                   lprint=lprint)
           end if
        elseif(present(plane2))then
           call lattice_matching(&
-               SAV,tol,bas1,bas2,&
+               SAV,tol,basis1,basis2,&
                plane2=plane2,nmiller=num_miller,&
                lprint=lprint)
        else
           call lattice_matching(&
-               SAV,tol,bas1,bas2,&
+               SAV,tol,basis1,basis2,&
                plane2=plane2,nmiller=num_miller,&
                lprint=lprint)
        end if
@@ -1056,34 +1055,34 @@ contains
              m2=floor((i2)/2.0)*(-1)**i2
              mloop3: do i3=1,loopsize
                 m3=floor((i3)/2.0)*(-1)**i3
-                if ( .not.is_unique( (/m1,m2,m3/), grp1%sym(:,:3,:3) ) ) &
+                if ( .not.is_unique( [ m1, m2, m3 ], grp1%sym(:,:3,:3) ) ) &
                      cycle mloop3
-                itmp1=itmp1+1
-                ivtmp1(itmp1,:)=(/m1,m2,m3/)
+                itmp1 = itmp1 + 1
+                ivtmp1(itmp1,:) = [ m1, m2, m3 ]
                 !if(itmp1.eq.nmiller) exit mloop1
              end do mloop3
           end do mloop2
        end do mloop1
        do i=1,itmp1
-          loc=minloc(&
-               abs(ivtmp1(i:itmp1,1))+&
-               abs(ivtmp1(i:itmp1,2))+&
-               abs(ivtmp1(i:itmp1,3)),dim=1)+i-1
-          ivtmp2(:)=ivtmp1(i,:)
-          ivtmp1(i,:)=ivtmp1(loc,:)
-          ivtmp1(loc,:)=ivtmp2(:)
+          loc = minloc(&
+               abs(ivtmp1(i:itmp1,1)) + &
+               abs(ivtmp1(i:itmp1,2)) + &
+               abs(ivtmp1(i:itmp1,3)),dim=1) + i - 1
+          ivtmp2(:) = ivtmp1(i,:)
+          ivtmp1(i,:) = ivtmp1(loc,:)
+          ivtmp1(loc,:) = ivtmp2(:)
        end do
-       itmp1=min(itmp1,nmiller)
+       itmp1 = min(itmp1,nmiller)
        allocate(miller1(itmp1,3))
-       miller1(:,:)=ivtmp1(:itmp1,:)
+       miller1(:,:) = ivtmp1(:itmp1,:)
     end if
 
 
     !!--------------------------------------------------------------------------
     !! generate all unique planes for lattice 2
     !!--------------------------------------------------------------------------
-    itmp1=0
-    ivtmp1=0
+    itmp1 = 0
+    ivtmp1 = 0
     if(present(plane2))then
        allocate(miller2(1,size(plane2)))
        miller2(1,:3)=plane2(:3)
@@ -1103,17 +1102,17 @@ contains
           end do mloop5
        end do mloop4
        do i=1,itmp1
-          loc=minloc(&
-               abs(ivtmp1(i:itmp1,1))+&
-               abs(ivtmp1(i:itmp1,2))+&
-               abs(ivtmp1(i:itmp1,3)),dim=1)+i-1
-          ivtmp2(:)=ivtmp1(i,:)
-          ivtmp1(i,:)=ivtmp1(loc,:)
-          ivtmp1(loc,:)=ivtmp2(:)
+          loc = minloc(&
+               abs(ivtmp1(i:itmp1,1)) + &
+               abs(ivtmp1(i:itmp1,2)) + &
+               abs(ivtmp1(i:itmp1,3)),dim=1) + i - 1
+          ivtmp2(:) = ivtmp1(i,:)
+          ivtmp1(i,:) = ivtmp1(loc,:)
+          ivtmp1(loc,:) = ivtmp2(:)
        end do
-       itmp1=min(itmp1,nmiller)
+       itmp1 = min(itmp1,nmiller)
        allocate(miller2(itmp1,3))
-       miller2(:,:)=ivtmp1(:itmp1,:)
+       miller2(:,:) = ivtmp1(:itmp1,:)
     end if
     if(present(lprint))then
        if(lprint)then
@@ -1138,11 +1137,11 @@ contains
     !! cycles through the unique miller planes to find matches
     !!--------------------------------------------------------------------------
     allocate(tmpsym(max(grp1%nsym,grp2%nsym),3,3))
-    MAINLOOP1: do m1=1,size(miller1(:,1),dim=1)
+    MAINLOOP1: do m1 = 1, size( miller1, dim = 1 )
        transform1 = nint(planecutter(lat1,real(miller1(m1,:),real32)))
        if (all(transform1 .eq. 0)) cycle MAINLOOP1
        templat1 = matmul(transform1,lat1)
-       tmpsym=0._real32
+       tmpsym = 0._real32
        do i=1,grp1%nsym
           tmpsym(i,:3,:3) = &
                matmul(grp1%sym(i,:3,:3),inverse_3x3(real(transform1,real32)))
@@ -1155,13 +1154,13 @@ contains
        tmpsym1=0._real32
 !!! IS THIS REASONABLE TO DO IT THIS WAY? OR DO WE NEED TO CHANGE sym TO BE IN THE NEW LAT?
 !!! Wait, should it be instead that the cross product of the a-b plane is always consistent?
-       rvec1=real(cross([templat1(1,:)],[templat1(2,:)]))
+       rvec1=cross([templat1(1,:)],[templat1(2,:)])
        do i=1,grp1%nsym
-          rmat1=real(matmul(tmpsym(i,:3,:3),templat1(:,:)))
+          rmat1=matmul(tmpsym(i,:3,:3),templat1(:,:))
           rvec2=cross([rmat1(1,:)],[rmat1(2,:)])
           if(all(abs( rvec1(:) - rvec2(:) ).lt.1.E-8_real32).or.&
                all(abs( rvec1(:) + rvec2(:) ).lt.1.E-8_real32))then
-             nsym1=nsym1+1
+             nsym1 = nsym1 + 1
              tmpsym1(nsym1,:3,:3) = tmpsym(i,:3,:3)
           else
              cycle
