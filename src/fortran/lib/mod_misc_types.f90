@@ -39,6 +39,9 @@ module artemis__misc_types
 
   type :: abstract_artemis_generator_type
      integer :: max_num_structures = 100
+     
+     integer :: axis = 3
+     !! Axis along which to align the slab/interface normal vector
 
      real(real32) :: tol_cart
      real(real32), dimension(3) :: tol_crys
