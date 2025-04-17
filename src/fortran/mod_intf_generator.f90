@@ -763,7 +763,9 @@ contains
           !!--------------------------------------------------------------------
           call build_slab(slab_lw,t2lw_map,lw_term,[iterm_lw,lw_surf(2)],&
                lw_thickness, ncells_lw, lw_num_layers, height_lw,&
-               "lw",lcycle)
+               "lw",lcycle, &
+               vacuum = this%vacuum_gap &
+          )
           if(lcycle) cycle lw_term_loop
 
           
@@ -776,7 +778,9 @@ contains
              allocate(t2up_map,source=t1up_map)
              call build_slab(slab_up,t2up_map,up_term,[iterm_up,up_surf(2)],&
                   up_thickness, ncells_up, up_num_layers, height_up,&
-                  "up",lcycle)
+                  "up",lcycle, &
+                  vacuum = this%vacuum_gap &
+             )
              if(lcycle) cycle up_term_loop
 
              
@@ -846,6 +850,7 @@ contains
                         &code is now exiting...")
                 end if
              end if
+             write(*,*) "intf_loc",intf_loc
 
 
              !!-----------------------------------------------------------------
@@ -985,7 +990,7 @@ contains
     case(4)
        if(present(map))then
           output_shifts = get_shifts_DON(&
-               lat=basis%lat,bas=basis,&
+               bas=basis,&
                axis=this%axis,&
                intf_loc=intf_loc,&
                nstore=nshift,c_scale=c_scale,offset=offset(1,:3),&
@@ -993,7 +998,7 @@ contains
                max_bondlength=max_bondlength)
        else
           output_shifts = get_shifts_DON(&
-               lat=basis%lat,bas=basis,&
+               bas=basis,&
                axis=this%axis,&
                intf_loc=intf_loc,&
                nstore=nshift,c_scale=c_scale,offset=offset(1,:3),&

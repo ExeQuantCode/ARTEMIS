@@ -740,7 +740,7 @@ contains
 !!!#############################################################################
 !!! generate shifts by filling missing neighours for surface atoms
 !!!#############################################################################
-  function get_shifts_DON(lat,bas,axis,intf_loc,nstore,c_scale,offset,&
+  function get_shifts_DON(bas,axis,intf_loc,nstore,c_scale,offset,&
        bulk_DON,bulk_map,lprint,max_bondlength) result(res_shifts)
     use artemis__sym, only: gldfnd,confine_type
     use edit_geom, only: get_bulk,wyck_spec_type,get_wyckoff
@@ -770,7 +770,6 @@ contains
     real(real32), intent(in), optional :: max_bondlength
     type(basis_type), intent(in) :: bas
     real(real32), dimension(:), intent(in) :: intf_loc
-    real(real32), dimension(3,3), intent(in) :: lat
     real(real32), optional :: c_scale
     logical, optional :: lprint
     real(real32), dimension(3), optional, intent(in) :: offset
@@ -901,7 +900,7 @@ contains
 
        count1 = 0
        DON_missing(i,:) = &
-            gen_DON(lat,splitbas(i),dist_max,scale_dist=.false.,norm=.true.)
+            gen_DON(bas%lat,splitbas(i),dist_max,scale_dist=.false.,norm=.true.)
        !!-----------------------------------------------------------------------
        !! Loops through the basis and finds the missing bonds of surface atoms.
        !! Does this by minusing the DON of the wyckoff atom of the surface ...
@@ -1059,24 +1058,24 @@ contains
     lpresent=.false.
     if(present(offset))then
        if(offset(axis).ge.0._real32)then
-          max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(lat(axis,:))
+          max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(bas%lat(axis,:))
           lpresent=.true.
        end if
     end if
     if(.not.lpresent)then
-       max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(lat(axis,:)) + 6._real32
+       max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(bas%lat(axis,:)) + 6._real32
        add = 0._real32
     end if
 
     stepsize=0.1
-    ngrid(1)=nint(modu(lat(1,:))/stepsize)
-    ngrid(2)=nint(modu(lat(2,:))/stepsize)
+    ngrid(1)=nint(modu(bas%lat(1,:))/stepsize)
+    ngrid(2)=nint(modu(bas%lat(2,:))/stepsize)
     ngrid(3)=ceiling(max_sep/stepsize)+1
     allocate(course_grid(2,ngrid(1),ngrid(2),ngrid(3)))
     allocate(tmp_neigh(max(size(intf(1)%neigh),size(intf(2)%neigh))*9))
-    gridsize(1) = stepsize/modu(lat(1,:))
-    gridsize(2) = stepsize/modu(lat(2,:))
-    gridsize(3) = stepsize/modu(lat(3,:))
+    gridsize(1) = stepsize/modu(bas%lat(1,:))
+    gridsize(2) = stepsize/modu(bas%lat(2,:))
+    gridsize(3) = stepsize/modu(bas%lat(3,:))
 
     nstep(:2) = min_trans(:2)*ngrid(:2)
     nstep(3) = 0
@@ -1101,7 +1100,7 @@ contains
              add(i) = 0.0
           end if
        end do
-       add(axis) = add(axis)/modu(lat(axis,:))
+       add(axis) = add(axis)/modu(bas%lat(axis,:))
     end if
 
     !nthreads=8
@@ -1112,7 +1111,7 @@ contains
 !!!-----------------------------------------------------------------------------
     if(abs(ierror).ge.1)then
        write(6,'(1X,A,3(2X,F8.4))') &
-            "lat:",modu(lat(1,:)),modu(lat(2,:)),modu(lat(3,:))
+            "lat:",modu(bas%lat(1,:)),modu(bas%lat(2,:)),modu(bas%lat(3,:))
        write(6,'(1X,A,3(2X,F8.4))') "gridsize:",gridsize
        write(6,*) "add:",add
        write(6,*) "nstep:",nstep
@@ -1133,7 +1132,7 @@ contains
 !$OMP PARALLEL DO &
 !$OMP DEFAULT(SHARED) &
 !$OMP PRIVATE(is,ja,jb,jc,pos,vtmp1,vtmp2,vtmp3,count1,tmp_neigh) &
-!$OMP SCHEDULE(DYNAMIC,8)
+!$OMP SCHEDULE(DYNAMIC,2)
     do k=1,2
        nneigh = size(intf(k)%neigh,dim=1)
 
@@ -1156,7 +1155,7 @@ contains
                       vtmp2(1) = vtmp1(1) + real(i,real32)
                       b_extend_loop: do j=-1,1,1
                          vtmp2(2) = vtmp1(2) + real(j,real32)
-                         vtmp3 = matmul(vtmp2,lat)
+                         vtmp3 = matmul(vtmp2,bas%lat)
                          if(modu(vtmp3).gt.dist_max) cycle b_extend_loop
                          count1 = count1 + 1
                          tmp_neigh(count1) = modu(vtmp3)
@@ -1275,7 +1274,7 @@ contains
        res_shifts(i,:2) = res_shifts(i,:2) + add(:2)
        write(6,'(1X,I3,":",2X,F6.2,3(2X,I3))') i,fit_store(i),shift_store(i,:)
     end do
-    res_shifts(:,axis) = (res_shifts(:,axis)*max_sep)/modu(lat(axis,:)) + &
+    res_shifts(:,axis) = (res_shifts(:,axis)*max_sep)/modu(bas%lat(axis,:)) + &
          add(axis)
     if(present(c_scale)) res_shifts(:,axis) = res_shifts(:,axis)*c_scale
 
@@ -1285,7 +1284,7 @@ contains
           write(6,'(1X,"Shifts to be applied (Å)")')
           do i=1,nstore
              write(6,'(I3,":",2X,3(2X,F7.4))') &
-                  i,res_shifts(i,:2),res_shifts(i,3)*modu(lat(axis,:))
+                  i,res_shifts(i,:2),res_shifts(i,3)*modu(bas%lat(axis,:))
           end do
        end if
     end if

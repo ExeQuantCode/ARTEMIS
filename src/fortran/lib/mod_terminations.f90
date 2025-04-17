@@ -835,7 +835,7 @@ contains
     logical, intent(out) :: lcycle
 
     logical, optional, intent(in) :: orthogonalise
-    real(real32), optional, intent(in) :: vacuum
+    real(real32), intent(in) :: vacuum
 
 
     ! Local variables
@@ -843,7 +843,6 @@ contains
     !! Indices of the bottom and top terminations
     logical :: equivalent_surfaces
     !! Boolean whether the two surfaces are equivalent
-    real(real32) :: vacuum_
     integer :: j, j_start, istep, natom_check
     real(real32) :: rtmp1, slab_thickness, shift_val
     character(2) :: lwup
@@ -921,9 +920,6 @@ contains
 
     orthogonalise_ = .true.
     if(present(orthogonalise)) orthogonalise_ = orthogonalise
-
-    vacuum_ = 10._real32
-    if(present(vacuum)) vacuum_ = vacuum
 
 
     !!--------------------------------------------------------------------
@@ -1022,12 +1018,12 @@ contains
     !!--------------------------------------------------------------------
     !! Apply slab_cuber to orthogonalise lower material
     !!--------------------------------------------------------------------
-    call set_vacuum(basis,term%axis,1._real32-term%tol/tfmat(term%axis,term%axis),vacuum_)
+    call set_vacuum(basis,term%axis,1._real32-term%tol/tfmat(term%axis,term%axis),vacuum)
     abc=cshift(abc,3-term%axis)
     if(orthogonalise_)then
        ortho_check: do j=1,2
           if(abs(dot_product(basis%lat(abc(j),:),basis%lat(term%axis,:))).gt.1.E-5_real32)then
-             call ortho_axis(basis%lat,basis,term%axis)
+             call ortho_axis(basis,term%axis)
              exit ortho_check
           end if
        end do ortho_check

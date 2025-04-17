@@ -627,26 +627,26 @@ contains
 !!! Takes a lattice and makes the defined axis orthogonal to the other two
 !!! WARNING! THIS IS FOR SLAB STRUCTURES! IT REMOVES PERIODICITY ALONG THAT AXIS
 !!!#############################################################################
-  subroutine ortho_axis(lat,bas,axis)
+  subroutine ortho_axis(basis,axis)
     implicit none
+    type(basis_type), intent(inout) :: basis
     integer :: axis
     real(real32) :: ortho_comp
-    type(basis_type) :: bas
     integer, dimension(3) :: order
     real(real32), dimension(3) :: ortho_vec
     real(real32), dimension(3,3) :: lat
 
 
-    call bas%convert()
     order = [ 1, 2, 3 ]
     order = cshift( order, 3 - axis )
+    lat = basis%lat
 
     ortho_vec=cross( [ lat(order(1),:) ] , [ lat(order(2),:) ] )
     ortho_comp=dot_product([ lat(3,:) ],ortho_vec)/modu(ortho_vec)**2._real32
     ortho_vec=ortho_vec*ortho_comp
 
     lat(3,:)=ortho_vec
-    call bas%change_lattice(lat)
+    call basis%change_lattice(lat)
 
     return
   end subroutine ortho_axis
@@ -1889,6 +1889,7 @@ contains
           tbas%nspec=count(bas_arr(i)%spec(:)%num.gt.0)
           tbas%natom=bas_arr(i)%natom
           tbas%sysname=bas_arr(i)%sysname
+          tbas%lat = inbas%lat
           allocate(tbas%spec(tbas%nspec))
 
           if(lmap.and.i.eq.1)then
