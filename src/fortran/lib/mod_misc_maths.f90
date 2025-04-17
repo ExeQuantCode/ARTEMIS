@@ -45,8 +45,8 @@ contains
   function times(in_array)
     implicit none
     integer :: i
-    real :: times
-    real, dimension(:),intent(in) :: in_array
+    real(real32) :: times
+    real(real32), dimension(:),intent(in) :: in_array
 
     times=1.0
     do i=1,size(in_array)
@@ -144,8 +144,8 @@ contains
     implicit none
     integer :: n
     integer :: datsize_f, datsize_g
-    real, dimension(:) :: f, g
-    real, dimension(:), allocatable :: overlap, y
+    real(real32), dimension(:) :: f, g
+    real(real32), dimension(:), allocatable :: overlap, y
     
     datsize_f = size(f)
     datsize_g = size(g)
@@ -172,9 +172,9 @@ contains
     implicit none
     integer :: n
     integer :: datsize_f, datsize_g
-    real :: overlap
-    real, dimension(:) :: f, g
-    real, dimension(:), allocatable :: y
+    real(real32) :: overlap
+    real(real32), dimension(:) :: f, g
+    real(real32), dimension(:), allocatable :: y
     
     datsize_f = size(f)
     datsize_g = size(g)
@@ -200,8 +200,8 @@ contains
 
     !f is the signal array
     !g is the noise/impulse array
-    real, dimension(:), allocatable :: convolve, y
-    real, dimension(:) :: f, g
+    real(real32), dimension(:), allocatable :: convolve, y
+    real(real32), dimension(:) :: f, g
     integer :: datsize_f, datsize_g
     integer :: i,j,k
 
@@ -247,8 +247,8 @@ contains
 
     !f is the signal array
     !g is the noise/impulse array
-    real, dimension(:), allocatable :: cross_correl, y
-    real, dimension(:) :: f, g
+    real(real32), dimension(:), allocatable :: cross_correl, y
+    real(real32), dimension(:) :: f, g
     integer :: datsize_f, datsize_g
     integer :: m,n
 
@@ -329,8 +329,8 @@ contains
 !!!#####################################################
   function mean(in_array)
     implicit none
-    real :: mean
-    real, dimension(:), intent(in) :: in_array
+    real(real32) :: mean
+    real(real32), dimension(:), intent(in) :: in_array
 
     mean=sum(in_array)/size(in_array)
 
@@ -344,9 +344,9 @@ contains
   function median(in_array)
     implicit none
     integer :: i,loc
-    real :: median,oddeven,rtmp1
-    real, allocatable, dimension(:) :: cp_array
-    real, dimension(:), intent(in) :: in_array
+    real(real32) :: median,oddeven,rtmp1
+    real(real32), allocatable, dimension(:) :: cp_array
+    real(real32), dimension(:), intent(in) :: in_array
 
     allocate(cp_array(size(in_array)))
     cp_array=in_array
@@ -375,8 +375,8 @@ contains
   function mode(in_array)
     implicit none
     integer :: i,itmp1,maxcount
-    real :: mode
-    real, dimension(:), intent(in) :: in_array
+    real(real32) :: mode
+    real(real32), dimension(:), intent(in) :: in_array
 
     maxcount=0
     do i=1,size(in_array)
@@ -463,7 +463,7 @@ contains
        l_grad=r_grad
        r_grad=invec(i+1)-invec(i)
        if(sign(1._real32,l_grad).ne.sign(1._real32,r_grad).or.&
-            (r_grad.eq.0._real32.and.abs(l_grad-r_grad).gt.1.D-5))then
+            (r_grad.eq.0._real32.and.abs(l_grad-r_grad).gt.1.E-5_real32))then
           nturn=nturn+1
           tvec1(nturn)=i
        end if

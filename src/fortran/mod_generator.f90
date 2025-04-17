@@ -255,7 +255,7 @@ contains
             mask=abs(trans(:ntrans,axis)).gt.1.D-3/modu(tmp_bas1%lat(axis,:)))
        tfmat(3,:)=trans(itmp1,:)
     end if
-    if(all(abs(tfmat(3,:)).lt.1.D-5)) tfmat(3,3) = 1._real32
+    if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
     call transformer(tmp_bas1,tfmat,bas_map)
     if(.not.compare_stoichiometry(tmp_bas1,basis))then
        write(0,'(1X,"ERROR: Internal error in generate_terminations")')
@@ -873,7 +873,7 @@ contains
                mask=abs(trans(:ntrans,axis)).gt.1.D-3/modu(supercell_lw%lat(axis,:)))
           tfmat(3,:)=trans(itmp1,:)
        end if
-       if(all(abs(tfmat(3,:)).lt.1.D-5)) tfmat(3,3) = 1._real32
+       if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
        call transformer(supercell_lw,tfmat,t1lw_map)
        if(.not.compare_stoichiometry(basis_lw_,supercell_lw))then
           write(0,'(1X,"ERROR: Internal error in generate_interfaces")')
@@ -953,7 +953,7 @@ contains
                mask=abs(trans(:ntrans,axis)).gt.1.D-3/modu(supercell_lw%lat(axis,:)))
           tfmat(3,:)=trans(itmp1,:)
        end if
-       if(all(abs(tfmat(3,:)).lt.1.D-5)) tfmat(3,3) = 1._real32
+       if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
        call transformer(supercell_up,tfmat,t1up_map)
        ! check the stoichiometry ratios are still maintained
        if(.not.compare_stoichiometry(basis_up_,supercell_up))then

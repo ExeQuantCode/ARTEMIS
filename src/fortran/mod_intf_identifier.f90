@@ -47,7 +47,7 @@ contains
   function get_interface(lat,bas,axis) result(intf)
     implicit none
     integer :: nstep
-    real :: dist_max
+    real(real32) :: dist_max
     type(basis_type) :: bas
     type(intf_info_type) :: intf
     real(real32), dimension(3,3) :: lat
@@ -82,21 +82,21 @@ contains
     implicit none
     integer :: i,j,k,is,ia,js,ja,count1
     integer :: nstep,nsize
-    real :: rdist_max,rtmp1,rtmp2
+    real(real32) :: rdist_max,rtmp1,rtmp2
     logical :: lscale_dist,lnorm
-    real :: gauss_tol,DON_sigma,dist
+    real(real32) :: gauss_tol,DON_sigma,dist
     integer, dimension(3) :: ncell
-    real, dimension(3) :: vrtmp1,vrtmp2
-    real, dimension(3) :: vtmp1,vtmp2,vtmp3
-    real, allocatable, dimension(:) :: distance
+    real(real32), dimension(3) :: vrtmp1,vrtmp2
+    real(real32), dimension(3) :: vtmp1,vtmp2,vtmp3
+    real(real32), allocatable, dimension(:) :: distance
     type(den_of_spec_type), allocatable, dimension(:) :: DOS
 
-    real, optional, intent(in) :: dist_max
+    real(real32), optional, intent(in) :: dist_max
     logical, optional, intent(in) :: scale_dist,norm
     type(basis_type), intent(in) :: bas
     real(real32), dimension(3,3), intent(in) :: lat
     
-    real, allocatable, dimension(:) :: dist_list
+    real(real32), allocatable, dimension(:) :: dist_list
 
 
     if(present(scale_dist))then
@@ -120,7 +120,7 @@ contains
     rdist_max=12._real32
     if(present(dist_max)) rdist_max=dist_max
     do i=1,nstep
-       distance(i)=real(i)*rdist_max/real(nstep)
+       distance(i)=real(i,real32)*rdist_max/real(nstep,real32)
     end do
 
     !! should now consider lattice vector addition for obtuse cells.
@@ -155,27 +155,27 @@ contains
 
     ncell = 0
     ncell_loop1: do i=1,3
-       rtmp1 = real(modu(lat(i,:)))
+       rtmp1 = modu(lat(i,:))
        ncell(i) = max(ncell(i),ceiling(rdist_max/modu(lat(i,:))))!maxval(ceiling( rdist_max/abs(lat(i,:)) ))
        do j=1,3
           if(i.eq.j) cycle
-          rtmp2 = real(dot_product(lat(i,:),lat(j,:)))
-          if(sign(1.0,rtmp1).eq.sign(1.0,rtmp2)) cycle
+          rtmp2 = dot_product(lat(i,:),lat(j,:))
+          if(sign(1._real32,rtmp1).eq.sign(1._real32,rtmp2)) cycle
           !vrtmp1 = uvec(lat(i,:)) * dot_product(uvec(lat(i,:)),lat(j,:))
           !vrtmp1 = uvec(lat(i,:)) * lat(j,:)
-          vrtmp1 = merge(real(lat(j,:)), (/0.E0, 0.E0, 0.E0/), mask = abs(lat(i,:))>1.D-5)
+          vrtmp1 = merge(lat(j,:), (/0._real32, 0._real32, 0._real32/), mask = abs(lat(i,:)).gt.1.E-5_real32)
           rtmp1 = modu(vrtmp1)
-          if(abs(rtmp1).lt.1.D-5) cycle
+          if(abs(rtmp1).lt.1.E-5_real32) cycle
           k = 0
-          vrtmp2 = real(lat(i,:))
+          vrtmp2 = lat(i,:)
           rtmp2 = modu(vrtmp2)
-          do while ( rtmp2 <= rtmp1)
+          do while ( rtmp2 .le. rtmp1)
              k = k + 1
              rtmp1 = rtmp2
-             vrtmp2 = real(lat(i,:)) + real(k)*vrtmp1
+             vrtmp2 = lat(i,:) + real(k,real32)*vrtmp1
              rtmp2 = modu(vrtmp2)
           end do
-          if(abs(rtmp1).lt.1.D-5) cycle
+          if(abs(rtmp1).lt.1.E-5_real32) cycle
           ncell(i) = max(ncell(i), ceiling(rdist_max/rtmp1))
           ncell(j) = max(ncell(j), (k-1)*ceiling(rdist_max/rtmp1))
        end do
@@ -203,11 +203,11 @@ contains
              count1=0
              dist_list = 0.0
              atomloop2: do ja=1,bas%spec(js)%num
-                vtmp1(:3) = real(bas%spec(is)%atom(ia,:3) - bas%spec(js)%atom(ja,:3))
+                vtmp1(:3) = bas%spec(is)%atom(ia,:3) - bas%spec(js)%atom(ja,:3)
                 do i=-ncell(1),ncell(1),1
-                   vtmp2(1) = vtmp1(1) + real(i)
+                   vtmp2(1) = vtmp1(1) + real(i,real32)
                    do j=-ncell(2),ncell(2),1
-                      vtmp2(2) = vtmp1(2) + real(j)
+                      vtmp2(2) = vtmp1(2) + real(j,real32)
                       kloop1: do k=-ncell(3),ncell(3),1
                          if(is.eq.js.and.ia.eq.ja)then
                             if(i.eq.0.and.j.eq.0.and.k.eq.0)then
@@ -221,8 +221,8 @@ contains
                          !   write(0,'(2X,"dist_list size allocated too small")')
                          !   stop
                          !end if
-                         vtmp2(3) = vtmp1(3) + real(k)
-                         vtmp3 = matmul(vtmp2,real(lat))
+                         vtmp2(3) = vtmp1(3) + real(k,real32)
+                         vtmp3 = matmul(vtmp2,lat)
                          dist_list(count1) = modu(vtmp3)
 
 
@@ -264,7 +264,7 @@ contains
     type(den_of_spec_type), allocatable, dimension(:) :: DOS
     type(den_of_neigh_type), allocatable, dimension(:) :: DON
     
-    real, optional, intent(in) :: dist_max
+    real(real32), optional, intent(in) :: dist_max
     logical, optional, intent(in) :: scale_dist,norm
     type(basis_type), intent(in) :: bas
     real(real32), dimension(3,3), intent(in) :: lat
@@ -313,10 +313,10 @@ contains
     type(den_of_neigh_type), dimension(:), intent(in) :: DON
     integer :: i,is,ia,ja,cutloc,itmp1,udef_avg_mthd
     integer :: nspec,natom,nstep
-    real :: avg,rdist_max,rcutoff,maxjump
-    real, optional, intent(in) :: dist_max,cutoff
+    real(real32) :: avg,rdist_max,rcutoff,maxjump
+    real(real32), optional, intent(in) :: dist_max,cutoff
     integer, allocatable, dimension(:) :: intf_list,sumspec
-    real, allocatable, dimension(:) :: newf,simi,distance
+    real(real32), allocatable, dimension(:) :: newf,simi,distance
     integer, allocatable, dimension(:,:) :: intf_atoms
     integer, optional, intent(in) :: avg_mthd
 
@@ -332,7 +332,7 @@ contains
     rdist_max=12._real32
     if(present(dist_max)) rdist_max=dist_max
     do i=1,nstep
-       distance(i)=real(i)*rdist_max/real(nstep)
+       distance(i)=real(i,real32)*rdist_max/real(nstep,real32)
     end do
     rcutoff=4._real32
     if(present(cutoff)) rcutoff=min(rcutoff,cutoff)
@@ -369,9 +369,9 @@ contains
           atomloop2: do ja=1,size(DON(is)%atom(:,1))
              newf = &
                   overlap_indiv_points(&
-                  (real(DON(is)%atom(ia,:))),&
-                  (real(DON(is)%atom(ja,:))))
-             similarity(is)%atom(ia,ja,:)=real(newf)
+                  [DON(is)%atom(ia,:)],&
+                  [DON(is)%atom(ja,:)])
+             similarity(is)%atom(ia,ja,:)=real(newf,real32)
              deallocate(newf)
           end do atomloop2
           do i=1,nstep
@@ -470,14 +470,14 @@ contains
     implicit none
     integer :: axis
     integer :: i,is,ia,ja,l,m,n,ks,cutloc,nstep,itmp1
-    real :: rdist_max,rcutoff,power,rtmp1
-    real, optional, intent(in) :: dist_max,cutoff
+    real(real32) :: rdist_max,rcutoff,power,rtmp1
+    real(real32), optional, intent(in) :: dist_max,cutoff
     logical, optional :: lprint
     type(basis_type) :: bas
     real(real32), dimension(3) :: dir_disim
-    real, dimension(3) :: vtmp1,vtmp2,vtmp3
+    real(real32), dimension(3) :: vtmp1,vtmp2,vtmp3
     real(real32), dimension(3,3) :: lat
-    real, allocatable, dimension(:) :: sim_dist,distance
+    real(real32), allocatable, dimension(:) :: sim_dist,distance
     
 
     type(den_of_spec_type), allocatable, dimension(:) :: DOS
@@ -496,7 +496,7 @@ contains
     if(present(dist_max)) rdist_max=dist_max
     allocate(distance(nstep))
     do i=1,nstep
-       distance(i)=real(i)*rdist_max/real(nstep)
+       distance(i)=real(i,real32)*rdist_max/real(nstep,real32)
     end do
     rcutoff=4.0
     if(present(cutoff)) rcutoff=min(rcutoff,cutoff)
@@ -525,15 +525,15 @@ contains
              !! This shows how similar an atom is to its local environment
              !!-----------------------------------------------------------------
              do ja=1,bas%spec(is)%num
-                vtmp1(:3) = real(bas%spec(is)%atom(ia,:3) - &
-                     bas%spec(is)%atom(ja,:3))
+                vtmp1(:3) = bas%spec(is)%atom(ia,:3) - &
+                     bas%spec(is)%atom(ja,:3)
                 do l=-1,1,1
-                   vtmp2(1) = vtmp1(1) + real(l)
+                   vtmp2(1) = vtmp1(1) + real(l,real32)
                    do m=-1,1,1
-                      vtmp2(2) = vtmp1(2) + real(m)
+                      vtmp2(2) = vtmp1(2) + real(m,real32)
                       nloop3: do n=-1,1,1
-                         vtmp2(3) = vtmp1(3) + real(n)
-                         vtmp3 = matmul(vtmp2,real(lat))
+                         vtmp2(3) = vtmp1(3) + real(n,real32)
+                         vtmp3 = matmul(vtmp2,lat)
                          !rtmp1=table_func(vtmp3(i),0.8_real32)
                          !rtmp1=exp(-abs(vtmp3(i))*power)
                          rtmp1=exp(-modu(vtmp3)*power)
@@ -543,8 +543,8 @@ contains
                          do ks=1,bas%nspec
                             sim_dist = sim_dist + &
                                  sqrt(overlap_indiv_points(&
-                                 (real(DOS(is)%atom(ia,ks,:))),&
-                                 (real(DOS(is)%atom(ja,ks,:)))))*rtmp1
+                                 [DOS(is)%atom(ia,ks,:)],&
+                                 [DOS(is)%atom(ja,ks,:)]))*rtmp1
                          end do
                       end do nloop3
                    end do
@@ -553,7 +553,7 @@ contains
              !!-----------------------------------------------------------------
              !! saves similarity up to the cutoff for each atom and its location
              !!-----------------------------------------------------------------
-             intf_func(i,is)%atom(ia,1)=real(bas%spec(is)%atom(ia,i)*modu(lat(i,:)))
+             intf_func(i,is)%atom(ia,1)=bas%spec(is)%atom(ia,i)*modu(lat(i,:))
              intf_func(i,is)%atom(ia,2)=sum(sim_dist(:cutloc))!/bas%spec(is)%num!/itmp1
 
 
@@ -608,7 +608,7 @@ contains
     real(real32) :: sigma,gauss_tol,area
     integer, dimension(3) :: abc
     real(real32), dimension(3) :: vtmp1,vtmp2,axis_vec
-    real, allocatable, dimension(:) :: rangevec
+    real(real32), allocatable, dimension(:) :: rangevec
     real(real32), allocatable, dimension(:) :: dist,multiCADD
     real(real32), allocatable, dimension(:,:) :: CAD,deriv
     real(real32), allocatable, dimension(:,:,:) :: CADD
@@ -736,7 +736,7 @@ contains
     real(real32), dimension(3) :: vtmp1,vtmp2
     real(real32), dimension(3,3) :: lat
     integer, allocatable, dimension(:) :: ivec1
-    real, allocatable, dimension(:) :: rangevec
+    real(real32), allocatable, dimension(:) :: rangevec
     real(real32), allocatable, dimension(:) :: dist,multiCADD
     real(real32), allocatable, dimension(:,:) :: CAD,deriv
     real(real32), allocatable, dimension(:,:,:) :: CADD
@@ -853,7 +853,7 @@ contains
 !!! finds the turning points of the multiCADD and attributes them to ...
 !!! ... the two interfaces
 !!!-----------------------------------------------------------------------------
-    ivec1=get_turn_points(real(multiCADD(:),real32),window=8,lperiodic=.true.)
+    ivec1=get_turn_points([multiCADD(:)],window=8,lperiodic=.true.)
     intf_loc(1)=dist(ivec1(size(ivec1)))
     intf_loc(2)=dist(ivec1(size(ivec1)-1))
 
@@ -968,11 +968,11 @@ contains
 !  function locate_two_intfs(func,ivec1,lmax) result(intf_loc)
 !    implicit none
 !    integer :: loc,i
-!    real :: rtmp1
+!    real(real32) :: rtmp1
 !    logical :: luse_max
 !    integer, dimension (:) :: ivec1
 !    integer, dimension(2) :: intf_loc
-!    real, dimension(:) :: func
+!    real(real32), dimension(:) :: func
 !    logical, optional :: lmax
 !
 !
@@ -1012,20 +1012,20 @@ contains
     implicit none
     integer :: i,j,k,js,ja,count1
     integer :: nstep
-    real :: rdist_max
-    real :: gauss_tol,DON_sigma,dist,dist_cutoff,rtmp1
+    real(real32) :: rdist_max
+    real(real32) :: gauss_tol,DON_sigma,dist,dist_cutoff,rtmp1
     type(basis_type) :: bas
     logical :: lweight
-    real, dimension(3) :: vtmp1,vtmp2,vtmp3
-    real, allocatable, dimension(:) :: distance
+    real(real32), dimension(3) :: vtmp1,vtmp2,vtmp3
+    real(real32), allocatable, dimension(:) :: distance
     
     integer, intent(in) :: ispec,iatom
     real(real32), dimension(3,3), intent(in) :: lat
-    real, optional, intent(in) :: dist_max
+    real(real32), optional, intent(in) :: dist_max
     logical, optional, intent(in) :: weight_dist
     real(real32), allocatable, dimension(:,:) :: DOS
 
-    real, allocatable, dimension(:) :: dist_list
+    real(real32), allocatable, dimension(:) :: dist_list
 
 
     nstep=nstep_default
@@ -1036,7 +1036,7 @@ contains
     rdist_max=12._real32
     if(present(dist_max)) rdist_max=dist_max
     do i=1,nstep
-       distance(i)=real(i)*rdist_max/real(nstep)
+       distance(i)=real(i,real32)*rdist_max/real(nstep,real32)
     end do
 
     gauss_tol=16.E0!38._real32
@@ -1048,19 +1048,19 @@ contains
        count1=0
        dist_list = 0.0
        atomloop1: do ja=1,bas%spec(js)%num
-          vtmp1(:3) = real(bas%spec(ispec)%atom(iatom,:3) - bas%spec(js)%atom(ja,:3))
+          vtmp1(:3) = bas%spec(ispec)%atom(iatom,:3) - bas%spec(js)%atom(ja,:3)
           do i=-1,1,1
-             vtmp2(1) = vtmp1(1) + real(i)
+             vtmp2(1) = vtmp1(1) + real(i,real32)
              do j=-1,1,1
-                vtmp2(2) = vtmp1(2) + real(j)
+                vtmp2(2) = vtmp1(2) + real(j,real32)
                 kloop1: do k=-1,1,1
                    if(ispec.eq.js.and.iatom.eq.ja)then
                       if(i.eq.0.and.j.eq.0.and.k.eq.0)then
                          cycle kloop1
                       end if
                    end if
-                   vtmp2(3) = vtmp1(3) + real(k)
-                   vtmp3 = matmul(vtmp2,real(lat))
+                   vtmp2(3) = vtmp1(3) + real(k,real32)
+                   vtmp3 = matmul(vtmp2,lat)
                    rtmp1=modu(vtmp3)
                    if(rtmp1.gt.dist_cutoff) cycle kloop1
                    count1=count1+1
@@ -1107,7 +1107,7 @@ contains
     real(real32), allocatable, dimension(:) :: DON
     real(real32), allocatable, dimension(:,:) :: DOS
     integer, intent(in) :: ispec,iatom
-    real, optional, intent(in) :: dist_max
+    real(real32), optional, intent(in) :: dist_max
 
 
     if(present(dist_max))then

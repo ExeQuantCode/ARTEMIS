@@ -34,23 +34,23 @@ contains
     integer :: i,j,is,iout,itmp,count1
     integer :: axis,nswap
     integer :: nabove,nbelow,nswaps_per_cell,nfail !,nperm
-    real :: udef_sigma,small_sigma
+    real(real32) :: udef_sigma,small_sigma
     real(real32) :: dintf,dist
     type(basis_type) :: tmpbas,store_bas
     type(sym_type) :: grp
     !real(real32), dimension(4,4) :: intf_sym
     integer, allocatable, dimension(:) :: spec_list
     integer, allocatable, dimension(:) :: lw_close_list,up_close_list
-    real, allocatable, dimension(:) :: lw_dist_list,up_dist_list
-    real, allocatable, dimension(:) :: lw_weight_list,up_weight_list
+    real(real32), allocatable, dimension(:) :: lw_dist_list,up_dist_list
+    real(real32), allocatable, dimension(:) :: lw_weight_list,up_weight_list
 
     integer, allocatable, dimension(:,:) :: pos_list,up_list,lw_list
     real(real32), allocatable, dimension(:,:) :: bas_list
     real(real32), dimension(4,4) :: intf_sym
 
     integer, intent(in) :: iswap
-    real, intent(in) :: width
-    real, optional, intent(in) :: sigma
+    real(real32), intent(in) :: width
+    real(real32), optional, intent(in) :: sigma
     logical, optional, intent(in) :: require_mirror
     type(basis_type), intent(in) :: bas
     integer, allocatable, dimension(:), intent(in) :: seed
@@ -332,7 +332,7 @@ end function rand_swapper
     integer :: itmp1,itmp2,old_itmp1
     integer :: lw_mirror,up_mirror
     integer :: lw_remove,up_remove,nabove,nbelow,nswaps_per_cell
-    real :: r_rand
+    real(real32) :: r_rand
     integer, allocatable, dimension(:,:) :: swap_list,up_list,lw_list
     type(basis_type) :: bas,swap_bas
 
@@ -432,21 +432,21 @@ end function rand_swapper
     implicit none
     integer :: i,is,ia
     integer :: nbelow,nabove
-    real :: rtol
+    real(real32) :: rtol
     real(real32), dimension(2) :: midpoint
     integer, allocatable, dimension(:) :: tmp_list1,tmp_list2
-    real, allocatable, dimension(:) :: tmp_dist_list1,tmp_dist_list2
+    real(real32), allocatable, dimension(:) :: tmp_dist_list1,tmp_dist_list2
 
     integer, intent(in) :: axis
-    real, intent(in) :: sigma
+    real(real32), intent(in) :: sigma
     type(basis_type), intent(in) :: bas
     real(real32), dimension(2), intent(in) :: intf_loc
     real(real32), dimension(3,3), intent(in) :: lat
 
     integer, allocatable, dimension(:), intent(out) :: spec_list
     integer, allocatable, dimension(:), intent(out) :: lw_close_list,up_close_list
-    real, allocatable, dimension(:), intent(out) :: lw_dist_list,up_dist_list
-    real, allocatable, dimension(:), intent(out) :: lw_weight_list,up_weight_list
+    real(real32), allocatable, dimension(:), intent(out) :: lw_dist_list,up_dist_list
+    real(real32), allocatable, dimension(:), intent(out) :: lw_weight_list,up_weight_list
     integer, allocatable, dimension(:,:), intent(out) :: lw_list,up_list
 
 
@@ -540,11 +540,11 @@ end function rand_swapper
 !!!-----------------------------------------------------------------------------
     allocate(lw_weight_list(nbelow))
     allocate(lw_close_list(nbelow))
-    lw_weight_list(1) = gauss(pos=lw_dist_list(1),centre=0.0,sigma=sigma)
+    lw_weight_list(1) = gauss(pos=lw_dist_list(1),centre=0._real32,sigma=sigma)
     lw_close_list(1) = count(abs(lw_dist_list(1) - lw_dist_list(:nbelow)).le.rtol)
     do i=2,nbelow
 
-       lw_weight_list(i) = lw_weight_list(i-1) + gauss(pos=lw_dist_list(i),centre=0.0,sigma=sigma)
+       lw_weight_list(i) = lw_weight_list(i-1) + gauss(pos=lw_dist_list(i),centre=0._real32,sigma=sigma)
        lw_close_list(i) = count(abs(lw_dist_list(i) - lw_dist_list(:nbelow)).le.rtol)
        
     end do
@@ -552,11 +552,11 @@ end function rand_swapper
 
     allocate(up_weight_list(nabove))
     allocate(up_close_list(nabove))
-    up_weight_list(1) = gauss(pos=up_dist_list(1),centre=0.0,sigma=sigma)
+    up_weight_list(1) = gauss(pos=up_dist_list(1),centre=0._real32,sigma=sigma)
     up_close_list(1) = count(abs(up_dist_list(1) - up_dist_list(:nabove)).le.rtol)
     do i=2,nabove
 
-       up_weight_list(i) = up_weight_list(i-1) + gauss(pos=up_dist_list(i),centre=0.0,sigma=sigma)
+       up_weight_list(i) = up_weight_list(i-1) + gauss(pos=up_dist_list(i),centre=0._real32,sigma=sigma)
        up_close_list(i) = count(abs(up_dist_list(i) - up_dist_list(:nabove)).le.rtol)
        
     end do
@@ -582,18 +582,18 @@ end function rand_swapper
     integer :: i,loc1,loc2
     integer :: nbelow,nabove
     integer :: lw_mirror,up_mirror
-    real :: r_rand1,r_rand2
+    real(real32) :: r_rand1,r_rand2
     integer, allocatable, dimension(:) :: lw_convert,up_convert
     integer, allocatable, dimension(:,:) :: swap_list
-    real, allocatable, dimension(:) :: tlw_weight_list,tup_weight_list
+    real(real32), allocatable, dimension(:) :: tlw_weight_list,tup_weight_list
 
     integer, dimension(:), intent(in) :: spec_list
     integer, dimension(:), intent(in) :: lw_close_list,up_close_list
-    real, dimension(:), intent(in) :: lw_dist_list,up_dist_list
-    real, dimension(:), intent(in) :: lw_weight_list,up_weight_list
+    real(real32), dimension(:), intent(in) :: lw_dist_list,up_dist_list
+    real(real32), dimension(:), intent(in) :: lw_weight_list,up_weight_list
     integer, dimension(:,:), intent(in) :: lw_list,up_list
 
-    real, intent(in) :: sigma,small_sigma
+    real(real32), intent(in) :: sigma,small_sigma
     type(basis_type), intent(inout) :: swap_bas
     integer, intent(in) :: nswaps_per_cell
     type(basis_type), intent(in) :: bas
@@ -763,12 +763,12 @@ end function rand_swapper
       implicit none
       integer :: i,j
       integer :: nswaps,num
-      real :: small_sigma
+      real(real32) :: small_sigma
 
-      real, intent(in) :: sigma
+      real(real32), intent(in) :: sigma
       integer, dimension(:),intent(in) :: close_list,swap_list,conversion
-      real, dimension(:),intent(in) :: dist_list
-      real, allocatable, dimension(:) :: new_list
+      real(real32), dimension(:),intent(in) :: dist_list
+      real(real32), allocatable, dimension(:) :: new_list
 
 
       num = size(conversion)
@@ -777,7 +777,7 @@ end function rand_swapper
       allocate(new_list(num))
       do i=1,num
 
-         new_list(i) = gauss(pos=dist_list(conversion(i)),centre=0.0,sigma=sigma)
+         new_list(i) = gauss(pos=dist_list(conversion(i)),centre=0._real32,sigma=sigma)
 
          do j=1,nswaps
 

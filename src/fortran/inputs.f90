@@ -26,7 +26,7 @@ module inputs
   integer :: irestart,idepth,imatch,ishift,iswap
   integer :: lw_num_layers,up_num_layers
   integer :: nshift,nterm,nintf,nswap,nmiller
-  real :: max_bondlength,swap_sigma,swap_depth
+  real(real32) :: max_bondlength,swap_sigma,swap_depth
   real(real32) :: lw_thickness, up_thickness
   real(real32) :: lw_bulk_modulus, up_bulk_modulus
   real(real32) :: c_scale,intf_depth,vacuum
