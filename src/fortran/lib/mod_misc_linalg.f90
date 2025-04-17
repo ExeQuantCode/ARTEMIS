@@ -409,13 +409,14 @@ contains
 !!!#####################################################
   pure function inverse(mat)
     real(real32), dimension(:,:), intent(in) :: mat
-    real(real32), dimension(size(mat(:,1),dim=1),size(mat(1,:),dim=1)) :: inverse
+    real(real32), dimension(size(mat,dim=1),size(mat,dim=2)) :: inverse
 
-    if(size(mat,dim=2).eq.2)then
+    select case(size(mat,dim=2))
+    case(2)
        inverse = inverse_2x2(mat)
-    elseif(size(mat,dim=2).eq.3)then
+    case(3)
        inverse = inverse_3x3(mat)
-    end if
+    end select
 
   end function inverse
 !!!#####################################################
@@ -425,22 +426,19 @@ contains
 !!! returns inverse of 2 x 2 matrix
 !!!#####################################################
   pure function inverse_2x2(mat) result(output)
-    real(real32) :: det
-    real(real32), dimension(2,2) :: output
+    implicit none
     real(real32), dimension(2,2), intent(in) :: mat
+    real(real32), dimension(2,2) :: output
+    real(real32) :: inv_det
 
-    det = mat(1,1)*mat(2,2)-mat(1,2)*mat(2,1)
-    !if(det.eq.0._real32)then
-    !   write(0,'("ERROR: Internal error in inverse_2x2")')
-    !   write(0,'(2X,"inverse_2x2 in mod_misc_linalg found determinant of 0")')
-    !   write(0,'(2X,"Exiting...")')
-    !   stop
-    !end if
+    associate(a => mat(1,1), b => mat(1,2), c => mat(2,1), d => mat(2,2))
+       inv_det = 1._real32 / (a * d - b * c)
 
-    output(1,1) = +1._real32 / det * ( mat(2,2) )
-    output(2,1) = -1._real32 / det * ( mat(1,2) )
-    output(1,2) = -1._real32 / det * ( mat(2,1) )
-    output(2,2) = +1._real32 / det * ( mat(1,1) )
+       output(1,1) =  d * inv_det
+       output(1,2) = -b * inv_det
+       output(2,1) = -c * inv_det
+       output(2,2) =  a * inv_det
+    end associate
 
   end function inverse_2x2
 !!!#####################################################
@@ -450,32 +448,47 @@ contains
 !!! returns inverse of 3 x 3 matrix
 !!!#####################################################
   pure function inverse_3x3(mat) result(output)
-    real(real32) :: det
-    real(real32), dimension(3,3) :: output
-    real(real32), dimension(3,3), intent(in) :: mat
+  implicit none
+  real(real32), dimension(3,3), intent(in) :: mat
+  real(real32), dimension(3,3) :: output
+  real(real32) :: inv_det
+  real(real32) :: c00, c01, c02, c10, c11, c12, c20, c21, c22
 
-    det = mat(1,1)*mat(2,2)*mat(3,3)-mat(1,1)*mat(2,3)*mat(3,2)&
-         - mat(1,2)*mat(2,1)*mat(3,3)+mat(1,2)*mat(2,3)*mat(3,1)&
-         + mat(1,3)*mat(2,1)*mat(3,2)-mat(1,3)*mat(2,2)*mat(3,1)
+  associate( &
+    m11 => mat(1,1), m12 => mat(1,2), m13 => mat(1,3), &
+    m21 => mat(2,1), m22 => mat(2,2), m23 => mat(2,3), &
+    m31 => mat(3,1), m32 => mat(3,2), m33 => mat(3,3))
 
-    !if(det.eq.0._real32)then
-    !   write(0,'("ERROR: Internal error in inverse_3x3")')
-    !   write(0,'(2X,"inverse_3x3 in mod_misc_linalg found determinant of 0")')
-    !   write(0,'(2X,"Exiting...")')
-    !   stop
-    !end if
+    ! Cofactors
+    c00 =  m22 * m33 - m23 * m32
+    c01 = -m21 * m33 + m23 * m31
+    c02 =  m21 * m32 - m22 * m31
 
-    output(1,1) = +1._real32 / det * ( mat(2,2) * mat(3,3) - mat(2,3) * mat(3,2) )
-    output(2,1) = -1._real32 / det * ( mat(2,1) * mat(3,3) - mat(2,3) * mat(3,1) )
-    output(3,1) = +1._real32 / det * ( mat(2,1) * mat(3,2) - mat(2,2) * mat(3,1) )
-    output(1,2) = -1._real32 / det * ( mat(1,2) * mat(3,3) - mat(1,3) * mat(3,2) )
-    output(2,2) = +1._real32 / det * ( mat(1,1) * mat(3,3) - mat(1,3) * mat(3,1) )
-    output(3,2) = -1._real32 / det * ( mat(1,1) * mat(3,2) - mat(1,2) * mat(3,1) )
-    output(1,3) = +1._real32 / det * ( mat(1,2) * mat(2,3) - mat(1,3) * mat(2,2) )
-    output(2,3) = -1._real32 / det * ( mat(1,1) * mat(2,3) - mat(1,3) * mat(2,1) )
-    output(3,3) = +1._real32 / det * ( mat(1,1) * mat(2,2) - mat(1,2) * mat(2,1) )
+    c10 = -m12 * m33 + m13 * m32
+    c11 =  m11 * m33 - m13 * m31
+    c12 = -m11 * m32 + m12 * m31
 
-  end function inverse_3x3
+    c20 =  m12 * m23 - m13 * m22
+    c21 = -m11 * m23 + m13 * m21
+    c22 =  m11 * m22 - m12 * m21
+
+    inv_det = 1._real32 / (m11 * c00 + m12 * c01 + m13 * c02)
+
+    ! Transpose cofactors into the inverse
+    output(1,1) = c00 * inv_det
+    output(2,1) = c01 * inv_det
+    output(3,1) = c02 * inv_det
+
+    output(1,2) = c10 * inv_det
+    output(2,2) = c11 * inv_det
+    output(3,2) = c12 * inv_det
+
+    output(1,3) = c20 * inv_det
+    output(2,3) = c21 * inv_det
+    output(3,3) = c22 * inv_det
+
+  end associate
+end function inverse_3x3
 !!!#####################################################
 
 
@@ -650,13 +663,19 @@ contains
   function find_tf(mat1,mat2) result(tf)
     implicit none
     real(real32), dimension(:,:) :: mat1,mat2
-    real(real32), allocatable, dimension(:,:) :: tf
+    real(real32), dimension(size(mat1,dim=1),size(mat1,dim=2)) :: tf
 
-    allocate(tf(size(mat2(:,1),dim=1),size(mat1(1,:),dim=1)))
     tf=matmul(inverse(mat1),mat2)
 
-
   end function find_tf
+  function find_tf_2x2(mat1,mat2) result(tf)
+    implicit none
+    real(real32), dimension(2,2) :: mat1,mat2
+    real(real32), dimension(2,2) :: tf
+
+    tf=matmul(inverse_2x2(mat1),mat2)
+
+  end function find_tf_2x2
 !!!#####################################################
 
 

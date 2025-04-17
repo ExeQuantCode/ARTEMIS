@@ -6,7 +6,7 @@
 module plane_matching
   use artemis__constants, only: real32, INF, pi
   use misc_linalg, only: cross,modu,get_angle,get_area,find_tf,&
-       reduce_vec_gcd,gcd
+       reduce_vec_gcd,gcd, inverse_2x2, find_tf_2x2
   implicit none
   !! importance of vector, angle, and area
   real(real32), dimension(3) :: vaa_weighting=(/1._real32,5._real32,2.5_real32/)
@@ -452,7 +452,7 @@ contains
 !!!------------------------------------------------------------------------
     allocate(tf_testlist(nlist,2,2))
     do i=1,nlist
-       tf_testlist(i,:2,:2) = find_tf(&
+       tf_testlist(i,:2,:2) = find_tf_2x2(&
             mat_testlist(i,:2,:2),&
             transpose(mat_testlist(i,:2,3:4)))
     end do
@@ -468,8 +468,8 @@ contains
        mat1 = matmul(inmat(:2,:2),(sym1(isym,:2,:2)))
        do jsym=1,size(sym2(:,1,1))
           !mat2 = matmul(inmat(:2,3:4),transpose(sym2(jsym,:2,:2)))
-          mat2 = matmul(inmat(:2,3:4),(sym2(jsym,:2,:2)))
-          tf = find_tf(mat1,transpose(mat2))
+          mat2 = transpose(matmul(inmat(:2,3:4),(sym2(jsym,:2,:2))))
+          tf = find_tf_2x2(mat1,mat2)
           !if(ltest_print)then
           !!if(any(ISNAN(tf)))then
           !!if(all(abs(inmat(:2,:2)-test1).lt.tol))then

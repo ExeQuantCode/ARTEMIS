@@ -1384,54 +1384,55 @@ contains
 !!!#############################################################################
 !!! planecutter
 !!!#############################################################################
-  function planecutter(inlat,invec) result(tfmat)
+  function planecutter(lat, plane) result(tfmat)
     implicit none
+    real(real32), dimension(3,3), intent(in) :: lat
+    real(real32), dimension(3), intent(in) :: plane
+
     integer :: i,j,itmp1
     real(real32) :: tol
     integer, dimension(3) :: order
-    real(real32), dimension(3) :: vec,tvec1
-    real(real32), dimension(3,3) :: lat,b,tfmat,invlat,reclat
-    real(real32), dimension(3), intent(in) :: invec
-    real(real32), dimension(3,3), intent(in) :: inlat
+    real(real32), dimension(3) :: plane_,tvec1
+    real(real32), dimension(3,3) :: lat_,b,tfmat,invlat,reclat
 
 
 
 !!!-----------------------------------------------------------------------------
 !!! Initialise variables and matrices
 !!!-----------------------------------------------------------------------------
-    tol = 1.E-4_real32
-    vec=invec
-    lat=inlat
-    invlat=inverse(lat)
-    reclat=transpose(invlat)
-    vec=reduce_vec_gcd(vec)
-    order=(/1,2,3/)
+    tol    = 1.E-4_real32
+    plane_ = plane
+    lat_   = lat
+    invlat = inverse(lat_)
+    reclat = transpose(invlat)
+    plane_ = reduce_vec_gcd(plane_)
+    order  = [ 1, 2, 3 ]
 
 
 !!!-----------------------------------------------------------------------------
 !!! Align the normal vector such that all non-zero values are left of all zeros
 !!!-----------------------------------------------------------------------------
     do i=1,2
-       if(vec(i).eq.0)then
-          if(all(vec(i:).eq.0._real32)) exit
-          itmp1=maxloc(vec(i+1:),mask=vec(i+1:).ne.0,dim=1)+i
+       if(plane_(i).eq.0)then
+          if(all(plane_(i:).eq.0._real32)) exit
+          itmp1=maxloc(plane_(i+1:),mask=plane_(i+1:).ne.0,dim=1)+i
           call swap(order(i),order(itmp1))
-          call swap(vec(i),vec(itmp1))
-          call swap(lat(:,i),lat(:,itmp1))
-          call swap(lat(i,:),lat(itmp1,:))
+          call swap(plane_(i),plane_(itmp1))
+          call swap(lat_(:,i),lat_(:,itmp1))
+          call swap(lat_(i,:),lat_(itmp1,:))
           call swap(reclat(:,i),reclat(:,itmp1))
           call swap(reclat(i,:),reclat(itmp1,:))
        end if
     end do
-    !vec=matmul(vec,reclat)
+    !plane_=matmul(plane_,reclat)
 
 
 !!!-----------------------------------------------------------------------------
 !!! Perform Lenstra-Lenstra-Lovász reduction
 !!!-----------------------------------------------------------------------------
-    b(1,:) = (/-vec(2),vec(1),0._real32/)
-    b(2,:) = (/-vec(3),0._real32,vec(1)/)
-    b(3,:) = vec
+    b(1,:) = [ -plane_(2),plane_(1),0._real32 ]
+    b(2,:) = [ -plane_(3),0._real32,plane_(1) ]
+    b(3,:) = plane_
     tfmat = b
     b(:2,:) = LLL_reduce(b(:2,:))
 
@@ -1478,7 +1479,7 @@ contains
        stop
     end if
 
-    !b = matmul(b,lat)
+    !b = matmul(b,lat_)
     
 
 !!!-----------------------------------------------------------------------------
@@ -1486,8 +1487,8 @@ contains
 !!!-----------------------------------------------------------------------------
     do i=1,3
        if(i.eq.order(i)) cycle
-       call swap(lat(i,:),lat(order(i),:))
-       call swap(lat(:,i),lat(:,order(i)))
+       call swap(lat_(i,:),lat_(order(i),:))
+       call swap(lat_(:,i),lat_(:,order(i)))
        call swap(b(:,i),b(:,order(i)))
        call swap(order(order(i)),order(i))
     end do
@@ -1506,8 +1507,8 @@ contains
     reduce_loop: do i=1,3
        b(i,:)=reduce_vec_gcd(b(i,:))
        if(any(abs(b(i,:)-nint(b(i,:))).gt.tol))then
-          write(0,'("Issue with plane ",3(1X,I0))') nint(invec)
-          write(0,*) vec
+          write(0,'("Issue with plane ",3(1X,I0))') nint(plane)
+          write(0,*) plane_
           write(0,'("row ",I0," of the following matrix")') i
           write(0,'(3(2X,F9.3))') (b(j,:),j=1,3)
           write(0,'(1X,"ERROR: Internal error in planecutter function")')
@@ -1518,9 +1519,9 @@ contains
        end if
     end do reduce_loop
     if(det(b).lt.0._real32)then
-       tvec1=b(2,:)
-       b(2,:)=b(1,:)
-       b(1,:)=tvec1
+       tvec1  = b(2,:)
+       b(2,:) = b(1,:)
+       b(1,:) = tvec1
     end if
     if(abs(det(b)).lt.tol)then
        write(0,'(1X,"ERROR: Internal error in planecutter function")')
