@@ -36,7 +36,7 @@ module artemis__generator
 
 
   type, extends(abstract_artemis_generator_type) :: artemis_termination_generator_type
-    
+
     real(real32) :: layer_separation_cutoff = 1._real32
 
    contains
@@ -45,13 +45,20 @@ module artemis__generator
 
 
   type, extends(abstract_artemis_generator_type) :: artemis_interface_generator_type
+    integer :: shift_method = 4
+    !! Shift method
+    integer :: swap_method = 0
+    !! Swap method
+    integer :: num_shifts = 5
+    !! Number of shifts per lattice match
+    integer :: num_swaps = 0
+    !! Number of swaps per shifted interface
+
     integer :: match_method = 0
     integer :: max_num_matches = 5
     integer :: max_num_term = 5
     integer :: num_miller_planes = 10
     
-    integer :: num_shifts = 5
-    integer :: shift_method = 4
     real(real32) :: bondlength_cutoff = 6._real32
     real(real32), dimension(2) :: layer_separation_cutoff = 1._real32
 
@@ -63,6 +70,7 @@ module artemis__generator
     procedure, pass(this) :: set_tolerance
     procedure, pass(this) :: generate => generate_interfaces
     procedure, pass(this) :: restart => generate_intefaces_from_existing
+    procedure, pass(this) :: generate_perturbations => generate_shifts_and_swaps
   end type artemis_interface_generator_type
 
 contains
@@ -189,9 +197,9 @@ contains
     ! ... user-defined thickness
     !---------------------------------------------------------------------------
     confine%l = .false.
-    confine%axis = axis
+    confine%axis = this%axis
     confine%laxis = .false.
-    confine%laxis(axis) = .true.
+    confine%laxis(this%axis) = .true.
     if(allocated(trans)) deallocate(trans)
     allocate(trans(minval(tmp_bas1%spec(:)%num+2),3))
     call gldfnd(confine, tmp_bas1, tmp_bas1, trans, ntrans)
@@ -201,8 +209,8 @@ contains
     if(ntrans.eq.0)then
        tfmat(3,3)=1._real32
     else
-       itmp1=minloc(abs(trans(:ntrans,axis)),dim=1,&
-            mask=abs(trans(:ntrans,axis)).gt.1.D-3/modu(tmp_bas1%lat(axis,:)))
+       itmp1=minloc(abs(trans(:ntrans,this%axis)),dim=1,&
+            mask=abs(trans(:ntrans,this%axis)).gt.1.D-3/modu(tmp_bas1%lat(this%axis,:)))
        tfmat(3,:)=trans(itmp1,:)
     end if
     if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
@@ -220,7 +228,7 @@ contains
 
     ! get the terminations
     term = get_termination_info( &
-         tmp_bas1, axis, &
+         tmp_bas1, this%axis, &
          lprint = .true., layer_sep = this%layer_separation_cutoff, &
          break_on_fail = lbreak_on_no_term &
     )
@@ -308,7 +316,7 @@ contains
     min_bond2=huge(0._real32)
     if(any(udef_intf_loc.lt.0._real32))then
        if(ludef_axis)then
-          intf=get_interface(basis%lat,basis,axis)
+          intf=get_interface(basis%lat,basis,this%axis)
        else
           intf=get_interface(basis%lat,basis)
        end if
@@ -321,7 +329,7 @@ contains
        write(10,'(1X,"INTF_LOC = ",2(2X,F9.6))') intf%loc
        close(10)
     else
-       intf%axis = axis
+       intf%axis = this%axis
        intf%loc = udef_intf_loc
     end if
     specloop1: do is=1,basis%nspec
@@ -359,9 +367,10 @@ contains
     min_bond = ( min_bond1 + min_bond2 )/2._real32
     write(6,'(1X,"Avg min bulk bond: ",F0.3," Å")') min_bond
     write(6,'(1X,"Trans-interfacial scaling factor:",F0.3)') c_scale
-    call gen_shifts_and_swaps(basis,intf%axis,intf%loc,min_bond,&
-         ishift,nshift,&
-         iswap,swap_den,nswap)
+    this%axis = intf%axis
+    call this%generate_perturbations(basis,intf%loc,min_bond,&
+         nshift,&
+         swap_den,nswap)
 
 
   end subroutine generate_intefaces_from_existing
@@ -470,15 +479,15 @@ contains
          ( get_min_bulk_bond(basis_lw_) + get_min_bulk_bond(basis_up_) )/2._real32
     write(6,'(1X,"Avg min bulk bond: ",F0.3," Å")') avg_min_bond
     write(6,'(1X,"Trans-interfacial scaling factor: ",F0.3)') c_scale
-    if(ishift.eq.-1) nshift=1
+    if(this%shift_method.eq.-1) nshift=1
     
 
 !!!-----------------------------------------------------------------------------
-!!! gets bulk DONs, if ISHIFT = 4
+!!! gets bulk DONs, if shift_method = 4
 !!!-----------------------------------------------------------------------------
     allocate(lw_map(basis_lw_%nspec,maxval(basis_lw_%spec(:)%num,dim=1),2))
     allocate(up_map(basis_up_%nspec,maxval(basis_up_%spec(:)%num,dim=1),2))    
-    if(ishift.eq.4.or.ishift.eq.0)then
+    if(this%shift_method.eq.4.or.this%shift_method.eq.0)then
        lw_map=0
        bulk_DON(1)%spec=gen_DON(basis_lw_%lat,basis_lw_,&
             dist_max=max_bondlength,&
@@ -672,7 +681,7 @@ contains
        !!-----------------------------------------------------------------------
        !! Determines the cell change for the upper lattice to get the new DON
        !!-----------------------------------------------------------------------
-       if(ishift.eq.4)then
+       if(this%shift_method.eq.4)then
           !! Issue with using this method when large deformations result in large
           !! angle changes. REMOVING IT FOR NOW AND RETURNING TO CALCULATING DONS
           !! FOR THE SUPERCELL.
@@ -709,9 +718,9 @@ contains
        !! SHOULD MAKE IT LATER MAKE DIFFERENT SETS OF THICKNESSES
        !!-----------------------------------------------------------------------
        confine%l=.false.
-       confine%axis=axis
+       confine%axis=this%axis
        confine%laxis=.false.
-       confine%laxis(axis)=.true.
+       confine%laxis(this%axis)=.true.
        if(allocated(trans)) deallocate(trans)
        allocate(trans(minval(supercell_lw%spec(:)%num+2),3))
        call gldfnd(confine,supercell_lw,supercell_lw,trans,ntrans)
@@ -721,8 +730,8 @@ contains
        if(ntrans.eq.0)then
           tfmat(3,3)=1._real32
        else
-          itmp1=minloc(abs(trans(:ntrans,axis)),dim=1,&
-               mask=abs(trans(:ntrans,axis)).gt.1.D-3/modu(supercell_lw%lat(axis,:)))
+          itmp1=minloc(abs(trans(:ntrans,this%axis)),dim=1,&
+               mask=abs(trans(:ntrans,this%axis)).gt.1.D-3/modu(supercell_lw%lat(this%axis,:)))
           tfmat(3,:)=trans(itmp1,:)
        end if
        if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
@@ -744,7 +753,7 @@ contains
        !!-----------------------------------------------------------------------
        if(allocated(lw_term%arr)) deallocate(lw_term%arr)
        lw_term = get_termination_info( &
-            supercell_lw, axis, &
+            supercell_lw, this%axis, &
             lprint = lprint_terms, layer_sep = lw_layer_sep, &
             break_on_fail = lbreak_on_no_term &
        )
@@ -768,7 +777,7 @@ contains
        !!-----------------------------------------------------------------------
        !! Sort out ladder rungs (checks whether the material is centrosymmetric)
        !!-----------------------------------------------------------------------
-       !call setup_ladder(supercell_lw%lat,supercell_lw,axis,lw_term)
+       !call setup_ladder(supercell_lw%lat,supercell_lw,this%axis,lw_term)
        if(sum(lw_term%arr(:)%natom)*lw_term%nstep.ne.supercell_lw%natom)then
           write(msg, '("ERROR: Number of atoms in lower layers not correct: "&
                &I0,2X,I0)') sum(lw_term%arr(:)%natom)*lw_term%nstep,supercell_lw%natom
@@ -801,8 +810,8 @@ contains
        if(ntrans.eq.0)then
           tfmat(3,3)=1._real32
        else
-          itmp1=minloc(abs(trans(:ntrans,axis)),dim=1,&
-               mask=abs(trans(:ntrans,axis)).gt.1.D-3/modu(supercell_lw%lat(axis,:)))
+          itmp1=minloc(abs(trans(:ntrans,this%axis)),dim=1,&
+               mask=abs(trans(:ntrans,this%axis)).gt.1.D-3/modu(supercell_lw%lat(this%axis,:)))
           tfmat(3,:)=trans(itmp1,:)
        end if
        if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
@@ -825,7 +834,7 @@ contains
        !!-----------------------------------------------------------------------
        if(allocated(up_term%arr)) deallocate(up_term%arr)
        up_term = get_termination_info( &
-            supercell_up, axis, &
+            supercell_up, this%axis, &
             lprint = lprint_terms, layer_sep = up_layer_sep, &
             break_on_fail = lbreak_on_no_term &
        )
@@ -849,7 +858,7 @@ contains
        !!-----------------------------------------------------------------------
        !! Sort out ladder rungs (checks whether the material is centrosymmetric)
        !!-----------------------------------------------------------------------
-       !call setup_ladder(supercell_up%lat,supercell_up,axis,up_term)
+       !call setup_ladder(supercell_up%lat,supercell_up,this%axis,up_term)
        if(sum(up_term%arr(:)%natom)*up_term%nstep.ne.supercell_up%natom)then
           write(msg, '("ERROR: Number of atoms in upper layers not correct: "&
                &I0,2X,I0)') sum(up_term%arr(:)%natom)*up_term%nstep,supercell_up%natom
@@ -947,13 +956,13 @@ contains
              !!-----------------------------------------------------------------
              interface = basis_stack(&
                   basis1 = slab_lw, basis2 = slab_up, &
-                  axis = axis, offset = init_offset(:), &
+                  axis = this%axis, offset = init_offset(:), &
                   map1 = t2lw_map, map2 = t2up_map &
              )
-             intf_loc(1) = ( modu(slab_lw%lat(axis,:)) + 0.5_real32*init_offset(axis) - &
-                  tmp_vac)/modu(interface%lat(axis,:))
-             intf_loc(2) = ( modu(slab_lw%lat(axis,:)) + modu(slab_up%lat(axis,:)) + &
-                  1.5_real32*init_offset(axis) - 2._real32*tmp_vac )/modu(interface%lat(axis,:))
+             intf_loc(1) = ( modu(slab_lw%lat(this%axis,:)) + 0.5_real32*init_offset(this%axis) - &
+                  tmp_vac)/modu(interface%lat(this%axis,:))
+             intf_loc(2) = ( modu(slab_lw%lat(this%axis,:)) + modu(slab_up%lat(this%axis,:)) + &
+                  1.5_real32*init_offset(this%axis) - 2._real32*tmp_vac )/modu(interface%lat(this%axis,:))
              if(ierror.ge.1)then
                 write(0,*) "interface:",intf_loc
                 if(ierror.eq.1.and.iunique.eq.icheck_intf-1)then
@@ -977,7 +986,7 @@ contains
              !!-----------------------------------------------------------------
              if(intf.gt.old_intf)then
                 iunique=iunique+1
-                if(ishift.gt.0.and.nshift.gt.1) &
+                if(this%shift_method.gt.0.and.nshift.gt.1) &
                      write(6,'(1X,"Generating shifts for unique interface ",&
                      &I0,":")') iunique
                 write(dirpath,'(A,I0.2)') trim(adjustl(subdir_prefix)),iunique
@@ -999,9 +1008,9 @@ contains
              !!-----------------------------------------------------------------
              !! Generates shifts and swaps and prints the subsequent structures
              !!-----------------------------------------------------------------
-             call gen_shifts_and_swaps(interface,axis,intf_loc,avg_min_bond,&
-                  ishift,nshift,&
-                  iswap,swap_den,nswap,t2lw_map)
+             call this%generate_perturbations(interface,intf_loc,avg_min_bond,&
+                  nshift,&
+                  swap_den,nswap,t2lw_map)
 
              if(intf.ge.nintf) exit intf_loop
              !call chdir(dirname)
@@ -1031,13 +1040,14 @@ contains
 !!! Prints these new structures to POSCARs.
 !!!#############################################################################
 !!! ISWAP METHOD NOT YET SET UP
-  subroutine gen_shifts_and_swaps(basis,axis,intf_loc,bond,&
-       ishift,nshift,&
-       iswap,swap_den,nswap,&
+  subroutine generate_shifts_and_swaps(this,basis,intf_loc,bond,&
+       nshift,&
+       swap_den,nswap,&
        map)
     implicit none
+    class(artemis_interface_generator_type), intent(inout) :: this
     type(basis_type), intent(in) :: basis
-    integer :: shift_unit=10
+    integer :: shift_unit
     integer :: ounit,iaxis,k,l
     integer :: ngen_swaps,nswaps_per_cell
     real(real32) :: dtmp1
@@ -1047,13 +1057,10 @@ contains
     integer, dimension(3) :: abc
     real(real32), dimension(2) :: intf_loc
     real(real32), dimension(3) :: toffset
-    real(real32), dimension(3,3) :: tlat
     type(basis_type), allocatable, dimension(:) :: bas_arr
     real(real32), allocatable, dimension(:,:) :: output_shifts
 
-    integer, intent(in) :: axis
     integer, intent(in) :: nshift,nswap
-    integer, intent(in) :: ishift,iswap
     real(real32), intent(in) :: bond,swap_den
 
     integer, dimension(:,:,:), optional, intent(in) :: map
@@ -1063,19 +1070,19 @@ contains
 !!! Sets up shift axis
 !!!-----------------------------------------------------------------------------
     abc = [ 1, 2, 3 ]
-    abc = cshift(abc,axis)
+    abc = cshift(abc,this%axis)
 
 
 !!!-----------------------------------------------------------------------------
 !!! Sets up and moves to appropriate directories
 !!!-----------------------------------------------------------------------------
     call getcwd(pwd1)
-    if(ishift.gt.0.or.nshift.gt.1)then
+    if(this%shift_method.gt.0.or.nshift.gt.1)then
        call system('mkdir -p '//trim(adjustl(shiftdir)))
        call chdir(shiftdir)
     end if
     call getcwd(pwd2)
-    open(unit=shift_unit,file="shift_vals.txt")
+    open(newunit=shift_unit,file="shift_vals.txt")
     write(shift_unit,&
          '("# interface_num    shift (a,b,c) units=(direct,direct,Å)")')
 
@@ -1083,8 +1090,8 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Generates sets of shifts based on shift version
 !!!-----------------------------------------------------------------------------
-    if(ishift.eq.0.or.ishift.eq.1) allocate(output_shifts(nshift,3))
-    select case(ishift)
+    if(this%shift_method.eq.0.or.this%shift_method.eq.1) allocate(output_shifts(nshift,3))
+    select case(this%shift_method)
     case(1)
        output_shifts(1,:3)=0._real32
        do k=2,nshift
@@ -1096,7 +1103,7 @@ contains
        output_shifts = get_fit_shifts(&
             lat=basis%lat,bas=basis,&
             bond=bond,&
-            axis=axis,&
+            axis=this%axis,&
             intf_loc=intf_loc,&
             depth=intf_depth,&
             nstore=nshift)
@@ -1104,7 +1111,7 @@ contains
        output_shifts = get_descriptive_shifts(&
             lat=basis%lat,bas=basis,&
             bond=bond,&
-            axis=axis,&
+            axis=this%axis,&
             intf_loc=intf_loc,&
             depth=intf_depth,c_scale=c_scale,&
             nstore=nshift,lprint=lprint_shifts)
@@ -1112,7 +1119,7 @@ contains
        if(present(map))then
           output_shifts = get_shifts_DON(&
                lat=basis%lat,bas=basis,&
-               axis=axis,&
+               axis=this%axis,&
                intf_loc=intf_loc,&
                nstore=nshift,c_scale=c_scale,offset=offset(1,:3),&
                lprint=lprint_shifts,bulk_DON=bulk_DON,bulk_map=map,&
@@ -1120,7 +1127,7 @@ contains
        else
           output_shifts = get_shifts_DON(&
                lat=basis%lat,bas=basis,&
-               axis=axis,&
+               axis=this%axis,&
                intf_loc=intf_loc,&
                nstore=nshift,c_scale=c_scale,offset=offset(1,:3),&
                lprint=lprint_shifts,&
@@ -1133,15 +1140,14 @@ contains
           return
        end if
     case default
-      ! nshift=1 !!! SORT THIS OUT !!! RESET NSHIFT DUE TO ISHIFT
        if(.not.allocated(output_shifts)) allocate(output_shifts(1,3))
        output_shifts(:,:) = offset
-       do iaxis=1,2
+       do iaxis = 1, 2
           output_shifts(1,iaxis) = output_shifts(1,iaxis)!/modu(lat(iaxis,:))
        end do
     end select
-    if(ishift.gt.0)then
-       output_shifts(:,axis) = output_shifts(:,axis)*modu(basis%lat(axis,:))
+    if(this%shift_method.gt.0)then
+       output_shifts(:,this%axis) = output_shifts(:,this%axis)*modu(basis%lat(this%axis,:))
     end if
 
 
@@ -1155,7 +1161,7 @@ contains
 !!! Determines number of swaps across the interface
 !!!-----------------------------------------------------------------------------
     nswaps_per_cell=nint(swap_den*get_area([basis%lat(abc(1),:)],[basis%lat(abc(2),:)]))
-    if(iswap.ne.0)then
+    if(this%swap_method.ne.0)then
        write(6,&
             '(" Generating ",I0," swaps per structure ")') nswaps_per_cell
     end if
@@ -1168,20 +1174,20 @@ contains
        call tbas%copy(basis)
        toffset=output_shifts(k,:3)
        do iaxis=1,2
-          call shift_region(tbas,axis,&
+          call shift_region(tbas,this%axis,&
                intf_loc(1),intf_loc(2),&
                shift_axis=iaxis,shift=toffset(iaxis),renorm=.true.)
        end do
-       dtmp1=modu(tlat(axis,:))
+       dtmp1=modu(tbas%lat(this%axis,:))
        call set_vacuum(&
             basis=tbas,&
-            axis=axis,loc=maxval(intf_loc(:)),&
-            vac=toffset(axis))
-       dtmp1=minval(intf_loc(:))*dtmp1/modu(tlat(axis,:))
+            axis=this%axis,loc=maxval(intf_loc(:)),&
+            vac=toffset(this%axis))
+       dtmp1=minval(intf_loc(:))*dtmp1/modu(tbas%lat(this%axis,:))
        call set_vacuum(&
             basis=tbas,&
-            axis=axis,loc=dtmp1,&
-            vac=toffset(axis))
+            axis=this%axis,loc=dtmp1,&
+            vac=toffset(this%axis))
        min_bond = get_shortest_bond(tbas)
        if(min_bond%length.le.1.5_real32)then
           write(msg,'("Smallest bond in the interface structure is\nless than 1.5 Å.")')
@@ -1205,7 +1211,7 @@ contains
        !!-----------------------------------------------------------------------
        intf=intf+1
        ounit=100+intf
-       if(ishift.gt.0.or.nshift.gt.1)then
+       if(this%shift_method.gt.0.or.nshift.gt.1)then
           write(dirpath,'(A,I0.2)') trim(adjustl(subdir_prefix)),k
           call system('mkdir -p '//trim(adjustl(dirpath)))
           write(filename,'(A,"/",A)') trim(adjustl(dirpath)),trim(out_filename)
@@ -1222,9 +1228,9 @@ contains
        !!-----------------------------------------------------------------------
        !! Performs swaps within the shifted structures if requested
        !!-----------------------------------------------------------------------
-       if_swap: if(iswap.ne.0)then
-          bas_arr = rand_swapper(tlat,tbas,axis,swap_depth,&
-               nswaps_per_cell,nswap,intf_loc,iswap,seed,sigma=swap_sigma,&
+       if_swap: if(this%swap_method.ne.0)then
+          bas_arr = rand_swapper(tbas%lat,tbas,this%axis,swap_depth,&
+               nswaps_per_cell,nswap,intf_loc,this%swap_method,seed,sigma=swap_sigma,&
                require_mirror=lswap_mirror)
           ngen_swaps = nswap
           LOOPswaps: do l=1,nswap
@@ -1261,7 +1267,7 @@ contains
     close(unit=shift_unit)
 
 
-  end subroutine gen_shifts_and_swaps
+  end subroutine generate_shifts_and_swaps
 !!!#############################################################################
 
 
