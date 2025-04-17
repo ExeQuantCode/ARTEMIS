@@ -420,7 +420,7 @@ contains
 
 
 !###############################################################################
-  subroutine VASP_geom_write(UNIT, basis, cartesian)
+  subroutine VASP_geom_write(UNIT, basis)
     !! Write the structure in vasp poscar style format.
     implicit none
 
@@ -429,8 +429,6 @@ contains
     !! The unit number of the file to write to.
     class(basis_type), intent(in) :: basis
     !! The basis to write the geometry from.
-    logical, intent(in), optional :: cartesian
-    !! Optional. Whether to write the basis in cartesian coordinates.
 
     ! Local variables
     integer :: i,j
@@ -441,9 +439,10 @@ contains
     !! String to determine whether to write in direct or cartesian coordinates.
 
 
-    string="Direct"
-    if(present(cartesian))then
-       if(cartesian) string="Cartesian"
+    if(basis%lcart)then
+       string = "Cartesian"
+    else
+       string="Direct"
     end if
 
     write(UNIT,'(A)') trim(adjustl(basis%sysname))
@@ -1255,16 +1254,21 @@ contains
     !! Loop index.
     real(real32), dimension(3,3) :: transform
     !! The transformation matrix.
+    logical :: lcart
+    !! Logical variable to determine whether the basis is in cartesian coordinates.
 
 
    transform = matmul(inverse_3x3(lattice),this%lat)
-   if(.not.this%lcart) call this%convert()
-   do is = 1, this%nspec
-      do ia = 1, this%spec(is)%num
-         this%spec(is)%atom(ia,1:3) = &
-              matmul(transform, this%spec(is)%atom(ia,1:3))
-      end do
-   end do
+   lcart = this%lcart
+   if(.not.lcart) call this%convert()
+   ! do is = 1, this%nspec
+   !    do ia = 1, this%spec(is)%num
+   !       this%spec(is)%atom(ia,1:3) = &
+   !            matmul(transform, this%spec(is)%atom(ia,1:3))
+   !    end do
+   ! end do
+   this%lat = lattice
+   if(.not.lcart) call this%convert()
 
   end subroutine change_lattice
 !###############################################################################
