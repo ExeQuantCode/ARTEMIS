@@ -811,7 +811,6 @@ contains
                         &code is now exiting...")
                 end if
              end if
-             write(*,*) "intf_loc",intf_loc
 
 
              !!-----------------------------------------------------------------
