@@ -7,8 +7,9 @@
 module artemis__generator
   use artemis__constants, only: real32, ierror, pi
   use artemis__misc, only: to_lower,to_upper
+  use artemis__misc_types, only: abstract_artemis_generator_type, latmatch_type, tol_type
   use artemis__geom_rw, only: basis_type,geom_write
-  use lat_compare, only: get_best_match,latmatch_type,tol_type
+  use lat_compare, only: get_best_match
   use artemis__io_utils, only: err_abort
   use artemis__io_utils_extd, only: err_abort_print_struc
   use misc_linalg,          only: uvec,modu,get_area,inverse,cross
@@ -31,16 +32,6 @@ module artemis__generator
 
   type(bulk_DON_type), dimension(2) :: bulk_DON
 
-  type :: abstract_artemis_generator_type
-     integer :: max_num_structures = 100
-
-     real(real32) :: tol_cart
-     real(real32), dimension(3) :: tol_crys
-
-     type(basis_type), dimension(:), allocatable :: structures
-   contains
-     procedure, pass(this) :: write_structures
-  end type abstract_artemis_generator_type
 
 
 
@@ -329,60 +320,6 @@ contains
     end if
 
    end subroutine generate_terminations
-!###############################################################################
-
-
-!###############################################################################
-  subroutine write_structures( &
-       this, directory, prefix &
-  )
-    !! Write the generated terminations to file
-    implicit none
-   
-    ! Arguments
-    class(abstract_artemis_generator_type), intent(in) :: this
-    !! Instance of artemis generator type
-    character(len=*), intent(in) :: directory
-    !! Directory to write the files to
-    character(len=*), intent(in), optional :: prefix
-    !! Prefix for the output files
-   
-    ! Local variables
-    integer :: i
-    !! Loop variable
-    integer :: unit
-    !! File unit number
-    character(len=256) :: filename, filename_template
-    !! File name for the output files
-    character(len=:), allocatable :: prefix_
-    !! Prefix for the output files
-
-
-
-    if(trim(directory).ne."") then
-       call system('mkdir -p '//trim(adjustl(directory)))
-    end if
-
-    filename_template = "POSCAR"
-    if(present(prefix)) then
-       prefix_ = trim(to_lower(prefix))
-       filename_template = trim(filename_template) // "_" // trim(prefix_)
-    end if
-    if(allocated(this%structures))then
-       do i = 1, size(this%structures)
-          write(filename,'(A,I0)') trim(filename_template), i
-          if(trim(directory).ne."") then
-             filename = trim(directory) // "/" // trim(filename)
-          end if
-          open(newunit=unit,file=filename)
-          call geom_write(unit, this%structures(i))
-          close(unit)
-       end do
-    else
-       write(0,'(1X,"No structures to write.")')
-    end if
-   
-  end subroutine write_structures
 !###############################################################################
 
 

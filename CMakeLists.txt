@@ -55,7 +55,6 @@ set(LIB_DIR ${FORTRAN_SRC_DIR}/lib)
 set(LIB_FILES
     mod_constants.f90
     mod_misc.f90
-    mod_misc_types.f90
     mod_io_utils.F90
     mod_help.f90
     mod_misc_maths.f90
@@ -66,6 +65,7 @@ set(LIB_FILES
     mod_sym.f90
     mod_tools_infile.f90
     mod_terminations.f90
+    mod_misc_types.f90
 )
 
 # Main source files
