@@ -4,7 +4,7 @@
 !!! Code part of the ARTEMIS group (Hepplestone research group).
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
-module artemis__generator
+module artemis__interface_generator
   use artemis__constants, only: real32, ierror, pi
   use artemis__misc, only: to_lower,to_upper
   use artemis__misc_types, only: abstract_artemis_generator_type, latmatch_type, tol_type
@@ -27,21 +27,10 @@ module artemis__generator
   use shifting !!! CHANGE TO SHIFTER?
   implicit none
   integer, private :: intf=0
-  real(real32), private, parameter :: tmp_vac = 14._real32
 
 
   type(bulk_DON_type), dimension(2) :: bulk_DON
 
-
-
-
-  type, extends(abstract_artemis_generator_type) :: artemis_termination_generator_type
-
-    real(real32) :: layer_separation_cutoff = 1._real32
-
-   contains
-     procedure, pass(this) :: generate => generate_terminations
-  end type artemis_termination_generator_type
 
 
   type, extends(abstract_artemis_generator_type) :: artemis_interface_generator_type
@@ -126,167 +115,6 @@ contains
     end if
 
   end subroutine set_tolerance
-!###############################################################################
-
-
-!###############################################################################
-  subroutine generate_terminations( &
-       this, basis, miller_plane, axis, num_layers, thickness &
-  )
-    !! Generate and prints terminations parallel to the supplied miller plane
-    implicit none
-
-    ! Arguments
-    class(artemis_termination_generator_type), intent(inout) :: this
-    !! Instance of artemis generator type
-    type(basis_type), intent(in) :: basis
-    !! Atomic structure data
-    integer, dimension(3), intent(in) :: miller_plane
-    !! Miller plane
-    integer, intent(in) :: axis
-    !! Axis along which to align the slab
-    integer, intent(in), optional :: num_layers
-    !! Number of layers in the slab
-    real(real32), intent(in), optional :: thickness
-    !! Thickness of the slab (in Å)
-
-    type(basis_type), dimension(:), allocatable :: output
-    !! Output structures
-
-    ! Local variables
-    integer :: itmp1, iterm, term_start, term_end, iterm_step, i
-    !! Termination loop variables
-    integer :: ncells, ntrans
-    !! Number of cells in the slab
-    integer :: num_structures
-    !! Number of structures to be generated
-    integer :: num_layers_
-    !! Number of layers in the slab
-    real(real32) :: height
-    !! Height of the slab
-    logical :: lcycle
-    !! Boolean whether to cycle through the slab
-    type(basis_type) :: tmp_bas1,tmp_bas2
-    !! Temporary basis structures
-    type(confine_type) :: confine
-    !! Confine structure along the specified axis
-    type(term_arr_type) :: term
-    !! List of terminations
-    real(real32), dimension(3,3) :: tfmat
-    !! Transformation matrix
-
-    character(len=256) :: warn_msg
-
-    integer, allocatable, dimension(:,:,:) :: bas_map,t1bas_map
-    real(real32), allocatable, dimension(:,:) :: trans
-
-
-    !! copy lattice and basis for manipulating
-    call tmp_bas1%copy(basis)
-    allocate(bas_map(tmp_bas1%nspec,maxval(tmp_bas1%spec(:)%num,dim=1),2))
-    bas_map = -1
-
-
-    write(6,'(1X,"Using supplied plane...")')
-    tfmat = planecutter(tmp_bas1%lat,real(miller_plane,real32))
-    call transformer(tmp_bas1,tfmat,bas_map)
-    !call err_abort_print_struc(bas,"check.vasp","stop")
-
-    !---------------------------------------------------------------------------
-    ! Finds smallest thickness of the slab and increases to ...
-    ! ... user-defined thickness
-    !---------------------------------------------------------------------------
-    confine%l = .false.
-    confine%axis = this%axis
-    confine%laxis = .false.
-    confine%laxis(this%axis) = .true.
-    if(allocated(trans)) deallocate(trans)
-    allocate(trans(minval(tmp_bas1%spec(:)%num+2),3))
-    call gldfnd(confine, tmp_bas1, tmp_bas1, trans, ntrans)
-    tfmat(:,:) = 0._real32
-    tfmat(1,1) = 1._real32
-    tfmat(2,2) = 1._real32
-    if(ntrans.eq.0)then
-       tfmat(3,3)=1._real32
-    else
-       itmp1=minloc(abs(trans(:ntrans,this%axis)),dim=1,&
-            mask=abs(trans(:ntrans,this%axis)).gt.1.D-3/modu(tmp_bas1%lat(this%axis,:)))
-       tfmat(3,:)=trans(itmp1,:)
-    end if
-    if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
-    call transformer(tmp_bas1,tfmat,bas_map)
-    if(.not.compare_stoichiometry(tmp_bas1,basis))then
-       write(0,'(1X,"ERROR: Internal error in generate_terminations")')
-       write(0,'(2X,"The gldfnd subroutine could not reproduce a valid primitive cell for the material")')
-       if(ierror.eq.1)then
-          call err_abort_print_struc(tmp_bas1, "broken_primitive.vasp", &
-           "Code exiting due to IPRINT = 1")
-       end if
-       write(0,'(2X,"Skipping this lattice match")')
-       return
-    end if
-
-    ! get the terminations
-    term = get_termination_info( &
-         tmp_bas1, this%axis, &
-         lprint = .true., layer_sep = this%layer_separation_cutoff, &
-         break_on_fail = lbreak_on_no_term &
-    )
-    if(term%nterm .eq. 0)then
-       write(warn_msg, '(A,I0,1X,I0,1X,I0,A)') &
-            "No terminations found for Miller plane (",miller_plane,")"
-       call print_warning(trim(warn_msg))
-       return
-    end if
-
-    ! set thickness if provided by user
-    if(present(num_layers))then
-       num_layers_ = num_layers
-    else
-       num_layers_ = 1
-    end if
-
-    ! determine tolerance for layer separations (termination tolerance)
-    ! ... this is different from layer_sep
-    call set_layer_tol(term)
-
-    ! determine required extension and perform that
-    call set_slab_height(tmp_bas1,bas_map,term,lw_surf,&
-         height,num_layers_, thickness, ncells,&
-         term_start,term_end,iterm_step &
-    )
-    
-    !---------------------------------------------------------------------------
-    ! Normalise lattice
-    !---------------------------------------------------------------------------
-    if(lnorm_lat)then
-       call reducer(tmp_bas1)
-       tmp_bas1%lat = MATNORM(tmp_bas1%lat)
-    end if
-    
-
-    !---------------------------------------------------------------------------
-    ! loop over terminations and write them
-    !---------------------------------------------------------------------------
-    num_structures = ( term_end - term_start ) / iterm_step + 1
-    allocate(output(num_structures))
-    do iterm = term_start, term_end, iterm_step
-       i = ( iterm - term_start ) / iterm_step + 1 
-       call output(i)%copy(tmp_bas1)
-       if(allocated(t1bas_map)) deallocate(t1bas_map)
-       allocate(t1bas_map,source=bas_map)
-       call build_slab(output(i),bas_map,term,[iterm,lw_surf(2)],&
-            thickness, ncells, num_layers_, height,&
-            "lw",lcycle,lortho,vacuum &
-       )
-    end do
-    if(.not.allocated(this%structures))then
-       call move_alloc(output,this%structures)
-    else
-       this%structures = [ this%structures, output ]
-    end if
-
-   end subroutine generate_terminations
 !###############################################################################
 
 
@@ -895,7 +723,7 @@ contains
           !! Shifts lower material to specified termination
           !!--------------------------------------------------------------------
           call build_slab(slab_lw,t2lw_map,lw_term,[iterm_lw,lw_surf(2)],&
-          lw_thickness, ncells_lw, lw_num_layers, height_lw,&
+               lw_thickness, ncells_lw, lw_num_layers, height_lw,&
                "lw",lcycle)
           if(lcycle) cycle lw_term_loop
 
@@ -960,9 +788,9 @@ contains
                   map1 = t2lw_map, map2 = t2up_map &
              )
              intf_loc(1) = ( modu(slab_lw%lat(this%axis,:)) + 0.5_real32*init_offset(this%axis) - &
-                  tmp_vac)/modu(interface%lat(this%axis,:))
+                  this%vacuum_gap)/modu(interface%lat(this%axis,:))
              intf_loc(2) = ( modu(slab_lw%lat(this%axis,:)) + modu(slab_up%lat(this%axis,:)) + &
-                  1.5_real32*init_offset(this%axis) - 2._real32*tmp_vac )/modu(interface%lat(this%axis,:))
+                  1.5_real32*init_offset(this%axis) - 2._real32*this%vacuum_gap )/modu(interface%lat(this%axis,:))
              if(ierror.ge.1)then
                 write(0,*) "interface:",intf_loc
                 if(ierror.eq.1.and.iunique.eq.icheck_intf-1)then
@@ -1318,5 +1146,4 @@ contains
   end subroutine output_intf_data
 !!!#############################################################################
 
-
-end module artemis__generator
+end module artemis__interface_generator
