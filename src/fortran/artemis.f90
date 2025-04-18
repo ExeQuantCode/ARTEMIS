@@ -1,5 +1,4 @@
 module artemis
-  use inputs
   use artemis__termination_generator
   use artemis__interface_generator
   implicit none
