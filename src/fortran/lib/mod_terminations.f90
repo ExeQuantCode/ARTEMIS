@@ -705,11 +705,11 @@ contains
     if(thickness.gt.0._real32)then
        select case(term%axis)
        case(1)
-          slab_thickness = dot_product(uvec(cross([ basis%lat(2,:) ], [ basis%lat(3,:) ])), [ basis%lat(1,:) ])
+          slab_thickness = abs( dot_product(uvec(cross([ basis%lat(2,:) ], [ basis%lat(3,:) ])), [ basis%lat(1,:) ]) )
        case(2)
-          slab_thickness = dot_product(uvec(cross([ basis%lat(1,:) ], [ basis%lat(3,:) ])), [ basis%lat(2,:) ])
+          slab_thickness = abs( dot_product(uvec(cross([ basis%lat(1,:) ], [ basis%lat(3,:) ])), [ basis%lat(2,:) ]) )
        case(3)
-          slab_thickness = dot_product(uvec(cross([ basis%lat(1,:) ], [ basis%lat(2,:) ])), [ basis%lat(3,:) ])
+          slab_thickness = abs( dot_product(uvec(cross([ basis%lat(1,:) ], [ basis%lat(2,:) ])), [ basis%lat(3,:) ]) )
        end select
        ! get the largest separation between two terminations
        if(ludef_surf)then

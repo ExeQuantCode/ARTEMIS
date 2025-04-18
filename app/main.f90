@@ -102,6 +102,7 @@ program artemis_executable
              print_termination_info = lprint_terms, &
              print_shift_info = lprint_shifts &
         )
+        call intf_gen%write_structures(directory = "DINTERFACES", prefix= "")
      else
         call intf_gen%restart(struc1_bas)
      end if
