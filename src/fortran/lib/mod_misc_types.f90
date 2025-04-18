@@ -1,6 +1,6 @@
 module artemis__misc_types
   !! Module containing custom derived types for ARTEMIS
-  use artemis__constants, only: real32
+  use artemis__constants, only: real32, pi
   use artemis__misc, only: to_lower
   use artemis__geom_rw, only: basis_type, geom_write
   implicit none
@@ -30,9 +30,9 @@ module artemis__misc_types
      integer :: maxsize = 10
      real(real32) :: maxlen=20._real32
      real(real32) :: maxarea=400._real32
-     real(real32) :: vec = 5._real32
-     real(real32) :: ang = 1._real32
-     real(real32) :: area = 10._real32
+     real(real32) :: vec = 5._real32 / 100._real32
+     real(real32) :: ang = 1._real32 * pi / 180._real32
+     real(real32) :: area = 10._real32 / 100._real32
      real(real32) :: ang_weight = 10._real32
      real(real32) :: area_weight = 100._real32
   end type tol_type
