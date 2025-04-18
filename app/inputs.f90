@@ -129,7 +129,7 @@ contains
     lreduce=.false.
     iswap = 0
     nswap = 5
-    swap_den = 5.D-2
+    swap_den = 5.E-2_real32
     swap_sigma = -1.0
     swap_depth = 3.0
     lswap_mirror = .true.
@@ -143,7 +143,7 @@ contains
     lw_surf=0
     up_surf=0
     iintf=-1
-    tol_sym = 1.D-6
+    tol_sym = 1.E-6_real32
     udef_intf_loc = [ -1._real32, -1._real32 ]
     lw_use_pricel=.true.
     up_use_pricel=.true.
@@ -601,8 +601,8 @@ contains
              call cat(unit=unit,end_string="END",end_string2="SHIFT",&
                   line=count,string=store,rm_cmt=.true.)
           end if
-          edits%axis(edits%nedits)=assign_list(store,tag_list,1)
-          edits%val(edits%nedits)=assign_list(store,tag_list,3)
+          edits%axis(edits%nedits)= nint( assign_list(store,tag_list,1) )
+          edits%val(edits%nedits)= assign_list(store,tag_list,3)
           if(index(store,"bounds").eq.0)then
              readvar(5) = readvar(5) + 1
              edits%list(edits%nedits)=1
@@ -619,7 +619,7 @@ contains
              readvar(7) = readvar(7) + 1
              call cat(unit=unit,end_string="END",end_string2="VACUUM",&
                   line=count,string=store,rm_cmt=.true.)
-             edits%axis(edits%nedits)=assign_list(store,tag_list,1)
+             edits%axis(edits%nedits)= nint( assign_list(store,tag_list,1) )
              edits%bounds(edits%nedits,1)=assign_list(store,tag_list,2)
              edits%val(edits%nedits)=assign_list(store,tag_list,3)
           else

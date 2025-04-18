@@ -381,7 +381,7 @@ contains
     maxcount=0
     do i=1,size(in_array)
        itmp1=count(in_array.eq.in_array(i))
-       itmp1=count(abs(in_array-in_array(i)).lt.1.D-8)
+       itmp1=count(abs(in_array-in_array(i)).lt.1.E-8_real32)
        if(itmp1.gt.maxcount)then
           maxcount=itmp1
           mode=in_array(i)
@@ -416,7 +416,7 @@ contains
     real(real32), dimension(size(in_array)) :: output
     
     sumval=sum(in_array)
-    if(sumval.lt.1.D-8)then
+    if(sumval.lt.1.E-8_real32)then
        output=in_array
     else
        output=in_array/sum(in_array)

@@ -26,7 +26,7 @@ module artemis__sym
   implicit none
   integer :: ierror_sym=0
   integer :: s_start=1,s_end=0
-  real(real32) :: tol_sym = 5.E-5_real32
+  real(real32) :: tol_sym = 1.E-6_real32
   character(1) :: verb_sym = "n"
   integer, allocatable, dimension(:) :: symops_compare
 
@@ -69,9 +69,12 @@ module artemis__sym
   end type confine_type
 
   type sym_type
-     integer :: nsym,nlatsym,nsymop,npntop
-     logical :: lspace=.true.
-     logical :: lmolec=.false.
+     integer :: nsym = 0
+     integer :: nlatsym = 0
+     integer :: nsymop = 0
+     integer :: npntop = 0
+     logical :: lspace = .true.
+     logical :: lmolec = .false.
      integer, allocatable, dimension(:) :: op
      real(real32), allocatable, dimension(:,:,:) :: sym
      type(confine_type) :: confine
@@ -192,6 +195,16 @@ contains
 
 
 204 format(4(F11.6),/,4(F11.6),/,4(F11.6),/,4(F11.6))
+
+    ! check length of basis
+    do is = 1, bas1%nspec
+       if(size(bas1%spec(is)%atom,2).ne.4)then
+          write(0,'("ERROR: error encountered in check_sym")')
+          write(0,'(2X,"Internal error in subroutine check_sym in artemis__sym.f90")')
+          write(0,'(2X,"size of basis is not 4")')
+          return
+       end if
+    end do
 
 
 !!!-----------------------------------------------------------------------------

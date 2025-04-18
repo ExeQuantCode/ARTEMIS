@@ -211,7 +211,7 @@ target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Dev>:${DEVFLAGS}>")
 
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${DEBUGFLAGS}>")
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${WARNFLAGS}>")
-target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${MPFLAGS}>")
+# target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${MPFLAGS}>")
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${PYTHONFLAGS}>")
 
 if (BUILD_EXECUTABLE)
@@ -228,7 +228,7 @@ if (BUILD_EXECUTABLE)
 
     target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Debug>:${DEBUGFLAGS}>")
     target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Debug>:${WARNFLAGS}>")
-    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Debug>:${MPFLAGS}>")
+    # target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Debug>:${MPFLAGS}>")
     target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Debug>:${PYTHONFLAGS}>")
 
     set_target_properties(${PROJECT_NAME}_executable PROPERTIES VERSION ${PROJECT_VERSION})

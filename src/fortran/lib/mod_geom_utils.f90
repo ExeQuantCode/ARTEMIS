@@ -1934,7 +1934,6 @@ contains
     integer :: minspecloc,minatomloc,nxtatomloc
     real(real32), dimension(3) :: transvec
     real(real32), dimension(2,2) :: regions
-    real(real32), dimension(3,3) :: tf
     logical, allocatable, dimension(:) :: atom_mask
     type(basis_type), allocatable, dimension(:) :: splitbas
 

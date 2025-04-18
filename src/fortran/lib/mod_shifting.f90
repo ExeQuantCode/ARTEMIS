@@ -564,7 +564,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Initialise variables
 !!!-----------------------------------------------------------------------------
-    tol=1.D-2/modu(lat(axis,:))
+    tol=1.E-2_real32/modu(lat(axis,:))
     count1=0
     prev_min_bond=0._real32
     prev_c_shift=0._real32
@@ -956,7 +956,7 @@ contains
              !where(DON_missing(i,is)%atom(ia,:).lt.0._real32)
              !   DON_missing(i,is)%atom(ia,:)=0._real32
              !end where
-             if(all(abs(DON_missing(i,is)%atom(ia,:)).lt.1.D-2))&
+             if(all(abs(DON_missing(i,is)%atom(ia,:)).lt.1.E-2_real32))&
                   cycle atom_loop1
 
 
@@ -1077,7 +1077,7 @@ contains
     gridsize(2) = stepsize/modu(bas%lat(2,:))
     gridsize(3) = stepsize/modu(bas%lat(3,:))
 
-    nstep(:2) = min_trans(:2)*ngrid(:2)
+    nstep(:2) = nint( min_trans(:2) * ngrid(:2) )
     nstep(3) = 0
     do jc=1,ngrid(3)
        pos(3) = real(jc-1,real32)*gridsize(3)
