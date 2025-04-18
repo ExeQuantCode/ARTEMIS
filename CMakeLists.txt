@@ -77,8 +77,8 @@ set(SPECIAL_LIB_FILES
     mod_swapping.f90
     mod_shifting.f90
     default_infile.f90
-    inputs.f90
-    mod_generator.f90
+    mod_term_generator.f90
+    mod_intf_generator.f90
 )
 
 
@@ -105,6 +105,7 @@ endforeach()
 
 
 set(EXECUTABLE_FILES
+    inputs.f90
     main.f90
 )
 set(APP_DIR app)
@@ -201,8 +202,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
 
 # set compile options based on different build configurations
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${OPTIMFLAGS}>")
-target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${MPFLAGS}>")
-target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
+# target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${MPFLAGS}>")
+# target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
 
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Dev>:${DEVFLAGS}>")
 
@@ -218,8 +219,8 @@ if (BUILD_EXECUTABLE)
     set_target_properties(${PROJECT_NAME}_executable PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_DIR})
 
     target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${OPTIMFLAGS}>")
-    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${MPFLAGS}>")
-    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
+    # target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${MPFLAGS}>")
+    # target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
 
     target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Dev>:${DEVFLAGS}>")
 

@@ -41,7 +41,7 @@ module artemis__interface_generator
     !! Shift values
     real(real32) :: interface_depth = 1.5_real32
     !! Interface depth
-    real(real32) :: separation_scale = 1.5_real32
+    real(real32) :: separation_scale = 1._real32
     !! Separation scale
     integer :: depth_method = 0
     !! Method for determining the depth to which consider atoms from interface
@@ -80,6 +80,7 @@ module artemis__interface_generator
    !  type(basis_type), dimension(:), allocatable :: term_structures_up
    contains
     procedure, pass(this) :: set_tolerance
+    procedure, pass(this) :: set_shift_method
     procedure, pass(this) :: generate => generate_interfaces
     procedure, pass(this) :: restart => generate_intefaces_from_existing
     procedure, pass(this) :: generate_perturbations => generate_shifts_and_swaps
@@ -136,6 +137,8 @@ contains
        if(present(angle_weight)) this%tolerance%ang_weight = angle_weight
        if(present(area_weight)) this%tolerance%area_weight = area_weight
     end if
+
+    !!! TOLERANCE EXPECTED IN FRACTIONS OF Å, radians, and Å^2
 
   end subroutine set_tolerance
 !###############################################################################
@@ -209,6 +212,9 @@ contains
                " components. It should have 1, 2, or 3."
           call err_abort(trim(err_msg),fmtd=.true.)
        end select
+    else
+       if(allocated(this%shifts)) deallocate(this%shifts)
+       allocate(this%shifts(1,3), source = -1._real32)
     end if
 
   end subroutine set_shift_method
@@ -512,6 +518,8 @@ contains
     if(present(break_on_fail)) break_on_fail_ = break_on_fail
     generate_structures_ = .true.
     if(present(generate_structures)) generate_structures_ = generate_structures
+
+    if(.not.allocated(this%shifts)) call this%set_shift_method()
 
 
     !---------------------------------------------------------------------------
