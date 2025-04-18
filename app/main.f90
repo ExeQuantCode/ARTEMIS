@@ -96,7 +96,11 @@ program artemis_executable
         call intf_gen%generate( &
              struc1_bas, struc2_bas, &
              miller_lw = lw_mplane, miller_up = up_mplane, &
-             surface_lw = lw_surf, surface_up = up_surf &
+             surface_lw = lw_surf, surface_up = up_surf, &
+             use_pricel_lw = lw_use_pricel, use_pricel_up = up_use_pricel, &
+             print_lattice_match_info = lprint_matches, &
+             print_termination_info = lprint_terms, &
+             print_shift_info = lprint_shifts &
         )
      else
         call intf_gen%restart(struc1_bas)
