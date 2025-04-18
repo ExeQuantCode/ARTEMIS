@@ -3,7 +3,7 @@ import artemis._artemis as _artemis
 import f90wrap.runtime
 import logging
 import numpy
-
+from ase import Atoms
 
 class Geom_Rw(f90wrap.runtime.FortranModule):
     """
@@ -1288,6 +1288,11 @@ class Termination_Generator(f90wrap.runtime.FortranModule):
              ... user-defined thickness
             ---------------------------------------------------------------------------
             """
+
+            # check if host is ase.Atoms object or a Fortran derived type basis_type
+            if isinstance(basis, Atoms):
+                basis = geom_rw.basis(atoms=basis)
+
             _artemis.f90wrap_term_gen__generate__binding__2af7(this=self._handle, \
                 basis=basis._handle, miller_plane=miller_plane, axis=axis, surface=surface, \
                 num_layers=num_layers, thickness=thickness, orthogonalise=orthogonalise, \
@@ -1458,7 +1463,8 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             elastic_constants_lw=None, elastic_constants_up=None, \
             print_lattice_match_info=None, print_termination_info=None, \
             print_shift_info=None, break_on_fail=None, icheck_match=None, \
-            interface_idx=None, generate_structures=None, seed=None):
+            interface_idx=None, generate_structures=None, seed=None, 
+            calc=None):
             """
             generate__binding__artemis_interface_generator_type(self, basis_lw, basis_up[, \
                 miller_lw, miller_up, surface_lw, surface_up, thickness_lw, thickness_up, \
@@ -1500,11 +1506,20 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             generate_structures : bool
             seed : int
             
-            ---------------------------------------------------------------------------
-             Set the random seed
-            ---------------------------------------------------------------------------
             """
-            _artemis.f90wrap_intf_gen__generate__binding__ar04c1(this=self._handle, \
+
+            exit_code = 0
+            structures = None
+
+            # check if host is ase.Atoms object or a Fortran derived type basis_type
+            if isinstance(basis_lw, Atoms):
+                basis_lw = geom_rw.basis(atoms=basis_lw)
+
+            if isinstance(basis_up, Atoms):
+                basis_up = geom_rw.basis(atoms=basis_up)
+
+            # exit_code = ...
+            _artemis.f90wrap_intf_gen__generate__binding__aigt(this=self._handle, \
                 basis_lw=basis_lw._handle, basis_up=basis_up._handle, miller_lw=miller_lw, \
                 miller_up=miller_up, surface_lw=surface_lw, surface_up=surface_up, \
                 thickness_lw=thickness_lw, thickness_up=thickness_up, \
@@ -1519,6 +1534,9 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
                 icheck_match=icheck_match, interface_idx=interface_idx, \
                 generate_structures=generate_structures, seed=seed)
         
+            structures = self.get_structures(calc)
+            return structures, exit_code
+
         def restart(self, basis, interface_location=None, print_shift_info=None, \
             seed=None):
             """
@@ -1542,10 +1560,35 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
              Set the random seed
             ---------------------------------------------------------------------------
             """
-            _artemis.f90wrap_intf_gen__restart__binding__artdb00(this=self._handle, \
+            _artemis.f90wrap_intf_gen__restart__binding__aigt(this=self._handle, \
                 basis=basis._handle, interface_location=interface_location, \
                 print_shift_info=print_shift_info, seed=seed)
         
+        def get_structures(self, calculator=None):
+            """
+            Get the generated structures as a list of ASE Atoms objects.
+
+            Parameters:
+                calculator (ASE calculator):
+                    The calculator to use for the generated structures.
+            """
+            atoms = []
+            for structure in self.structures:
+                atoms.append(structure.toase(calculator))
+            return atoms
+
+        @property
+        def num_structures(self):
+            """
+            The number of generated structures currently stored in the generator.
+            """
+            return _artemis.f90wrap_artemis_intf_gen_type__get__num_structures(self._handle)
+
+        @num_structures.setter
+        def num_structures(self, num_structures):
+            _raffle.f90wrap_artemis_intf_gen_type__set__num_structures(self._handle, \
+                num_structures)
+
         @property
         def shift_method(self):
             """
@@ -1558,11 +1601,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__shift_method(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__shift_method(self._handle)
         
         @shift_method.setter
         def shift_method(self, shift_method):
-            _artemis.f90wrap_artemis_interface_generator_type__set__shift_method(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__shift_method(self._handle, \
                 shift_method)
         
         @property
@@ -1577,11 +1620,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__num_shifts(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__num_shifts(self._handle)
         
         @num_shifts.setter
         def num_shifts(self, num_shifts):
-            _artemis.f90wrap_artemis_interface_generator_type__set__num_shifts(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__num_shifts(self._handle, \
                 num_shifts)
         
         @property
@@ -1596,13 +1639,13 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             array_ndim, array_type, array_shape, array_handle = \
-                _artemis.f90wrap_artemis_interface_generator_type__array__shifts(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__array__shifts(self._handle)
             if array_handle in self._arrays:
                 shifts = self._arrays[array_handle]
             else:
                 shifts = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
                                         self._handle,
-                                        _artemis.f90wrap_artemis_interface_generator_type__array__shifts)
+                                        _artemis.f90wrap_artemis_intf_gen_type__array__shifts)
                 self._arrays[array_handle] = shifts
             return shifts
         
@@ -1622,11 +1665,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__interface_depth(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__interface_depth(self._handle)
         
         @interface_depth.setter
         def interface_depth(self, interface_depth):
-            _artemis.f90wrap_artemis_interface_generator_type__set__interface_depth(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__interface_depth(self._handle, \
                 interface_depth)
         
         @property
@@ -1641,11 +1684,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__separation_scale(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__separation_scale(self._handle)
         
         @separation_scale.setter
         def separation_scale(self, separation_scale):
-            _artemis.f90wrap_artemis_interface_generator_type__set__separation_scale(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__separation_scale(self._handle, \
                 separation_scale)
         
         @property
@@ -1660,11 +1703,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__depth_method(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__depth_method(self._handle)
         
         @depth_method.setter
         def depth_method(self, depth_method):
-            _artemis.f90wrap_artemis_interface_generator_type__set__depth_method(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__depth_method(self._handle, \
                 depth_method)
         
         @property
@@ -1679,13 +1722,13 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             array_ndim, array_type, array_shape, array_handle = \
-                _artemis.f90wrap_artemis_interface_generator_type__array__shift_data(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__array__shift_data(self._handle)
             if array_handle in self._arrays:
                 shift_data = self._arrays[array_handle]
             else:
                 shift_data = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
                                         self._handle,
-                                        _artemis.f90wrap_artemis_interface_generator_type__array__shift_data)
+                                        _artemis.f90wrap_artemis_intf_gen_type__array__shift_data)
                 self._arrays[array_handle] = shift_data
             return shift_data
         
@@ -1705,11 +1748,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__swap_method(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__swap_method(self._handle)
         
         @swap_method.setter
         def swap_method(self, swap_method):
-            _artemis.f90wrap_artemis_interface_generator_type__set__swap_method(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__swap_method(self._handle, \
                 swap_method)
         
         @property
@@ -1724,11 +1767,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__num_swaps(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__num_swaps(self._handle)
         
         @num_swaps.setter
         def num_swaps(self, num_swaps):
-            _artemis.f90wrap_artemis_interface_generator_type__set__num_swaps(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__num_swaps(self._handle, \
                 num_swaps)
         
         @property
@@ -1743,11 +1786,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__swap_density(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__swap_density(self._handle)
         
         @swap_density.setter
         def swap_density(self, swap_density):
-            _artemis.f90wrap_artemis_interface_generator_type__set__swap_density(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__swap_density(self._handle, \
                 swap_density)
         
         @property
@@ -1762,11 +1805,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__swap_depth(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__swap_depth(self._handle)
         
         @swap_depth.setter
         def swap_depth(self, swap_depth):
-            _artemis.f90wrap_artemis_interface_generator_type__set__swap_depth(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__swap_depth(self._handle, \
                 swap_depth)
         
         @property
@@ -1781,11 +1824,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__swap_sigma(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__swap_sigma(self._handle)
         
         @swap_sigma.setter
         def swap_sigma(self, swap_sigma):
-            _artemis.f90wrap_artemis_interface_generator_type__set__swap_sigma(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__swap_sigma(self._handle, \
                 swap_sigma)
         
         @property
@@ -1800,11 +1843,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__require_mirr41cf(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__require_mirr41cf(self._handle)
         
         @require_mirror_swaps.setter
         def require_mirror_swaps(self, require_mirror_swaps):
-            _artemis.f90wrap_artemis_interface_generator_type__set__require_mirr3bfa(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__require_mirr3bfa(self._handle, \
                 require_mirror_swaps)
         
         @property
@@ -1819,11 +1862,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__match_method(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__match_method(self._handle)
         
         @match_method.setter
         def match_method(self, match_method):
-            _artemis.f90wrap_artemis_interface_generator_type__set__match_method(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__match_method(self._handle, \
                 match_method)
         
         @property
@@ -1838,11 +1881,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__max_num_matches(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__max_num_matches(self._handle)
         
         @max_num_matches.setter
         def max_num_matches(self, max_num_matches):
-            _artemis.f90wrap_artemis_interface_generator_type__set__max_num_matches(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__max_num_matches(self._handle, \
                 max_num_matches)
         
         @property
@@ -1857,11 +1900,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__max_num_terms(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__max_num_terms(self._handle)
         
         @max_num_terms.setter
         def max_num_terms(self, max_num_terms):
-            _artemis.f90wrap_artemis_interface_generator_type__set__max_num_terms(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__max_num_terms(self._handle, \
                 max_num_terms)
         
         @property
@@ -1876,11 +1919,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__max_num_planes(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__max_num_planes(self._handle)
         
         @max_num_planes.setter
         def max_num_planes(self, max_num_planes):
-            _artemis.f90wrap_artemis_interface_generator_type__set__max_num_planes(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__max_num_planes(self._handle, \
                 max_num_planes)
         
         @property
@@ -1895,11 +1938,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__fix_normal(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__fix_normal(self._handle)
         
         @fix_normal.setter
         def fix_normal(self, fix_normal):
-            _artemis.f90wrap_artemis_interface_generator_type__set__fix_normal(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__fix_normal(self._handle, \
                 fix_normal)
         
         @property
@@ -1914,11 +1957,11 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_interface_generator_type__get__bondlength_c21a8(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__get__bondlength_c21a8(self._handle)
         
         @bondlength_cutoff.setter
         def bondlength_cutoff(self, bondlength_cutoff):
-            _artemis.f90wrap_artemis_interface_generator_type__set__bondlength_cbd11(self._handle, \
+            _artemis.f90wrap_artemis_intf_gen_type__set__bondlength_cbd11(self._handle, \
                 bondlength_cutoff)
         
         @property
@@ -1933,14 +1976,14 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             
             """
             array_ndim, array_type, array_shape, array_handle = \
-                _artemis.f90wrap_artemis_interface_generator_type__array__layer_sepa90a5(self._handle)
+                _artemis.f90wrap_artemis_intf_gen_type__array__layer_sepa90a5(self._handle)
             if array_handle in self._arrays:
                 layer_separation_cutoff = self._arrays[array_handle]
             else:
                 layer_separation_cutoff = \
                     f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
                                         self._handle,
-                                        _artemis.f90wrap_artemis_interface_generator_type__array__layer_sepa90a5)
+                                        _artemis.f90wrap_artemis_intf_gen_type__array__layer_sepa90a5)
                 self._arrays[array_handle] = layer_separation_cutoff
             return layer_separation_cutoff
         
@@ -1948,6 +1991,26 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
         def layer_separation_cutoff(self, layer_separation_cutoff):
             self.layer_separation_cutoff[...] = layer_separation_cutoff
         
+        def _init_array_structures(self):
+            """
+            Initialise the structures array.
+
+            It is not recommended to use this function directly. Use the `structures` property instead.
+            """
+            self.structures = f90wrap.runtime.FortranDerivedTypeArray(self,
+                                            _artemis.f90wrap_artemis_intf_gen_type__array_getitem__structures,
+                                            _artemis.f90wrap_artemis_intf_gen_type__array_setitem__structures,
+                                            _artemis.f90wrap_artemis_intf_gen_type__array_len__structures,
+                                            """
+            Element items ftype=type(basis_type) pytype=basis
+
+
+            Defined at ../src/lib/mod_generator.f90 line \
+                29
+
+            """, Geom_Rw.basis)
+            return self.structures
+
         def __str__(self):
             ret = ['<artemis_interface_generator_type>{\n']
             ret.append('    shift_method : ')
@@ -1990,10 +2053,12 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             ret.append(repr(self.bondlength_cutoff))
             ret.append(',\n    layer_separation_cutoff : ')
             ret.append(repr(self.layer_separation_cutoff))
+            ret.append(',\n    structures : ')
+            ret.append(repr(self.structures))
             ret.append('}')
             return ''.join(ret)
         
-        _dt_array_initialisers = []
+        _dt_array_initialisers = [_init_array_structures]
         
     
     _dt_array_initialisers = []
