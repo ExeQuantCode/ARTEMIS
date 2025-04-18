@@ -1045,7 +1045,7 @@ contains
           trans(i,i-ntrans)=1._real32
        end do
        !  trans=matmul(trans(1:ntrans,1:3),basis%lat)
-       call sort2D(trans(1:ntrans+3,:),ntrans+3)
+       call sort2D( [ trans(1:ntrans+3,:) ] ,ntrans+3)
        !! for each lattice vector, determine the shortest translation ...
        !! ... vector that has a non-zero projection along that lattice vector.
        do i=1,3
@@ -1055,10 +1055,10 @@ contains
              if(dtmp1.lt.tol_sym) cycle trans_loop
 
              do k=1,i-1,1
-                if(modu(abs(cross(trans(j,:),dmat1(k,:)))).lt.1.E-8_real32) cycle trans_loop
+                if(modu(abs(cross( [ trans(j,:) ], [ dmat1(k,:) ]))).lt.1.E-8_real32) cycle trans_loop
              end do
 
-             dtmp1 = modu(trans(j,:))
+             dtmp1 = modu( [ trans(j,:) ] )
              if(dtmp1.lt.proj)then
                 proj=dtmp1
                 dmat1(i,:) = trans(j,:)

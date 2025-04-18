@@ -453,8 +453,8 @@ contains
     allocate(tf_testlist(nlist,2,2))
     do i=1,nlist
        tf_testlist(i,:2,:2) = find_tf_2x2(&
-            mat_testlist(i,:2,:2),&
-            transpose(mat_testlist(i,:2,3:4)))
+            [ mat_testlist(i,:2,:2) ],&
+            [ transpose(mat_testlist(i,:2,3:4)) ])
     end do
 
 
@@ -525,10 +525,10 @@ contains
 !!! saves the smallest match if successful
 !!!------------------------------------------------------------------------
     if(.not.lunique)then
-       if(abs(get_area(inmat(:2,:2),inmat(:2,3:4))).lt.&
+       if(abs(get_area([ inmat(:2,:2) ], [ inmat(:2,3:4) ])).lt.&
             abs(&
-            get_area(mat_testlist(matched_loc,:2,:2),&
-            mat_testlist(matched_loc,:2,3:4))))then
+            get_area([ mat_testlist(matched_loc,:2,:2) ],&
+            [ mat_testlist(matched_loc,:2,3:4) ])))then
           mat_testlist(matched_loc,:2,:4) = inmat(:2,:4)
           if(present(test_list))then
              test_list = mat_testlist
@@ -628,10 +628,10 @@ contains
 !!! Setting up tolerances !!! 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   tiny = 1.E-5_real32
-  tol_up_ang = 1.E0 + real(tol%ang)/(2.E0*pi)
-  tol_dw_ang = 1.E0 - real(tol%ang)/(2.E0*pi)
-  tol_up_vec = 1.E0 + real(tol%vec)!/100._real32
-  tol_dw_vec = 1.E0 - real(tol%vec)!/100._real32
+  tol_up_ang = 1._real32 + tol%ang/(2._real32*pi)
+  tol_dw_ang = 1._real32 - tol%ang/(2._real32*pi)
+  tol_up_vec = 1._real32 + tol%vec!/100._real32
+  tol_dw_vec = 1._real32 - tol%vec!/100._real32
 
   if(allocated(matched_tols)) deallocate(matched_tols)
   allocate(matched_tols(tol%maxfit,3))
@@ -849,10 +849,10 @@ contains
            mat1(2,:2)=real(numstore_1(m,:2),real32)
            mat2(1,:2)=real(list_angle_fits(i,1:2),real32)
            mat2(2,:2)=real(list_angle_fits(i,3:4),real32)
-           tf=find_tf(mat1,mat2)
+           tf=find_tf_2x2(mat1,mat2)
            do j=1,tol%maxfit
-              if(all(abs(tf-find_tf(real(MAIN_LOOP_LIST(j,:2,1:2),real32),&
-                   real(MAIN_LOOP_LIST(j,:2,3:4),real32))).lt.1.D-6))then
+              if(all(abs(tf-find_tf_2x2( [ MAIN_LOOP_LIST(j,:2,1:2) ],&
+                   [ MAIN_LOOP_LIST(j,:2,3:4) ] )).lt.1.E-6_real32))then
                  cycle loop112
               end if
            end do
