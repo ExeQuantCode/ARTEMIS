@@ -1518,8 +1518,7 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             if isinstance(basis_up, Atoms):
                 basis_up = geom_rw.basis(atoms=basis_up)
 
-            # exit_code = ...
-            _artemis.f90wrap_intf_gen__generate__binding__aigt(this=self._handle, \
+            exit_code = _artemis.f90wrap_intf_gen__generate__binding__aigt(this=self._handle, \
                 basis_lw=basis_lw._handle, basis_up=basis_up._handle, miller_lw=miller_lw, \
                 miller_up=miller_up, surface_lw=surface_lw, surface_up=surface_up, \
                 thickness_lw=thickness_lw, thickness_up=thickness_up, \
@@ -1532,7 +1531,8 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
                 print_termination_info=print_termination_info, \
                 print_shift_info=print_shift_info, break_on_fail=break_on_fail, \
                 icheck_match=icheck_match, interface_idx=interface_idx, \
-                generate_structures=generate_structures, seed=seed)
+                generate_structures=generate_structures, seed=seed \
+            )
         
             structures = self.get_structures(calc)
             return structures, exit_code
@@ -1588,6 +1588,18 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
         def num_structures(self, num_structures):
             _raffle.f90wrap_artemis_intf_gen_type__set__num_structures(self._handle, \
                 num_structures)
+
+        @property
+        def max_num_structures(self):
+            """
+            The maximum number of generated structures that can be stored in the generator.
+            """
+            return _artemis.f90wrap_artemis_intf_gen_type__get__num_structures(self._handle)
+
+        @max_num_structures.setter
+        def max_num_structures(self, max_num_structures):
+            _raffle.f90wrap_artemis_intf_gen_type__set__max_num_structures(self._handle, \
+                max_num_structures)
 
         @property
         def shift_method(self):

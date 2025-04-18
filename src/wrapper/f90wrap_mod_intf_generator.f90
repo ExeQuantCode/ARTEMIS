@@ -14,6 +14,48 @@ subroutine f90wrap_artemis_intf_gen_type__get__num_structures(this, f90wrap_num_
     f90wrap_num_structures = this_ptr%p%num_structures
 end subroutine f90wrap_artemis_intf_gen_type__get__num_structures
 
+subroutine f90wrap_artemis_intf_gen_type__set__num_structures(this, f90wrap_num_structures)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer, intent(in) :: f90wrap_num_structures
+    
+    this_ptr = transfer(this, this_ptr)
+    this_ptr%p%num_structures = f90wrap_num_structures
+end subroutine f90wrap_artemis_intf_gen_type__set__num_structures
+
+subroutine f90wrap_artemis_intf_gen_type__get__max_num_structures(this, f90wrap_max_num_structures)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer, intent(out) :: f90wrap_max_num_structures
+    
+    this_ptr = transfer(this, this_ptr)
+    f90wrap_max_num_structures = this_ptr%p%max_num_structures
+end subroutine f90wrap_artemis_intf_gen_type__get__max_num_structures
+
+subroutine f90wrap_artemis_intf_gen_type__set__max_num_structures(this, f90wrap_max_num_structures)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer, intent(in) :: f90wrap_max_num_structures
+    
+    this_ptr = transfer(this, this_ptr)
+    this_ptr%p%max_num_structures = f90wrap_max_num_structures
+end subroutine f90wrap_artemis_intf_gen_type__set__max_num_structures
+
 subroutine f90wrap_artemis_intf_gen_type__get__shift_method(this, f90wrap_shift_method)
     use artemis__interface_generator, only: artemis_interface_generator_type
     implicit none
@@ -651,8 +693,8 @@ subroutine f90wrap_intf_gen__generate__binding__aigt( &
     is_layered_lw, is_layered_up, &
     elastic_constants_lw, elastic_constants_up, &
     print_lattice_match_info,  print_termination_info, print_shift_info, &
-    break_on_fail, icheck_match, interface_idx, generate_structures, seed, n0, &
-    n1, n2, n3)
+    break_on_fail, icheck_match, interface_idx, generate_structures, seed, exit_code, &
+    n0, n1, n2, n3)
     use artemis__interface_generator, only: artemis_interface_generator_type
     use artemis__geom_rw, only: basis_type
     implicit none
@@ -691,6 +733,7 @@ subroutine f90wrap_intf_gen__generate__binding__aigt( &
     integer, intent(in), optional :: interface_idx
     logical, intent(in), optional :: generate_structures
     integer, intent(in), optional :: seed
+    integer, intent(out), optional :: exit_code
     integer :: n0
     !f2py intent(hide), depend(surface_lw) :: n0 = shape(surface_lw,0)
     integer :: n1
@@ -708,7 +751,8 @@ subroutine f90wrap_intf_gen__generate__binding__aigt( &
         is_layered_lw=is_layered_lw, is_layered_up=is_layered_up, elastic_constants_lw=elastic_constants_lw, &
         elastic_constants_up=elastic_constants_up, print_lattice_match_info=print_lattice_match_info, &
         print_termination_info=print_termination_info, print_shift_info=print_shift_info, break_on_fail=break_on_fail, &
-        icheck_match=icheck_match, interface_idx=interface_idx, generate_structures=generate_structures, seed=seed)
+        icheck_match=icheck_match, interface_idx=interface_idx, generate_structures=generate_structures, seed=seed, exit_code=exit_code &
+    )
 end subroutine f90wrap_intf_gen__generate__binding__aigt
 
 subroutine f90wrap_intf_gen__restart__binding__aigt(this, basis, interface_location, &
