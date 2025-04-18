@@ -6,6 +6,7 @@
 !!!#############################################################################
 program artemis_executable
   use artemis
+  use inputs
   implicit none
 
 

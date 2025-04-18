@@ -38,6 +38,7 @@ module artemis__misc_types
   end type tol_type
 
   type :: abstract_artemis_generator_type
+     integer :: num_structures = 0
      integer :: max_num_structures = 100
      
      integer :: axis = 3

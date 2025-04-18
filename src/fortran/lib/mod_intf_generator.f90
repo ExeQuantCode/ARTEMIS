@@ -25,11 +25,11 @@ module artemis__interface_generator
   use swapping,               only: rand_swapper
   use shifting !!! CHANGE TO SHIFTER?
   implicit none
-  integer, private :: intf=0
 
 
-  type(bulk_DON_type), dimension(2) :: bulk_DON
+  private
 
+  public :: artemis_interface_generator_type
 
 
   type, extends(abstract_artemis_generator_type) :: artemis_interface_generator_type
@@ -257,6 +257,9 @@ contains
     integer, dimension(:), allocatable :: seed_arr
     !! Array of seeds for the random number generator.
 
+    type(bulk_DON_type), dimension(2) :: bulk_DON
+    !! Distribution functions for the lower and upper bulk structures
+
 
     !---------------------------------------------------------------------------
     ! Set the random seed
@@ -326,11 +329,11 @@ contains
        end do atomloop1
     end do specloop1
 
-    min_bond = ( min_bond1 + min_bond2 )/2._real32
+    min_bond = ( min_bond1 + min_bond2 ) / 2._real32
     write(6,'(1X,"Avg min bulk bond: ",F0.3," Å")') min_bond
     write(6,'(1X,"Trans-interfacial scaling factor:",F0.3)') this%separation_scale
     this%axis = intf%axis
-    call this%generate_perturbations(basis,intf%loc,min_bond, print_shift_info_, seed_arr)
+    call this%generate_perturbations(basis, intf%loc, min_bond, bulk_DON, print_shift_info_, seed_arr)
 
 
   end subroutine generate_intefaces_from_existing
@@ -477,7 +480,9 @@ contains
 
     real(real32), dimension(:), allocatable :: elastic_constants_lw_, elastic_constants_up_
     !! Elastic constants for the lower and upper bulk structures
-    
+
+    type(bulk_DON_type), dimension(2) :: bulk_DON
+    !! Distribution functions for the lower and upper bulk structures
 
     integer :: ntrans,iunique,itmp1,old_intf
     integer :: layered_axis_lw,layered_axis_up
@@ -779,7 +784,6 @@ contains
 !!!-----------------------------------------------------------------------------
    !  call getcwd(pwd)
     old_intf = -1
-    intf=0
     abc="abc"
     if(any(miller_lw_.ne.0))then
        if(this%match_method.ne.0)then
@@ -1184,7 +1188,7 @@ contains
              !!-----------------------------------------------------------------
              !! Saves current directory and moves to new directory
              !!-----------------------------------------------------------------
-             if(intf.gt.old_intf)then
+             if(this%num_structures.gt.old_intf)then
                 iunique=iunique+1
                !  if(this%shift_method.gt.0.and.this%num_shifts.gt.1) &
                !       write(6,'(1X,"Generating shifts for unique interface ",&
@@ -1195,7 +1199,7 @@ contains
                !  write(dirpath,'(A,I0.2)') trim(adjustl(subdir_prefix)),iunique
              end if
             !  call chdir(dirpath)
-             old_intf = intf
+             old_intf = this%num_structures
 
              
              !!-----------------------------------------------------------------
@@ -1210,12 +1214,13 @@ contains
              !!-----------------------------------------------------------------
              call this%generate_perturbations( &
                   interface, intf_loc, avg_min_bond, &
+                  bulk_DON, &
                   print_shift_info_, &
                   seed_arr, &
                   t2lw_map &
              )
 
-             if(intf.ge.this%max_num_structures) exit intf_loop
+             if(this%num_structures.ge.this%max_num_structures) exit intf_loop
              !call chdir(dirname)
             !  call chdir(intf_dir)
 
@@ -1244,13 +1249,15 @@ contains
 !!!#############################################################################
 !!! ISWAP METHOD NOT YET SET UP
   subroutine generate_shifts_and_swaps( &
-       this, basis, intf_loc, bond, print_shift_info, seed_arr, map &
+       this, basis, intf_loc, bond, bulk_DON, print_shift_info, seed_arr, map &
   )
     implicit none
     class(artemis_interface_generator_type), intent(inout) :: this
     type(basis_type), intent(in) :: basis
     real(real32), dimension(2), intent(in) :: intf_loc
     real(real32), intent(in) :: bond
+    type(bulk_DON_type), dimension(2), intent(in) :: bulk_DON
+    !! Distribution functions for the lower and upper bulk structures
     logical, intent(in) :: print_shift_info
     integer, dimension(:), intent(in) :: seed_arr
     integer, dimension(:,:,:), optional, intent(in) :: map
@@ -1418,8 +1425,7 @@ contains
        !! Merges lower and upper materials
        !! Writes interfaces to output directories
        !!-----------------------------------------------------------------------
-       intf=intf+1
-       ounit=100+intf
+      !  ounit=100+intf
       !  if(this%shift_method.gt.0.or.this%num_shifts.gt.1)then
       !     write(dirpath,'(A,I0.2)') trim(adjustl(subdir_prefix)),k
       !     call system('mkdir -p '//trim(adjustl(dirpath)))
@@ -1432,7 +1438,8 @@ contains
       !  call geom_write(ounit,tbas)
       !  close(ounit)
        this%structures = [ this%structures, tbas ]
-       if(intf.ge.this%max_num_structures) return
+       this%num_structures = size(this%structures, dim = 1)
+       if(this%num_structures.ge.this%max_num_structures) return
 
 
        !!-----------------------------------------------------------------------

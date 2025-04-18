@@ -18,6 +18,11 @@ module artemis__termination_generator
   implicit none
 
 
+  private
+
+  public :: artemis_termination_generator_type
+
+
   type, extends(abstract_artemis_generator_type) :: artemis_termination_generator_type
 
     real(real32) :: layer_separation_cutoff = 1._real32
