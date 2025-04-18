@@ -14,8 +14,8 @@ module shifting
   use interface_identifier
   implicit none
 
-  real(real32) :: f_scale = 0.5
-  real(real32) :: g_scale = 8.0/3.0
+  real(real32) :: f_scale = 0.5_real32
+  real(real32) :: g_scale = 8._real32/3._real32
 
   private
 
