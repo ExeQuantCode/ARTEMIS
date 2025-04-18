@@ -59,7 +59,7 @@ set(LIB_FILES
     mod_help.f90
     mod_misc_maths.f90
     mod_misc_linalg.f90
-    mod_edit_geom.f90
+    mod_geom_utils.f90
     mod_io_utils_extd.F90
     mod_sym.f90
     mod_terminations.f90
@@ -73,7 +73,7 @@ set(LIB_FILES
 
 # Main source files
 set(SPECIAL_LIB_FILES
-    mod_rw_geom.f90
+    mod_geom_rw.f90
     mod_term_generator.f90
     mod_intf_generator.f90
 )
