@@ -8,19 +8,20 @@ module artemis__io_utils
   use artemis__constants, only: real32
   use artemis__misc
   implicit none
-  logical :: test_error_handling = .false.
-
-  logical :: suppress_warnings = .false.
   
+
   private
 
   public :: write_fmtd
   public :: err_abort,print_warning, stop_program
   public :: io_print_help
   public :: print_header
+  public :: artemis__version__
 
 
-  character(25), public, parameter :: artemis__version__="development version 1.0.2a"
+  logical :: test_error_handling = .false.
+  logical :: suppress_warnings = .false.
+  character(len=*), parameter :: artemis__version__ = "2.0.0"
   !character(30), public, parameter :: &
   !     author(3) = [&
   !     "N. T. Taylor",&
