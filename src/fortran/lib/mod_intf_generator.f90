@@ -359,7 +359,7 @@ contains
        break_on_fail, &
        icheck_match, interface_idx, &
        generate_structures, &
-       seed &
+       seed, exit_code &
   )
     !! Generate interfaces from two bulk structures
     implicit none
@@ -418,6 +418,8 @@ contains
     !! Boolean whether to generate structures or just print information
     integer, intent(in), optional :: seed
     !! Random seed for generating random numbers
+    integer, intent(out), optional :: exit_code
+    !! Exit code for the function
 
     ! Local variables
     real(real32) :: avg_min_bond
@@ -556,8 +558,8 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! determines the primitive and niggli reduced cell for each bulk
 !!!-----------------------------------------------------------------------------
-    call basis_lw_%copy(basis_lw)
-    call basis_up_%copy(basis_up)
+    call basis_lw_%copy(basis_lw, length=4)
+    call basis_up_%copy(basis_up, length=4)
     write(6,*)
     use_pricel_lw_ = .false.
     use_pricel_up_ = .false.
@@ -654,7 +656,6 @@ contains
     end if
 
 
-    
 !!!-----------------------------------------------------------------------------
 !!! investigates individual bulks and their bondlengths
 !!!-----------------------------------------------------------------------------

@@ -1250,15 +1250,15 @@ contains
     !! The new lattice.
 
     ! Local variables
-    integer :: is, ia
-    !! Loop index.
-    real(real32), dimension(3,3) :: transform
-    !! The transformation matrix.
+    ! integer :: is, ia
+    ! !! Loop index.
+    ! real(real32), dimension(3,3) :: transform
+    ! !! The transformation matrix.
     logical :: lcart
     !! Logical variable to determine whether the basis is in cartesian coordinates.
 
 
-   transform = matmul(inverse_3x3(lattice),this%lat)
+   ! transform = matmul(inverse_3x3(lattice),this%lat)
    lcart = this%lcart
    if(.not.lcart) call this%convert()
    ! do is = 1, this%nspec
@@ -1470,7 +1470,7 @@ contains
     !---------------------------------------------------------------------------
     ! determines whether user wants output basis extra translational dimension
     !---------------------------------------------------------------------------
-    length_input = size(basis%spec(1)%atom(1,:),dim=1)
+    length_input = size(basis%spec(1)%atom,dim=2)
     if(present(length))then
        length_ = length
     else

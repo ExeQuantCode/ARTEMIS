@@ -14,7 +14,7 @@
 !!! convert_n_tf1!!! endcode
 !!!#############################################################################
 module lat_compare
-  use artemis__constants
+  use artemis__constants, only: real32, pi, INF, ierror
   use artemis__misc_types, only: latmatch_type, tol_type
   use misc_linalg, only: cross,uvec,modu,get_area,find_tf,det,reduce_vec_gcd,&
        inverse_3x3,get_vec_multiple,get_frac_denom
@@ -23,7 +23,7 @@ module lat_compare
   implicit none
   integer :: ierr_compare
   logical :: lstop=.true.
-  logical :: lreduce=.true.
+  logical :: lreduce=.false.
   integer, private :: match_method=0
 
 
@@ -521,6 +521,7 @@ contains
 
 !!! IF tf RETURNED AS ALL 0, THEN NO MATCH FOUND
 
+    lchange = .false.
     m_num=0
     m_max=ceiling(&
          get_area(tlat1(1,:),tlat1(2,:))/get_area(SAV%lat2(1,:),SAV%lat2(2,:)))
@@ -556,7 +557,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Loops over the n array to check whether values are allowed
 !!!-----------------------------------------------------------------------------
-302 mloop: do
+    mloop: do
        chngloop2: do i=2,1,-1
           do j=1,SAV%axes(2)
              if(m(i,j).lt.0)then
@@ -950,7 +951,7 @@ contains
     
     type(sym_type) :: grp1,grp2
     type(tol_type) :: tol
-    type(pm_tol_type) :: pm_tol
+    type(tol_type) :: pm_tol
     type(latmatch_type) :: SAV
     real(real32), dimension(3,3) :: tf
     real(real32), dimension(3,3) :: lat1,lat2 !original lattices.

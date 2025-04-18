@@ -7,18 +7,10 @@ module plane_matching
   use artemis__constants, only: real32, INF, pi
   use misc_linalg, only: cross,modu,get_angle,get_area,find_tf,&
        reduce_vec_gcd,gcd, inverse_2x2, find_tf_2x2
+  use artemis__misc_types, only: tol_type
   implicit none
   !! importance of vector, angle, and area
   real(real32), dimension(3) :: vaa_weighting=(/1._real32,5._real32,2.5_real32/)
-
-  type :: pm_tol_type
-     integer :: maxsize,maxfit,nstore
-     real(real32) :: maxlen=20._real32
-     real(real32) :: maxarea=400._real32
-     real(real32) :: vec,ang,area
-     real(real32) :: ang_weight = 10._real32
-     real(real32) :: area_weight = 100._real32
-  end type pm_tol_type
 
 
 !!!updated 2021/11/11
@@ -574,27 +566,27 @@ contains
     real(real32) :: tiny
     real(real32) :: reference_mag,considered_mag
     real(real32) :: reference_angle,considered_angle
-    type(pm_tol_type) :: tol
+    type(tol_type) :: tol
     real(real32), dimension(3) :: lat1_veca,lat1_vecb,lat2_veca,lat2_vecb
     real(real32), dimension(tol%maxfit) :: MAIN_LOOP_LIST_TOLERANCES
     !real(real32), dimension(:) :: MAIN_LOOP_LIST_TOLERANCES
     integer, dimension(2,6) :: tmpmat
     real(real32), dimension(2,2) :: tf,mat1,mat2
     real(real32), dimension(2,3) :: considered_vectors
-    real(real32), dimension(3,3) :: lat1,lat2
+    real(real32), dimension(3,3), intent(in) :: lat1,lat2
     real(real32), dimension(1000,3) :: tmp_tolerances
-    real(real32), allocatable, dimension(:,:) :: matched_tols
+    real(real32), allocatable, dimension(:,:), intent(out) :: matched_tols
     real(real32), dimension(tol%maxfit,2,4) :: MAIN_LOOP_LIST
 
-    integer :: ntransforms
+    integer, intent(out) :: ntransforms
     !! The 2x2 transformation matrices output by the code.
     !! allocated when we know how many fits.
-    integer, allocatable, dimension(:,:,:) :: transforms1,transforms2
+    integer, allocatable, dimension(:,:,:), intent(out) :: transforms1,transforms2
     integer, allocatable, dimension(:,:) :: numstore_1,numstore_2
     integer, allocatable, dimension(:,:) :: iarrtmp1
     real(real32), allocatable, dimension(:,:) :: latstore_1,latstore_2
     real(real32), allocatable, dimension(:,:) :: darrtmp1
-    real(real32), dimension(:,:,:), optional :: sym1,sym2
+    real(real32), dimension(:,:,:), intent(in), optional :: sym1,sym2
   
 
 !!! Layout of each of the 1000 cells:
