@@ -1,0 +1,47 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: >-
+  ARTEMIS: Ab Initio Restructuring Tool Enabling Modelling
+  of Interface Structures
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Ned Thaddeus
+    family-names: Taylor
+    orcid: 'https://orcid.org/0000-0002-9134-9712'
+    affiliation: University of Exeter
+  - given-names: Francis Huw
+    family-names: Davies
+    orcid: 'https://orcid.org/0000-0003-0786-2773'
+    affiliation: University of Exeter
+  - given-names: Isiah Edward Mikel
+    family-names: Rudkin
+  - given-names: Conor Jason
+    family-names: Price
+    orcid: 'https://orcid.org/0000-0002-1430-3294'
+  - given-names: Tsz Hin
+    family-names: Chan
+    orcid: 'https://orcid.org/0000-0003-1126-6579'
+  - given-names: Steven Paul
+    family-names: Hepplestone
+    affiliation: University of Exeter
+    orcid: 'https://orcid.org/0000-0002-2528-1270'
+identifiers:
+  - type: doi
+    value: 10.1016/j.cpc.2020.107515
+    description: Paper detailing the first code release
+repository-code: 'https://github.com/ExeQuantCode/ARTEMIS'
+abstract: >-
+  ARTEMIS is a software package for the generation and
+  modelling of interfaces between materials.
+keywords:
+  - materials science
+  - interfaces
+  - material interfaces
+  - structure generation
+license: GPL-3.0
+version: 1.0.2
