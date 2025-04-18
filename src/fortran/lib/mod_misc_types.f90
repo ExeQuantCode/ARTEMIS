@@ -53,6 +53,7 @@ module artemis__misc_types
      type(basis_type), dimension(:), allocatable :: structures
    contains
      procedure, pass(this) :: write_structures
+     procedure, pass(this) :: get_structures
   end type abstract_artemis_generator_type
 
 
@@ -110,5 +111,20 @@ contains
    
   end subroutine write_structures
 !###############################################################################
-  
+
+
+!###############################################################################
+  function get_structures(this) result(structures)
+    !! Get the generated structures.
+    implicit none
+    ! Arguments
+    class(abstract_artemis_generator_type), intent(in) :: this
+    !! Instance of the raffle generator.
+    type(basis_type), dimension(:), allocatable :: structures
+    !! Generated structures.
+
+    structures = this%structures
+  end function get_structures
+!###############################################################################
+
 end module artemis__misc_types
