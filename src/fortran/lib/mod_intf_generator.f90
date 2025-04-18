@@ -191,10 +191,16 @@ contains
           case(3)
              this%shifts(1,:) = shifts
           case default
-             write(err_msg,'(A,I0,A)') &
-                  "ERROR: The shifts vector has ", size(shifts, dim=1), &
-                  " components. It should have 1 or 3."
-             call err_abort(trim(err_msg),fmtd=.true.)
+             ! check if length of shifts is divisible by 3
+             if(mod(size(shifts,dim=1),3).eq.0) then
+               allocate(this%shifts(size(shifts,dim=1)/3,3))
+               this%shifts = reshape(shifts, [ size(shifts,dim=1)/3,3 ])
+             else
+                write(err_msg,'(A,I0,A)') &
+                     "ERROR: The shifts vector has ", size(shifts, dim=1), &
+                     " components. It should have 1 or 3."
+                call err_abort(trim(err_msg),fmtd=.true.)
+             end if
           end select
        rank(2)
           if(size(shifts,dim=2).eq.3) then
@@ -222,8 +228,7 @@ contains
 
 
 !###############################################################################
-  subroutine generate_intefaces_from_existing(this, basis, &
-       interface_location, &
+  subroutine generate_intefaces_from_existing(this, basis, interface_location, &
        print_shift_info, seed &
   )
     !! Generate interfaces for the given basis
@@ -424,7 +429,7 @@ contains
     !! Copy of the basis structures
     type(basis_type) :: slab_lw, slab_up
     !! Slab structures
-    type(basis_type) :: interface
+    type(basis_type) :: intf_basis
     !! Interface structure
     character(len=256) :: err_msg
     !! Error message
@@ -515,8 +520,7 @@ contains
        allocate(seed_arr(num_seed))
        call random_seed(get=seed_arr)
     end if
-    icheck_match_ = -1
-    interface_idx_ = -1
+    icheck_match_ = -1; interface_idx_ = -1
     if(present(icheck_match)) icheck_match_ = icheck_match
     if(present(interface_idx)) interface_idx_ = interface_idx
     break_on_fail_ = .true.
@@ -1197,15 +1201,15 @@ contains
              !!-----------------------------------------------------------------
              !! Merge the two bases and lattices and define the interface loc
              !!-----------------------------------------------------------------
-             interface = basis_stack(&
+             intf_basis = basis_stack(&
                   basis1 = slab_lw, basis2 = slab_up, &
                   axis = this%axis, offset = init_offset(:), &
                   map1 = t2lw_map, map2 = t2up_map &
              )
              intf_loc(1) = ( modu(slab_lw%lat(this%axis,:)) + 0.5_real32*init_offset(this%axis) - &
-                  this%vacuum_gap)/modu(interface%lat(this%axis,:))
+                  this%vacuum_gap)/modu(intf_basis%lat(this%axis,:))
              intf_loc(2) = ( modu(slab_lw%lat(this%axis,:)) + modu(slab_up%lat(this%axis,:)) + &
-                  1.5_real32*init_offset(this%axis) - 2._real32*this%vacuum_gap )/modu(interface%lat(this%axis,:))
+                  1.5_real32*init_offset(this%axis) - 2._real32*this%vacuum_gap )/modu(intf_basis%lat(this%axis,:))
              if(ierror.ge.1)then
                 write(0,*) "interface:",intf_loc
                 if(ierror.eq.1.and.iunique.eq.icheck_match_-1)then
@@ -1217,7 +1221,7 @@ contains
                         &code is now exiting...")
                 elseif(ierror.eq.2.and.iunique.eq.icheck_match_-1)then
                   !  call chdir(intf_dir)
-                   call err_abort_print_struc(interface,"test_intf.vasp",&
+                   call err_abort_print_struc(intf_basis,"test_intf.vasp",&
                         "As IPRINT = 2 and ICHECK has been set, &
                         &code is now exiting...")
                 end if
@@ -1252,7 +1256,7 @@ contains
              !! Generates shifts and swaps and prints the subsequent structures
              !!-----------------------------------------------------------------
              call this%generate_perturbations( &
-                  interface, intf_loc, avg_min_bond, &
+                  intf_basis, intf_loc, avg_min_bond, &
                   bulk_DON, &
                   print_shift_info_, &
                   seed_arr, &
