@@ -44,7 +44,9 @@ set( CMAKE_BUILD_TYPE "Release"
   CACHE STRING "Select which configuration to build." )
 
 # set options
+option(BUILD_PYTHON "Build the python library" Off)
 option(BUILD_EXECUTABLE "Build the Fortran executable" On)
+option(REMAKE_F90WRAP "Remake the f90wrap signature file" Off)
 
 # Define the sources
 set(SRC_DIR src)
@@ -203,7 +205,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
 # set compile options based on different build configurations
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${OPTIMFLAGS}>")
 # target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${MPFLAGS}>")
-# target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
 
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Dev>:${DEVFLAGS}>")
 
@@ -220,7 +222,7 @@ if (BUILD_EXECUTABLE)
 
     target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${OPTIMFLAGS}>")
     # target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${MPFLAGS}>")
-    # target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
+    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
 
     target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Dev>:${DEVFLAGS}>")
 
@@ -230,4 +232,123 @@ if (BUILD_EXECUTABLE)
     target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Debug>:${PYTHONFLAGS}>")
 
     set_target_properties(${PROJECT_NAME}_executable PROPERTIES VERSION ${PROJECT_VERSION})
+endif()
+
+
+
+if (BUILD_PYTHON)
+
+    # # Get the directory where object files are generated
+    get_target_property(OBJECTS ${PROJECT_NAME} EXTERNAL_OBJECT)
+    # Print the object files directory
+    set(OBJECTS_DIR ${CMAKE_BUILD_DIR}/CMakeFiles/${PROJECT_NAME}.dir)
+    message(STATUS "Object files directory for ${PROJECT_NAME}: ${OBJECTS_DIR}")
+
+    # Include f90wrap
+    find_package(Python COMPONENTS Interpreter Development.Module NumPy REQUIRED)
+    if(NOT DEFINED PYTHON_EXECUTABLE)
+        set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
+    endif()
+
+    # Grab the variables from a local Python installation F2PY headers
+    execute_process(
+        COMMAND "${Python_EXECUTABLE}" -c
+                "import numpy.f2py; print(numpy.f2py.get_include())"
+        OUTPUT_VARIABLE F2PY_INCLUDE_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    add_library(fortranobject OBJECT "${F2PY_INCLUDE_DIR}/fortranobject.c")
+    target_link_libraries(fortranobject PUBLIC Python::NumPy)
+    target_include_directories(fortranobject PUBLIC "${F2PY_INCLUDE_DIR}")
+    set_property(TARGET fortranobject PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+    set (F90WRAP_EXECUTABLE ${PYTHON_EXECUTABLE} -m f90wrap)
+    set (F2PY_EXECUTABLE ${PYTHON_EXECUTABLE} -m f90wrap --f2py-f90wrap)
+
+    # Run Python command to get the extension suffix
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))"
+        RESULT_VARIABLE result
+        OUTPUT_VARIABLE PYTHON_EXTENSION_MODULE_SUFFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    # Check if the suffix was retrieved successfully
+    if (result EQUAL 0)
+        message(STATUS "Python extension module suffix: ${PYTHON_EXTENSION_MODULE_SUFFIX}")
+    else()
+        message(FATAL_ERROR "Failed to retrieve Python extension module suffix")
+    endif()
+    set(F2PY_OUTPUT_FILE ${CMAKE_BUILD_DIR}/artemis/_${PROJECT_NAME}${PYTHON_EXTENSION_MODULE_SUFFIX})
+
+    # Generate f90wrap signature file
+    set(F90WRAP_FILE
+        ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_mod_term_generator.f90
+        ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_mod_intf_generator.f90
+        ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_mod_geom_rw.f90
+        ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_artemis.f90
+    )
+    if (REMAKE_F90WRAP)
+        set(KIND_MAP ${CMAKE_SOURCE_DIR}/kind_map)
+        set(F90WRAP_REMAKE_FILE ${CMAKE_BUILD_DIR}/f90wrap_${PROJECT_NAME}.f90)
+        add_custom_command(
+            OUTPUT ${F90WRAP_REMAKE_FILE}
+            COMMAND ${F90WRAP_EXECUTABLE}
+            --default-to-inout
+            -m ${PROJECT_NAME}
+            -k ${KIND_MAP}
+            ${F90WRAP_FORTRAN_SRC_FILES}
+            --only artemis_interface_generator_type artemis_termination_generator_type basis_type:
+            DEPENDS ${F90WRAP_FORTRAN_SRC_FILES}
+            WORKING_DIRECTORY ${CMAKE_BUILD_DIR}
+            COMMENT "Generating f90wrap signature file"
+            VERBATIM
+        )
+    endif()
+
+    # Copy f90wrap edited files from edited_autogen_files to ${CMAKE_BUILD_DIR}
+    add_custom_command(
+        OUTPUT ${CMAKE_BUILD_DIR}/artemis/python_copied
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/${SRC_DIR}/artemis ${CMAKE_BUILD_DIR}/artemis
+        COMMENT "Copying artemis python files"
+    )
+
+    # If parallel build, need to add the parallel flag
+    if (CMAKE_BUILD_TYPE MATCHES "Release*" OR CMAKE_BUILD_TYPE MATCHES "Parallel*" OR CMAKE_BUILD_TYPE MATCHES "Debug")
+        set(GOMPFLAGS "-lgomp")
+    else()
+        set(GOMPFLAGS "")
+    endif()
+
+    # Create a Python module using f2py
+    add_custom_command(
+        OUTPUT ${F2PY_OUTPUT_FILE}
+        COMMAND CC="${CMAKE_C_COMPILER}" LDFLAGS="-L${CMAKE_BUILD_DIR}" LIBS="-lartemis" ${F2PY_EXECUTABLE}
+        -c
+        -m _${PROJECT_NAME}
+        -I${MODULE_DIR}
+        --f90flags="${PPFLAGS}"
+        ${GOMPFLAGS}
+        --backend meson
+        ${F90WRAP_FILE}
+        -L${CMAKE_BUILD_DIR}
+        -lartemis
+        # --build-dir ${CMAKE_BUILD_DIR}/Dmeson
+        DEPENDS ${F90WRAP_FILE} ${CMAKE_BUILD_DIR}/artemis/python_copied ${PROJECT_NAME}
+        WORKING_DIRECTORY ${CMAKE_BUILD_DIR}/artemis
+        COMMENT "Creating Python module using f2py"
+    )
+
+    # Define output files
+	set(PY_MODULE ${CMAKE_BUILD_DIR}/artemis/${PROJECT_NAME}.py ${CMAKE_BUILD_DIR}/artemis/__init__.py)
+
+    # Create a custom target for the Python module
+    add_custom_target(python_module ALL
+        DEPENDS ${F90WRAP_REMAKE_FILE} ${F2PY_OUTPUT_FILE}
+    )
+
+    # Installation instructions
+    install(FILES ${PY_MODULE} DESTINATION ${SKBUILD_PROJECT_NAME})
+    install(FILES ${F2PY_OUTPUT_FILE} DESTINATION ${SKBUILD_PROJECT_NAME})
+
 endif()
