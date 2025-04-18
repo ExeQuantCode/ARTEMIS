@@ -59,24 +59,21 @@ set(LIB_FILES
     mod_help.f90
     mod_misc_maths.f90
     mod_misc_linalg.f90
-    mod_rw_geom.f90
     mod_edit_geom.f90
     mod_io_utils_extd.F90
     mod_sym.f90
-    mod_tools_infile.f90
     mod_terminations.f90
     mod_misc_types.f90
-)
-
-# Main source files
-set(SPECIAL_LIB_FILES
-    aspect.f90
     mod_intf_identifier.f90
     mod_plane_matching.f90
     mod_lat_compare.f90
     mod_swapping.f90
     mod_shifting.f90
-    default_infile.f90
+)
+
+# Main source files
+set(SPECIAL_LIB_FILES
+    mod_rw_geom.f90
     mod_term_generator.f90
     mod_intf_generator.f90
 )
@@ -86,7 +83,7 @@ foreach(lib ${LIB_FILES})
     list(APPEND PREPENDED_LIB_FILES ${LIB_DIR}/${lib})
 endforeach()
 foreach(lib ${SPECIAL_LIB_FILES})
-    list(APPEND PREPENDED_LIB_FILES ${FORTRAN_SRC_DIR}/${lib})
+    list(APPEND PREPENDED_LIB_FILES ${LIB_DIR}/${lib})
 endforeach()
 message(STATUS "Modified LIB_FILES: ${PREPENDED_LIB_FILES}")
 
@@ -96,7 +93,7 @@ set(SRC_FILES
     artemis.f90
 )
 foreach(lib ${SPECIAL_LIB_FILES})
-    list(APPEND F90WRAP_FORTRAN_SRC_FILES ${CMAKE_CURRENT_LIST_DIR}/${FORTRAN_SRC_DIR}/${lib})
+    list(APPEND F90WRAP_FORTRAN_SRC_FILES ${CMAKE_CURRENT_LIST_DIR}/${LIB_DIR}/${lib})
 endforeach()
 foreach(src ${SRC_FILES})
     list(APPEND F90WRAP_FORTRAN_SRC_FILES ${CMAKE_CURRENT_LIST_DIR}/${FORTRAN_SRC_DIR}/${src})
@@ -105,7 +102,10 @@ endforeach()
 
 
 set(EXECUTABLE_FILES
+    mod_tools_infile.f90
+    default_infile.f90
     inputs.f90
+    aspect.f90
     main.f90
 )
 set(APP_DIR app)

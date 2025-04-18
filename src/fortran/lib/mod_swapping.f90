@@ -12,7 +12,7 @@ module swapping
   use artemis__sym, only: sym_setup,check_sym,sym_type,basmap_type,basis_map
   use artemis__io_utils, only: err_abort
   implicit none
-  real(real32) :: tiny=5.0D-5
+  real(real32) :: tiny=5.E-5_real32
   logical :: lmirror
   type(basmap_type) :: bas_map
 
