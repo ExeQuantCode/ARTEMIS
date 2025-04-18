@@ -115,8 +115,7 @@ Advisors
 
 License
 ------------
-This work is licensed under a Creative Commons Attribution-NonCommercial 3.0 Unported (CC BY-NC 3.0) License.  
-https://creativecommons.org/licenses/by-nc/3.0/
+This work is licensed under a [GPL v3 license]([https://opensource.org/license/mit/](https://www.gnu.org/licenses/gpl-3.0.en.html)).
 
 
 Source file descriptions
