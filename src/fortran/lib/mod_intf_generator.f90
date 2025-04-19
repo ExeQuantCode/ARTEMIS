@@ -10,7 +10,7 @@ module artemis__interface_generator
   use artemis__misc_types,    only: abstract_artemis_generator_type, latmatch_type, tol_type
   use artemis__geom_rw,       only: basis_type,geom_write
   use lat_compare,            only: get_best_match
-  use artemis__io_utils,      only: err_abort, print_warning
+  use artemis__io_utils,      only: err_abort, print_warning, stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
   use misc_linalg,            only: uvec,modu,get_area,inverse,cross
   use interface_identifier,   only: intf_info_type,&
@@ -33,6 +33,21 @@ module artemis__interface_generator
 
 
   type, extends(abstract_artemis_generator_type) :: artemis_interface_generator_type
+    !! Interface generator type
+    type(basis_type) :: structure_lw, structure_up
+    !! Lower and upper bulk structures
+    real(real32), dimension(:), allocatable :: elastic_constants_lw, elastic_constants_up
+    !! Elastic constants for the lower and upper bulk structures
+    logical :: use_pricel_lw = .true., use_pricel_up = .true.
+    !! Use primitive cell for lower and upper bulk structures
+    
+    integer, dimension(3) :: miller_lw = [ 0, 0, 0], miller_up = [ 0, 0, 0 ]
+    !! Miller indices for the lower and upper bulk structures
+    logical :: is_layered_lw = .false., is_layered_up = .false.
+    !! Boolean whether the lower and upper bulk structures are layered
+    logical :: ludef_is_layered_lw = .false., ludef_is_layered_up = .false.
+    !! Boolean whether the user defined whether to use layered structures
+
     integer :: shift_method = 4
     !! Shift method
     integer :: num_shifts = 5
@@ -73,9 +88,13 @@ module artemis__interface_generator
     !! Require mirror swaps
 
     integer :: match_method = 0
+    !! Match method
     integer :: max_num_matches = 5
+    !! Maximum number of matches
     integer :: max_num_terms = 5
+    !! Maximum number of terminations
     integer :: max_num_planes = 10
+    !! Maximum number of planes
 
     logical :: fix_normal = .true. !! compensate_strains_parallel = .true.
     !! Fix the lattice constants parallel to the interface normal vector
@@ -83,18 +102,32 @@ module artemis__interface_generator
     !! Fix = false = relaxed (compensate for interfacial strain by extending/compressing)
     
     real(real32) :: bondlength_cutoff = 6._real32
+    !! Maximum bond length cutoff for the bulk structures
     real(real32), dimension(2) :: layer_separation_cutoff = 1._real32
+    !! Minimum separation between layers
 
     type(tol_type) :: tolerance
+    !! Tolerance structure
 
-   !  type(basis_type), dimension(:), allocatable :: term_structures_lw
-   !  type(basis_type), dimension(:), allocatable :: term_structures_up
    contains
     procedure, pass(this) :: set_tolerance
+    !! Set tolerance for identifying good lattice matches
     procedure, pass(this) :: set_shift_method
+    !! Set the shift method and associated data
+    procedure, pass(this) :: set_materials
+    !! Set the input materials for the interface generator
+    procedure, pass(this) :: set_surface_properties
+    !! Set the surface properties for the interface generator
+    procedure, pass(this) :: reset_is_layered_lw
+    !! Reset the is_layered flags for the lower bulk structure
+    procedure, pass(this) :: reset_is_layered_up
+    !! Reset the is_layered flags for the upper bulk structure
     procedure, pass(this) :: generate => generate_interfaces
+    !! Generate interfaces from two bulk structures
     procedure, pass(this) :: restart => generate_intefaces_from_existing
+    !! Generate interfaces from existing bulk structures
     procedure, pass(this) :: generate_perturbations => generate_shifts_and_swaps
+    !! Generate perturbations for the given basis
   end type artemis_interface_generator_type
 
 contains
@@ -239,6 +272,130 @@ contains
 
 
 !###############################################################################
+  subroutine set_materials( &
+       this, structure_lw, structure_up, &
+       elastic_constants_lw, elastic_constants_up, &
+       use_pricel_lw, use_pricel_up &
+  )
+    !! Set the materials for the interface generator
+    implicit none
+
+    ! Arguments
+    class(artemis_interface_generator_type), intent(inout) :: this
+    !! Instance of artemis generator type
+    type(basis_type), intent(in) :: structure_lw
+    !! Lower bulk structure
+    type(basis_type), intent(in) :: structure_up
+    !! Upper bulk structure
+    real(real32), dimension(:), intent(in), optional :: elastic_constants_lw
+    !! Elastic constants for the lower bulk structure
+    real(real32), dimension(:), intent(in), optional :: elastic_constants_up
+    !! Elastic constants for the upper bulk structure
+    logical, intent(in), optional :: use_pricel_lw
+    !! Use primitive cell for lower bulk structure
+    logical, intent(in), optional :: use_pricel_up
+
+    ! Local variables
+    character(len=256) :: err_msg
+
+
+    this%structure_lw = structure_lw
+    this%structure_up = structure_up
+
+    !---------------------------------------------------------------------------
+    ! Handle the elastic constants
+    !---------------------------------------------------------------------------
+    if(present(elastic_constants_lw))then
+       if(allocated(this%elastic_constants_lw)) deallocate(this%elastic_constants_lw)
+       allocate(this%elastic_constants_lw(size(elastic_constants_lw)))
+       this%elastic_constants_lw = elastic_constants_lw
+    end if
+    if(present(elastic_constants_up))then
+       if(allocated(this%elastic_constants_up)) deallocate(this%elastic_constants_up)
+       allocate(this%elastic_constants_up(size(elastic_constants_up)))
+       this%elastic_constants_up = elastic_constants_up
+    end if
+
+    if(present(use_pricel_lw)) this%use_pricel_lw = use_pricel_lw
+    if(present(use_pricel_up)) this%use_pricel_up = use_pricel_up
+
+
+  end subroutine set_materials
+!###############################################################################
+
+
+!###############################################################################
+  subroutine set_surface_properties( &
+       this, &
+       miller_lw, miller_up, &
+       is_layered_lw, is_layered_up &
+  )
+    !! Set the surface properties for the interface generator
+    implicit none
+   
+    ! Arguments
+    class(artemis_interface_generator_type), intent(inout) :: this
+    !! Instance of artemis generator type
+    integer, dimension(3), intent(in), optional :: miller_lw
+    !! Miller indices for the lower bulk structure
+    integer, dimension(3), intent(in), optional :: miller_up
+    !! Miller indices for the upper bulk structure
+   
+    logical, intent(in), optional :: is_layered_lw
+    !! Boolean whether the lower bulk structure is layered
+    logical, intent(in), optional :: is_layered_up
+    !! Boolean whether the upper bulk structure is layered
+
+
+    if(present(miller_lw)) this%miller_lw = miller_lw
+    if(present(miller_up)) this%miller_up = miller_up
+
+    if(present(is_layered_lw))then
+       this%is_layered_lw = is_layered_lw
+       this%ludef_is_layered_lw = .true.
+    end if
+    if(present(is_layered_up))then
+       this%is_layered_up = is_layered_up
+       this%ludef_is_layered_up = .true.
+    end if
+   
+   end subroutine set_surface_properties
+!###############################################################################
+
+
+!###############################################################################
+  subroutine reset_is_layered_lw(this)
+   !! Reset the is_layered flags
+   implicit none
+
+   ! Arguments
+   class(artemis_interface_generator_type), intent(inout) :: this
+   !! Instance of artemis generator type
+
+   this%is_layered_lw = .false.
+   this%ludef_is_layered_lw = .false.
+
+  end subroutine reset_is_layered_lw
+!###############################################################################
+
+
+!###############################################################################
+  subroutine reset_is_layered_up(this)
+   !! Reset the is_layered flags
+   implicit none
+
+   ! Arguments
+   class(artemis_interface_generator_type), intent(inout) :: this
+   !! Instance of artemis generator type
+
+   this%is_layered_up = .false.
+   this%ludef_is_layered_up = .false.
+
+  end subroutine reset_is_layered_up
+!###############################################################################
+
+
+!###############################################################################
   subroutine generate_intefaces_from_existing(this, basis, interface_location, &
        print_shift_info, seed &
   )
@@ -358,19 +515,15 @@ contains
 
 !###############################################################################
   subroutine generate_interfaces( &
-       this, basis_lw, basis_up, &
-       miller_lw, miller_up, &
+       this, &
        surface_lw, surface_up, &
        thickness_lw, thickness_up, &
        num_layers_lw, num_layers_up, &
-       use_pricel_lw, use_pricel_up, &
-       is_layered_lw, is_layered_up, &
-       elastic_constants_lw, elastic_constants_up, &
        print_lattice_match_info, print_termination_info, print_shift_info, &
        break_on_fail, &
        icheck_match, interface_idx, &
        generate_structures, &
-       seed, exit_code &
+       seed, verbose, exit_code &
   )
     !! Generate interfaces from two bulk structures
     implicit none
@@ -378,14 +531,6 @@ contains
     ! Arguments
     class(artemis_interface_generator_type), intent(inout) :: this
     !! Instance of artemis generator type
-    type(basis_type), intent(in) :: basis_lw
-    !! Lower bulk structure
-    type(basis_type), intent(in) :: basis_up
-    !! Upper bulk structure
-    integer, intent(in), optional :: miller_lw(3)
-    !! Miller indices for the lower bulk structure
-    integer, intent(in), optional :: miller_up(3)
-    !! Miller indices for the upper bulk structure
     integer, intent(in), dimension(:), optional :: surface_lw
     !! Surface indices for the lower bulk structure
     integer, intent(in), dimension(:), optional :: surface_up
@@ -398,20 +543,6 @@ contains
     !! Number of layers in the lower slab
     integer, intent(in), optional :: num_layers_up
     !! Number of layers in the upper slab
-
-    logical, intent(in), optional :: use_pricel_lw
-    !! Use primitive cell for lower bulk structure
-    logical, intent(in), optional :: use_pricel_up
-    !! Use primitive cell for upper bulk structure
-    logical, intent(in), optional :: is_layered_lw
-    !! Boolean whether the lower bulk structure is layered
-    logical, intent(in), optional :: is_layered_up
-    !! Boolean whether the upper bulk structure is layered
-
-    real(real32), dimension(:), intent(in), optional :: elastic_constants_lw
-    !! Elastic constants for the lower bulk structure
-    real(real32), dimension(:), intent(in), optional :: elastic_constants_up
-    !! Elastic constants for the upper bulk structure
 
     logical, intent(in), optional :: break_on_fail
     !! Break on failure
@@ -429,6 +560,8 @@ contains
     !! Boolean whether to generate structures or just print information
     integer, intent(in), optional :: seed
     !! Random seed for generating random numbers
+    integer, intent(in), optional :: verbose
+    !! Verbosity level
     integer, intent(out), optional :: exit_code
     !! Exit code for the function
 
@@ -436,9 +569,7 @@ contains
     real(real32) :: avg_min_bond
     !! Average minimum bond length
 
-    type(basis_type) :: basis_lw_, basis_up_
-    !! Temporary basis structures
-    type(basis_type) :: supercell_lw, supercell_up
+    type(basis_type) :: structure_lw, structure_up, supercell_lw, supercell_up
     !! Copy of the basis structures
     type(basis_type) :: slab_lw, slab_up
     !! Slab structures
@@ -465,14 +596,8 @@ contains
     !! Thickness of the slab
     integer :: num_layers_lw_, num_layers_up_
     !! Number of layers in the slab
-    logical :: use_pricel_lw_, use_pricel_up_
-    !! Use primitive cell for lower and upper bulk structures
-    logical :: is_layered_lw_, is_layered_up_
-    !! Boolean whether the bulk structures are layered
-    logical :: ludef_is_layered_lw, ludef_is_layered_up
-    !! Boolean whether the user defined whether to use layered structures
 
-    integer, dimension(3) :: miller_lw_, miller_up_
+    integer, dimension(3) :: miller_lw, miller_up
     !! Miller indices for the lower and upper bulk structures
     integer, dimension(2) :: surface_lw_, surface_up_
     !! Surface indices for the lower and upper bulk structures
@@ -483,8 +608,9 @@ contains
 
     logical :: break_on_fail_
     !! Boolean whether to break on failure
-    logical :: print_lattice_match_info_, print_termination_info_, print_shift_info_
-    !! Boolean whether to print lattice match, termination, and shift information
+    logical :: print_lattice_match_info_, print_termination_info_, &
+         print_shift_info_
+    !! Boolean whether to print lattice match, termination, and shift info
     integer :: num_seed
     !! Number of seeds for the random number generator.
     integer, dimension(:), allocatable :: seed_arr
@@ -496,27 +622,59 @@ contains
     logical :: generate_structures_
     !! Boolean whether to generate structures or just print information
 
-    real(real32), dimension(:), allocatable :: elastic_constants_lw_, elastic_constants_up_
-    !! Elastic constants for the lower and upper bulk structures
 
-    type(bulk_DON_type), dimension(2) :: bulk_DON
-    !! Distribution functions for the lower and upper bulk structures
-
-    integer :: ntrans,iunique,itmp1,old_intf
-    integer :: layered_axis_lw,layered_axis_up
+    integer :: ntrans, iunique, itmp1, num_structures_old
+    integer :: layered_axis_lw, layered_axis_up
     character(3) :: abc
-    character(1024) :: pwd,intf_dir,dirpath,msg
+    character(1024) :: pwd, intf_dir, dirpath, msg
     type(confine_type) :: confine
     type(latmatch_type) :: SAV
-    type(term_arr_type) :: lw_term,up_term
+    type(term_arr_type) :: lw_term, up_term
     integer, dimension(3) :: ivtmp1
     real(real32), dimension(2) :: intf_loc
-    real(real32), dimension(3) :: init_offset = [0._real32,0._real32,2._real32]
-    !real(real32), dimension(3,3) :: mtmp1,DONsupercell_up%lat
+    real(real32), dimension(3) :: init_offset
     real(real32), dimension(3,3) :: tfmat
-    integer, allocatable, dimension(:,:,:) :: lw_map,t1lw_map,t2lw_map
-    integer, allocatable, dimension(:,:,:) :: up_map,t1up_map,t2up_map
+    !! Transformation matrix
+    type(bulk_DON_type), dimension(2) :: bulk_DON
+    !! Distribution functions for the lower and upper bulk structures
+    integer, allocatable, dimension(:,:,:) :: lw_map, t1lw_map, t2lw_map
+    integer, allocatable, dimension(:,:,:) :: up_map, t1up_map, t2up_map
     real(real32), allocatable, dimension(:,:) :: trans
+
+    integer :: exit_code_
+    !! Exit code for the function
+    integer :: verbose_
+    !! Verbosity level
+
+
+    !---------------------------------------------------------------------------
+    ! Initialise variables
+    !---------------------------------------------------------------------------
+    exit_code_ = 0
+    verbose_ = 0
+    if(present(verbose)) verbose_ = verbose
+
+    icheck_match_ = -1; interface_idx_ = -1
+    if(present(icheck_match)) icheck_match_ = icheck_match
+    if(present(interface_idx)) interface_idx_ = interface_idx
+
+    break_on_fail_ = .true.
+    if(present(break_on_fail)) break_on_fail_ = break_on_fail
+
+    generate_structures_ = .true.
+    if(present(generate_structures)) generate_structures_ = generate_structures
+
+    print_lattice_match_info_ = .false.
+    print_termination_info_ = .false.
+    print_shift_info_ = .false.
+    if(present(print_lattice_match_info)) &
+         print_lattice_match_info_ = print_lattice_match_info
+    if(present(print_termination_info)) &
+         print_termination_info_ = print_termination_info
+    if(present(print_shift_info)) print_shift_info_ = print_shift_info
+
+    init_offset = [0._real32,0._real32,2._real32]
+    if(.not.allocated(this%shifts)) call this%set_shift_method()
 
 
     !---------------------------------------------------------------------------
@@ -532,69 +690,57 @@ contains
        allocate(seed_arr(num_seed))
        call random_seed(get=seed_arr)
     end if
-    icheck_match_ = -1; interface_idx_ = -1
-    if(present(icheck_match)) icheck_match_ = icheck_match
-    if(present(interface_idx)) interface_idx_ = interface_idx
-    break_on_fail_ = .true.
-    if(present(break_on_fail)) break_on_fail_ = break_on_fail
-    generate_structures_ = .true.
-    if(present(generate_structures)) generate_structures_ = generate_structures
-
-    if(.not.allocated(this%shifts)) call this%set_shift_method()
 
 
     !---------------------------------------------------------------------------
-    ! Handle the elastic constants
+    ! Check if the structures are valid
     !---------------------------------------------------------------------------
-    if(present(elastic_constants_lw))then
-       if(allocated(elastic_constants_lw_)) deallocate(elastic_constants_lw_)
-       allocate(elastic_constants_lw_(size(elastic_constants_lw)))
-       elastic_constants_lw_ = elastic_constants_lw
-    else
-       if(allocated(elastic_constants_lw_)) deallocate(elastic_constants_lw_)
-       allocate(elastic_constants_lw_(1))
-       elastic_constants_lw_ = 0._real32
+    ! check if the structures have anything (i.e. atoms) in them
+    if(this%structure_lw%natom.eq.0)then
+       write(err_msg,'(A,I0,A)') &
+            "ERROR: The lower structure has ", this%structure_lw%natom, &
+            " atoms. It should have at least 1."
+       call err_abort(trim(err_msg),fmtd=.true.)
+       return
     end if
-    if(present(elastic_constants_up))then
-       if(allocated(elastic_constants_up_)) deallocate(elastic_constants_up_)
-       allocate(elastic_constants_up_(size(elastic_constants_up)))
-       elastic_constants_up_ = elastic_constants_up
-    else
-       if(allocated(elastic_constants_up_)) deallocate(elastic_constants_up_)
-       allocate(elastic_constants_up_(1))
-       elastic_constants_up_ = 0._real32
+    if(this%structure_up%natom.eq.0)then
+       write(err_msg,'(A,I0,A)') &
+            "ERROR: The upper structure has ", this%structure_lw%natom, &
+            " atoms. It should have at least 1."
+       call err_abort(trim(err_msg),fmtd=.true.)
+       return
     end if
+    call structure_lw%copy(this%structure_lw, length=4)
+    call structure_up%copy(this%structure_up, length=4)
+    if(.not.allocated(this%structures)) allocate(this%structures(0))
 
 
-!!!-----------------------------------------------------------------------------
-!!! determines the primitive and niggli reduced cell for each bulk
-!!!-----------------------------------------------------------------------------
-    call basis_lw_%copy(basis_lw, length=4)
-    call basis_up_%copy(basis_up, length=4)
-    write(*,*)
-    use_pricel_lw_ = .false.
-    use_pricel_up_ = .false.
-    if(present(use_pricel_lw)) use_pricel_lw_ = use_pricel_lw
-    if(present(use_pricel_up)) use_pricel_up_ = use_pricel_up
-    if(use_pricel_lw_)then
+    !---------------------------------------------------------------------------
+    ! Retrieve the primitive cells if necessary
+    !---------------------------------------------------------------------------
+    if(this%use_pricel_lw)then
        write(*,'(1X,"Using primitive cell for lower material")')
-       call get_primitive_cell(basis_lw_)
+       call get_primitive_cell(structure_lw)
     else
        write(*,'(1X,"Using supplied cell for lower material")')
-       call reducer(basis_lw_)
-       basis_lw_%lat=primitive_lat(basis_lw_%lat)
+       call reducer(structure_lw)
+       structure_lw%lat=primitive_lat(structure_lw%lat)
     end if
-    if(use_pricel_up_)then
+    if(this%use_pricel_up)then
        write(*,'(1X,"Using primitive cell for upper material")')
-       call get_primitive_cell(basis_up_)
+       call get_primitive_cell(structure_up)
     else
        write(*,'(1X,"Using supplied cell for upper material")')
-       call reducer(basis_up_)
-       basis_up_%lat=primitive_lat(basis_up_%lat)
+       call reducer(structure_up)
+       structure_up%lat=primitive_lat(structure_up%lat)
     end if
-    write(*,*)
 
 
+    !---------------------------------------------------------------------------
+    ! Handle surface properties
+    !---------------------------------------------------------------------------
+    miller_lw = this%miller_lw
+    miller_up = this%miller_up
     surface_lw_ = 0
     surface_up_ = 0
     if(present(surface_lw))then
@@ -629,20 +775,6 @@ contains
     if(all(surface_lw_.gt.0)) ludef_surface_lw = .true.
     if(all(surface_up_.gt.0)) ludef_surface_up = .true.
 
-    miller_lw_ = 0
-    miller_up_ = 0
-    if(present(miller_lw)) miller_lw_ = miller_lw
-    if(present(miller_up)) miller_up_ = miller_up
-
-    print_lattice_match_info_ = .false.
-    print_termination_info_ = .false.
-    print_shift_info_ = .false.
-    if(present(print_lattice_match_info)) print_lattice_match_info_ = print_lattice_match_info
-    if(present(print_termination_info)) print_termination_info_ = print_termination_info
-    if(present(print_shift_info)) print_shift_info_ = print_shift_info
-    
-    if(.not.allocated(this%structures)) allocate(this%structures(0))
-
     thickness_lw_ = 10._real32
     thickness_up_ = 10._real32
     num_layers_lw_ = 0
@@ -667,24 +799,28 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! investigates individual bulks and their bondlengths
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Get the average bond length
+    !---------------------------------------------------------------------------
     avg_min_bond = &
-         ( get_min_bulk_bond(basis_lw_) + get_min_bulk_bond(basis_up_) )/2._real32
+         ( &
+              get_min_bulk_bond(structure_lw) + &
+              get_min_bulk_bond(structure_up) &
+         ) / 2._real32
     write(*,'(1X,"Avg min bulk bond: ",F0.3," Å")') avg_min_bond
     write(*,'(1X,"Trans-interfacial scaling factor: ",F0.3)') this%separation_scale
-    if(this%shift_method.eq.-1) this%num_shifts=1
+    if(this%shift_method.eq.-1) this%num_shifts = 1
     
 
-!!!-----------------------------------------------------------------------------
-!!! gets bulk DONs, if shift_method = 4
-!!!-----------------------------------------------------------------------------
-    allocate(lw_map(basis_lw_%nspec,maxval(basis_lw_%spec(:)%num,dim=1),2))
-    allocate(up_map(basis_up_%nspec,maxval(basis_up_%spec(:)%num,dim=1),2))    
+    !---------------------------------------------------------------------------
+    ! Gets bulk distribution functions (i.e. densities of neighbours)
+    ! ... if shift_method = 4
+    !---------------------------------------------------------------------------
+    allocate(lw_map(structure_lw%nspec,maxval(structure_lw%spec(:)%num,dim=1),2))
+    allocate(up_map(structure_up%nspec,maxval(structure_up%spec(:)%num,dim=1),2))    
     if(this%shift_method.eq.4.or.this%shift_method.eq.0)then
        lw_map=0
-       bulk_DON(1)%spec=gen_DON(basis_lw_%lat,basis_lw_,&
+       bulk_DON(1)%spec=gen_DON(structure_lw%lat,structure_lw,&
             dist_max=this%bondlength_cutoff,&
             scale_dist=.false.,&
             norm=.true.)
@@ -705,7 +841,7 @@ contains
        end if
        !call exit()
        up_map=0
-       bulk_DON(2)%spec=gen_DON(basis_up_%lat,basis_up_,&
+       bulk_DON(2)%spec=gen_DON(structure_up%lat,structure_up,&
             dist_max=this%bondlength_cutoff,&
             scale_dist=.false.,&
             norm=.true.)
@@ -730,31 +866,14 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! checks whether system appears layered
-!!!-----------------------------------------------------------------------------
-    if(present(is_layered_lw))then
-       is_layered_lw_ = is_layered_lw
-       ludef_is_layered_lw = .true.
-    else
-       is_layered_lw_ = .false.
-       ludef_is_layered_lw = .false.
-    end if
-    if(present(is_layered_up))then
-       is_layered_up_ = is_layered_up
-       ludef_is_layered_up = .true.
-    else
-       is_layered_up_ = .false.
-       ludef_is_layered_up = .false.
-    end if
-
-
-
-    layered_axis_lw=get_layered_axis(basis_lw_%lat,basis_lw_)
-    if(.not.is_layered_lw_.and.layered_axis_lw.gt.0)then
-       ivtmp1=0
+    !---------------------------------------------------------------------------
+    ! Check whether system appears layered
+    !---------------------------------------------------------------------------
+    layered_axis_lw = get_layered_axis( structure_lw%lat, structure_lw )
+    if(.not.this%is_layered_lw.and.layered_axis_lw.gt.0)then
+       ivtmp1 = 0
        ivtmp1(layered_axis_lw)=1
-       if(ludef_is_layered_lw)then
+       if(this%ludef_is_layered_lw)then
           write(msg,'("Lower crystal appears layered along axis ",I0,"\n&
                &Partial layer terminations will be generated\n&
                &We suggest using LW_MILLER =",3(1X,I1))') layered_axis_lw,ivtmp1
@@ -765,18 +884,18 @@ contains
                &If you don''t want this, set\nLW_LAYERED = .FALSE.")') &
                ivtmp1
           call print_warning(trim(msg))
-          miller_lw_=ivtmp1
-          is_layered_lw_=.true.
+          miller_lw=ivtmp1
+          this%is_layered_lw=.true.
        end if
-    elseif(is_layered_lw_.and.layered_axis_lw.gt.0.and.all(miller_lw_.eq.0))then
-       miller_lw_(layered_axis_lw)=1
+    elseif(this%is_layered_lw.and.layered_axis_lw.gt.0.and.all(miller_lw.eq.0))then
+       miller_lw(layered_axis_lw)=1
     end if
 
-    layered_axis_up=get_layered_axis(basis_up_%lat,basis_up_)
-    if(.not.is_layered_up_.and.layered_axis_up.gt.0)then
+    layered_axis_up = get_layered_axis( structure_up%lat, structure_up )
+    if(.not.this%is_layered_up.and.layered_axis_up.gt.0)then
        ivtmp1=0
        ivtmp1(layered_axis_up)=1
-       if(ludef_is_layered_up)then
+       if(this%ludef_is_layered_up)then
           write(msg,'("Upper crystal appears layered along axis ",I0,"\n&
                &Partial layer terminations will be generated\n&
                &We suggest using UP_MILLER =",3(1X,I1))') layered_axis_up,ivtmp1
@@ -787,52 +906,51 @@ contains
                &If you don''t want this, set\nUP_LAYERED = .FALSE.")') &
                ivtmp1
           call print_warning(trim(msg))
-          miller_up_=ivtmp1
-          is_layered_up_=.true.
+          miller_up=ivtmp1
+          this%is_layered_up=.true.
        end if
-    elseif(is_layered_up_.and.layered_axis_up.gt.0.and.all(miller_up_.eq.0))then
-       miller_up_(layered_axis_up)=1
+    elseif(this%is_layered_up.and.layered_axis_up.gt.0.and.all(miller_up.eq.0))then
+       miller_up(layered_axis_up)=1
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! Finds and stores the best matches between the materials
-!!!-----------------------------------------------------------------------------
-   !  call getcwd(pwd)
-    old_intf = -1
+    !---------------------------------------------------------------------------
+    ! Finds and stores the best matches between the materials
+    !---------------------------------------------------------------------------
+    num_structures_old = -1
     abc="abc"
-    if(any(miller_lw_.ne.0))then
+    if(any(miller_lw.ne.0))then
        if(this%match_method.ne.0)then
           abc="ab"
-          tfmat=planecutter(basis_lw_%lat,real(miller_lw_,real32))
-          call transformer(basis_lw_,tfmat,lw_map)
+          tfmat=planecutter(structure_lw%lat,real(miller_lw,real32))
+          call transformer(structure_lw,tfmat,lw_map)
           SAV=get_best_match(&
                this%tolerance,&
-               basis_lw_,basis_up_,&
+               structure_lw,structure_up,&
                trim(abc),"abc",print_lattice_match_info_,ierror,imatch=this%match_method)
-       elseif(any(miller_up_.ne.0))then
+       elseif(any(miller_up.ne.0))then
           SAV=get_best_match(&
                this%tolerance,&
-               basis_lw_,basis_up_,&
+               structure_lw,structure_up,&
                trim(abc),"abc",print_lattice_match_info_,ierror,imatch=this%match_method,&
-               plane1=miller_lw_,plane2=miller_up_,nmiller=this%max_num_planes)
+               plane1=miller_lw,plane2=miller_up,nmiller=this%max_num_planes)
        else
           SAV=get_best_match(&
                this%tolerance,&
-               basis_lw_,basis_up_,&
+               structure_lw,structure_up,&
                trim(abc),"abc",print_lattice_match_info_,ierror,imatch=this%match_method,&
-               plane1=miller_lw_,nmiller=this%max_num_planes)
+               plane1=miller_lw,nmiller=this%max_num_planes)
        end if
-    elseif(any(miller_up_.ne.0))then
+    elseif(any(miller_up.ne.0))then
        SAV=get_best_match(&
             this%tolerance,&
-            basis_lw_,basis_up_,&
+            structure_lw,structure_up,&
             trim(abc),"abc",print_lattice_match_info_,ierror,imatch=this%match_method,&
-            plane2=miller_up_,nmiller=this%max_num_planes)
+            plane2=miller_up,nmiller=this%max_num_planes)
     else
        SAV=get_best_match(&
             this%tolerance,&
-            basis_lw_,basis_up_,&
+            structure_lw,structure_up,&
             trim(abc),"abc",print_lattice_match_info_,ierror,imatch=this%match_method,&
             nmiller=this%max_num_planes)
     end if
@@ -874,8 +992,8 @@ contains
 !!!-----------------------------------------------------------------------------
     intf_loop: do ifit = intf_start, intf_end
        write(*,'("Fit number: ",I0)') ifit
-       call supercell_lw%copy(basis_lw_)
-       call supercell_up%copy(basis_up_)
+       call supercell_lw%copy(structure_lw)
+       call supercell_up%copy(structure_up)
        if(allocated(t1lw_map)) deallocate(t1lw_map)
        if(allocated(t1up_map)) deallocate(t1up_map)
        allocate(t1lw_map,source=lw_map)
@@ -918,7 +1036,7 @@ contains
                dist_max=this%bondlength_cutoff,&
                scale_dist=.false.,&
                norm=.true.)
-          !call err_abort_print_struc(basis_up_,"bulk_up_term.vasp",&
+          !call err_abort_print_struc(structure_up,"bulk_up_term.vasp",&
           !     "",.false.)
        end if
 
@@ -947,7 +1065,7 @@ contains
        end if
        if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
        call transformer(supercell_lw,tfmat,t1lw_map)
-       if(.not.compare_stoichiometry(basis_lw_,supercell_lw))then
+       if(.not.compare_stoichiometry(structure_lw,supercell_lw))then
           write(0,'(1X,"ERROR: Internal error in generate_interfaces")')
           write(0,'(2X,"The gldfnd subroutine could not reproduce a valid primitive cell for the lower material on match ",I0)') ifit
           if(ierror.eq.1)then
@@ -1028,7 +1146,7 @@ contains
        if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
        call transformer(supercell_up,tfmat,t1up_map)
        ! check the stoichiometry ratios are still maintained
-       if(.not.compare_stoichiometry(basis_up_,supercell_up))then
+       if(.not.compare_stoichiometry(structure_up,supercell_up))then
           write(0,'(1X,"ERROR: Internal error in generate_interfaces")')
           write(0,'(2X,"The gldfnd subroutine could not reproduce a valid primitive cell for the upper material on match ",I0)') ifit
           if(ierror.eq.1)then
@@ -1131,24 +1249,24 @@ contains
              !!-----------------------------------------------------------------
              !! Checks stoichiometry
              !!-----------------------------------------------------------------
-             if(slab_lw%nspec.ne.basis_lw_%nspec.or.any(&
-                  (basis_lw_%spec(1)%num*slab_lw%spec(:)%num)&
-                  /slab_lw%spec(1)%num.ne.basis_lw_%spec(:)%num))then
+             if(slab_lw%nspec.ne.structure_lw%nspec.or.any(&
+                  (structure_lw%spec(1)%num*slab_lw%spec(:)%num)&
+                  /slab_lw%spec(1)%num.ne.structure_lw%spec(:)%num))then
                 write(*,'("WARNING: This lower surface termination is not &
                      &stoichiometric")')
-                if(is_layered_lw_)then
+                if(this%is_layered_lw)then
                    write(*,'(2X,"As lower structure is layered, stoichiometric &
                         &surfaces are required.")')
                    write(*,'(2X,"Skipping this termination...")')
                    cycle lw_term_loop
                 end if
              end if
-             if(slab_up%nspec.ne.basis_up_%nspec.or.any(&
-                  (basis_up_%spec(1)%num*slab_up%spec(:)%num)&
-                  /slab_up%spec(1)%num.ne.basis_up_%spec(:)%num))then
+             if(slab_up%nspec.ne.structure_up%nspec.or.any(&
+                  (structure_up%spec(1)%num*slab_up%spec(:)%num)&
+                  /slab_up%spec(1)%num.ne.structure_up%spec(:)%num))then
                 write(*,'("WARNING: This upper surface termination is not &
                      &stoichiometric")')
-                if(is_layered_up_)then
+                if(this%is_layered_up)then
                    write(*,'(2X,"As upper structure is layered, stoichiometric &
                         &surfaces are required.")')
                    write(*,'(2X,"Skipping this termination...")')
@@ -1157,23 +1275,43 @@ contains
              end if
 
 
-             !!-----------------------------------------------------------------
-             !! Use the bulk moduli to determine the strain sharing
-             !!-----------------------------------------------------------------
-             if( all(abs(elastic_constants_lw_).gt.0.E0) .and. &
-                  all(abs(elastic_constants_up_).gt.0.E0) &
-             )then
-                call share_strain(slab_lw%lat,slab_up%lat,&
-                     elastic_constants_lw_(1), &
-                     elastic_constants_up_(1), &
-                     lcompensate = .not.this%fix_normal &
-                )
+             !------------------------------------------------------------------
+             ! Use the bulk moduli to determine the strain sharing
+             !------------------------------------------------------------------
+             if(allocated(this%elastic_constants_lw).and. &
+                allocated(this%elastic_constants_up))then
+                select case(size(this%elastic_constants_lw))
+                case(1)
+                   if( abs(this%elastic_constants_lw(1)).gt.0.E0 .and. &
+                         abs(this%elastic_constants_up(1)).gt.0.E0 &
+                   )then
+                      call share_strain(slab_lw%lat,slab_up%lat,&
+                            this%elastic_constants_lw(1), &
+                            this%elastic_constants_up(1), &
+                            lcompensate = .not.this%fix_normal &
+                      )
+                   end if
+                case default
+                   write(err_msg,'("Elastic constants not yet set up to handle &
+                        &the full tensor.")')
+                   call stop_program(trim(err_msg))
+                   exit_code_ = 1
+                   return
+                end select
+             elseif(allocated(this%elastic_constants_lw).neqv. &
+                   allocated(this%elastic_constants_up))then
+                write(err_msg,'(A)') &
+                     "Elastic constants not set up for both materials."
+                call stop_program(trim(err_msg))
+                exit_code_ = 1
+                return
              end if
-             
 
-             !!-----------------------------------------------------------------
-             !! Merge the two bases and lattices and define the interface loc
-             !!-----------------------------------------------------------------
+               
+
+             !------------------------------------------------------------------
+             ! Merge the two bases and lattices and define the interface loc
+             !------------------------------------------------------------------
              intf_basis = basis_stack(&
                   basis1 = slab_lw, basis2 = slab_up, &
                   axis = this%axis, offset = init_offset(:), &
@@ -1201,33 +1339,24 @@ contains
              end if
 
 
-             !!-----------------------------------------------------------------
-             !! Saves current directory and moves to new directory
-             !!-----------------------------------------------------------------
-             if(this%num_structures.gt.old_intf)then
-                iunique=iunique+1
-               !  if(this%shift_method.gt.0.and.this%num_shifts.gt.1) &
-               !       write(*,'(1X,"Generating shifts for unique interface ",&
-               !       &I0,":")') iunique
-               !  write(dirpath,'(A,I0.2)') trim(adjustl(subdir_prefix)),iunique
-               !  call system('mkdir -p '//trim(adjustl(dirpath)))
-             else
-               !  write(dirpath,'(A,I0.2)') trim(adjustl(subdir_prefix)),iunique
-             end if
-            !  call chdir(dirpath)
-             old_intf = this%num_structures
+
+             !------------------------------------------------------------------
+             ! Saves current directory and moves to new directory
+             !------------------------------------------------------------------
+             if(this%num_structures.gt.num_structures_old) iunique = iunique + 1
+             num_structures_old = this%num_structures
 
              
-             !!-----------------------------------------------------------------
-             !! Writes information of current match to file in save directory
-             !!-----------------------------------------------------------------
+             !------------------------------------------------------------------
+             ! Write information of current match to file in save directory
+             !------------------------------------------------------------------
              call  output_intf_data(SAV, ifit, lw_term, iterm_lw, up_term, iterm_up,&
-                  use_pricel_lw_,use_pricel_up_)
+                  this%use_pricel_lw, this%use_pricel_up)
 
 
-             !!-----------------------------------------------------------------
-             !! Generates shifts and swaps and prints the subsequent structures
-             !!-----------------------------------------------------------------
+             !------------------------------------------------------------------
+             ! Generate shifts and swaps and prints the subsequent structures
+             !------------------------------------------------------------------
              call this%generate_perturbations( &
                   intf_basis, intf_loc, avg_min_bond, &
                   bulk_DON, &
@@ -1237,24 +1366,14 @@ contains
              )
 
              if(this%num_structures.ge.this%max_num_structures) exit intf_loop
-             !call chdir(dirname)
-            !  call chdir(intf_dir)
 
              if(ludef_surface_up) exit up_term_loop
           end do up_term_loop
           if(ludef_surface_lw) exit lw_term_loop
        end do lw_term_loop
-       !!-----------------------------------------------------------------------
-       !! Returns to working directory
-       !!-----------------------------------------------------------------------
-      !  call chdir(intf_dir)
 
     end do intf_loop
 
-   !  call chdir(pwd)
-
-
-    return
   end subroutine generate_interfaces
 !###############################################################################
 

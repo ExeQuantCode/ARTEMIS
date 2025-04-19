@@ -56,6 +56,331 @@ subroutine f90wrap_artemis_intf_gen_type__set__max_num_structures(this, f90wrap_
     this_ptr%p%max_num_structures = f90wrap_max_num_structures
 end subroutine f90wrap_artemis_intf_gen_type__set__max_num_structures
 
+
+subroutine f90wrap_artemis_intf_gen_type__get__structure_lw(this, f90wrap_structure_lw)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    use artemis__geom_rw, only: basis_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    type basis_type_ptr_type
+        type(basis_type), pointer :: p => NULL()
+    end type basis_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer, intent(out) :: f90wrap_structure_lw(2)
+    type(basis_type_ptr_type) :: structure_lw_ptr
+    
+    this_ptr = transfer(this, this_ptr)
+    structure_lw_ptr%p => this_ptr%p%structure_lw
+    f90wrap_structure_lw = transfer(structure_lw_ptr,f90wrap_structure_lw)
+end subroutine f90wrap_artemis_intf_gen_type__get__structure_lw
+
+subroutine f90wrap_artemis_intf_gen_type__set__structure_lw(this, f90wrap_structure_lw)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    use artemis__geom_rw, only: basis_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    type basis_type_ptr_type
+        type(basis_type), pointer :: p => NULL()
+    end type basis_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer, intent(in) :: f90wrap_structure_lw(2)
+    type(basis_type_ptr_type) :: structure_lw_ptr
+    
+    this_ptr = transfer(this, this_ptr)
+    structure_lw_ptr = transfer(f90wrap_structure_lw,structure_lw_ptr)
+    this_ptr%p%structure_lw = structure_lw_ptr%p
+end subroutine f90wrap_artemis_intf_gen_type__set__structure_lw
+
+subroutine f90wrap_artemis_intf_gen_type__get__structure_up(this, f90wrap_structure_up)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    use artemis__geom_rw, only: basis_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    type basis_type_ptr_type
+        type(basis_type), pointer :: p => NULL()
+    end type basis_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer, intent(out) :: f90wrap_structure_up(2)
+    type(basis_type_ptr_type) :: structure_up_ptr
+    
+    this_ptr = transfer(this, this_ptr)
+    structure_up_ptr%p => this_ptr%p%structure_up
+    f90wrap_structure_up = transfer(structure_up_ptr,f90wrap_structure_up)
+end subroutine f90wrap_artemis_intf_gen_type__get__structure_up
+
+subroutine f90wrap_artemis_intf_gen_type__set__structure_up(this, f90wrap_structure_up)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    use artemis__geom_rw, only: basis_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    type basis_type_ptr_type
+        type(basis_type), pointer :: p => NULL()
+    end type basis_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer, intent(in) :: f90wrap_structure_up(2)
+    type(basis_type_ptr_type) :: structure_up_ptr
+    
+    this_ptr = transfer(this, this_ptr)
+    structure_up_ptr = transfer(f90wrap_structure_up,structure_up_ptr)
+    this_ptr%p%structure_up = structure_up_ptr%p
+end subroutine f90wrap_artemis_intf_gen_type__set__structure_up
+
+subroutine f90wrap_artemis_intf_gen_type__array__elastic_co4c3f(this, nd, dtype, dshape, dloc)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    use, intrinsic :: iso_c_binding, only : c_int
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer(c_int), intent(in) :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer(c_int), intent(out) :: nd
+    integer(c_int), intent(out) :: dtype
+    integer(c_int), dimension(10), intent(out) :: dshape
+    integer*8, intent(out) :: dloc
+    
+    nd = 1
+    dtype = 11
+    this_ptr = transfer(this, this_ptr)
+    if (allocated(this_ptr%p%elastic_constants_lw)) then
+        dshape(1:1) = shape(this_ptr%p%elastic_constants_lw)
+        dloc = loc(this_ptr%p%elastic_constants_lw)
+    else
+        dloc = 0
+    end if
+end subroutine f90wrap_artemis_intf_gen_type__array__elastic_co4c3f
+
+subroutine f90wrap_artemis_intf_gen_type__array__elastic_coedb6(this, nd, dtype, dshape, dloc)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    use, intrinsic :: iso_c_binding, only : c_int
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer(c_int), intent(in) :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer(c_int), intent(out) :: nd
+    integer(c_int), intent(out) :: dtype
+    integer(c_int), dimension(10), intent(out) :: dshape
+    integer*8, intent(out) :: dloc
+    
+    nd = 1
+    dtype = 11
+    this_ptr = transfer(this, this_ptr)
+    if (allocated(this_ptr%p%elastic_constants_up)) then
+        dshape(1:1) = shape(this_ptr%p%elastic_constants_up)
+        dloc = loc(this_ptr%p%elastic_constants_up)
+    else
+        dloc = 0
+    end if
+end subroutine f90wrap_artemis_intf_gen_type__array__elastic_coedb6
+
+subroutine f90wrap_artemis_intf_gen_type__get__use_pricel_lw(this, f90wrap_use_pricel_lw)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    logical, intent(out) :: f90wrap_use_pricel_lw
+    
+    this_ptr = transfer(this, this_ptr)
+    f90wrap_use_pricel_lw = this_ptr%p%use_pricel_lw
+end subroutine f90wrap_artemis_intf_gen_type__get__use_pricel_lw
+
+subroutine f90wrap_artemis_intf_gen_type__set__use_pricel_lw(this, f90wrap_use_pricel_lw)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    logical, intent(in) :: f90wrap_use_pricel_lw
+    
+    this_ptr = transfer(this, this_ptr)
+    this_ptr%p%use_pricel_lw = f90wrap_use_pricel_lw
+end subroutine f90wrap_artemis_intf_gen_type__set__use_pricel_lw
+
+subroutine f90wrap_artemis_intf_gen_type__get__use_pricel_up(this, f90wrap_use_pricel_up)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    logical, intent(out) :: f90wrap_use_pricel_up
+    
+    this_ptr = transfer(this, this_ptr)
+    f90wrap_use_pricel_up = this_ptr%p%use_pricel_up
+end subroutine f90wrap_artemis_intf_gen_type__get__use_pricel_up
+
+subroutine f90wrap_artemis_intf_gen_type__set__use_pricel_up(this, f90wrap_use_pricel_up)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    logical, intent(in) :: f90wrap_use_pricel_up
+    
+    this_ptr = transfer(this, this_ptr)
+    this_ptr%p%use_pricel_up = f90wrap_use_pricel_up
+end subroutine f90wrap_artemis_intf_gen_type__set__use_pricel_up
+
+subroutine f90wrap_artemis_intf_gen_type__array__miller_lw(this, nd, dtype, dshape, dloc)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    use, intrinsic :: iso_c_binding, only : c_int
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer(c_int), intent(in) :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer(c_int), intent(out) :: nd
+    integer(c_int), intent(out) :: dtype
+    integer(c_int), dimension(10), intent(out) :: dshape
+    integer*8, intent(out) :: dloc
+    
+    nd = 1
+    dtype = 5
+    this_ptr = transfer(this, this_ptr)
+    dshape(1:1) = shape(this_ptr%p%miller_lw)
+    dloc = loc(this_ptr%p%miller_lw)
+end subroutine f90wrap_artemis_intf_gen_type__array__miller_lw
+
+subroutine f90wrap_artemis_intf_gen_type__get__is_layered_lw(this, f90wrap_is_layered_lw)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    logical, intent(out) :: f90wrap_is_layered_lw
+    
+    this_ptr = transfer(this, this_ptr)
+    f90wrap_is_layered_lw = this_ptr%p%is_layered_lw
+end subroutine f90wrap_artemis_intf_gen_type__get__is_layered_lw
+
+subroutine f90wrap_artemis_intf_gen_type__set__is_layered_lw(this, f90wrap_is_layered_lw)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    logical, intent(in) :: f90wrap_is_layered_lw
+    
+    this_ptr = transfer(this, this_ptr)
+    this_ptr%p%is_layered_lw = f90wrap_is_layered_lw
+end subroutine f90wrap_artemis_intf_gen_type__set__is_layered_lw
+
+subroutine f90wrap_artemis_intf_gen_type__get__is_layered_up(this, f90wrap_is_layered_up)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    logical, intent(out) :: f90wrap_is_layered_up
+    
+    this_ptr = transfer(this, this_ptr)
+    f90wrap_is_layered_up = this_ptr%p%is_layered_up
+end subroutine f90wrap_artemis_intf_gen_type__get__is_layered_up
+
+subroutine f90wrap_artemis_intf_gen_type__set__is_layered_up(this, f90wrap_is_layered_up)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    logical, intent(in) :: f90wrap_is_layered_up
+    
+    this_ptr = transfer(this, this_ptr)
+    this_ptr%p%is_layered_up = f90wrap_is_layered_up
+end subroutine f90wrap_artemis_intf_gen_type__set__is_layered_up
+
+subroutine f90wrap_artemis_intf_gen_type__get__ludef_is_lay4aa6(this, f90wrap_ludef_is_layered_lw)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    logical, intent(out) :: f90wrap_ludef_is_layered_lw
+    
+    this_ptr = transfer(this, this_ptr)
+    f90wrap_ludef_is_layered_lw = this_ptr%p%ludef_is_layered_lw
+end subroutine f90wrap_artemis_intf_gen_type__get__ludef_is_lay4aa6
+
+subroutine f90wrap_artemis_intf_gen_type__set__ludef_is_lay87a5(this, f90wrap_ludef_is_layered_lw)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    logical, intent(in) :: f90wrap_ludef_is_layered_lw
+    
+    this_ptr = transfer(this, this_ptr)
+    this_ptr%p%ludef_is_layered_lw = f90wrap_ludef_is_layered_lw
+end subroutine f90wrap_artemis_intf_gen_type__set__ludef_is_lay87a5
+
+subroutine f90wrap_artemis_intf_gen_type__get__ludef_is_lay60fd(this, f90wrap_ludef_is_layered_up)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    logical, intent(out) :: f90wrap_ludef_is_layered_up
+    
+    this_ptr = transfer(this, this_ptr)
+    f90wrap_ludef_is_layered_up = this_ptr%p%ludef_is_layered_up
+end subroutine f90wrap_artemis_intf_gen_type__get__ludef_is_lay60fd
+
+subroutine f90wrap_artemis_intf_gen_type__set__ludef_is_laye6e4(this, f90wrap_ludef_is_layered_up)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    logical, intent(in) :: f90wrap_ludef_is_layered_up
+    
+    this_ptr = transfer(this, this_ptr)
+    this_ptr%p%ludef_is_layered_up = f90wrap_ludef_is_layered_up
+end subroutine f90wrap_artemis_intf_gen_type__set__ludef_is_laye6e4
+
+
+
+
+
+
 subroutine f90wrap_artemis_intf_gen_type__get__shift_method(this, f90wrap_shift_method)
     use artemis__interface_generator, only: artemis_interface_generator_type
     implicit none
@@ -684,17 +1009,8 @@ subroutine f90wrap_intf_gen__set_shift_method__bin4dc1(this, method, num_shifts,
         separation_scale=separation_scale, depth_method=depth_method)
 end subroutine f90wrap_intf_gen__set_shift_method__bin4dc1
 
-subroutine f90wrap_intf_gen__generate__binding__aigt( &
-    this, basis_lw, basis_up, miller_lw, &
-    miller_up, surface_lw, surface_up, &
-    thickness_lw, thickness_up, &
-    num_layers_lw, num_layers_up, &
-    use_pricel_lw, use_pricel_up, &
-    is_layered_lw, is_layered_up, &
-    elastic_constants_lw, elastic_constants_up, &
-    print_lattice_match_info,  print_termination_info, print_shift_info, &
-    break_on_fail, icheck_match, interface_idx, generate_structures, seed, exit_code, &
-    n0, n1, n2, n3)
+subroutine f90wrap_intf_gen__set_materials__bindin017c(this, structure_lw, structure_up, &
+    elastic_constants_lw, elastic_constants_up, use_pricel_lw, use_pricel_up, n0, n1)
     use artemis__interface_generator, only: artemis_interface_generator_type
     use artemis__geom_rw, only: basis_type
     implicit none
@@ -707,24 +1023,104 @@ subroutine f90wrap_intf_gen__generate__binding__aigt( &
     end type artemis_interface_generator_type_ptr_type
     type(artemis_interface_generator_type_ptr_type) :: this_ptr
     integer, intent(in), dimension(2) :: this
-    type(basis_type_ptr_type) :: basis_lw_ptr
-    integer, intent(in), dimension(2) :: basis_lw
-    type(basis_type_ptr_type) :: basis_up_ptr
-    integer, intent(in), dimension(2) :: basis_up
-    integer, intent(in), optional, dimension(3) :: miller_lw
-    integer, intent(in), optional, dimension(3) :: miller_up
+    type(basis_type_ptr_type) :: structure_lw_ptr
+    integer, intent(in), dimension(2) :: structure_lw
+    type(basis_type_ptr_type) :: structure_up_ptr
+    integer, intent(in), dimension(2) :: structure_up
+    real(4), intent(in), optional, dimension(n0) :: elastic_constants_lw
+    real(4), intent(in), optional, dimension(n1) :: elastic_constants_up
+    logical, intent(in), optional :: use_pricel_lw
+    logical, intent(in), optional :: use_pricel_up
+    integer :: n0
+    !f2py intent(hide), depend(elastic_constants_lw) :: n0 = shape(elastic_constants_lw,0)
+    integer :: n1
+    !f2py intent(hide), depend(elastic_constants_up) :: n1 = shape(elastic_constants_up,0)
+    this_ptr = transfer(this, this_ptr)
+    structure_lw_ptr = transfer(structure_lw, structure_lw_ptr)
+    structure_up_ptr = transfer(structure_up, structure_up_ptr)
+    call this_ptr%p%set_materials(structure_lw=structure_lw_ptr%p, structure_up=structure_up_ptr%p, &
+        elastic_constants_lw=elastic_constants_lw, elastic_constants_up=elastic_constants_up, use_pricel_lw=use_pricel_lw, &
+        use_pricel_up=use_pricel_up)
+end subroutine f90wrap_intf_gen__set_materials__bindin017c
+
+subroutine f90wrap_intf_gen__set_surface_propertie615d(this, miller_lw, miller_up, is_layered_lw, &
+    is_layered_up)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    integer, dimension(3), intent(in), optional :: miller_lw
+    integer, dimension(3), intent(in), optional :: miller_up
+    logical, intent(in), optional :: is_layered_lw
+    logical, intent(in), optional :: is_layered_up
+    this_ptr = transfer(this, this_ptr)
+    call this_ptr%p%set_surface_properties(miller_lw=miller_lw, miller_up=miller_up, is_layered_lw=is_layered_lw, &
+        is_layered_up=is_layered_up)
+end subroutine f90wrap_intf_gen__set_surface_propertie615d
+
+subroutine f90wrap_intf_gen__reset_is_layered_lw__69b8(this)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    this_ptr = transfer(this, this_ptr)
+    call this_ptr%p%reset_is_layered_lw()
+end subroutine f90wrap_intf_gen__reset_is_layered_lw__69b8
+
+subroutine f90wrap_intf_gen__reset_is_layered_up__0b2c(this)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    this_ptr = transfer(this, this_ptr)
+    call this_ptr%p%reset_is_layered_up()
+end subroutine f90wrap_intf_gen__reset_is_layered_up__0b2c
+
+
+
+
+
+
+
+
+
+
+
+subroutine f90wrap_intf_gen__generate__binding__aigt( &
+    this, surface_lw, surface_up, &
+    thickness_lw, thickness_up, &
+    num_layers_lw, num_layers_up, &
+    print_lattice_match_info, print_termination_info, print_shift_info, &
+    break_on_fail, icheck_match, interface_idx, &
+    generate_structures, &
+    seed, verbose, exit_code, &
+    n0, n1)
+    use artemis__interface_generator, only: artemis_interface_generator_type
+    implicit none
+    
+    type artemis_interface_generator_type_ptr_type
+        type(artemis_interface_generator_type), pointer :: p => NULL()
+    end type artemis_interface_generator_type_ptr_type
+    type(artemis_interface_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
     integer, intent(in), optional, dimension(n0) :: surface_lw
     integer, intent(in), optional, dimension(n1) :: surface_up
     real(4), intent(in), optional :: thickness_lw
     real(4), intent(in), optional :: thickness_up
     integer, intent(in), optional :: num_layers_lw
     integer, intent(in), optional :: num_layers_up
-    logical, intent(in), optional :: use_pricel_lw
-    logical, intent(in), optional :: use_pricel_up
-    logical, intent(in), optional :: is_layered_lw
-    logical, intent(in), optional :: is_layered_up
-    real(4), intent(in), optional, dimension(n2) :: elastic_constants_lw
-    real(4), intent(in), optional, dimension(n3) :: elastic_constants_up
     logical, intent(in), optional :: print_lattice_match_info
     logical, intent(in), optional :: print_termination_info
     logical, intent(in), optional :: print_shift_info
@@ -733,26 +1129,19 @@ subroutine f90wrap_intf_gen__generate__binding__aigt( &
     integer, intent(in), optional :: interface_idx
     logical, intent(in), optional :: generate_structures
     integer, intent(in), optional :: seed
-    integer, intent(out), optional :: exit_code
+    integer, intent(in), optional :: verbose
+    integer, optional, intent(inout) :: exit_code
     integer :: n0
     !f2py intent(hide), depend(surface_lw) :: n0 = shape(surface_lw,0)
     integer :: n1
     !f2py intent(hide), depend(surface_up) :: n1 = shape(surface_up,0)
-    integer :: n2
-    !f2py intent(hide), depend(elastic_constants_lw) :: n2 = shape(elastic_constants_lw,0)
-    integer :: n3
-    !f2py intent(hide), depend(elastic_constants_up) :: n3 = shape(elastic_constants_up,0)
     this_ptr = transfer(this, this_ptr)
-    basis_lw_ptr = transfer(basis_lw, basis_lw_ptr)
-    basis_up_ptr = transfer(basis_up, basis_up_ptr)
-    call this_ptr%p%generate(basis_lw=basis_lw_ptr%p, basis_up=basis_up_ptr%p, miller_lw=miller_lw, miller_up=miller_up, &
-        surface_lw=surface_lw, surface_up=surface_up, thickness_lw=thickness_lw, thickness_up=thickness_up, &
-        num_layers_lw=num_layers_lw, num_layers_up=num_layers_up, use_pricel_lw=use_pricel_lw, use_pricel_up=use_pricel_up, &
-        is_layered_lw=is_layered_lw, is_layered_up=is_layered_up, elastic_constants_lw=elastic_constants_lw, &
-        elastic_constants_up=elastic_constants_up, print_lattice_match_info=print_lattice_match_info, &
-        print_termination_info=print_termination_info, print_shift_info=print_shift_info, break_on_fail=break_on_fail, &
-        icheck_match=icheck_match, interface_idx=interface_idx, generate_structures=generate_structures, seed=seed, exit_code=exit_code &
-    )
+    call this_ptr%p%generate(surface_lw=surface_lw, surface_up=surface_up, thickness_lw=thickness_lw, &
+        thickness_up=thickness_up, num_layers_lw=num_layers_lw, num_layers_up=num_layers_up, &
+        print_lattice_match_info=print_lattice_match_info, print_termination_info=print_termination_info, &
+        print_shift_info=print_shift_info, break_on_fail=break_on_fail, icheck_match=icheck_match, &
+        interface_idx=interface_idx, generate_structures=generate_structures, seed=seed, verbose=verbose, &
+        exit_code=exit_code)
 end subroutine f90wrap_intf_gen__generate__binding__aigt
 
 subroutine f90wrap_intf_gen__restart__binding__aigt(this, basis, interface_location, &
