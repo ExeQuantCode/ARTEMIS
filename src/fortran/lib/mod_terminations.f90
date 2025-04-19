@@ -10,6 +10,7 @@ module artemis__terminations
   use edit_geom,          only: shifter, transformer, ortho_axis, set_vacuum
   implicit none
 
+
   private
 
   public :: term_arr_type
@@ -20,6 +21,7 @@ module artemis__terminations
 
 
   type term_type
+     !! Structure to hold termination information
      real(real32) :: hmin
      real(real32) :: hmax
      integer :: natom
@@ -28,6 +30,7 @@ module artemis__terminations
   end type term_type
 
   type term_arr_type
+     !! Structure to hold arrays of terminations
      integer :: nterm = 0, axis, nstep
      real(real32) :: tol
      logical :: lmirror=.false.
@@ -35,6 +38,7 @@ module artemis__terminations
   end type term_arr_type
 
   type term_list_type
+     !! Structure to hold termination index and location
      integer :: term
      real(real32) :: loc
   end type term_list_type
@@ -63,38 +67,52 @@ contains
     logical, intent(in), optional :: break_on_fail
     !! Boolean whether to break on failure to find terminations
 
-
-    integer :: i,j,is,nterm,mterm,dim,ireject
-    integer :: itmp1,itmp2,init,min_loc
-    logical :: ludef_print,lunique,ltmp1,lmirror, break_on_fail_
-    real(real32) :: rtmp1,tol,height,max_sep,c_along,centre
-    type(sym_type) :: grp1,grp_store
+    ! Local variables
+    integer :: i, j, is, nterm, mterm, dim, ireject
+    !! Loop indices and dimensions
+    integer :: itmp1, itmp2, init, min_loc
+    !! Temporary indices
+    logical :: ludef_print, lunique, ltmp1, lmirror, break_on_fail_
+    !! Boolean flags
+    real(real32) :: rtmp1, tol, height, max_sep, c_along, centre
+    !! Temporary variables
+    real(real32) :: layer_sep_
+    !! Minimum separation between layers
+    type(sym_type) :: grp1, grp_store
+    !! Symmetry group structure
     type(term_arr_type) :: term
-    integer, dimension(3) :: abc=(/1,2,3/)
+    !! Termination information
+    integer, dimension(3) :: abc
+    !! Axis indices
     real(real32), dimension(3) :: vec_compare
-    real(real32), dimension(3,3) :: inv_mat,ident
-    type(basis_type),allocatable, dimension(:) :: basis_arr,basis_arr_reject
-    type(term_type), allocatable, dimension(:) :: term_arr,term_arr_uniq
-    integer, allocatable, dimension(:) :: success,tmpop
+    !! Comparison vector
+    real(real32), dimension(3,3) :: inv_mat, ident
+    !! Inversion and identity matrix
+    type(basis_type),allocatable, dimension(:) :: basis_arr, basis_arr_reject
+    !! Basis structures for terminations
+    type(term_type), allocatable, dimension(:) :: term_arr, term_arr_uniq
+    !! Termination information
+    integer, allocatable, dimension(:) :: success, tmpop
+    !! Temporary symmetry operations
     integer, allocatable, dimension(:,:) :: reject_match
+    !! Rejection match array
     real(real32), allocatable, dimension(:,:) :: basis_list
+    !! List of basis atoms
     real(real32), allocatable, dimension(:,:,:) :: tmpsym
+    !! Temporary symmetry matrix
     character(len=256) :: err_msg
+    !! Error message
 
 
-
-
-!!!APPLY TRANSFORMATION MATRIX TO FIND TERMINATIONS ALONG OTHER PLANES
-!!! E.G. (1 0 1)
-    
+    abc = [ 1, 2, 3 ]
     term%nterm = 0
     s_end=0
     grp_store%confine%l=.false.
     grp_store%confine%axis=axis
     grp_store%confine%laxis=.false.
-!!!-----------------------------------------------------------------------------
-!!! Sets printing option
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Set printing option
+    !---------------------------------------------------------------------------
     if(present(lprint))then
        ludef_print = lprint
     else
@@ -104,25 +122,25 @@ contains
     if(present(break_on_fail)) break_on_fail_ = break_on_fail
 
 
-!!!-----------------------------------------------------------------------------
-!!! Sets the surface identification tolerance
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Set the surface identification tolerance
+    !---------------------------------------------------------------------------
     if(present(layer_sep))then
-       tol = layer_sep
+       layer_sep_ = layer_sep
     else
-       tol = 1._real32  !!!tolerance of 1 Å for defining a layer
+      layer_sep_ = 1._real32  !!!tolerance of 1 Å for defining a layer
     end if
 
     abc=cshift(abc,3-axis)
     c_along = abs(dot_product(basis%lat(axis,:),&
          uvec(cross([basis%lat(abc(1),:)],[basis%lat(abc(2),:)]))))
-    tol = tol / c_along
+    layer_sep_ = layer_sep_ / c_along
     lmirror=.false.
 
 
-!!!-----------------------------------------------------------------------------
-!!! Set up basis list that will order them wrt distance along 'axis'
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Set up basis list that will order them wrt distance along 'axis'
+    !---------------------------------------------------------------------------
     allocate(basis_list(basis%natom,3))
     init = 1
     do is=1,basis%nspec
@@ -132,9 +150,9 @@ contains
     call sort_col(basis_list,col=axis)
 
 
-!!!-----------------------------------------------------------------------------
-!!! Find largest separation between atoms
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Find largest separation between atoms
+    !---------------------------------------------------------------------------
     max_sep = basis_list(1,axis) - (basis_list(basis%natom,axis)-1._real32)
     height = ( basis_list(1,axis) + (basis_list(basis%natom,axis)-1._real32) )/2._real32
     do i=1,basis%natom-1
@@ -144,7 +162,7 @@ contains
           height = ( basis_list(i+1,axis) + basis_list(i,axis) )/2._real32
        end if
     end do
-    if(max_sep.lt.tol)then
+    if(max_sep.lt.layer_sep_)then
        if(break_on_fail_)then
           write(0,'("ERROR: Error in artemis__sym.f90")')
        else
@@ -201,7 +219,7 @@ contains
        end if
 
        rtmp1 = basis_list(itmp1,axis) - term_arr(nterm)%hmax
-       if(rtmp1.le.tol)then
+       if(rtmp1.le.layer_sep_)then
           term_arr(nterm)%hmax = basis_list(itmp1,axis)
        else
           term_arr(nterm)%natom = itmp1 - min_loc
@@ -357,7 +375,7 @@ contains
        lunique=.true.
        itmp1=reject_match(i,1)
        itmp2=reject_match(i,2)
-       !! Check if comparison termination has already been compared successfully
+       ! Check if comparison termination has already been compared successfully
        prior_check: if(any(success(1:i-1).eq.itmp2))then
           lunique=.false.
        else
@@ -366,27 +384,27 @@ contains
                iperm=-1,lsave=.true.,lcheck_all=.true.)
           ltmp1=.false.
 
-          !! Check if pure translations are present in comparison termination?
-          !   if(all(abs(grp1%sym_save(j,:3,:3)-ident).le.tolerance))then
-          !      write(0,*) "FOUND TRANSLATION"
-          !      cycle reject_loop1
-          !   end if
-          !end do
-          !! Check if inversions are present in comparison termination
+          ! Check if pure translations are present in comparison termination?
+          !!    if(all(abs(grp1%sym_save(j,:3,:3)-ident).le.tolerance))then
+          !!       write(0,*) "FOUND TRANSLATION"
+          !!       cycle reject_loop1
+          !!    end if
+          !! end do
+          ! Check if inversions are present in comparison termination
           do j=1,grp1%nsymop
              if(abs(det(grp1%sym_save(j,:3,:3))+1._real32).le.tolerance) ltmp1=.true.
           end do
-          !! If they are not, then no point comparing. It is a new termination
+          ! If they are not, then no point comparing. It is a new termination
           if(.not.ltmp1) exit prior_check 
 
           call clone_grp(grp_store,grp1)
           call check_sym(grp1,basis_arr(itmp2),&
                tmpbas2=basis_arr_reject(i),iperm=-1,lsave=.true.,lcheck_all=.true.)
 
-          !! Check det of all symmetry operations. If any are 1, move on
-          !! This is because they are just rotations as can be captured ...
-          !! ... through lattice matches.
-          !! Solely inversions are unique and must be captured.
+          ! Check det of all symmetry operations. If any are 1, move on
+          ! This is because they are just rotations as can be captured ...
+          ! ... through lattice matches.
+          ! Solely inversions are unique and must be captured.
           do j=1,grp1%nsymop
              if(abs(det(grp1%sym_save(j,:3,:3))-1._real32).le.tolerance) lunique=.false.
           end do
@@ -420,7 +438,7 @@ contains
     ! Populate termination output
     !---------------------------------------------------------------------------
     allocate(term%arr(mterm))
-    term%tol=tol
+    term%tol=layer_sep_
     term%axis=axis
     term%nterm=mterm
     term%lmirror = lmirror
@@ -438,10 +456,10 @@ contains
        if(ludef_print) write(*,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
             i,term%arr(i)%hmin,term%arr(i)%hmax,term%arr(i)%natom
        itmp1 = minloc(term_arr_uniq(:)%hmin,&
-            mask=term_arr_uniq(:)%hmin.gt.rtmp1+tol,dim=1)
+            mask=term_arr_uniq(:)%hmin.gt.rtmp1+layer_sep_,dim=1)
        if(itmp1.eq.0) then
           itmp1 = minloc(term_arr_uniq(:)%hmin,&
-               mask=term_arr_uniq(:)%hmin.gt.rtmp1+tol-1._real32,dim=1)
+               mask=term_arr_uniq(:)%hmin.gt.rtmp1+layer_sep_-1._real32,dim=1)
        end if
        rtmp1 = term_arr_uniq(itmp1)%hmin
     end do
@@ -451,8 +469,8 @@ contains
     !---------------------------------------------------------------------------
     ! Check to ensure equivalent number of steps for each termination
     !---------------------------------------------------------------------------
-    !! Not yet certain whether each termination should have same number ...
-    !! ... of ladder rungs. That's why this check is here.
+    ! Not yet certain whether each termination should have same number ...
+    ! ... of ladder rungs. That's why this check is here.
     if(all(term%arr(:)%nstep.ne.term%nstep))then
        write(0,'("ERROR: Number of rungs in terminations no equivalent for &
             &every termination! Please report this to developers.\n&
@@ -579,25 +597,34 @@ contains
     !! List of termination information
     integer, dimension(2), intent(in) :: surf
     !! Surface termination indices (for a single slab with both surface indices)
-    integer, intent(in) :: num_layers
-    integer, intent(out) :: term_start, term_end, num_cells
-    integer, intent(out) :: term_step
     real(real32), intent(in) :: thickness
+    !! Requested thickness of the slab (mutually exclusive with num_layers)
+    integer, intent(in) :: num_layers
+    !! Requested number of layers in the slab (mutually exclusive with thickness)
     real(real32), intent(out) :: height
+    !! Height of the slab if user-defined surf
+    integer, intent(out) :: num_cells
+    !! Maximum number of cells in the output basis
+    integer, intent(out) :: term_start, term_end, term_step
+    !! Termination indices for the slab
 
-
-    integer :: i,itmp1
-    real(real32) :: rtmp1, slab_thickness, largest_sep
+    ! Local variables
+    integer :: i, itmp1, icell, istep, iterm
+    !! Loop indices
+    real(real32) :: rtmp1, slab_thickness, largest_sep, layer_thickness
+    !! Temporary variables
     character(1024) :: msg
+    !! Temporary message string
     real(real32), dimension(3,3) :: tfmat
+    !! Transformation matrix
     real(real32), allocatable, dimension(:) :: vtmp1
+    !! Temporary vector
     type(term_list_type), allocatable, dimension(:) :: list
-
-
-    integer :: icell, istep, iterm
-    real(real32) :: layer_thickness
+    !! List of terminations
     logical :: success
+    !! Success flag for finding the required thickness
     logical :: ludef_surf
+    !! Boolean whether surface terminations are user-defined
     
 
     !---------------------------------------------------------------------------
