@@ -278,7 +278,7 @@ contains
     !    close(unit)
     ! end do
 
-    write(6,'(4(F0.5,2X))') (best_shifts(i,:),i=1,nstore)
+    write(*,'(4(F0.5,2X))') (best_shifts(i,:),i=1,nstore)
 
   end function get_fit_shifts
 !!!#########################################################################
@@ -520,9 +520,9 @@ contains
 
     if(present(lprint))then
        if(lprint)then
-          write(6,'(1X,"Shifts to be applied (Å)")')
+          write(*,'(1X,"Shifts to be applied (Å)")')
           do is=1,nstore
-             write(6,*) res_shifts(is,1),res_shifts(is,2), &
+             write(*,*) res_shifts(is,1),res_shifts(is,2), &
                   res_shifts(is,3)*modu(lat(axis,:))
           end do
        end if
@@ -859,7 +859,7 @@ contains
     where(abs(min_trans).lt.1.E-5_real32)
        min_trans=1._real32
     end where
-    if(ierror.eq.1) write(6,*) "repeated_trans:",min_trans
+    if(ierror.eq.1) write(*,*) "repeated_trans:",min_trans
 
 
 !!!-----------------------------------------------------------------------------
@@ -871,7 +871,7 @@ contains
        do i=1,2
           wyckoff(i)=get_wyckoff(splitbas(i),axis)
           if(.not.allocated(wyckoff(i)%spec))then
-             write(6,'(1X,"Using centre atoms as bulk representation")')
+             write(*,'(1X,"Using centre atoms as bulk representation")')
              lwyckoff(i)=.false.
           end if
        end do
@@ -893,9 +893,9 @@ contains
        dist_max = 4.0
     end if
     allocate(DON_missing(2,bas%nspec))
-    if(ierror.ge.1) write(6,*)
+    if(ierror.ge.1) write(*,*)
     region_loop: do i=1,2
-       if(ierror.ge.1) write(6,'&
+       if(ierror.ge.1) write(*,'&
             &(2X,"is",2X,"ia",4X,"nmissing",4X,"bond size (Å)",8X,"position")')
 
        count1 = 0
@@ -979,7 +979,7 @@ contains
                      - 1 ) * dist_max/nstep_default
                 neighbour(i,count1)%num = itmp1
                 if(ierror.ge.1)&
-                     write(6,'(2X,I2,3X,I3,7X,I2,9X,F0.3,8X,3(1X,F5.2))') &
+                     write(*,'(2X,I2,3X,I3,7X,I2,9X,F0.3,8X,3(1X,F5.2))') &
                      is,ia,&
                      neighbour(i,count1)%num,&
                      neighbour(i,count1)%bond,&
@@ -1021,8 +1021,8 @@ contains
           end do atom_loop1
        end do spec_loop
        if(ierror.ge.1)then
-          write(6,*) "nneigh:",count1
-          write(6,*)
+          write(*,*) "nneigh:",count1
+          write(*,*)
        end if
        if(count1.le.0)then
           write(0,'("WARNING: No missing bonds identified for parent slab ",I0)') i
@@ -1047,8 +1047,8 @@ contains
     lowest_atom(1) = minval(intf(1)%neigh(:)%pos(3),dim=1)
     highest_atom(2) = maxval(intf(2)%neigh(:)%pos(3),dim=1)
     if(abs(ierror).ge.1)then
-       write(6,*) "lowest atom:",lowest_atom
-       write(6,*) "highest atom:",highest_atom
+       write(*,*) "lowest atom:",lowest_atom
+       write(*,*) "highest atom:",highest_atom
     end if
 
 
@@ -1086,7 +1086,7 @@ contains
        nstep(3) = nstep(3) + 1
     end do
     if(present(offset))then
-       if(ierror.ge.1) write(6,'(1X,"user-defined offset:",3(3X,F7.3))') offset
+       if(ierror.ge.1) write(*,'(1X,"user-defined offset:",3(3X,F7.3))') offset
        add = -1.0
        do i=1,3
           if(offset(i).ge.0._real32)then
@@ -1110,12 +1110,12 @@ contains
 !!! Determines neighbours for each grid point 
 !!!-----------------------------------------------------------------------------
     if(abs(ierror).ge.1)then
-       write(6,'(1X,A,3(2X,F8.4))') &
+       write(*,'(1X,A,3(2X,F8.4))') &
             "lat:",modu(bas%lat(1,:)),modu(bas%lat(2,:)),modu(bas%lat(3,:))
-       write(6,'(1X,A,3(2X,F8.4))') "gridsize:",gridsize
-       write(6,*) "add:",add
-       write(6,*) "nstep:",nstep
-       write(6,*) "ngrid:",ngrid
+       write(*,'(1X,A,3(2X,F8.4))') "gridsize:",gridsize
+       write(*,*) "add:",add
+       write(*,*) "nstep:",nstep
+       write(*,*) "ngrid:",ngrid
        write(*,*) "max_sep:",max_sep
     end if
 
@@ -1267,12 +1267,12 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Sets output of shifts
 !!!-----------------------------------------------------------------------------
-    write(6,'("Determined shifts (gridsize:",3(2X,F6.4),")")') gridsize
-    write(6,'(" num   fit_val   x    y    z")')
+    write(*,'("Determined shifts (gridsize:",3(2X,F6.4),")")') gridsize
+    write(*,'(" num   fit_val   x    y    z")')
     do i=1,nstore
        res_shifts(i,:) = real(shift_store(i,:),real32)/real(ngrid(:)-1,real32)
        res_shifts(i,:2) = res_shifts(i,:2) + add(:2)
-       write(6,'(1X,I3,":",2X,F6.2,3(2X,I3))') i,fit_store(i),shift_store(i,:)
+       write(*,'(1X,I3,":",2X,F6.2,3(2X,I3))') i,fit_store(i),shift_store(i,:)
     end do
     res_shifts(:,axis) = (res_shifts(:,axis)*max_sep)/modu(bas%lat(axis,:)) + &
          add(axis)
@@ -1281,9 +1281,9 @@ contains
 
     if(present(lprint))then
        if(lprint)then
-          write(6,'(1X,"Shifts to be applied (Å)")')
+          write(*,'(1X,"Shifts to be applied (Å)")')
           do i=1,nstore
-             write(6,'(I3,":",2X,3(2X,F7.4))') &
+             write(*,'(I3,":",2X,3(2X,F7.4))') &
                   i,res_shifts(i,:2),res_shifts(i,3)*modu(bas%lat(axis,:))
           end do
        end if

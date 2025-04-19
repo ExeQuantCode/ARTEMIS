@@ -488,7 +488,7 @@ contains
 !!! initialise variables
 !!!-----------------------------------------------------------------------------
     if(present(lprint))then
-       if(lprint) write(6,'(1X,"Determining axis perpendicular to interface")')
+       if(lprint) write(*,'(1X,"Determining axis perpendicular to interface")')
     end if
     power=1.E0
     nstep=size(DOS(1)%atom(1,1,:))
@@ -590,7 +590,7 @@ contains
 !!!-----------------------------------------------------------------------------
     axis=minloc(dir_disim,dim=1)
     if(present(lprint))then
-       if(lprint) write(6,*) "Interface located along axis",axis
+       if(lprint) write(*,*) "Interface located along axis",axis
     end if
 
 
@@ -829,9 +829,9 @@ contains
 !!! identify whether system is likely a planar defect
 !!!-----------------------------------------------------------------------------
     if(count(abs(multiCADD).lt.1.D-8).gt.0.9*nstep)then
-       write(6,'(1X,"System has same species-split density across system")')
-       write(6,'(1X,"Likely a planar defect")')
-       write(6,'(1X,"Use another interface identifier method...")')
+       write(*,'(1X,"System has same species-split density across system")')
+       write(*,'(1X,"Likely a planar defect")')
+       write(*,'(1X,"Use another interface identifier method...")')
     end if
 
 

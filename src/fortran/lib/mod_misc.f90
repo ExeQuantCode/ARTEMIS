@@ -132,17 +132,17 @@ contains
     real(real32), dimension(3) :: buff
     real(real32), dimension(dim,3) :: arr
 
-    a123(:)=(/1,2,3/)
+    a123(:) = [ 1, 2, 3 ]
     istart=1
-    do j=1,3
-       do i=j,dim
+    do j = 1, 3
+       do i = j, dim
           loc=minloc(abs(arr(i:dim,a123(1))),dim=1,mask=(abs(arr(i:dim,a123(1))).gt.1.E-5_real32))+i-1
           buff(:)=arr(i,:)
           arr(i,:)=arr(loc,:)
           arr(loc,:)=buff(:)
        end do
 
-       scndrow: do i=j,dim
+       scndrow: do i = j, dim
           if(abs(arr(j,a123(1))).ne.abs(arr(i,a123(1)))) exit scndrow
           loc=minloc(abs(arr(i:dim,a123(2)))+abs(arr(i:dim,a123(3))),dim=1,&
                mask=(abs(arr(j,a123(1))).eq.abs(arr(i:dim,a123(1)))))+i-1
@@ -411,9 +411,9 @@ contains
     end if
 
     if((real(count)/real(4*div)-floor(real(count)/real(4*div))).lt.tiny) then
-       write(6,'(A,20X,A,"CALCULATING")',advance='no') creturn,creturn
+       write(*,'(A,20X,A,"CALCULATING")',advance='no') creturn,creturn
     else if((real(count)/real(div)-floor(real(count)/real(div))).lt.tiny) then
-       write(6,'(".")',advance='no')
+       write(*,'(".")',advance='no')
     end if
 
     return
@@ -452,22 +452,22 @@ contains
     do i=1,5
        inquire(file=trim(FILENAME),exist=filefound)
        if(.not.filefound) then
-          write(6,'("File name ",A," not found.")')&
+          write(*,'("File name ",A," not found.")')&
                "'"//trim(FILENAME)//"'"
-          write(6,'("Supply another filename: ")')
+          write(*,'("Supply another filename: ")')
           read(*,*) FILENAME
        else
-          write(6,'("Using file ",A)')  &
+          write(*,'("Using file ",A)')  &
                "'"//trim(FILENAME)//"'"
           exit
        end if
        if(i.ge.4) then
-          write(6,*) "Nope"
+          write(*,*) "Nope"
           call exit()
        end if
     end do
     if(trim(adjustl(udef_action)).eq.'NONE')then
-       write(6,*) "File found, but not opened."
+       write(*,*) "File found, but not opened."
     else
        open(unit=UNIT,file=trim(FILENAME),action=trim(udef_action),iostat=Reason)
     end if

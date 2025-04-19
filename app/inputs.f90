@@ -174,15 +174,15 @@ contains
           if(.not.empty)then
              read(buffer,'(A)') input_file
           else
-             write(6,'("ERROR: No input filename supplied, but the flag ''-f'' was used")')
+             write(*,'("ERROR: No input filename supplied, but the flag ''-f'' was used")')
              infilename_do: do j=1,3
-                write(6,'("Please supply an input filename:")')
+                write(*,'("Please supply an input filename:")')
                 read(5,'(A)') input_file
                 if(trim(input_file).ne.'')then
-                   write(6,'("Input filename supplied")')
+                   write(*,'("Input filename supplied")')
                    exit infilename_do
                 else
-                   write(6,'(1X,"Not a valid filename")')
+                   write(*,'(1X,"Not a valid filename")')
                 end if
                 if(j.eq.3)then
                    call err_abort('ERROR: No valid input filename supplied\nExiting...',.true.)
@@ -234,46 +234,46 @@ contains
           if(.not.empty) read(buffer,*) ierror
        elseif(index(buffer,'--version').eq.1)then
           flag="--version"
-          write(6,'(1X,"ARTEMIS version: ",A)') trim(artemis__version__)
+          write(*,'(1X,"ARTEMIS version: ",A)') trim(artemis__version__)
           stop
        elseif(index(buffer,'-h').eq.1.or.index(buffer,'--help').eq.1)then
           flag="--help"
           if(index(buffer,'-h').eq.1) flag="-h"
           call flagmaker(buffer,flag,i,skip,empty)
           if(empty)then
-             write(6,'("Flags:")')
-             write(6,'("-----------------FILE-NAME-FLAGS-----------------")')
-             write(6,'(2X,"-f<STR>         : Input file name (Default = (empty)). (ALTERNATIVE TO FLAGS)")')
-             write(6,'(2X,"-i<STR>         : Structure file 1 (Default = POSCAR)")')
-             write(6,'(2X,"-I<STR>         : Structure file 2 (Default = (empty)")')
-             write(6,'(2X,"-D<STR>         : Output directory name for generated structures (Default = DInterfaces)")')
-             write(6,'(2X,"-o<STR>         : Subdirectory prefix (Default = D)")')
-             write(6,'("--------------------JOB-FLAGS--------------------")')
-             write(6,'(2X,"--restart       : Restart job from where left off (NOT YET IMPLEMENTED)")')
-             write(6,'(2X,"--gen-surfaces  : Generates the surfaces and labels them (NOT YET IMPLEMENTED)")')
-             write(6,'("------------------VERBOSE-FLAGS------------------")')
-             write(6,'(2X,"--version       : Prints the version number")')
-             write(6,'(2X,"-v<INT>         : Verbose printing type")')
-             write(6,'(2X,"-d[STR]         : Print example input file (to file STR if present)")')
-             write(6,'(2X,"-h|--help [tag] : Prints the help for flags and tags (describes [tag] if supplied)")')
-             write(6,'(2X,"     ""     all : Prints a list of all input file tags")')
-             write(6,'(2X,"--search <str>  : Searches the help for tags including the string <str>")')
+             write(*,'("Flags:")')
+             write(*,'("-----------------FILE-NAME-FLAGS-----------------")')
+             write(*,'(2X,"-f<STR>         : Input file name (Default = (empty)). (ALTERNATIVE TO FLAGS)")')
+             write(*,'(2X,"-i<STR>         : Structure file 1 (Default = POSCAR)")')
+             write(*,'(2X,"-I<STR>         : Structure file 2 (Default = (empty)")')
+             write(*,'(2X,"-D<STR>         : Output directory name for generated structures (Default = DInterfaces)")')
+             write(*,'(2X,"-o<STR>         : Subdirectory prefix (Default = D)")')
+             write(*,'("--------------------JOB-FLAGS--------------------")')
+             write(*,'(2X,"--restart       : Restart job from where left off (NOT YET IMPLEMENTED)")')
+             write(*,'(2X,"--gen-surfaces  : Generates the surfaces and labels them (NOT YET IMPLEMENTED)")')
+             write(*,'("------------------VERBOSE-FLAGS------------------")')
+             write(*,'(2X,"--version       : Prints the version number")')
+             write(*,'(2X,"-v<INT>         : Verbose printing type")')
+             write(*,'(2X,"-d[STR]         : Print example input file (to file STR if present)")')
+             write(*,'(2X,"-h|--help [tag] : Prints the help for flags and tags (describes [tag] if supplied)")')
+             write(*,'(2X,"     ""     all : Prints a list of all input file tags")')
+             write(*,'(2X,"--search <str>  : Searches the help for tags including the string <str>")')
           else
-             write(6,*) 
+             write(*,*) 
              call settings_help(6,trim(adjustl(buffer)))
              call cell_edits_help(6,trim(adjustl(buffer)))
              call interface_help(6,trim(adjustl(buffer)))
-             write(6,'("======================================")')
+             write(*,'("======================================")')
           end if
           stop
        elseif(index(buffer,'--search').eq.1)then
           flag="--search"
-          write(6,*) 
+          write(*,*) 
           call flagmaker(buffer,flag,i,skip,empty)
           call settings_help(6,trim(adjustl(buffer)),search=.true.)
           call cell_edits_help(6,trim(adjustl(buffer)),search=.true.)
           call interface_help(6,trim(adjustl(buffer)),search=.true.)  
-          write(6,'("======================================")')        
+          write(*,'("======================================")')        
           stop
        end if
     end do flagloop
@@ -289,7 +289,7 @@ contains
 !!! print execution date and time
 !!!-----------------------------------------------------------------------------
     call date_and_time(values=date_time_vals)
-    write(6,'(" executed on ",&
+    write(*,'(" executed on ",&
          &I4,".",I2.2,".",I2.2," at ",&
          &I0,":",I0,":",I0)')&
          date_time_vals(1:3),date_time_vals(5:7)
@@ -331,7 +331,7 @@ contains
     seed = clock + 37 * (/ (i - 1, i = 1, n) /)
     call random_seed(put=seed)
 
-    write(6,'(1X,A,I0)') "clock seed: ",clock
+    write(*,'(1X,A,I0)') "clock seed: ",clock
 
 
 !!!-----------------------------------------------------------------------------
@@ -348,8 +348,8 @@ contains
     if( (irestart.eq.1.and.task.eq.1).or.&
          (lsurf_gen.and.task.eq.1.and.struc2_file.eq.'').or.&
          (task.eq.0.and.struc2_file.eq.'') )then
-       write(6,'("2nd structure file not supplied")')
-       write(6,'(2X,"As is not necessary for this run, skipping...")')
+       write(*,'("2nd structure file not supplied")')
+       write(*,'(2X,"As is not necessary for this run, skipping...")')
     elseif(struc2_file.eq.'')then
        call err_abort('ERROR: 2nd structure file not supplied\n&
             &  Supply a filename to the tag STRUC2_FILE in the SETTINGS card\n&
@@ -387,7 +387,7 @@ contains
        call write_settings(adjustl(trim(dirname)))
     end if
 
-    write(6,'(A)') repeat("#",50)
+    write(*,'(A)') repeat("#",50)
 
     if(lw_thickness.gt.0._real32.and.lw_num_layers.gt.0)then
        write(0,'(1X,A)') "WARNING: SLAB THICKNESS AND NUMBER OF LAYERS BOTH DEFINED"
@@ -529,7 +529,7 @@ contains
        case("TOL_SYM")
           call assign(buffer,tol_sym,      readvar(11))
        case default
-          write(6,'("NOTE: unable to assign variable on line ",I0)') count
+          write(*,'("NOTE: unable to assign variable on line ",I0)') count
        end select
     end do settings_read
 
@@ -651,7 +651,7 @@ contains
        case("MIN_THICKNESS")
           call assign(buffer,lw_thickness,     readvar(13))
        case default
-          write(6,'("NOTE: unable to assign variable on line ",I0)') count
+          write(*,'("NOTE: unable to assign variable on line ",I0)') count
        end select
     end do cell_edits_read
 
@@ -960,7 +960,7 @@ contains
          !! defect task 1 = doper
          !! defect task 2 = molec rotater
       case default
-         write(6,'("NOTE: unable to assign variable on line ",I0)') count
+         write(*,'("NOTE: unable to assign variable on line ",I0)') count
       end select
     end do defects_read
 

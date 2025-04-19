@@ -45,6 +45,17 @@ module artemis__interface_generator
     !! Separation scale
     integer :: depth_method = 0
     !! Method for determining the depth to which consider atoms from interface
+
+    integer, dimension(:,:,:,:), allocatable :: match_data
+    !! Data of matches for each interface
+    !! indices 1 and 2 are the transformation matrices
+    !! index 3 is length 2, where element 1 is lower, element 2 is upper
+    !! index 4 is the interface number in structures
+    real(real32), dimension(:,:), allocatable :: mismatch_data
+    !! Data of mismatches for each interface
+    !! index 1 is length 3, element 1 = length, element 2 = angle, element 3 = area
+    !! index 2 is the interface number in structures
+
     real(real32), dimension(:,:), allocatable :: shift_data
     !! Data of shifts for each interface, where index 1 is the interface number in structures
 
@@ -294,8 +305,8 @@ contains
     else
        intf=get_interface(basis%lat,basis,this%axis)
        intf%loc=intf%loc/modu(basis%lat(intf%axis,:))
-       write(6,*) "interface axis:",intf%axis
-       write(6,*) "interface loc:",intf%loc
+       write(*,*) "interface axis:",intf%axis
+       write(*,*) "interface loc:",intf%loc
        !! write interface location to a file for user to refer back to
        open(unit=10,file="interface_location.dat")
        write(10,'(1X,"AXIS = ",I0)') intf%axis
@@ -335,8 +346,8 @@ contains
     end do specloop1
 
     min_bond = ( min_bond1 + min_bond2 ) / 2._real32
-    write(6,'(1X,"Avg min bulk bond: ",F0.3," Å")') min_bond
-    write(6,'(1X,"Trans-interfacial scaling factor:",F0.3)') this%separation_scale
+    write(*,'(1X,"Avg min bulk bond: ",F0.3," Å")') min_bond
+    write(*,'(1X,"Trans-interfacial scaling factor:",F0.3)') this%separation_scale
     this%axis = intf%axis
     call this%generate_perturbations(basis, intf%loc, min_bond, bulk_DON, print_shift_info_, seed_arr)
 
@@ -446,7 +457,7 @@ contains
     !! Upper bulk termination loop indices
 
     ! slab thickness variables
-    integer :: ncells_lw, ncells_up
+    integer :: num_cells_lw, num_cells_up
     !! Number of cells in the slab
     real(real32) :: height_lw, height_up
     !! Height of the slab
@@ -561,28 +572,28 @@ contains
 !!!-----------------------------------------------------------------------------
     call basis_lw_%copy(basis_lw, length=4)
     call basis_up_%copy(basis_up, length=4)
-    write(6,*)
+    write(*,*)
     use_pricel_lw_ = .false.
     use_pricel_up_ = .false.
     if(present(use_pricel_lw)) use_pricel_lw_ = use_pricel_lw
     if(present(use_pricel_up)) use_pricel_up_ = use_pricel_up
     if(use_pricel_lw_)then
-       write(6,'(1X,"Using primitive cell for lower material")')
+       write(*,'(1X,"Using primitive cell for lower material")')
        call get_primitive_cell(basis_lw_)
     else
-       write(6,'(1X,"Using supplied cell for lower material")')
+       write(*,'(1X,"Using supplied cell for lower material")')
        call reducer(basis_lw_)
        basis_lw_%lat=primitive_lat(basis_lw_%lat)
     end if
     if(use_pricel_up_)then
-       write(6,'(1X,"Using primitive cell for upper material")')
+       write(*,'(1X,"Using primitive cell for upper material")')
        call get_primitive_cell(basis_up_)
     else
-       write(6,'(1X,"Using supplied cell for upper material")')
+       write(*,'(1X,"Using supplied cell for upper material")')
        call reducer(basis_up_)
        basis_up_%lat=primitive_lat(basis_up_%lat)
     end if
-    write(6,*)
+    write(*,*)
 
 
     surface_lw_ = 0
@@ -662,8 +673,8 @@ contains
 !!!-----------------------------------------------------------------------------
     avg_min_bond = &
          ( get_min_bulk_bond(basis_lw_) + get_min_bulk_bond(basis_up_) )/2._real32
-    write(6,'(1X,"Avg min bulk bond: ",F0.3," Å")') avg_min_bond
-    write(6,'(1X,"Trans-interfacial scaling factor: ",F0.3)') this%separation_scale
+    write(*,'(1X,"Avg min bulk bond: ",F0.3," Å")') avg_min_bond
+    write(*,'(1X,"Trans-interfacial scaling factor: ",F0.3)') this%separation_scale
     if(this%shift_method.eq.-1) this%num_shifts=1
     
 
@@ -872,7 +883,7 @@ contains
        write(0,'(1X,"Number of matches found: ",I0)')&
             min(this%tolerance%nstore,SAV%nfit)
     end if
-    write(6,'(1X,"Maximum number of generated interfaces will be: ",I0)')&
+    write(*,'(1X,"Maximum number of generated interfaces will be: ",I0)')&
          this%max_num_terms*this%num_shifts*this%tolerance%nstore
     if(.not.generate_structures_)then
        write(0,'(1X,"Told not to generate interfaces, just find matches.")')
@@ -891,7 +902,7 @@ contains
     if(interface_idx_.gt.0)then
        intf_start=interface_idx_
        intf_end=interface_idx_
-       write(6,'(1X,"Generating only interfaces for match ",I0)') interface_idx_
+       write(*,'(1X,"Generating only interfaces for match ",I0)') interface_idx_
     else
        intf_start=1
        intf_end=min(this%tolerance%nstore,SAV%nfit)
@@ -901,7 +912,7 @@ contains
 !!! Applies the best match transformations
 !!!-----------------------------------------------------------------------------
     intf_loop: do ifit = intf_start, intf_end
-       write(6,'("Fit number: ",I0)') ifit
+       write(*,'("Fit number: ",I0)') ifit
        call supercell_lw%copy(basis_lw_)
        call supercell_up%copy(basis_up_)
        if(allocated(t1lw_map)) deallocate(t1lw_map)
@@ -1029,7 +1040,7 @@ contains
        !! Defines height of lower slab from user-defined values
        !!-----------------------------------------------------------------------
        call set_slab_height(supercell_lw,t1lw_map,lw_term,surface_lw_,&
-            height_lw,num_layers_lw_, thickness_lw_,ncells_lw,&
+            height_lw,num_layers_lw_, thickness_lw_,num_cells_lw,&
             term_lw_start_idx,term_lw_end_idx,term_lw_step &
        )
        if(term_lw_end_idx.gt.this%max_num_terms) term_lw_end_idx = this%max_num_terms
@@ -1110,7 +1121,7 @@ contains
        !! Defines height of upper slab from user-defined values
        !!-----------------------------------------------------------------------
        call set_slab_height(supercell_up,t1up_map,up_term,surface_up_,&
-            height_up,num_layers_up_, thickness_up_, ncells_up,&
+            height_up,num_layers_up_, thickness_up_, num_cells_up,&
             term_up_start_idx,term_up_end_idx,term_up_step &
        )
        if(term_up_end_idx.gt.this%max_num_terms) term_up_end_idx = this%max_num_terms
@@ -1119,7 +1130,7 @@ contains
        !!-----------------------------------------------------------------------
        !! Print termination plane locations
        !!-----------------------------------------------------------------------
-       write(6,'(1X,"Number of unique terminations: ",I0,2X,I0)') &
+       write(*,'(1X,"Number of unique terminations: ",I0,2X,I0)') &
             lw_term%nterm,up_term%nterm
 
        !!-----------------------------------------------------------------------
@@ -1134,7 +1145,7 @@ contains
           !! Shifts lower material to specified termination
           !!--------------------------------------------------------------------
           call build_slab(slab_lw,t2lw_map,lw_term,[iterm_lw,surface_lw_(2)],&
-               thickness_lw_, ncells_lw, num_layers_lw_, height_lw,&
+               thickness_lw_, num_cells_lw, num_layers_lw_, height_lw,&
                "lw",lcycle, &
                vacuum = this%vacuum_gap &
           )
@@ -1149,7 +1160,7 @@ contains
              if(allocated(t2up_map)) deallocate(t2up_map)
              allocate(t2up_map,source=t1up_map)
              call build_slab(slab_up,t2up_map,up_term,[iterm_up,surface_up_(2)],&
-                  thickness_up_, ncells_up, num_layers_up_, height_up,&
+                  thickness_up_, num_cells_up, num_layers_up_, height_up,&
                   "up",lcycle, &
                   vacuum = this%vacuum_gap &
              )
@@ -1162,24 +1173,24 @@ contains
              if(slab_lw%nspec.ne.basis_lw_%nspec.or.any(&
                   (basis_lw_%spec(1)%num*slab_lw%spec(:)%num)&
                   /slab_lw%spec(1)%num.ne.basis_lw_%spec(:)%num))then
-                write(6,'("WARNING: This lower surface termination is not &
+                write(*,'("WARNING: This lower surface termination is not &
                      &stoichiometric")')
                 if(is_layered_lw_)then
-                   write(6,'(2X,"As lower structure is layered, stoichiometric &
+                   write(*,'(2X,"As lower structure is layered, stoichiometric &
                         &surfaces are required.")')
-                   write(6,'(2X,"Skipping this termination...")')
+                   write(*,'(2X,"Skipping this termination...")')
                    cycle lw_term_loop
                 end if
              end if
              if(slab_up%nspec.ne.basis_up_%nspec.or.any(&
                   (basis_up_%spec(1)%num*slab_up%spec(:)%num)&
                   /slab_up%spec(1)%num.ne.basis_up_%spec(:)%num))then
-                write(6,'("WARNING: This upper surface termination is not &
+                write(*,'("WARNING: This upper surface termination is not &
                      &stoichiometric")')
                 if(is_layered_up_)then
-                   write(6,'(2X,"As upper structure is layered, stoichiometric &
+                   write(*,'(2X,"As upper structure is layered, stoichiometric &
                         &surfaces are required.")')
-                   write(6,'(2X,"Skipping this termination...")')
+                   write(*,'(2X,"Skipping this termination...")')
                    cycle up_term_loop
                 end if
              end if
@@ -1235,7 +1246,7 @@ contains
              if(this%num_structures.gt.old_intf)then
                 iunique=iunique+1
                !  if(this%shift_method.gt.0.and.this%num_shifts.gt.1) &
-               !       write(6,'(1X,"Generating shifts for unique interface ",&
+               !       write(*,'(1X,"Generating shifts for unique interface ",&
                !       &I0,":")') iunique
                !  write(dirpath,'(A,I0.2)') trim(adjustl(subdir_prefix)),iunique
                !  call system('mkdir -p '//trim(adjustl(dirpath)))
@@ -1414,7 +1425,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Prints number of shifts to terminal
 !!!-----------------------------------------------------------------------------
-    write(6,'(3X,"Number of unique shifts structures: ",I0)') this%num_shifts
+    write(*,'(3X,"Number of unique shifts structures: ",I0)') this%num_shifts
 
 
 !!!-----------------------------------------------------------------------------
@@ -1422,7 +1433,7 @@ contains
 !!!-----------------------------------------------------------------------------
     nswaps_per_cell=nint(this%swap_density*get_area([basis%lat(abc(1),:)],[basis%lat(abc(2),:)]))
     if(this%swap_method.ne.0)then
-       write(6,&
+       write(*,&
             '(" Generating ",I0," swaps per structure ")') nswaps_per_cell
     end if
 
@@ -1452,9 +1463,9 @@ contains
        if(min_bond%length.le.1.5_real32)then
           write(msg,'("Smallest bond in the interface structure is\nless than 1.5 Å.")')
           call print_warning(trim(msg))
-          write(6,'(2X,"bond length: ",F9.6)') min_bond%length
-          write(6,'(2X,"atom 1:",I4,2X,I4)') min_bond%atoms(1,:)
-          write(6,'(2X,"atom 2:",I4,2X,I4)') min_bond%atoms(2,:)
+          write(*,'(2X,"bond length: ",F9.6)') min_bond%length
+          write(*,'(2X,"atom 1:",I4,2X,I4)') min_bond%atoms(1,:)
+          write(*,'(2X,"atom 2:",I4,2X,I4)') min_bond%atoms(2,:)
        end if
 
 
@@ -1477,7 +1488,7 @@ contains
       !  else
       !     filename = trim(out_filename)
       !  end if
-      !  write(6,'(2X,"Writing interface ",I0,"...")') intf
+      !  write(*,'(2X,"Writing interface ",I0,"...")') intf
       !  open(unit=ounit,file=trim(adjustl(filename)))
       !  call geom_write(ounit,tbas)
       !  close(ounit)
@@ -1506,7 +1517,7 @@ contains
          !  call chdir(dirpath)
          !  call system('mkdir -p '//trim(adjustl(swapdir)))
          !  call chdir(swapdir)
-         !  write(6,'(3X,"Number of unique swap structures: ",I0)') ngen_swaps
+         !  write(*,'(3X,"Number of unique swap structures: ",I0)') ngen_swaps
           this%structures = [ this%structures, bas_arr(1:ngen_swaps) ]
          !  do l=1,ngen_swaps
          !     write(dirpath,'(A,I0.2)') trim(adjustl(subdir_prefix)),l
@@ -1514,7 +1525,7 @@ contains
          !     write(filename,'(A,"/",A)') &
          !          trim(adjustl(dirpath)),trim(out_filename)
          !     ounit=100+l
-         !     write(6,'(3X,"Writing swap ",I0,"...")') l
+         !     write(*,'(3X,"Writing swap ",I0,"...")') l
          !     open(unit=ounit,file=trim(adjustl(filename)))
          !     call geom_write(ounit,bas_arr(l))
          !     close(ounit)
