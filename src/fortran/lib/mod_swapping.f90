@@ -110,8 +110,8 @@ contains
     !    if(nperm.le.0) nperm=10
     !
     !    if(nswap.gt.nperm)then
-    !       write(6,'(1X,A)') "Number of possible permutations is less than requested value."
-    !       write(6,'(1X,A,I0)') "Resetting number of output structures to ",nperm
+    !       write(*,'(1X,A)') "Number of possible permutations is less than requested value."
+    !       write(*,'(1X,A,I0)') "Resetting number of output structures to ",nperm
     !       nswap=nperm
     !    end if
 !!!-----------------------------------------------------------------------------
@@ -166,9 +166,9 @@ contains
           end if
        end do
        if(ierror.ge.1)then
-          write(6,*) "mirror found for swaps"
-          write(6,'(4(2X,F9.4))') intf_sym(:,:)
-          write(6,*)
+          write(*,*) "mirror found for swaps"
+          write(*,'(4(2X,F9.4))') intf_sym(:,:)
+          write(*,*)
        end if
     else
        write(0,*) "WARNING: No mirror identified in interface"
@@ -206,8 +206,8 @@ contains
        nabove = size(up_close_list)
     end select
     if(nswaps_per_cell.gt.min(nabove,nbelow))then
-       write(6,'(1X,A)') "Number of possible swaps is less than requested value."
-       write(6,'(1X,A,I0)') "Resetting number of swaps to ",min(nabove,nbelow)
+       write(*,'(1X,A)') "Number of possible swaps is less than requested value."
+       write(*,'(1X,A,I0)') "Resetting number of swaps to ",min(nabove,nbelow)
        nswaps_per_cell=min(nabove,nbelow)
     end if
 
@@ -295,8 +295,8 @@ end function rand_swapper
     nbelow=count(dintf-bas_list(:,axis).le.width.and.dintf-bas_list(:,axis).ge.0)
     nabove=count(bas_list(:,axis)-dintf.le.width.and.bas_list(:,axis)-dintf.gt.0)
     if(min(nabove,nbelow).eq.0)then
-       write(6,'(1X,"No atoms found within ",F0.2," Å of the interface.")') width*modu(lat(axis,:))
-       write(6,'(1X,"Exiting code...")')
+       write(*,'(1X,"No atoms found within ",F0.2," Å of the interface.")') width*modu(lat(axis,:))
+       write(*,'(1X,"Exiting code...")')
        call exit()
     end if
 

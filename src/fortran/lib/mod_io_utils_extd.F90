@@ -66,18 +66,18 @@ contains
     
     select case(form)
     case("VASP")
-       write(6,*) "Input files will be VASP formatted"
+       write(*,*) "Input files will be VASP formatted"
        igeom_input=1
     case("CASTEP")
-       write(6,*) "Input files will be CASTEP formatted"
+       write(*,*) "Input files will be CASTEP formatted"
        igeom_input=2
        !call err_abort('ERROR: ARTEMIS not yet set up for CASTEP')
     case("QE","QUANTUMESPRESSO")
-       write(6,*) "Input files will be QuantumEspresso formatted"
+       write(*,*) "Input files will be QuantumEspresso formatted"
        igeom_input=3
        !call err_abort('ERROR: ARTEMIS not yet set up for Quantum Espresso')
     case("CRYSTAL")
-       write(6,*) "Input files will be CRYSTAL formatted"
+       write(*,*) "Input files will be CRYSTAL formatted"
        igeom_input=4
        call err_abort('ERROR: ARTEMIS not yet set up for CRYSTAL')
     end select
@@ -108,21 +108,21 @@ contains
     
     select case(form)
     case("VASP")
-       write(6,*) "Output files will be VASP formatted"
+       write(*,*) "Output files will be VASP formatted"
        if(out_filename.eq.'') out_filename="POSCAR"
        igeom_output=1
     case("CASTEP")
-       write(6,*) "Output files will be CASTEP formatted"
+       write(*,*) "Output files will be CASTEP formatted"
        if(out_filename.eq.'') out_filename="struc.cell"
        igeom_output=2
        !call err_abort('ERROR: ARTEMIS not yet set up for CASTEP')
     case("QE","QUANTUMESPRESSO")
-       write(6,*) "Output files will be QuantumEspresso formatted"
+       write(*,*) "Output files will be QuantumEspresso formatted"
        if(out_filename.eq.'') out_filename="struc.geom"
        igeom_output=3
        !call err_abort('ERROR: ARTEMIS not yet set up for Quantum Espresso')
     case("CRYSTAL")
-       write(6,*) "Output files will be CRYSTAL formatted"
+       write(*,*) "Output files will be CRYSTAL formatted"
        if(out_filename.eq.'') out_filename="INPUT_geom"
        igeom_output=4
        call err_abort('ERROR: ARTEMIS not yet set up for CRYSTAL')

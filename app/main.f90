@@ -30,7 +30,7 @@ program artemis_executable
 !!!  ARTIE   = Alloying & Rotating Tool for Intermixed structure Editing ??? 
   select case(task)
   case(0) ! cell_edit/ASPECT
-     write(6,'(1X,"task ",I0," set",/,1X,"Performing Cell Edits")') task
+     write(*,'(1X,"task ",I0," set",/,1X,"Performing Cell Edits")') task
      if(lsurf_gen)then
         write(0,'(1X,"Finding terminations for lower material.")')
         term_gen%layer_separation_cutoff = layer_sep
@@ -48,7 +48,7 @@ program artemis_executable
           lnorm=lnorm_lat)
 
   case(1) ! interfaces/ARTEMIS/SEARCH
-     write(6,'(1X,"task ",I0," set",/,1X,"Performing Interface Generation")') task
+     write(*,'(1X,"task ",I0," set",/,1X,"Performing Interface Generation")') task
 
      !!-------------------------------------------------------------------------
      !! surface generator
@@ -59,10 +59,10 @@ program artemis_executable
         call chdir("DTERMINATIONS")
         
         if(all(lw_mplane.eq.0))then
-           write(6,'("No Miller plane defined for lower material.")')
-           write(6,'("Skipping...")')
+           write(*,'("No Miller plane defined for lower material.")')
+           write(*,'("Skipping...")')
         else
-           write(6,'(1X,"Finding terminations for lower material.")')
+           write(*,'(1X,"Finding terminations for lower material.")')
            term_gen%layer_separation_cutoff = lw_layer_sep
            call term_gen%generate(struc1_bas,lw_mplane,axis,&
                 num_layers = lw_num_layers, &
@@ -71,10 +71,10 @@ program artemis_executable
            call term_gen%write_structures(directory = "DTERMINATIONS", prefix= "lw_")
         end if
         if(all(up_mplane.eq.0))then
-           write(6,'("No Miller plane defined for upper material.")')
-           write(6,'("Skipping...")')
+           write(*,'("No Miller plane defined for upper material.")')
+           write(*,'("Skipping...")')
         else
-           write(6,'(1X,"Finding terminations for upper material.")')
+           write(*,'(1X,"Finding terminations for upper material.")')
            term_gen%layer_separation_cutoff = up_layer_sep
            call term_gen%generate(struc2_bas,up_mplane,axis,&
                 num_layers = up_num_layers, &
@@ -82,7 +82,7 @@ program artemis_executable
            )
            call term_gen%write_structures(directory = "DTERMINATIONS", prefix= "up_")
         end if
-        write(6,'(1X,"Terminations printed.",/,1X,"Exiting...")')
+        write(*,'(1X,"Terminations printed.",/,1X,"Exiting...")')
         stop
      end if
      
@@ -110,12 +110,12 @@ program artemis_executable
 
 
   case(2) ! defects/ARTIE
-     write(6,'(1X,"task ",I0," set",/,1X,"Performing Defect Generation")') task
+     write(*,'(1X,"task ",I0," set",/,1X,"Performing Defect Generation")') task
      
 
   case default
-     write(6,'(1X,"No task selected.")')
-     write(6,'(1X,"Exiting code...")')
+     write(*,'(1X,"No task selected.")')
+     write(*,'(1X,"Exiting code...")')
      call exit()
   end select
 

@@ -16,7 +16,7 @@ module artemis__misc_types
   type latmatch_type
      integer :: nfit
      logical :: lreduced
-     character(1) :: abc(3)=(/'a','b','c'/)
+     character(1) :: abc(3)= [ 'a', 'b', 'c' ]
 
      integer, dimension(2) :: axes
      integer, allocatable, dimension(:,:,:) :: tf1,tf2

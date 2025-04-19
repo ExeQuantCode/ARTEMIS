@@ -118,22 +118,22 @@ contains
     do i=1,2
        if(verify("abc",str(i)).eq.0) then
           SAV%axes(i)=3
-          if(lprint) write(6,*) "Finding matches of all possible planes."
+          if(lprint) write(*,*) "Finding matches of all possible planes."
        elseif(verify("abc",str(i)).eq.3) then
           SAV%axes(i)=2
-          if(lprint) write(6,*) "Finding matches of the ab planes."
+          if(lprint) write(*,*) "Finding matches of the ab planes."
        elseif(verify("abc",str(i)).eq.1) then
           SAV%axes(i)=2
           SAV%abc=cshift(SAV%abc,shift=1)
           SAV%lat1(:,:)=cshift(SAV%lat1(:,:),shift=1,dim=1)
           SAV%lat2(:,:)=cshift(SAV%lat2(:,:),shift=1,dim=1)
-          if(lprint) write(6,*) "Finding matches of the bc planes."
+          if(lprint) write(*,*) "Finding matches of the bc planes."
        elseif(verify("abc",str(i)).eq.2) then
           SAV%axes(i)=2
           SAV%abc=cshift(SAV%abc,shift=2)
           SAV%lat1(:,:)=cshift(SAV%lat1(:,:),shift=2,dim=1)
           SAV%lat2(:,:)=cshift(SAV%lat2(:,:),shift=2,dim=1)
-          if(lprint) write(6,*) "Finding matches of the ca planes."
+          if(lprint) write(*,*) "Finding matches of the ca planes."
        end if
     end do
 
@@ -321,12 +321,12 @@ contains
 !!!-----------------------------------------------------------------------------
        if(SAV%nfit.eq.tol%maxfit) then
           if(lprint) &
-               write(6,'(/,"Number of fits reached maxfits ",I0)') SAV%nfit
+               write(*,'(/,"Number of fits reached maxfits ",I0)') SAV%nfit
           return
        end if
        if(lstop.and.count1.gt.100) then
           if(lprint) &
-               write(6,'(/,"Stopped as we reached ",I0," failed checks.")')&
+               write(*,'(/,"Stopped as we reached ",I0," failed checks.")')&
                count1
           return
        end if
@@ -709,21 +709,21 @@ contains
        !!-----------------------------------------------------------------------
        if(present(lprint))then
           if(lprint)then
-             write(6,'(/,A,I0,2X,A,I0)') &
+             write(*,'(/,A,I0,2X,A,I0)') &
                   "Fit number: ",SAV%nfit+1,&
                   "Area increase: ",&
                   nint(get_area(real(tf1(1,:),real32),real(tf1(2,:),real32)))
-             write(6,'("   Transmat 1:    Transmat 2:")')
-             write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
-             write(6,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
+             write(*,'("   Transmat 1:    Transmat 2:")')
+             write(*,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
+             write(*,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
                   tf1(1,1:3),tf2(1,1:3),&
                   tf1(2,1:3),tf2(2,1:3),&
                   tf1(3,1:3),tf2(3,1:3)
-             write(6,'(" vector mismatch (%) = ",F0.9)') diff*100._real32
-             write(6,'(" angle mismatch (°)  = ",F0.9)') abs(ang1-ang2)*180/pi
-             write(6,'(" area mismatch (%)   = ",F0.9)') (&
+             write(*,'(" vector mismatch (%) = ",F0.9)') diff*100._real32
+             write(*,'(" angle mismatch (°)  = ",F0.9)') abs(ang1-ang2)*180/pi
+             write(*,'(" area mismatch (%)   = ",F0.9)') (&
                   1-abs(t_area1/t_area2))*100._real32
-             write(6,*) "reduced:",SAV%lreduced
+             write(*,*) "reduced:",SAV%lreduced
           end if
        end if
        !!-----------------------------------------------------------------------
@@ -853,27 +853,27 @@ contains
     type(latmatch_type) :: SAV
 
 
-    write(6,*)
+    write(*,*)
     if(SAV%nfit.eq.0)then
-       write(6,'(" No matches were found within the tolerances supplied.")')
-       write(6,*)
+       write(*,'(" No matches were found within the tolerances supplied.")')
+       write(*,*)
        call exit(1)
     end if
 
-    write(6,'(1X,"BEST MATCH      Area increase: ",I0)') &
+    write(*,'(1X,"BEST MATCH      Area increase: ",I0)') &
          nint(get_area(real(SAV%tf1(1,1,:),real32),real(SAV%tf1(1,2,:),real32)))
-    write(6,'("   Transmat 1:    Transmat 2:")')
-    write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
+    write(*,'("   Transmat 1:    Transmat 2:")')
+    write(*,'((/,1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
          SAV%abc,SAV%abc,&
          SAV%tf1(1,1,1:3),SAV%tf2(1,1,1:3),&
          SAV%tf1(1,2,1:3),SAV%tf2(1,2,1:3),&
          SAV%tf1(1,3,1:3),SAV%tf2(1,3,1:3)
-    write(6,'(" vector mismatch (%) = ",F0.9)') SAV%tol(1,1)
-    write(6,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(1,2)*180/pi
-    write(6,'(" area mismatch (%)   = ",F0.9)') SAV%tol(1,3)
-    write(6,*)
+    write(*,'(" vector mismatch (%) = ",F0.9)') SAV%tol(1,1)
+    write(*,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(1,2)*180/pi
+    write(*,'(" area mismatch (%)   = ",F0.9)') SAV%tol(1,3)
+    write(*,*)
 
-    write(6,'(A)') "EXITING"
+    write(*,'(A)') "EXITING"
 
 
     return
@@ -1117,19 +1117,19 @@ contains
     end if
     if(present(lprint))then
        if(lprint)then
-          write(6,*)
-          write(6,'(1X,"Miller planes considered for lower material: ",I0)') &
+          write(*,*)
+          write(*,'(1X,"Miller planes considered for lower material: ",I0)') &
                size(miller1(:,1))
           do i=1,size(miller1(:,1))
-             write(6,'(2X,I2,")",3X,3(3X,I0))') i,miller1(i,:)
+             write(*,'(2X,I2,")",3X,3(3X,I0))') i,miller1(i,:)
           end do
-          write(6,*)
-          write(6,'(1X,"Miller planes considered for upper material: ",I0)') &
+          write(*,*)
+          write(*,'(1X,"Miller planes considered for upper material: ",I0)') &
                size(miller2(:,1))
           do i=1,size(miller2(:,1))
-             write(6,'(2X,I2,")",3X,3(3X,I0))') i,miller2(i,:)
+             write(*,'(2X,I2,")",3X,3(3X,I0))') i,miller2(i,:)
           end do
-          write(6,*)
+          write(*,*)
        end if
     end if
 
@@ -1300,7 +1300,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Reduce transformation matrices if necessary
 !!!-----------------------------------------------------------------------------
-    write(6,*) "Performing lattice match reduction"
+    write(*,*) "Performing lattice match reduction"
     allocate(lvec1(tol%nstore))
     lvec1=.false.
     OUTLOOP: do i=1,tol%nstore
@@ -1342,7 +1342,7 @@ contains
     end do OUTLOOP
     SAV%tol(:,1) = SAV%tol(:,1)*100._real32
     SAV%tol(:,3) = SAV%tol(:,3)*100._real32
-    write(6,*) "Total number of matches saved:",SAV%nfit
+    write(*,*) "Total number of matches saved:",SAV%nfit
 
 
 !!!-----------------------------------------------------------------------------
@@ -1351,21 +1351,21 @@ contains
     if(present(lprint))then
        if(lprint)then
           do i=1,SAV%nfit
-             write(6,'(/,A,I0,2X,A,I0)') &
+             write(*,'(/,A,I0,2X,A,I0)') &
                   "Fit number: ",i,&
                   "Area increase: ",&
                   nint(get_area(real(SAV%tf1(i,1,:),real32),real(SAV%tf1(i,2,:),real32)))
-             write(6,'("   Transmat 1:    Transmat 2:")')
-             write(6,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
-             write(6,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
+             write(*,'("   Transmat 1:    Transmat 2:")')
+             write(*,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
+             write(*,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
                   SAV%tf1(i,1,1:3),SAV%tf2(i,1,1:3),&
                   SAV%tf1(i,2,1:3),SAV%tf2(i,2,1:3),&
                   SAV%tf1(i,3,1:3),SAV%tf2(i,3,1:3)
-             write(6,'(" vector mismatch (%) = ",F0.9)') SAV%tol(i,1)
-             write(6,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(i,2)*180/pi
-             write(6,'(" area mismatch (%)   = ",F0.9)') SAV%tol(i,3)
-             write(6,*) "reduced:",lvec1(i)
-             write(6,*)
+             write(*,'(" vector mismatch (%) = ",F0.9)') SAV%tol(i,1)
+             write(*,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(i,2)*180/pi
+             write(*,'(" area mismatch (%)   = ",F0.9)') SAV%tol(i,3)
+             write(*,*) "reduced:",lvec1(i)
+             write(*,*)
           end do
        end if
     end if

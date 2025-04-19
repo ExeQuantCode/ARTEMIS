@@ -71,7 +71,7 @@ contains
     ! Local variables
     integer :: itmp1, iterm, term_start, term_end, iterm_step, i
     !! Termination loop variables
-    integer :: ncells, ntrans
+    integer :: num_cells, ntrans
     !! Number of cells in the slab
     integer :: num_structures
     !! Number of structures to be generated
@@ -131,7 +131,7 @@ contains
     bas_map = -1
 
 
-    write(6,'(1X,"Using supplied plane...")')
+    write(*,'(1X,"Using supplied plane...")')
     tfmat = planecutter(tmp_bas1%lat,real(miller_plane,real32))
     call transformer(tmp_bas1,tfmat,bas_map)
     !call err_abort_print_struc(bas,"check.vasp","stop")
@@ -197,7 +197,7 @@ contains
 
     ! determine required extension and perform that
     call set_slab_height(tmp_bas1,bas_map,term,surface_,&
-         height,num_layers_, thickness, ncells,&
+         height,num_layers_, thickness, num_cells,&
          term_start,term_end,iterm_step &
     )
     
@@ -221,7 +221,7 @@ contains
        if(allocated(t1bas_map)) deallocate(t1bas_map)
        allocate(t1bas_map,source=bas_map)
        call build_slab(output(i),bas_map,term,[iterm,surface_(2)],&
-            thickness, ncells, num_layers_, height,&
+            thickness, num_cells, num_layers_, height,&
             "lw", lcycle, orthogonalise_, this%vacuum_gap &
        )
     end do

@@ -267,7 +267,7 @@ contains
        lbracket=scan(buffer,'(',back=.true.)
        rbracket=scan(buffer(lbracket:),')')
        if(lbracket.eq.0.or.rbracket.eq.0)then
-          write(6,'(A,I0)') &
+          write(*,'(A,I0)') &
                ' NOTE: a bracketing error was encountered on line ',iline
           buffer=""
           return
