@@ -1456,22 +1456,18 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
                 interface_depth=interface_depth, separation_scale=separation_scale, \
                 depth_method=depth_method)
         
-        def generate(self, basis_lw, basis_up, miller_lw=None, miller_up=None, \
-            surface_lw=None, surface_up=None, thickness_lw=None, thickness_up=None, \
-            num_layers_lw=None, num_layers_up=None, use_pricel_lw=None, \
-            use_pricel_up=None, is_layered_lw=None, is_layered_up=None, \
-            elastic_constants_lw=None, elastic_constants_up=None, \
+        def generate(self, surface_lw=None, surface_up=None, thickness_lw=None, \
+            thickness_up=None, num_layers_lw=None, num_layers_up=None, \
             print_lattice_match_info=None, print_termination_info=None, \
             print_shift_info=None, break_on_fail=None, icheck_match=None, \
-            interface_idx=None, generate_structures=None, seed=None, 
-            calc=None):
+            interface_idx=None, generate_structures=None, seed=None, verbose=None, \
+            exit_code=None, calc=None):
             """
-            generate__binding__artemis_interface_generator_type(self, basis_lw, basis_up[, \
-                miller_lw, miller_up, surface_lw, surface_up, thickness_lw, thickness_up, \
-                num_layers_lw, num_layers_up, use_pricel_lw, use_pricel_up, is_layered_lw, \
-                is_layered_up, elastic_constants_lw, elastic_constants_up, \
+            generate__binding__artemis_interface_generator_type(self[, surface_lw, \
+                surface_up, thickness_lw, thickness_up, num_layers_lw, num_layers_up, \
                 print_lattice_match_info, print_termination_info, print_shift_info, \
-                break_on_fail, icheck_match, interface_idx, generate_structures, seed])
+                break_on_fail, icheck_match, interface_idx, generate_structures, seed, \
+                verbose, exit_code])
             
             
             Defined at \
@@ -1481,22 +1477,12 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             Parameters
             ----------
             this : Artemis_Interface_Generator_Type
-            basis_lw : Basis_Type
-            basis_up : Basis_Type
-            miller_lw : int array
-            miller_up : int array
             surface_lw : int array
             surface_up : int array
             thickness_lw : float
             thickness_up : float
             num_layers_lw : int
             num_layers_up : int
-            use_pricel_lw : bool
-            use_pricel_up : bool
-            is_layered_lw : bool
-            is_layered_up : bool
-            elastic_constants_lw : float array
-            elastic_constants_up : float array
             print_lattice_match_info : bool
             print_termination_info : bool
             print_shift_info : bool
@@ -1505,6 +1491,8 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             interface_idx : int
             generate_structures : bool
             seed : int
+            verbose : int
+            exit_code : int
             
             """
 
@@ -1518,20 +1506,15 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             if isinstance(basis_up, Atoms):
                 basis_up = geom_rw.basis(atoms=basis_up)
 
-            exit_code = _artemis.f90wrap_intf_gen__generate__binding__aigt(this=self._handle, \
-                basis_lw=basis_lw._handle, basis_up=basis_up._handle, miller_lw=miller_lw, \
-                miller_up=miller_up, surface_lw=surface_lw, surface_up=surface_up, \
-                thickness_lw=thickness_lw, thickness_up=thickness_up, \
-                num_layers_lw=num_layers_lw, num_layers_up=num_layers_up, \
-                use_pricel_lw=use_pricel_lw, use_pricel_up=use_pricel_up, \
-                is_layered_lw=is_layered_lw, is_layered_up=is_layered_up, \
-                elastic_constants_lw=elastic_constants_lw, \
-                elastic_constants_up=elastic_constants_up, \
+            exit_code = _artemis.f90wrap_artemis__interface_generator__generate__binding__ar04c1(this=self._handle, \
+                surface_lw=surface_lw, surface_up=surface_up, thickness_lw=thickness_lw, \
+                thickness_up=thickness_up, num_layers_lw=num_layers_lw, \
+                num_layers_up=num_layers_up, \
                 print_lattice_match_info=print_lattice_match_info, \
                 print_termination_info=print_termination_info, \
                 print_shift_info=print_shift_info, break_on_fail=break_on_fail, \
                 icheck_match=icheck_match, interface_idx=interface_idx, \
-                generate_structures=generate_structures, seed=seed \
+                generate_structures=generate_structures, seed=seed, verbose=verbose
             )
         
             structures = self.get_structures(calc)
@@ -1601,6 +1584,256 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
             _raffle.f90wrap_artemis_intf_gen_type__set__max_num_structures(self._handle, \
                 max_num_structures)
 
+        @property
+        def structure_lw(self):
+            """
+            Element structure_lw ftype=type(basis_type) pytype=Basis_Type
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                line 32
+            
+            """
+            structure_lw_handle = \
+                _artemis.f90wrap_artemis_interface_generator_type__get__structure_lw(self._handle)
+            if tuple(structure_lw_handle) in self._objs:
+                structure_lw = self._objs[tuple(structure_lw_handle)]
+            else:
+                structure_lw = artemis__geom_rw.basis_type.from_handle(structure_lw_handle)
+                self._objs[tuple(structure_lw_handle)] = structure_lw
+            return structure_lw
+        
+        @structure_lw.setter
+        def structure_lw(self, structure_lw):
+            structure_lw = structure_lw._handle
+            _artemis.f90wrap_artemis_interface_generator_type__set__structure_lw(self._handle, \
+                structure_lw)
+        
+        @property
+        def structure_up(self):
+            """
+            Element structure_up ftype=type(basis_type) pytype=Basis_Type
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                line 32
+            
+            """
+            structure_up_handle = \
+                _artemis.f90wrap_artemis_interface_generator_type__get__structure_up(self._handle)
+            if tuple(structure_up_handle) in self._objs:
+                structure_up = self._objs[tuple(structure_up_handle)]
+            else:
+                structure_up = artemis__geom_rw.basis_type.from_handle(structure_up_handle)
+                self._objs[tuple(structure_up_handle)] = structure_up
+            return structure_up
+        
+        @structure_up.setter
+        def structure_up(self, structure_up):
+            structure_up = structure_up._handle
+            _artemis.f90wrap_artemis_interface_generator_type__set__structure_up(self._handle, \
+                structure_up)
+        
+        @property
+        def elastic_constants_lw(self):
+            """
+            Element elastic_constants_lw ftype=real(real32) pytype=float
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                line 34
+            
+            """
+            array_ndim, array_type, array_shape, array_handle = \
+                _artemis.f90wrap_artemis_interface_generator_type__array__elastic_co4c3f(self._handle)
+            if array_handle in self._arrays:
+                elastic_constants_lw = self._arrays[array_handle]
+            else:
+                elastic_constants_lw = \
+                    f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
+                                        self._handle,
+                                        _artemis.f90wrap_artemis_interface_generator_type__array__elastic_co4c3f)
+                self._arrays[array_handle] = elastic_constants_lw
+            return elastic_constants_lw
+        
+        @elastic_constants_lw.setter
+        def elastic_constants_lw(self, elastic_constants_lw):
+            self.elastic_constants_lw[...] = elastic_constants_lw
+        
+        @property
+        def elastic_constants_up(self):
+            """
+            Element elastic_constants_up ftype=real(real32) pytype=float
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                line 34
+            
+            """
+            array_ndim, array_type, array_shape, array_handle = \
+                _artemis.f90wrap_artemis_interface_generator_type__array__elastic_coedb6(self._handle)
+            if array_handle in self._arrays:
+                elastic_constants_up = self._arrays[array_handle]
+            else:
+                elastic_constants_up = \
+                    f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
+                                        self._handle,
+                                        _artemis.f90wrap_artemis_interface_generator_type__array__elastic_coedb6)
+                self._arrays[array_handle] = elastic_constants_up
+            return elastic_constants_up
+        
+        @elastic_constants_up.setter
+        def elastic_constants_up(self, elastic_constants_up):
+            self.elastic_constants_up[...] = elastic_constants_up
+        
+        @property
+        def use_pricel_lw(self):
+            """
+            Element use_pricel_lw ftype=logical pytype=bool
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                line 36
+            
+            """
+            return \
+                _artemis.f90wrap_artemis_interface_generator_type__get__use_pricel_lw(self._handle)
+        
+        @use_pricel_lw.setter
+        def use_pricel_lw(self, use_pricel_lw):
+            _artemis.f90wrap_artemis_interface_generator_type__set__use_pricel_lw(self._handle, \
+                use_pricel_lw)
+        
+        @property
+        def use_pricel_up(self):
+            """
+            Element use_pricel_up ftype=logical pytype=bool
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                line 36
+            
+            """
+            return \
+                _artemis.f90wrap_artemis_interface_generator_type__get__use_pricel_up(self._handle)
+        
+        @use_pricel_up.setter
+        def use_pricel_up(self, use_pricel_up):
+            _artemis.f90wrap_artemis_interface_generator_type__set__use_pricel_up(self._handle, \
+                use_pricel_up)
+        
+        @property
+        def miller_lw(self):
+            """
+            Element miller_lw ftype=integer pytype=int
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                line 38
+            
+            """
+            array_ndim, array_type, array_shape, array_handle = \
+                _artemis.f90wrap_artemis_interface_generator_type__array__miller_lw(self._handle)
+            if array_handle in self._arrays:
+                miller_lw = self._arrays[array_handle]
+            else:
+                miller_lw = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
+                                        self._handle,
+                                        _artemis.f90wrap_artemis_interface_generator_type__array__miller_lw)
+                self._arrays[array_handle] = miller_lw
+            return miller_lw
+        
+        @miller_lw.setter
+        def miller_lw(self, miller_lw):
+            self.miller_lw[...] = miller_lw
+        
+        @miller_up.setter
+        def miller_up(self, miller_up):
+            self.miller_up[...] = miller_up
+        
+        @property
+        def is_layered_lw(self):
+            """
+            Element is_layered_lw ftype=logical pytype=bool
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                line 40
+            
+            """
+            return \
+                _artemis.f90wrap_artemis_interface_generator_type__get__is_layered_lw(self._handle)
+        
+        @is_layered_lw.setter
+        def is_layered_lw(self, is_layered_lw):
+            _artemis.f90wrap_artemis_interface_generator_type__set__is_layered_lw(self._handle, \
+                is_layered_lw)
+        
+        @property
+        def is_layered_up(self):
+            """
+            Element is_layered_up ftype=logical pytype=bool
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                line 40
+            
+            """
+            return \
+                _artemis.f90wrap_artemis_interface_generator_type__get__is_layered_up(self._handle)
+        
+        @is_layered_up.setter
+        def is_layered_up(self, is_layered_up):
+            _artemis.f90wrap_artemis_interface_generator_type__set__is_layered_up(self._handle, \
+                is_layered_up)
+        
+        @property
+        def ludef_is_layered_lw(self):
+            """
+            Element ludef_is_layered_lw ftype=logical pytype=bool
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                line 42
+            
+            """
+            return \
+                _artemis.f90wrap_artemis_interface_generator_type__get__ludef_is_lay4aa6(self._handle)
+        
+        @ludef_is_layered_lw.setter
+        def ludef_is_layered_lw(self, ludef_is_layered_lw):
+            _artemis.f90wrap_artemis_interface_generator_type__set__ludef_is_lay87a5(self._handle, \
+                ludef_is_layered_lw)
+        
+        @property
+        def ludef_is_layered_up(self):
+            """
+            Element ludef_is_layered_up ftype=logical pytype=bool
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                line 42
+            
+            """
+            return \
+                _artemis.f90wrap_artemis_interface_generator_type__get__ludef_is_lay60fd(self._handle)
+        
+        @ludef_is_layered_up.setter
+        def ludef_is_layered_up(self, ludef_is_layered_up):
+            _artemis.f90wrap_artemis_interface_generator_type__set__ludef_is_laye6e4(self._handle, \
+                ludef_is_layered_up)
+        
         @property
         def shift_method(self):
             """
@@ -2025,7 +2258,35 @@ class Interface_Generator(f90wrap.runtime.FortranModule):
 
         def __str__(self):
             ret = ['<artemis_interface_generator_type>{\n']
-            ret.append('    shift_method : ')
+            ret.append('       num_structures : ')
+            ret.append(repr(self.num_structures))
+            ret.append(',\n    max_num_structures : ')
+            ret.append(repr(self.max_num_structures))
+            ret.append('\n     structure_lw : ')
+            ret.append(repr(self.structure_lw))
+            ret.append(',\n    structure_up : ')
+            ret.append(repr(self.structure_up))
+            ret.append(',\n    elastic_constants_lw : ')
+            ret.append(repr(self.elastic_constants_lw))
+            ret.append(',\n    elastic_constants_up : ')
+            ret.append(repr(self.elastic_constants_up))
+            ret.append(',\n    use_pricel_lw : ')
+            ret.append(repr(self.use_pricel_lw))
+            ret.append(',\n    use_pricel_up : ')
+            ret.append(repr(self.use_pricel_up))
+            ret.append(',\n    miller_lw : ')
+            ret.append(repr(self.miller_lw))
+            ret.append(',\n    miller_up : ')
+            ret.append(repr(self.miller_up))
+            ret.append(',\n    is_layered_lw : ')
+            ret.append(repr(self.is_layered_lw))
+            ret.append(',\n    is_layered_up : ')
+            ret.append(repr(self.is_layered_up))
+            ret.append(',\n    ludef_is_layered_lw : ')
+            ret.append(repr(self.ludef_is_layered_lw))
+            ret.append(',\n    ludef_is_layered_up : ')
+            ret.append(repr(self.ludef_is_layered_up))
+            ret.append('\n     shift_method : ')
             ret.append(repr(self.shift_method))
             ret.append(',\n    num_shifts : ')
             ret.append(repr(self.num_shifts))
