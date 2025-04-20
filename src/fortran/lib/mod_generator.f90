@@ -9,13 +9,13 @@ module artemis__generator
   use artemis__misc,          only: to_lower,to_upper
   use artemis__misc_types,    only: abstract_artemis_generator_type, latmatch_type, tol_type
   use artemis__geom_rw,       only: basis_type,geom_write
-  use lat_compare,            only: get_best_match
+  use lat_compare,            only: lattice_matching, cyc_lat1
   use artemis__io_utils,      only: err_abort, print_warning, stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
   use misc_linalg,            only: uvec,modu,get_area,inverse,cross
   use interface_identifier,   only: intf_info_type,&
        get_interface,get_layered_axis,gen_DON
-  use edit_geom,              only: planecutter,primitive_lat,ortho_axis,&
+  use artemis__geom_utils,              only: planecutter,primitive_lat,ortho_axis,&
        shift_region,set_vacuum,transformer,shifter,reducer,&
        get_min_bulk_bond,get_shortest_bond,bond_type,&
        share_strain, MATNORM, basis_stack, compare_stoichiometry
@@ -41,7 +41,7 @@ module artemis__generator
     logical :: use_pricel_lw = .true., use_pricel_up = .true.
     !! Use primitive cell for lower and upper bulk structures
     
-    integer, dimension(3) :: miller_lw = [ 0, 0, 0], miller_up = [ 0, 0, 0 ]
+    integer, dimension(3) :: miller_lw = [ 0, 0, 0 ], miller_up = [ 0, 0, 0 ]
     !! Miller indices for the lower and upper bulk structures
     logical :: is_layered_lw = .false., is_layered_up = .false.
     !! Boolean whether the lower and upper bulk structures are layered
@@ -70,7 +70,6 @@ module artemis__generator
     !! Data of mismatches for each interface
     !! index 1 is length 3, element 1 = length, element 2 = angle, element 3 = area
     !! index 2 is the interface number in structures
-
     real(real32), dimension(:,:), allocatable :: shift_data
     !! Data of shifts for each interface, where index 1 is the interface number in structures
 
@@ -96,10 +95,10 @@ module artemis__generator
     integer :: max_num_planes = 10
     !! Maximum number of planes
 
-    logical :: fix_normal = .true. !! compensate_strains_parallel = .true.
-    !! Fix the lattice constants parallel to the interface normal vector
-    !! Fix = true = strained
-    !! Fix = false = relaxed (compensate for interfacial strain by extending/compressing)
+    logical :: compensate_normal = .true.
+    !! Compensate mismatch strain by adjusting the axes parallel to the interface normal vector
+    !! Compensate = false = strained
+    !! Compensate = true = relaxed (compensate for interfacial strain by extending/compressing)
     
     real(real32) :: bondlength_cutoff = 6._real32
     !! Maximum bond length cutoff for the bulk structures
@@ -114,6 +113,11 @@ module artemis__generator
     !! Set tolerance for identifying good lattice matches
     procedure, pass(this) :: set_shift_method
     !! Set the shift method and associated data
+    procedure, pass(this) :: set_swap_method
+    !! Set the swap method and associated data
+    procedure, pass(this) :: set_match_method
+    !! Set the lattice match method and associated data
+
     procedure, pass(this) :: set_materials
     !! Set the input materials for the interface generator
     procedure, pass(this) :: set_surface_properties
@@ -196,7 +200,8 @@ contains
   subroutine set_shift_method( &
        this, &
        method, num_shifts, shifts, &
-       interface_depth, separation_scale, depth_method &
+       interface_depth, separation_scale, depth_method, &
+       bondlength_cutoff &
   )
     !! Set the shift method
     implicit none
@@ -216,6 +221,8 @@ contains
     !! Separation scale
     integer, intent(in), optional :: depth_method
     !! Method for determining the depth to which consider atoms from interface
+    real(real32), intent(in), optional :: bondlength_cutoff
+    !! Bond length cutoff for the bulk structures
 
     ! Local variables
     character(len=256) :: err_msg
@@ -225,6 +232,7 @@ contains
     if(present(interface_depth)) this%interface_depth = interface_depth
     if(present(separation_scale)) this%separation_scale = separation_scale
     if(present(depth_method)) this%depth_method = depth_method
+    if(present(bondlength_cutoff)) this%bondlength_cutoff = bondlength_cutoff
     if(present(shifts)) then
        if(allocated(this%shifts)) deallocate(this%shifts)
        select rank(shifts)
@@ -276,6 +284,74 @@ contains
 
 
 !###############################################################################
+  subroutine set_swap_method( &
+       this, method, num_swaps, swap_density, swap_depth, swap_sigma, &
+       require_mirror_swaps &
+  )
+    !! Set the swap method
+    implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(inout) :: this
+    !! Instance of artemis generator type
+    integer, intent(in), optional :: method
+    !! Swap method
+    integer, intent(in), optional :: num_swaps
+    !! Number of swaps
+    real(real32), intent(in), optional :: swap_density
+    !! Swap density
+    real(real32), intent(in), optional :: swap_depth
+    !! Swap depth
+    real(real32), intent(in), optional :: swap_sigma
+    !! Swap sigma
+    logical, intent(in), optional :: require_mirror_swaps
+    !! Require mirror swaps
+
+    if(present(method)) this%swap_method = method
+    if(present(num_swaps)) this%num_swaps = num_swaps
+    if(present(swap_density)) this%swap_density = swap_density
+    if(present(swap_depth)) this%swap_depth = swap_depth
+    if(present(swap_sigma)) this%swap_sigma = swap_sigma
+    if(present(require_mirror_swaps)) &
+         this%require_mirror_swaps = require_mirror_swaps
+
+  end subroutine set_swap_method
+!###############################################################################
+
+
+!###############################################################################
+  subroutine set_match_method( &
+       this, method, max_num_matches, max_num_terms, max_num_planes, &
+       compensate_normal &
+  )
+    !! Set the lattice match method
+    implicit none
+   
+    ! Arguments
+    class(artemis_generator_type), intent(inout) :: this
+    !! Instance of artemis generator type
+    integer, intent(in), optional :: method
+    !! Match method
+    integer, intent(in), optional :: max_num_matches
+    !! Maximum number of matches
+    integer, intent(in), optional :: max_num_terms
+    !! Maximum number of terminations
+    integer, intent(in), optional :: max_num_planes
+    !! Maximum number of planes
+    logical, intent(in), optional :: compensate_normal
+    !! Compensate mismatch strain by adjusting the axes parallel to the interface normal vector
+   
+    if(present(method)) this%match_method = method
+    if(present(max_num_matches)) this%max_num_matches = max_num_matches
+    if(present(max_num_terms)) this%max_num_terms = max_num_terms
+    if(present(max_num_planes)) this%max_num_planes = max_num_planes
+    if(present(compensate_normal)) this%compensate_normal = compensate_normal
+   
+  end subroutine set_match_method
+!###############################################################################
+
+
+!###############################################################################
   subroutine set_materials( &
        this, structure_lw, structure_up, &
        elastic_constants_lw, elastic_constants_up, &
@@ -287,9 +363,9 @@ contains
     ! Arguments
     class(artemis_generator_type), intent(inout) :: this
     !! Instance of artemis generator type
-    type(basis_type), intent(in) :: structure_lw
+    type(basis_type), intent(in), optional :: structure_lw
     !! Lower bulk structure
-    type(basis_type), intent(in) :: structure_up
+    type(basis_type), intent(in), optional :: structure_up
     !! Upper bulk structure
     real(real32), dimension(:), intent(in), optional :: elastic_constants_lw
     !! Elastic constants for the lower bulk structure
@@ -303,8 +379,8 @@ contains
     character(len=256) :: err_msg
 
 
-    this%structure_lw = structure_lw
-    this%structure_up = structure_up
+    if(present(structure_lw)) call this%structure_lw%copy(structure_lw, length=4)
+    if(present(structure_up)) call this%structure_up%copy(structure_up, length=4)
 
     !---------------------------------------------------------------------------
     ! Handle the elastic constants
@@ -332,7 +408,10 @@ contains
   subroutine set_surface_properties( &
        this, &
        miller_lw, miller_up, &
-       is_layered_lw, is_layered_up &
+       is_layered_lw, is_layered_up, &
+       layer_separation_cutoff_lw, layer_separation_cutoff_up, &
+       layer_separation_cutoff, &
+       vacuum_gap &
   )
     !! Set the surface properties for the interface generator
     implicit none
@@ -350,6 +429,20 @@ contains
     logical, intent(in), optional :: is_layered_up
     !! Boolean whether the upper bulk structure is layered
 
+    real(real32), intent(in), optional :: layer_separation_cutoff_lw
+    !! Layer separation cutoff for the lower bulk structure
+    real(real32), intent(in), optional :: layer_separation_cutoff_up
+    !! Layer separation cutoff for the upper bulk structure
+    real(real32), dimension(..), intent(in), optional :: layer_separation_cutoff
+    !! Layer separation cutoff
+
+    real(real32), intent(in), optional :: vacuum_gap
+    !! Vacuum gap for termination generator
+
+    ! Local variables
+    character(len=256) :: err_msg
+    !! Error message
+
 
     if(present(miller_lw)) this%miller_lw = miller_lw
     if(present(miller_up)) this%miller_up = miller_up
@@ -361,6 +454,46 @@ contains
     if(present(is_layered_up))then
        this%is_layered_up = is_layered_up
        this%ludef_is_layered_up = .true.
+    end if
+
+    if(present(vacuum_gap)) this%vacuum_gap = vacuum_gap
+
+    if(present(layer_separation_cutoff_lw)) &
+         this%layer_separation_cutoff(1) = layer_separation_cutoff_lw
+    if(present(layer_separation_cutoff_up)) &
+         this%layer_separation_cutoff(2) = layer_separation_cutoff_up
+
+    if( ( present(layer_separation_cutoff_lw) .or. &
+         present(layer_separation_cutoff_up) ) .and. &
+         present(layer_separation_cutoff) ) then
+       write(err_msg,'(A)') &
+            "The layer separation cutoff is defined in two ways. Please use only one."
+       call stop_program(trim(err_msg))
+       return
+    elseif(present(layer_separation_cutoff))then
+       select rank(layer_separation_cutoff)
+       rank(0)
+          this%layer_separation_cutoff(:) = layer_separation_cutoff
+       rank(1)
+          select case(size(layer_separation_cutoff,dim=1))
+          case(1)
+             this%layer_separation_cutoff = layer_separation_cutoff(1)
+          case(2)
+             this%layer_separation_cutoff = layer_separation_cutoff
+          case default
+             write(err_msg,'(A,I0,A)') &
+                  "The layer separation cutoff vector has ", &
+                  size(layer_separation_cutoff,dim=1), &
+                  " components. It should have 1 or 2."
+             call stop_program(trim(err_msg))
+             return
+          end select
+       rank default
+          write(err_msg,'(A,I0,A)') &
+               "The layer separation cutoff only accepts rank 0 or 1."
+          call stop_program(trim(err_msg))
+          return
+       end select
     end if
    
    end subroutine set_surface_properties
@@ -677,16 +810,17 @@ contains
 
 
 !###############################################################################
-  subroutine generate_intefaces_from_existing(this, basis, interface_location, &
+  subroutine generate_intefaces_from_existing( &
+       this, structure, interface_location, &
        print_shift_info, seed, verbose, exit_code &
   )
-    !! Generate interfaces for the given basis
+    !! Generate swaps and shifts for an existing interface
     implicit none
 
     ! Arguments
     class(artemis_generator_type), intent(inout) :: this
     !! Instance of artemis generator type
-    type(basis_type), intent(in) :: basis
+    type(basis_type), intent(in) :: structure
     !! Atomic structure data
     real(real32), dimension(2), intent(in), optional :: interface_location
     !! Interface location
@@ -760,38 +894,33 @@ contains
       intf%axis = this%axis
       intf%loc = interface_location
     else
-       intf=get_interface(basis%lat,basis,this%axis)
-       intf%loc=intf%loc/modu(basis%lat(intf%axis,:))
-       write(*,*) "interface axis:",intf%axis
-       write(*,*) "interface loc:",intf%loc
-       !! write interface location to a file for user to refer back to
-      !  open(unit=10,file="interface_location.dat")
-      !  write(10,'(1X,"AXIS = ",I0)') intf%axis
-      !  write(10,'(1X,"INTF_LOC = ",2(2X,F9.6))') intf%loc
-      !  close(10)
+       intf=get_interface(structure%lat,structure,this%axis)
+       intf%loc=intf%loc/modu(structure%lat(intf%axis,:))
+       if(verbose_.gt.0) write(*,*) "interface axis:",intf%axis
+       if(verbose_.gt.0) write(*,*) "interface loc:",intf%loc
     end if
-    specloop1: do is=1,basis%nspec
-       atomloop1: do ia=1,basis%spec(is)%num
+    specloop1: do is=1,structure%nspec
+       atomloop1: do ia=1,structure%spec(is)%num
 
-          specloop2: do js=1,basis%nspec
-             atomloop2: do ja=1,basis%spec(js)%num
+          specloop2: do js=1,structure%nspec
+             atomloop2: do ja=1,structure%spec(js)%num
                 if(is.eq.js.and.ia.eq.ja) cycle atomloop2
                 if( &
-                     ( basis%spec(is)%atom(ia,intf%axis).gt.intf%loc(1).and.&
-                     basis%spec(is)%atom(ia,intf%axis).lt.intf%loc(2) ).and.&
-                     ( basis%spec(js)%atom(ja,intf%axis).gt.intf%loc(1).and.&
-                     basis%spec(js)%atom(ja,intf%axis).lt.intf%loc(2) ) )then
-                   vtmp1 = (basis%spec(is)%atom(ia,:3)-basis%spec(js)%atom(ja,:3))
-                   vtmp1 = matmul(vtmp1,basis%lat)
+                     ( structure%spec(is)%atom(ia,intf%axis).gt.intf%loc(1).and.&
+                     structure%spec(is)%atom(ia,intf%axis).lt.intf%loc(2) ).and.&
+                     ( structure%spec(js)%atom(ja,intf%axis).gt.intf%loc(1).and.&
+                     structure%spec(js)%atom(ja,intf%axis).lt.intf%loc(2) ) )then
+                   vtmp1 = (structure%spec(is)%atom(ia,:3)-structure%spec(js)%atom(ja,:3))
+                   vtmp1 = matmul(vtmp1,structure%lat)
                    dtmp1 = modu(vtmp1)
                    if(dtmp1.lt.min_bond1) min_bond1 = dtmp1
                 elseif( &
-                     ( basis%spec(is)%atom(ia,intf%axis).lt.intf%loc(1).or.&
-                     basis%spec(is)%atom(ia,intf%axis).gt.intf%loc(2) ).and.&
-                     ( basis%spec(js)%atom(ja,intf%axis).lt.intf%loc(1).or.&
-                     basis%spec(js)%atom(ja,intf%axis).gt.intf%loc(2) ) )then
-                   vtmp1 = (basis%spec(is)%atom(ia,:3)-basis%spec(js)%atom(ja,:3))
-                   vtmp1 = matmul(vtmp1,basis%lat)
+                     ( structure%spec(is)%atom(ia,intf%axis).lt.intf%loc(1).or.&
+                     structure%spec(is)%atom(ia,intf%axis).gt.intf%loc(2) ).and.&
+                     ( structure%spec(js)%atom(ja,intf%axis).lt.intf%loc(1).or.&
+                     structure%spec(js)%atom(ja,intf%axis).gt.intf%loc(2) ) )then
+                   vtmp1 = (structure%spec(is)%atom(ia,:3)-structure%spec(js)%atom(ja,:3))
+                   vtmp1 = matmul(vtmp1,structure%lat)
                    dtmp1 = modu(vtmp1)
                    if(dtmp1.lt.min_bond2) min_bond2 = dtmp1
                 end if
@@ -803,11 +932,11 @@ contains
     end do specloop1
 
     min_bond = ( min_bond1 + min_bond2 ) / 2._real32
-    write(*,'(1X,"Avg min bulk bond: ",F0.3," Å")') min_bond
-    write(*,'(1X,"Trans-interfacial scaling factor:",F0.3)') this%separation_scale
+    if(verbose_.gt.0) write(*,'(1X,"Avg min bulk bond: ",F0.3," Å")') min_bond
+    if(verbose_.gt.0) write(*,'(1X,"Trans-interfacial scaling factor:",F0.3)') this%separation_scale
     this%axis = intf%axis
     call this%generate_perturbations( &
-         basis, intf%loc, &
+         structure, intf%loc, &
          min_bond, bulk_DON, &
          print_shift_info_, seed_arr, verbose_, exit_code_ &
     )
@@ -824,6 +953,7 @@ contains
        surface_lw, surface_up, &
        thickness_lw, thickness_up, &
        num_layers_lw, num_layers_up, &
+       reduce_matches, &
        print_lattice_match_info, print_termination_info, print_shift_info, &
        break_on_fail, &
        icheck_match, interface_idx, &
@@ -848,6 +978,8 @@ contains
     !! Number of layers in the lower slab
     integer, intent(in), optional :: num_layers_up
     !! Number of layers in the upper slab
+    logical, intent(in), optional :: reduce_matches
+    !! Reduce lattice matches to their smallest cell (UNSTABLE)
 
     logical, intent(in), optional :: break_on_fail
     !! Break on failure
@@ -930,14 +1062,14 @@ contains
 
     integer :: ntrans, iunique, itmp1, num_structures_old
     integer :: layered_axis_lw, layered_axis_up
-    character(3) :: abc
-    character(1024) :: pwd, intf_dir, dirpath, msg
     type(confine_type) :: confine
     type(latmatch_type) :: SAV
     type(term_arr_type) :: lw_term, up_term
     integer, dimension(3) :: ivtmp1
     real(real32), dimension(2) :: intf_loc
     real(real32), dimension(3) :: init_offset
+    logical :: reduce_matches_
+    !! Boolean whether to reduce lattice matches to their smallest cell
     real(real32), dimension(3,3) :: tfmat
     !! Transformation matrix
     type(bulk_DON_type), dimension(2) :: bulk_DON
@@ -957,7 +1089,9 @@ contains
     !---------------------------------------------------------------------------
     exit_code_ = 0
     verbose_ = 0
+    reduce_matches_ = .false.
     if(present(verbose)) verbose_ = verbose
+    if(present(reduce_matches)) reduce_matches_ = reduce_matches
 
     icheck_match_ = -1; interface_idx_ = -1
     if(present(icheck_match)) icheck_match_ = icheck_match
@@ -1055,10 +1189,11 @@ contains
        case(2)
           surface_lw_ = surface_lw
        case default
-          write(msg,'(A,I0,A)') &
-               "ERROR: The surface vector for the lower material has ", &
+          write(err_msg,'(A,I0,A)') &
+               "The surface vector for the lower material has ", &
                size(surface_lw, dim=1), " components. It should have 1 or 2."
-          call err_abort(trim(msg),fmtd=.true.)
+          call stop_program(trim(err_msg))
+          return
        end select
     end if
     if(present(surface_up))then
@@ -1068,10 +1203,10 @@ contains
        case(2)
           surface_up_ = surface_up
        case default
-          write(msg,'(A,I0,A)') &
-               "ERROR: The surface vector for the upper material has ", &
+          write(err_msg,'(A,I0,A)') &
+               "The surface vector for the upper material has ", &
                size(surface_up, dim=1), " components. It should have 1 or 2."
-          call err_abort(trim(msg),fmtd=.true.)
+          call stop_program(trim(err_msg))
        end select
     end if
 
@@ -1089,18 +1224,18 @@ contains
     if(present(thickness_lw)) thickness_lw_ = thickness_lw
     if(present(thickness_up)) thickness_up_ = thickness_up
     if(num_layers_lw_.le.0.and.thickness_lw_.le.0._real32)then
-       write(msg,'(A,I0,A)') &
-            "ERROR: The number of layers for the lower material is ", &
+       write(err_msg,'(A,I0,A)') &
+            "The number of layers for the lower material is ", &
             num_layers_lw_, " and the thickness is ", thickness_lw_, &
             " One of these must be greater than 0."
-       call err_abort(trim(msg),fmtd=.true.)
+       call stop_program(trim(err_msg))
     end if
     if(num_layers_up_.le.0.and.thickness_up_.le.0._real32)then
-       write(msg,'(A,I0,A)') &
-            "ERROR: The number of layers for the upper material is ", &
+       write(err_msg,'(A,I0,A)') &
+            "The number of layers for the upper material is ", &
             num_layers_up_, " and the thickness is ", thickness_up_, &
             " One of these must be greater than 0."
-       call err_abort(trim(msg),fmtd=.true.)
+       call stop_program(trim(err_msg))
     end if
 
 
@@ -1142,7 +1277,8 @@ contains
                &" distance (MAX_BONDLENGTH = ", this%bondlength_cutoff, " Å)." // achar(10) //&
                &" To proceed with the current shift method," //&
                &" increase MAX_BONDLENGTH."
-          call err_abort(trim(err_msg),fmtd=.true.)
+          call stop_program(trim(err_msg))
+          return
        end if
        !call exit()
        up_map=0
@@ -1163,7 +1299,8 @@ contains
                &" distance (MAX_BONDLENGTH = ", this%bondlength_cutoff, " Å)." // achar(10) //&
                &" To proceed with the current shift method," //&
                &" increase MAX_BONDLENGTH."
-          call err_abort(trim(err_msg),fmtd=.true.)
+          call stop_program(trim(err_msg))
+          return
        end if
     else
        lw_map=-1
@@ -1179,16 +1316,16 @@ contains
        ivtmp1 = 0
        ivtmp1(layered_axis_lw)=1
        if(this%ludef_is_layered_lw)then
-          write(msg,'("Lower crystal appears layered along axis ",I0,"\n&
+          write(err_msg,'("Lower crystal appears layered along axis ",I0,"\n&
                &Partial layer terminations will be generated\n&
                &We suggest using LW_MILLER =",3(1X,I1))') layered_axis_lw,ivtmp1
-          call print_warning(trim(msg))
+          call print_warning(trim(err_msg))
        else
-          write(msg,'("Lower crystal has been identified as layered\nalong",3(1X,I1),"\n&
+          write(err_msg,'("Lower crystal has been identified as layered\nalong",3(1X,I1),"\n&
                &Confining crystal to this plane and\nstoichiometric terminations.\n&
                &If you don''t want this, set\nLW_LAYERED = .FALSE.")') &
                ivtmp1
-          call print_warning(trim(msg))
+          call print_warning(trim(err_msg))
           miller_lw=ivtmp1
           this%is_layered_lw=.true.
        end if
@@ -1201,16 +1338,16 @@ contains
        ivtmp1=0
        ivtmp1(layered_axis_up)=1
        if(this%ludef_is_layered_up)then
-          write(msg,'("Upper crystal appears layered along axis ",I0,"\n&
+          write(err_msg,'("Upper crystal appears layered along axis ",I0,"\n&
                &Partial layer terminations will be generated\n&
                &We suggest using UP_MILLER =",3(1X,I1))') layered_axis_up,ivtmp1
-          call print_warning(trim(msg))
+          call print_warning(trim(err_msg))
        else
-          write(msg,'("Upper crystal has been identified as layered\nalong",3(1X,I1),"\n&
+          write(err_msg,'("Upper crystal has been identified as layered\nalong",3(1X,I1),"\n&
                &Confining crystal to this plane and\nstoichiometric terminations.\n&
                &If you don''t want this, set\nUP_LAYERED = .FALSE.")') &
                ivtmp1
-          call print_warning(trim(msg))
+          call print_warning(trim(err_msg))
           miller_up=ivtmp1
           this%is_layered_up=.true.
        end if
@@ -1223,42 +1360,27 @@ contains
     ! Finds and stores the best matches between the materials
     !---------------------------------------------------------------------------
     num_structures_old = -1
-    abc="abc"
-    if(any(miller_lw.ne.0))then
-       if(this%match_method.ne.0)then
-          abc="ab"
-          tfmat=planecutter(structure_lw%lat,real(miller_lw,real32))
-          call transformer(structure_lw,tfmat,lw_map)
-          SAV=get_best_match(&
-               this%tolerance,&
-               structure_lw,structure_up,&
-               trim(abc),"abc",print_lattice_match_info_,ierror,imatch=this%match_method)
-       elseif(any(miller_up.ne.0))then
-          SAV=get_best_match(&
-               this%tolerance,&
-               structure_lw,structure_up,&
-               trim(abc),"abc",print_lattice_match_info_,ierror,imatch=this%match_method,&
-               plane1=miller_lw,plane2=miller_up,nmiller=this%max_num_planes)
-       else
-          SAV=get_best_match(&
-               this%tolerance,&
-               structure_lw,structure_up,&
-               trim(abc),"abc",print_lattice_match_info_,ierror,imatch=this%match_method,&
-               plane1=miller_lw,nmiller=this%max_num_planes)
-       end if
-    elseif(any(miller_up.ne.0))then
-       SAV=get_best_match(&
-            this%tolerance,&
-            structure_lw,structure_up,&
-            trim(abc),"abc",print_lattice_match_info_,ierror,imatch=this%match_method,&
-            plane2=miller_up,nmiller=this%max_num_planes)
-    else
-       SAV=get_best_match(&
-            this%tolerance,&
-            structure_lw,structure_up,&
-            trim(abc),"abc",print_lattice_match_info_,ierror,imatch=this%match_method,&
-            nmiller=this%max_num_planes)
+    if(this%match_method.ne.0)then
+       tfmat = planecutter(structure_lw%lat,real(miller_lw,real32))
+       call transformer(structure_lw,tfmat,lw_map)
     end if
+    call SAV%init( &
+         this%tolerance, structure_lw%lat, structure_up%lat, &
+         reduce_matches_ &
+    )
+    select case(this%match_method)
+    case(0)
+       call lattice_matching(&
+            SAV, this%tolerance, &
+            structure_lw, structure_up, &
+            miller_lw = miller_lw, miller_up = miller_up, &
+            max_num_planes = this%max_num_planes, &
+            verbose = merge(1,verbose_,print_lattice_match_info_) &
+       )
+    case default
+       call SAV%constrain_axes(miller_lw, miller_up, verbose = verbose_)
+       call cyc_lat1(SAV, this%tolerance, this%match_method, verbose = verbose_)
+    end select
     if(min(this%tolerance%nstore,SAV%nfit).eq.0)then
        write(err_msg,'("No matches found between the two structures")')
        call print_warning(trim(err_msg))
@@ -1395,12 +1517,13 @@ contains
           cycle intf_loop
        end if
        if(any(surface_lw_.gt.lw_term%nterm))then
-          write(msg, '("surface_lw_ACE VALUES INVALID!\nOne or more value &
+          write(err_msg, '("surface_lw_ACE VALUES INVALID!\nOne or more value &
                &exceeds the maximum number of terminations in the &
                structure.\n&
                &  Supplied values: ",I0,1X,I0,"\n&
                &  Maximum allowed: ",I0)') surface_lw_, lw_term%nterm
-          call err_abort(trim(msg),fmtd=.true.)
+          call err_abort(trim(err_msg),fmtd=.true.)
+          return
        end if
 
 
@@ -1409,9 +1532,10 @@ contains
        !!-----------------------------------------------------------------------
        !call setup_ladder(supercell_lw%lat,supercell_lw,this%axis,lw_term)
        if(sum(lw_term%arr(:)%natom)*lw_term%nstep.ne.supercell_lw%natom)then
-          write(msg, '("ERROR: Number of atoms in lower layers not correct: "&
+          write(err_msg, '("Number of atoms in lower layers not correct: "&
                &I0,2X,I0)') sum(lw_term%arr(:)%natom)*lw_term%nstep,supercell_lw%natom
-          call err_abort(trim(msg),fmtd=.true.)
+          call err_abort(trim(err_msg),fmtd=.true.)
+          return
        end if
        call set_layer_tol(lw_term)
 
@@ -1477,12 +1601,13 @@ contains
           cycle intf_loop
        end if
        if(any(surface_up_.gt.up_term%nterm))then
-          write(msg, '("surface_up_ACE VALUES INVALID!\nOne or more value &
+          write(err_msg, '("surface_up_ACE VALUES INVALID!\nOne or more value &
                &exceeds the maximum number of terminations in the &
                structure.\n&
                &  Supplied values: ",I0,1X,I0,"\n&
                &  Maximum allowed: ",I0)') surface_up_, up_term%nterm
-          call err_abort(trim(msg),fmtd=.true.)
+          call err_abort(trim(err_msg),fmtd=.true.)
+          return
        end if
 
 
@@ -1491,9 +1616,10 @@ contains
        !!-----------------------------------------------------------------------
        !call setup_ladder(supercell_up%lat,supercell_up,this%axis,up_term)
        if(sum(up_term%arr(:)%natom)*up_term%nstep.ne.supercell_up%natom)then
-          write(msg, '("ERROR: Number of atoms in upper layers not correct: "&
+          write(err_msg, '("Number of atoms in upper layers not correct: "&
                &I0,2X,I0)') sum(up_term%arr(:)%natom)*up_term%nstep,supercell_up%natom
-          call err_abort(trim(msg),fmtd=.true.)
+          call stop_program(trim(err_msg))
+          return
        end if
        call set_layer_tol(up_term)
 
@@ -1590,7 +1716,7 @@ contains
                       call share_strain(slab_lw%lat,slab_up%lat,&
                             this%elastic_constants_lw(1), &
                             this%elastic_constants_up(1), &
-                            lcompensate = .not.this%fix_normal &
+                            lcompensate = this%compensate_normal &
                       )
                    end if
                 case default
@@ -1678,6 +1804,8 @@ contains
 
     end do intf_loop
 
+    if(present(exit_code)) exit_code = exit_code_
+
   end subroutine generate_interfaces
 !###############################################################################
 
@@ -1709,7 +1837,7 @@ contains
     real(real32) :: dtmp1
     type(basis_type) :: tbas
     type(bond_type) :: min_bond
-    character(1024) :: filename,dirpath,pwd1,pwd2,msg
+    character(len=256) :: err_msg
     integer, dimension(3) :: abc
     real(real32), dimension(3) :: toffset
     type(basis_type), allocatable, dimension(:) :: bas_arr
@@ -1847,8 +1975,8 @@ contains
             vac=toffset(this%axis))
        min_bond = get_shortest_bond(tbas)
        if(min_bond%length.le.1.5_real32)then
-          write(msg,'("Smallest bond in the interface structure is\nless than 1.5 Å.")')
-          call print_warning(trim(msg))
+          write(err_msg,'("Smallest bond in the interface structure is\nless than 1.5 Å.")')
+          call print_warning(trim(err_msg))
           write(*,'(2X,"bond length: ",F9.6)') min_bond%length
           write(*,'(2X,"atom 1:",I4,2X,I4)') min_bond%atoms(1,:)
           write(*,'(2X,"atom 2:",I4,2X,I4)') min_bond%atoms(2,:)

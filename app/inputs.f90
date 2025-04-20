@@ -17,7 +17,7 @@ module inputs
        err_abort
   use artemis__io_utils_extd, only: setup_input_fmt, setup_output_fmt
   use aspect, only: aspect_type, edit_structure
-  use lat_compare, only: lreduce,tol_type
+  use lat_compare, only: reduce,tol_type
   use infile_tools
   use infile_print
   use artemis__sym, only: set_symmetry_tolerance
@@ -126,7 +126,7 @@ contains
     lprint_shifts=.false.
     lprint_matches=.false.
     lgen_interfaces=.true.
-    lreduce=.false.
+    reduce=.false.
     iswap = 0
     nswap = 5
     swap_den = 5.E-2_real32
@@ -798,7 +798,7 @@ contains
        case("ISHIFT")
           call assign(buffer,ishift,             readvar(22))
        case("LREDUCE")
-          call assign(buffer,lreduce,            readvar(23))
+          call assign(buffer,reduce,            readvar(23))
        case("LPRINT_SHIFTS")
           call assign(buffer,lprint_shifts,      readvar(24))
        case("C_SCALE")

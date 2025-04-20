@@ -7,7 +7,7 @@ module artemis__terminations
   use artemis__io_utils_extd, only: err_abort_print_struc
   use misc_linalg,        only: modu, cross, uvec, det
   use artemis__sym,       only: sym_type, check_sym, sym_setup, clone_grp, s_end
-  use edit_geom,          only: shifter, transformer, ortho_axis, set_vacuum
+  use artemis__geom_utils,          only: shifter, transformer, ortho_axis, set_vacuum
   implicit none
 
 

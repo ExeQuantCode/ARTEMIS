@@ -3,6 +3,7 @@ module artemis__misc_types
   use artemis__constants, only: real32, pi
   use artemis__misc, only: to_lower
   use artemis__geom_rw, only: basis_type, geom_write
+  use artemis__geom_utils, only: MATNORM
   implicit none
 
 
@@ -15,13 +16,17 @@ module artemis__misc_types
 
   type latmatch_type
      integer :: nfit
-     logical :: lreduced
+     logical :: reduce = .false.
+     logical :: reduced = .false.
      character(1) :: abc(3)= [ 'a', 'b', 'c' ]
 
      integer, dimension(2) :: axes
      integer, allocatable, dimension(:,:,:) :: tf1,tf2
      real(real32), allocatable, dimension(:,:) :: tol
      real(real32), dimension(3,3) :: lat1,lat2
+   contains
+     procedure, pass(this) :: init => latmatch_init
+     procedure, pass(this) :: constrain_axes
   end type latmatch_type
 
   type tol_type
@@ -47,9 +52,6 @@ module artemis__misc_types
      real(real32) :: vacuum_gap = 14._real32
      !! Vacuum thickness in Å
 
-     real(real32) :: tol_cart
-     real(real32), dimension(3) :: tol_crys
-
      type(basis_type), dimension(:), allocatable :: structures
    contains
      procedure, pass(this) :: write_structures
@@ -60,6 +62,60 @@ module artemis__misc_types
 
 contains
   
+!###############################################################################
+  subroutine latmatch_init( &
+       this, tol, lattice_lw, lattice_up, reduce_matches &
+  )
+    implicit none
+    class(latmatch_type), intent(inout) :: this
+    type(tol_type), intent(in) :: tol
+    real(real32), dimension(3,3), intent(in) :: lattice_lw,lattice_up
+    logical, intent(in) :: reduce_matches
+
+    allocate(this%tf1(tol%nstore,3,3))
+    allocate(this%tf2(tol%nstore,3,3))
+    allocate(this%tol(tol%nstore,3))
+
+    this%tol(:,:) = huge(0._real32)
+    this%lat1 = MATNORM(lattice_lw)
+    this%lat2 = MATNORM(lattice_up)
+
+    this%reduce = reduce_matches
+
+  end subroutine latmatch_init
+!###############################################################################
+
+
+!###############################################################################
+  subroutine constrain_axes(this, miller_lw, miller_up, verbose)
+    implicit none
+    class(latmatch_type), intent(inout) :: this
+    integer, dimension(3), intent(in) :: miller_lw, miller_up
+    integer, intent(in) :: verbose
+
+
+    if(all(miller_lw.eq.0))then
+       this%axes(1) = 3
+       if(verbose.gt.0) write(*,*) &
+            "Finding matches for all possible lower planes."
+    else
+       this%axes(1) = 2
+       if(verbose.gt.0) write(*,*) "Finding matches for the lower ab plane."
+    end if
+
+    if(all(miller_up.eq.0))then
+       this%axes(2) = 3
+       if(verbose.gt.0) write(*,*) &
+            "Finding matches for all possible upper planes."
+    else
+       this%axes(2) = 2
+       if(verbose.gt.0) write(*,*) "Finding matches for the upper ab plane."
+    end if
+
+  end subroutine constrain_axes
+!###############################################################################
+
+
 !###############################################################################
   subroutine write_structures( &
        this, directory, prefix &

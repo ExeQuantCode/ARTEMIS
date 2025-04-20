@@ -1,4 +1,6 @@
 module artemis
+  use artemis__geom_rw, only: basis_type, &
+       geom_write, geom_read
   use artemis__structure_cache, only: &
        store_last_generated_structures, &
        retrieve_last_generated_structures

@@ -8,7 +8,7 @@ module artemis__constants
   real(real32), parameter, public :: avogadros=6.022e23_real32
   real(real32), parameter, public :: bohrtoang=0.529177249_real32
   real(real32), parameter, public :: pi = 4._real32*atan(1._real32)
-  real(real32), parameter, public :: INF = huge(1._real32)
+  real(real32), parameter, public :: INF = huge(0._real32)
   integer, public :: ierror = -1
   real(real32), parameter, public :: tolerance = 1.E-6_real32
 end MODULE artemis__constants
