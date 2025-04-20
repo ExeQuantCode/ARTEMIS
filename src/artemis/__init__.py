@@ -11,8 +11,7 @@ try:
 except PackageNotFoundError:
     __version__ = "unknown"
 
-from .artemis import interface_generator as _interface_generator_class
-from .artemis import termination_generator as _termination_generator_class
+from .artemis import generator as _generator_class
 from .artemis import geom_rw as _geom_rw_class
 # from .artemis import generator
 
@@ -23,8 +22,7 @@ generator = types.ModuleType('generator')
 geom = types.ModuleType('geom')
 
 # Assign the respective class to the simulated 'generator' and 'geom' modules
-generator.artemis_interface_generator = _interface_generator_class.artemis_interface_generator
-generator.artemis_termination_generator = _termination_generator_class.artemis_termination_generator
+generator.artemis_generator = _generator_class.artemis_generator
 
 # Assign the class to the simulated 'geom' module
 geom.basis_array = _geom_rw_class.basis_array
@@ -37,8 +35,7 @@ sys.modules['artemis.generator'] = generator
 sys.modules['artemis.geom'] = geom
 
 # Clean up internal imports (remove access to the direct classes)
-del _interface_generator_class
-del _termination_generator_class
+del _generator_class
 del _geom_rw_class
 del PackageNotFoundError
 del version

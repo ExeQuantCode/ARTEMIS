@@ -4,7 +4,7 @@
 !!! Code part of the ARTEMIS group (Hepplestone research group).
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
-module artemis__interface_generator
+module artemis__generator
   use artemis__constants,     only: real32, ierror, pi
   use artemis__misc,          only: to_lower,to_upper
   use artemis__misc_types,    only: abstract_artemis_generator_type, latmatch_type, tol_type
@@ -29,10 +29,10 @@ module artemis__interface_generator
 
   private
 
-  public :: artemis_interface_generator_type
+  public :: artemis_generator_type
 
 
-  type, extends(abstract_artemis_generator_type) :: artemis_interface_generator_type
+  type, extends(abstract_artemis_generator_type) :: artemis_generator_type
     !! Interface generator type
     type(basis_type) :: structure_lw, structure_up
     !! Lower and upper bulk structures
@@ -122,13 +122,17 @@ module artemis__interface_generator
     !! Reset the is_layered flags for the lower bulk structure
     procedure, pass(this) :: reset_is_layered_up
     !! Reset the is_layered flags for the upper bulk structure
+    
+    procedure, pass(this) :: get_terminations
+    !! Return the terminations for structure
+
     procedure, pass(this) :: generate => generate_interfaces
     !! Generate interfaces from two bulk structures
     procedure, pass(this) :: restart => generate_intefaces_from_existing
     !! Generate interfaces from existing bulk structures
     procedure, pass(this) :: generate_perturbations => generate_shifts_and_swaps
     !! Generate perturbations for the given basis
-  end type artemis_interface_generator_type
+  end type artemis_generator_type
 
 contains
 
@@ -144,7 +148,7 @@ contains
     implicit none
 
     ! Arguments
-    class(artemis_interface_generator_type), intent(inout) :: this
+    class(artemis_generator_type), intent(inout) :: this
     !! Instance of artemis generator type
     type(tol_type), intent(in), optional :: tolerance
     !! Tolerance structure
@@ -198,7 +202,7 @@ contains
     implicit none
 
     ! Arguments
-    class(artemis_interface_generator_type), intent(inout) :: this
+    class(artemis_generator_type), intent(inout) :: this
     !! Instance of artemis generator type
     integer, intent(in), optional :: method
     !! Shift method
@@ -281,7 +285,7 @@ contains
     implicit none
 
     ! Arguments
-    class(artemis_interface_generator_type), intent(inout) :: this
+    class(artemis_generator_type), intent(inout) :: this
     !! Instance of artemis generator type
     type(basis_type), intent(in) :: structure_lw
     !! Lower bulk structure
@@ -334,7 +338,7 @@ contains
     implicit none
    
     ! Arguments
-    class(artemis_interface_generator_type), intent(inout) :: this
+    class(artemis_generator_type), intent(inout) :: this
     !! Instance of artemis generator type
     integer, dimension(3), intent(in), optional :: miller_lw
     !! Miller indices for the lower bulk structure
@@ -369,7 +373,7 @@ contains
    implicit none
 
    ! Arguments
-   class(artemis_interface_generator_type), intent(inout) :: this
+   class(artemis_generator_type), intent(inout) :: this
    !! Instance of artemis generator type
 
    this%is_layered_lw = .false.
@@ -385,7 +389,7 @@ contains
    implicit none
 
    ! Arguments
-   class(artemis_interface_generator_type), intent(inout) :: this
+   class(artemis_generator_type), intent(inout) :: this
    !! Instance of artemis generator type
 
    this%is_layered_up = .false.
@@ -396,14 +400,291 @@ contains
 
 
 !###############################################################################
+  function get_terminations( &
+       this, identifier, miller, surface, num_layers, thickness, &
+       orthogonalise, normalise, break_on_fail, &
+       verbose, exit_code &
+  ) result(output)
+    !! Generate and prints terminations parallel to the supplied miller plane
+    implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(inout) :: this
+    !! Instance of artemis generator type
+    integer, intent(in) :: identifier
+    !! Identifier for the material (1=lower, 2=upper)
+    integer, dimension(3), intent(in), optional :: miller
+    !! Miller plane
+    integer, dimension(:), intent(in), optional :: surface
+    !! Surface termination indices
+    integer, intent(in), optional :: num_layers
+    !! Number of layers in the slab
+    real(real32), intent(in), optional :: thickness
+    !! Thickness of the slab (in Å)
+    logical, intent(in), optional :: orthogonalise
+    !! Boolean whether to orthogonalise the lattice
+    logical, intent(in), optional :: normalise
+    !! Boolean whether to normalise the lattice and basis
+    logical, intent(in), optional :: break_on_fail
+    !! Boolean whether to break on failure
+    integer, intent(in), optional :: verbose
+    !! Boolean whether to print verbose output
+    integer, intent(out), optional :: exit_code
+    !! Exit code for the program
+
+    type(basis_type), dimension(:), allocatable :: output
+    !! Output structures
+
+    ! Local variables
+    integer :: itmp1, iterm, term_start, term_end, term_step, i
+    !! Termination loop variables
+    integer :: num_cells, ntrans
+    !! Number of cells in the slab
+    integer :: num_structures
+    !! Number of structures to be generated
+    integer, dimension(2) :: surface_
+    !! Surface termination indices
+    integer, dimension(3) :: miller_
+    !! Miller plane
+    integer :: num_layers_
+    !! Number of layers in the slab
+    real(real32) :: height, thickness_
+    !! Height of the slab
+    logical :: lcycle
+    !! Boolean whether to cycle through the slab
+    type(basis_type) :: structure, structure_compare
+    !! Temporary basis structures
+    type(confine_type) :: confine
+    !! Confine structure along the specified axis
+    type(term_arr_type) :: term
+    !! List of terminations
+    real(real32), dimension(3,3) :: tfmat
+    !! Transformation matrix
+    logical :: orthogonalise_
+    !! Boolean whether to orthogonalise the lattice
+    logical :: normalise_
+    !! Boolean whether to normalise the lattice
+    logical :: break_on_fail_
+    !! Boolean whether to break on failure
+
+
+    real(real32) :: layer_sep
+    character(len=2) :: prefix
+    character(len=256) :: warn_msg, err_msg
+    integer :: exit_code_
+    !! Exit code for the program
+    integer :: verbose_
+    !! Verbosity level
+
+    integer, allocatable, dimension(:,:,:) :: bas_map,t1bas_map
+    real(real32), allocatable, dimension(:,:) :: trans
+
+
+    !---------------------------------------------------------------------------
+    ! Initialise variables
+    !---------------------------------------------------------------------------
+    exit_code_ = 0
+    verbose_ = 0
+    if(present(verbose)) verbose_ = verbose
+
+
+    !---------------------------------------------------------------------------
+    ! Handle identifier
+    !---------------------------------------------------------------------------
+    select case(identifier)
+    case(1)
+       call structure%copy(this%structure_lw, length=4)
+       call structure_compare%copy(this%structure_lw, length=4)
+       if(this%use_pricel_lw)then
+          if(verbose_.gt.0) write(*,'(1X,"Using primitive cell for material")')
+          call get_primitive_cell(structure)
+       end if
+       miller_ = this%miller_lw
+       prefix = "lw"
+       layer_sep = this%layer_separation_cutoff(1)
+    case(2)
+       call structure%copy(this%structure_up, length=4)
+       call structure_compare%copy(this%structure_up, length=4)
+       if(this%use_pricel_up)then
+          if(verbose_.gt.0) write(*,'(1X,"Using primitive cell for material")')
+          call get_primitive_cell(structure)
+       end if
+       miller_ = this%miller_up
+       prefix = "up"
+       layer_sep = this%layer_separation_cutoff(2)
+    case default
+       write(err_msg,'(A,I0,A)') &
+            "The identifier for the material is not valid: ", identifier
+       call stop_program(trim(err_msg))
+       return
+    end select
+    ! check if the structures have anything (i.e. atoms) in them
+    if(structure%natom.eq.0)then
+       write(err_msg,'(A,I0,A)') &
+            "The structure has ", structure%natom, &
+            " atoms. It should have at least 1."
+       call stop_program(trim(err_msg))
+       return
+    end if
+
+
+    ! set thickness if provided by user
+    thickness_ = 10._real32
+    num_layers_ = 0
+    if(present(num_layers)) num_layers_ = num_layers
+    if(present(thickness)) thickness_ = thickness
+    if(num_layers_.le.0.and.thickness_.le.0._real32)then
+       write(err_msg,'(A,I0,A)') &
+            "The number of layers for the material is ", &
+            num_layers_, " and the thickness is ", thickness_, &
+            " One of these must be greater than 0."
+       call stop_program(trim(err_msg))
+       exit_code_ = 1
+       return
+    end if
+
+
+    !---------------------------------------------------------------------------
+    ! Handle the miller plane
+    !---------------------------------------------------------------------------
+    if(present(miller)) miller_ = miller
+    if(all(miller_.eq.0))then
+       write(err_msg,'(A,I0,A)') &
+            "The miller plane is not valid: ", identifier
+       call stop_program(trim(err_msg))
+       exit_code_ = 1
+       return
+    end if
+
+
+    orthogonalise_ = .true.
+    if(present(orthogonalise)) orthogonalise_ = orthogonalise
+    break_on_fail_ = .false.
+    if(present(break_on_fail)) break_on_fail_ = break_on_fail
+    normalise_ = .true.
+    if(present(normalise)) normalise_ = normalise
+    surface_ = 0
+    if(present(surface))then
+       select case(size(surface,dim=1))
+       case(1)
+          surface_(:) = surface(1)
+       case(2)
+          surface_ = surface
+       case default
+          write(err_msg,'(A,I0,A)') &
+               "The surface termination indices have ", size(surface,dim=1), &
+               " components. It should have 1 or 2."
+          call stop_program(trim(err_msg))
+          exit_code_ = 1
+          return
+       end select
+    end if
+
+    !! copy lattice and basis for manipulating
+    allocate(bas_map(structure%nspec,maxval(structure%spec(:)%num,dim=1),2))
+    bas_map = -1
+
+
+    if(verbose_.gt.0) write(*,'(1X,"Using supplied plane...")')
+    tfmat = planecutter(structure%lat,real(miller_,real32))
+    call transformer(structure,tfmat,bas_map)
+
+
+    !---------------------------------------------------------------------------
+    ! Finds smallest thickness of the slab and increases to ...
+    ! ... user-defined thickness
+    !---------------------------------------------------------------------------
+    confine%l = .false.
+    confine%axis = this%axis
+    confine%laxis = .false.
+    confine%laxis(this%axis) = .true.
+    if(allocated(trans)) deallocate(trans)
+    allocate(trans(minval(structure%spec(:)%num+2),3))
+    call gldfnd(confine, structure, structure, trans, ntrans)
+    tfmat(:,:) = 0._real32
+    tfmat(1,1) = 1._real32
+    tfmat(2,2) = 1._real32
+    if(ntrans.eq.0)then
+       tfmat(3,3) = 1._real32
+    else
+       itmp1=minloc(abs(trans(:ntrans,this%axis)),dim=1,&
+            mask=abs(trans(:ntrans,this%axis)).gt.1.D-3/modu(structure%lat(this%axis,:)))
+       tfmat(3,:) = trans(itmp1,:)
+    end if
+    if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
+    call transformer(structure,tfmat,bas_map)
+    if(.not.compare_stoichiometry(structure,structure_compare))then
+       write(err_msg,'(A,I0,A)') &
+            "The transformed structure stoichiometry does not match the &
+            &original structure."
+       call stop_program(trim(err_msg))
+       exit_code_ = 1
+       return
+    end if
+
+
+    ! get the terminations
+    term = get_termination_info( &
+         structure, this%axis, &
+         verbose = verbose_, layer_sep = layer_sep, &
+         break_on_fail = break_on_fail_ &
+    )
+    if(term%nterm .eq. 0)then
+       write(warn_msg, '(A,I0,1X,I0,1X,I0,A)') &
+            "No terminations found for Miller plane (",miller_,")"
+       call print_warning(trim(warn_msg))
+       return
+    end if
+
+    ! determine tolerance for layer separations (termination tolerance)
+    ! ... this is different from layer_sep
+    call set_layer_tol(term)
+
+    ! determine required extension and perform that
+    call set_slab_height(structure, bas_map, term, surface_,&
+         height, num_layers_, thickness_, num_cells,&
+         term_start, term_end, term_step &
+    )
+
+
+    !---------------------------------------------------------------------------
+    ! Normalise lattice
+    !---------------------------------------------------------------------------
+    if(normalise_)then
+       call reducer(structure)
+       structure%lat = MATNORM(structure%lat)
+    end if
+    
+
+    !---------------------------------------------------------------------------
+    ! loop over terminations and write them
+    !---------------------------------------------------------------------------
+    num_structures = ( term_end - term_start ) / term_step + 1
+    allocate(output(num_structures))
+    do iterm = term_start, term_end, term_step
+       i = ( iterm - term_start ) / term_step + 1 
+       call output(i)%copy(structure, length=4)
+       if(allocated(t1bas_map)) deallocate(t1bas_map)
+       allocate(t1bas_map,source=bas_map)
+       call build_slab(output(i),bas_map,term,[iterm,surface_(2)],&
+            thickness_, num_cells, num_layers_, height,&
+            prefix, lcycle, orthogonalise_, this%vacuum_gap &
+       )
+    end do
+
+   end function get_terminations
+!###############################################################################
+
+
+!###############################################################################
   subroutine generate_intefaces_from_existing(this, basis, interface_location, &
-       print_shift_info, seed &
+       print_shift_info, seed, verbose, exit_code &
   )
     !! Generate interfaces for the given basis
     implicit none
 
     ! Arguments
-    class(artemis_interface_generator_type), intent(inout) :: this
+    class(artemis_generator_type), intent(inout) :: this
     !! Instance of artemis generator type
     type(basis_type), intent(in) :: basis
     !! Atomic structure data
@@ -413,6 +694,10 @@ contains
     !! Print shift information
     integer, intent(in), optional :: seed
     !! Random seed for generating random numbers
+    integer, intent(in), optional :: verbose
+    !! Verbosity level
+    integer, intent(out), optional :: exit_code
+    !! Exit code for the program
 
     ! Local variables
     integer :: is,ia,js,ja
@@ -432,6 +717,21 @@ contains
 
     type(bulk_DON_type), dimension(2) :: bulk_DON
     !! Distribution functions for the lower and upper bulk structures
+
+    integer :: verbose_
+    !! Verbosity level
+    integer :: exit_code_
+    !! Exit code for the program
+    character(len=256) :: err_msg
+    !! Error message
+
+
+    !---------------------------------------------------------------------------
+    ! Initialise variables
+    !---------------------------------------------------------------------------
+    exit_code_ = 0
+    verbose_ = 0
+    if(present(verbose)) verbose_ = verbose
 
 
     !---------------------------------------------------------------------------
@@ -465,10 +765,10 @@ contains
        write(*,*) "interface axis:",intf%axis
        write(*,*) "interface loc:",intf%loc
        !! write interface location to a file for user to refer back to
-       open(unit=10,file="interface_location.dat")
-       write(10,'(1X,"AXIS = ",I0)') intf%axis
-       write(10,'(1X,"INTF_LOC = ",2(2X,F9.6))') intf%loc
-       close(10)
+      !  open(unit=10,file="interface_location.dat")
+      !  write(10,'(1X,"AXIS = ",I0)') intf%axis
+      !  write(10,'(1X,"INTF_LOC = ",2(2X,F9.6))') intf%loc
+      !  close(10)
     end if
     specloop1: do is=1,basis%nspec
        atomloop1: do ia=1,basis%spec(is)%num
@@ -506,8 +806,13 @@ contains
     write(*,'(1X,"Avg min bulk bond: ",F0.3," Å")') min_bond
     write(*,'(1X,"Trans-interfacial scaling factor:",F0.3)') this%separation_scale
     this%axis = intf%axis
-    call this%generate_perturbations(basis, intf%loc, min_bond, bulk_DON, print_shift_info_, seed_arr)
+    call this%generate_perturbations( &
+         basis, intf%loc, &
+         min_bond, bulk_DON, &
+         print_shift_info_, seed_arr, verbose_, exit_code_ &
+    )
 
+    if(present(exit_code)) exit_code = exit_code_
 
   end subroutine generate_intefaces_from_existing
 !###############################################################################
@@ -529,7 +834,7 @@ contains
     implicit none
 
     ! Arguments
-    class(artemis_interface_generator_type), intent(inout) :: this
+    class(artemis_generator_type), intent(inout) :: this
     !! Instance of artemis generator type
     integer, intent(in), dimension(:), optional :: surface_lw
     !! Surface indices for the lower bulk structure
@@ -658,7 +963,7 @@ contains
     if(present(icheck_match)) icheck_match_ = icheck_match
     if(present(interface_idx)) interface_idx_ = interface_idx
 
-    break_on_fail_ = .true.
+    break_on_fail_ = .false.
     if(present(break_on_fail)) break_on_fail_ = break_on_fail
 
     generate_structures_ = .true.
@@ -719,20 +1024,20 @@ contains
     ! Retrieve the primitive cells if necessary
     !---------------------------------------------------------------------------
     if(this%use_pricel_lw)then
-       write(*,'(1X,"Using primitive cell for lower material")')
+       if(verbose_.gt.0) write(*,'(1X,"Using primitive cell for lower material")')
        call get_primitive_cell(structure_lw)
     else
-       write(*,'(1X,"Using supplied cell for lower material")')
+       if(verbose_.gt.0) write(*,'(1X,"Using supplied cell for lower material")')
        call reducer(structure_lw)
-       structure_lw%lat=primitive_lat(structure_lw%lat)
+       structure_lw%lat = primitive_lat(structure_lw%lat)
     end if
     if(this%use_pricel_up)then
-       write(*,'(1X,"Using primitive cell for upper material")')
+       if(verbose_.gt.0) write(*,'(1X,"Using primitive cell for upper material")')
        call get_primitive_cell(structure_up)
     else
-       write(*,'(1X,"Using supplied cell for upper material")')
+       if(verbose_.gt.0) write(*,'(1X,"Using supplied cell for upper material")')
        call reducer(structure_up)
-       structure_up%lat=primitive_lat(structure_up%lat)
+       structure_up%lat = primitive_lat(structure_up%lat)
     end if
 
 
@@ -807,8 +1112,8 @@ contains
               get_min_bulk_bond(structure_lw) + &
               get_min_bulk_bond(structure_up) &
          ) / 2._real32
-    write(*,'(1X,"Avg min bulk bond: ",F0.3," Å")') avg_min_bond
-    write(*,'(1X,"Trans-interfacial scaling factor: ",F0.3)') this%separation_scale
+    if(verbose_.gt.0) write(*,'(1X,"Avg min bulk bond: ",F0.3," Å")') avg_min_bond
+    if(verbose_.gt.0) write(*,'(1X,"Trans-interfacial scaling factor: ",F0.3)') this%separation_scale
     if(this%shift_method.eq.-1) this%num_shifts = 1
     
 
@@ -955,33 +1260,28 @@ contains
             nmiller=this%max_num_planes)
     end if
     if(min(this%tolerance%nstore,SAV%nfit).eq.0)then
-       write(0,'("No matches found.")')
-       write(0,'("Exiting...")')
-       call exit()
+       write(err_msg,'("No matches found between the two structures")')
+       call print_warning(trim(err_msg))
+       return
     else
-       write(0,'(1X,"Number of matches found: ",I0)')&
+       if(verbose_.gt.0) write(*,'(1X,"Number of matches found: ",I0)')&
             min(this%tolerance%nstore,SAV%nfit)
     end if
-    write(*,'(1X,"Maximum number of generated interfaces will be: ",I0)')&
+    if(verbose_.gt.0) write(*,'(1X,"Maximum number of generated interfaces will be: ",I0)')&
          this%max_num_terms*this%num_shifts*this%tolerance%nstore
     if(.not.generate_structures_)then
-       write(0,'(1X,"Told not to generate interfaces, just find matches.")')
-       write(0,'("Exiting...")')
-       call exit()
+       if(verbose_.gt.0) write(*,'(1X,"Told not to generate structures, just find matches.")')
+       return
     end if
 
        
 !!!-----------------------------------------------------------------------------
 !!! Saves current directory and moves to new directory
 !!!-----------------------------------------------------------------------------
-   !  call system('mkdir -p '//trim(adjustl(dirname)))
-   !  call chdir(dirname)
-   !  call getcwd(intf_dir)
-
     if(interface_idx_.gt.0)then
        intf_start=interface_idx_
        intf_end=interface_idx_
-       write(*,'(1X,"Generating only interfaces for match ",I0)') interface_idx_
+       if(verbose_.gt.0) write(*,'(1X,"Generating only interfaces for match ",I0)') interface_idx_
     else
        intf_start=1
        intf_end=min(this%tolerance%nstore,SAV%nfit)
@@ -991,7 +1291,7 @@ contains
 !!! Applies the best match transformations
 !!!-----------------------------------------------------------------------------
     intf_loop: do ifit = intf_start, intf_end
-       write(*,'("Fit number: ",I0)') ifit
+       if(verbose_.gt.0) write(*,'("Fit number: ",I0)') ifit
        call supercell_lw%copy(structure_lw)
        call supercell_up%copy(structure_up)
        if(allocated(t1lw_map)) deallocate(t1lw_map)
@@ -1083,7 +1383,8 @@ contains
        if(allocated(lw_term%arr)) deallocate(lw_term%arr)
        lw_term = get_termination_info( &
             supercell_lw, this%axis, &
-            lprint = print_termination_info_, layer_sep = this%layer_separation_cutoff(1), &
+            verbose = merge(1,verbose_,print_termination_info_), &
+            layer_sep = this%layer_separation_cutoff(1), &
             break_on_fail = break_on_fail_ &
        )
        if(lw_term%nterm .eq. 0)then
@@ -1164,7 +1465,8 @@ contains
        if(allocated(up_term%arr)) deallocate(up_term%arr)
        up_term = get_termination_info( &
             supercell_up, this%axis, &
-            lprint = print_termination_info_, layer_sep = this%layer_separation_cutoff(2), &
+            verbose = merge(1,verbose_,print_termination_info_), &
+            layer_sep = this%layer_separation_cutoff(2), &
             break_on_fail = break_on_fail_ &
        )
        if(up_term%nterm .eq. 0)then
@@ -1209,7 +1511,7 @@ contains
        !!-----------------------------------------------------------------------
        !! Print termination plane locations
        !!-----------------------------------------------------------------------
-       write(*,'(1X,"Number of unique terminations: ",I0,2X,I0)') &
+       if(verbose_.gt.0) write(*,'(1X,"Number of unique terminations: ",I0,2X,I0)') &
             lw_term%nterm,up_term%nterm
 
        !!-----------------------------------------------------------------------
@@ -1362,6 +1664,8 @@ contains
                   bulk_DON, &
                   print_shift_info_, &
                   seed_arr, &
+                  verbose_, &
+                  exit_code_, &
                   t2lw_map &
              )
 
@@ -1380,14 +1684,14 @@ contains
 
 !!!#############################################################################
 !!! Takes input interface structure and generates a set of shifts and swaps.
-!!! Prints these new structures to POSCARs.
 !!!#############################################################################
 !!! ISWAP METHOD NOT YET SET UP
   subroutine generate_shifts_and_swaps( &
-       this, basis, intf_loc, bond, bulk_DON, print_shift_info, seed_arr, map &
+       this, basis, intf_loc, bond, bulk_DON, print_shift_info, &
+       seed_arr, verbose, exit_code, map &
   )
     implicit none
-    class(artemis_interface_generator_type), intent(inout) :: this
+    class(artemis_generator_type), intent(inout) :: this
     type(basis_type), intent(in) :: basis
     real(real32), dimension(2), intent(in) :: intf_loc
     real(real32), intent(in) :: bond
@@ -1395,6 +1699,8 @@ contains
     !! Distribution functions for the lower and upper bulk structures
     logical, intent(in) :: print_shift_info
     integer, dimension(:), intent(in) :: seed_arr
+    integer, intent(in) :: verbose
+    integer, intent(inout) :: exit_code
     integer, dimension(:,:,:), optional, intent(in) :: map
 
     integer :: shift_unit
@@ -1505,7 +1811,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Prints number of shifts to terminal
 !!!-----------------------------------------------------------------------------
-    write(*,'(3X,"Number of unique shifts structures: ",I0)') this%num_shifts
+    if(verbose.gt.0) write(*,'(3X,"Number of unique shifts structures: ",I0)') this%num_shifts
 
 
 !!!-----------------------------------------------------------------------------
@@ -1513,7 +1819,7 @@ contains
 !!!-----------------------------------------------------------------------------
     nswaps_per_cell=nint(this%swap_density*get_area([basis%lat(abc(1),:)],[basis%lat(abc(2),:)]))
     if(this%swap_method.ne.0)then
-       write(*,&
+       if(verbose.gt.0) write(*,&
             '(" Generating ",I0," swaps per structure ")') nswaps_per_cell
     end if
 
@@ -1671,4 +1977,4 @@ contains
   end subroutine output_intf_data
 !!!#############################################################################
 
-end module artemis__interface_generator
+end module artemis__generator

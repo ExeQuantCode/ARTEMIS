@@ -94,11 +94,20 @@ program artemis_executable
         call intf_gen%set_tolerance( &
                tolerance = tolerance &
         )
+        call intf_gen%set_materials( &
+               structure_lw = struc1_bas, structure_up = struc2_bas, &
+               use_pricel_lw = lw_use_pricel, use_pricel_up = up_use_pricel, &
+               elastic_constants_lw = [ lw_bulk_modulus ], &
+               elastic_constants_up = [ up_bulk_modulus ] &
+        )
+        call intf_gen%set_surface_properties( &
+               miller_lw = lw_mplane, miller_up = up_mplane, &
+               is_layered_lw = lw_layered, is_layered_up = up_layered &
+        )
+        if(.not.ludef_lw_layered) call intf_gen%reset_is_layered_lw()
+        if(.not.ludef_up_layered) call intf_gen%reset_is_layered_up()
         call intf_gen%generate( &
-             struc1_bas, struc2_bas, &
-             miller_lw = lw_mplane, miller_up = up_mplane, &
              surface_lw = lw_surf, surface_up = up_surf, &
-             use_pricel_lw = lw_use_pricel, use_pricel_up = up_use_pricel, &
              print_lattice_match_info = lprint_matches, &
              print_termination_info = lprint_terms, &
              print_shift_info = lprint_shifts &
