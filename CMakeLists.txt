@@ -71,13 +71,13 @@ set(LIB_FILES
     mod_lat_compare.f90
     mod_swapping.f90
     mod_shifting.f90
+    mod_cache.f90
 )
 
 # Main source files
 set(SPECIAL_LIB_FILES
     mod_geom_rw.f90
-    mod_term_generator.f90
-    mod_intf_generator.f90
+    mod_generator.f90
 )
 
 
@@ -283,8 +283,7 @@ if (BUILD_PYTHON)
 
     # Generate f90wrap signature file
     set(F90WRAP_FILE
-        ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_mod_term_generator.f90
-        ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_mod_intf_generator.f90
+        ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_mod_generator.f90
         ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_mod_geom_rw.f90
         ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_artemis.f90
     )
@@ -298,7 +297,7 @@ if (BUILD_PYTHON)
             -m ${PROJECT_NAME}
             -k ${KIND_MAP}
             ${F90WRAP_FORTRAN_SRC_FILES}
-            --only artemis_interface_generator_type artemis_termination_generator_type basis_type:
+            --only artemis_generator_type basis_type:
             DEPENDS ${F90WRAP_FORTRAN_SRC_FILES}
             WORKING_DIRECTORY ${CMAKE_BUILD_DIR}
             COMMENT "Generating f90wrap signature file"

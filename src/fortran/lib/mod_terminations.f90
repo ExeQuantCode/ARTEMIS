@@ -49,7 +49,7 @@ contains
 
 !###############################################################################
   function get_termination_info( &
-       basis, axis, lprint, layer_sep, break_on_fail &
+       basis, axis, verbose, layer_sep, break_on_fail &
   ) result(term)
     !! Function to find the terminations of a material along a given axis
     implicit none
@@ -60,10 +60,10 @@ contains
     integer, intent(in) :: axis
     !! Axis to find terminations along (1,2,3)
     !! 1=a, 2=b, 3=c
+    integer, intent(in) :: verbose
+    !! Verbosity level
     real(real32), intent(in), optional :: layer_sep
     !! Minimum separation between layers
-    logical, intent(in), optional :: lprint
-    !! Boolean whether to print terminations
     logical, intent(in), optional :: break_on_fail
     !! Boolean whether to break on failure to find terminations
 
@@ -72,7 +72,7 @@ contains
     !! Loop indices and dimensions
     integer :: itmp1, itmp2, init, min_loc
     !! Temporary indices
-    logical :: ludef_print, lunique, ltmp1, lmirror, break_on_fail_
+    logical :: lunique, ltmp1, lmirror, break_on_fail_
     !! Boolean flags
     real(real32) :: rtmp1, tol, height, max_sep, c_along, centre
     !! Temporary variables
@@ -113,11 +113,6 @@ contains
     !---------------------------------------------------------------------------
     ! Set printing option
     !---------------------------------------------------------------------------
-    if(present(lprint))then
-       ludef_print = lprint
-    else
-       ludef_print = .false.
-    end if
     break_on_fail_ = .false.
     if(present(break_on_fail)) break_on_fail_ = break_on_fail
 
@@ -442,7 +437,7 @@ contains
     term%axis=axis
     term%nterm=mterm
     term%lmirror = lmirror
-    if(ludef_print)&
+    if(verbose.gt.0)&
          write(*,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
     rtmp1 = term_arr_uniq(1)%hmin-1.E-6_real32
     itmp1 = 1
@@ -453,7 +448,7 @@ contains
        term%arr(i)%natom = term_arr_uniq(itmp1)%natom
        term%arr(i)%nstep = term_arr_uniq(itmp1)%nstep
        term%arr(i)%ladder(:term%arr(i)%nstep) = term_arr_uniq(i)%ladder(:term%arr(i)%nstep)
-       if(ludef_print) write(*,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+       if(verbose.gt.0) write(*,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
             i,term%arr(i)%hmin,term%arr(i)%hmax,term%arr(i)%natom
        itmp1 = minloc(term_arr_uniq(:)%hmin,&
             mask=term_arr_uniq(:)%hmin.gt.rtmp1+layer_sep_,dim=1)
@@ -576,8 +571,8 @@ contains
 
 
 !###############################################################################
-  subroutine set_slab_height( basis, map, term, surf,&
-       height, num_layers, thickness, num_cells,&
+  subroutine set_slab_height( basis, map, term, surf, &
+       height, num_layers, thickness, num_cells, &
        term_start, term_end, term_step &
   )
     !! Extend the basis to the maximum required height for all terminations
