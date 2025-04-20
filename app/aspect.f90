@@ -7,7 +7,7 @@
 module aspect
   use artemis__io_utils, only: err_abort
   use artemis__geom_rw, only: basis_type
-  use edit_geom
+  use artemis__geom_utils
   implicit none
 
   private

@@ -8,7 +8,7 @@ module shifting
   use misc_maths, only: get_nth_plane
   use misc_linalg, only: modu
   use artemis__geom_rw, only: basis_type,geom_write
-  use edit_geom, only: split_bas,get_centre_atom,set_vacuum,shifter
+  use artemis__geom_utils, only: split_bas,get_centre_atom,set_vacuum,shifter
   use artemis__io_utils
   use artemis__io_utils_extd, only: err_abort_print_struc
   use interface_identifier
@@ -743,7 +743,7 @@ contains
   function get_shifts_DON(bas,axis,intf_loc,nstore,c_scale,offset,&
        bulk_DON,bulk_map,lprint,max_bondlength) result(res_shifts)
     use artemis__sym, only: gldfnd,confine_type
-    use edit_geom, only: get_bulk,wyck_spec_type,get_wyckoff
+    use artemis__geom_utils, only: get_bulk,wyck_spec_type,get_wyckoff
     use interface_identifier, only: gen_single_DON,nstep_default,den_of_neigh_type
     implicit none
     integer :: i,j,k,l,is,ia,ja,jb,jc,count1,itmp1

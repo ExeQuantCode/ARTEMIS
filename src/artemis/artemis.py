@@ -618,31 +618,85 @@ class Generator(f90wrap.runtime.FortranModule):
                 area_weight=area_weight)
         
         def set_shift_method(self, method=None, num_shifts=None, shifts=None, \
-            interface_depth=None, separation_scale=None, depth_method=None):
+            interface_depth=None, separation_scale=None, depth_method=None, \
+            bondlength_cutoff=None):
             """
-            set_shift_method__binding__artemis_gen_type(self[, method, \
-                num_shifts, shifts, interface_depth, separation_scale, depth_method])
+            set_shift_method__binding__artemis_generator_type(self[, method, num_shifts, \
+                shifts, interface_depth, separation_scale, depth_method, bondlength_cutoff])
             
             
             Defined at \
-                ../src/fortran/lib/mod_intf_generator.f90 \
-                lines 133-196
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_generator.f90 \
+                lines 180-252
             
             Parameters
             ----------
-            this : Artemis_generator_Type
+            this : Artemis_Generator_Type
             method : int
             num_shifts : int
             shifts : float array
             interface_depth : float
             separation_scale : float
             depth_method : int
+            bondlength_cutoff : float
             
             """
             _artemis.f90wrap_intf_gen__set_shift_method__binding_agt(this=self._handle, \
                 method=method, num_shifts=num_shifts, shifts=shifts, \
                 interface_depth=interface_depth, separation_scale=separation_scale, \
-                depth_method=depth_method)
+                depth_method=depth_method, bondlength_cutoff=bondlength_cutoff)
+        
+        def set_swap_method(self, method=None, num_swaps=None, swap_density=None, \
+            swap_depth=None, swap_sigma=None, require_mirror_swaps=None):
+            """
+            set_swap_method__binding__artemis_generator_type(self[, method, num_swaps, \
+                swap_density, swap_depth, swap_sigma, require_mirror_swaps])
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_generator.f90 \
+                lines 259-283
+            
+            Parameters
+            ----------
+            this : Artemis_Generator_Type
+            method : int
+            num_swaps : int
+            swap_density : float
+            swap_depth : float
+            swap_sigma : float
+            require_mirror_swaps : bool
+            
+            """
+            _artemis.f90wrap_intf_gen__set_swap_method__binding_agt(this=self._handle, \
+                method=method, num_swaps=num_swaps, swap_density=swap_density, \
+                swap_depth=swap_depth, swap_sigma=swap_sigma, \
+                require_mirror_swaps=require_mirror_swaps)
+        
+        def set_match_method(self, method=None, max_num_matches=None, \
+            max_num_terms=None, max_num_planes=None, compensate_normal=None):
+            """
+            set_match_method__binding__artemis_generator_type(self[, method, \
+                max_num_matches, max_num_terms, max_num_planes, compensate_normal])
+            
+            
+            Defined at \
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_generator.f90 \
+                lines 290-310
+            
+            Parameters
+            ----------
+            this : Artemis_Generator_Type
+            method : int
+            max_num_matches : int
+            max_num_terms : int
+            max_num_planes : int
+            compensate_normal : bool
+            
+            """
+            _artemis.f90wrap_intf_gen__set_match_method__binding_agt(this=self._handle, \
+                method=method, max_num_matches=max_num_matches, max_num_terms=max_num_terms, \
+                max_num_planes=max_num_planes, compensate_normal=compensate_normal)
         
         def set_materials(self, structure_lw, structure_up, elastic_constants_lw=None, \
             elastic_constants_up=None, use_pricel_lw=None, use_pricel_up=None):
@@ -685,28 +739,38 @@ class Generator(f90wrap.runtime.FortranModule):
                 use_pricel_up=use_pricel_up)
         
         def set_surface_properties(self, miller_lw=None, miller_up=None, \
-            is_layered_lw=None, is_layered_up=None):
+            is_layered_lw=None, is_layered_up=None, layer_separation_cutoff_lw=None, \
+            layer_separation_cutoff_up=None, layer_separation_cutoff=None, \
+            vacuum_gap=None):
             """
-            set_surface_properties__binding__artemis_gen_type(self[, \
-                miller_lw, miller_up, is_layered_lw, is_layered_up])
+            set_surface_properties__binding__artemis_generator_type(self[, miller_lw, \
+                miller_up, is_layered_lw, is_layered_up, layer_separation_cutoff_lw, \
+                layer_separation_cutoff_up, layer_separation_cutoff, vacuum_gap])
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
-                lines 295-318
+                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_generator.f90 \
+                lines 364-435
             
             Parameters
             ----------
-            this : Artemis_generator_Type
+            this : Artemis_Generator_Type
             miller_lw : int array
             miller_up : int array
             is_layered_lw : bool
             is_layered_up : bool
+            layer_separation_cutoff_lw : float
+            layer_separation_cutoff_up : float
+            layer_separation_cutoff : float array
+            vacuum_gap : float
             
             """
             _artemis.f90wrap_intf_gen__set_surface_properties__binding_agt(this=self._handle, \
                 miller_lw=miller_lw, miller_up=miller_up, is_layered_lw=is_layered_lw, \
-                is_layered_up=is_layered_up)
+                is_layered_up=is_layered_up, \
+                layer_separation_cutoff_lw=layer_separation_cutoff_lw, \
+                layer_separation_cutoff_up=layer_separation_cutoff_up, \
+                layer_separation_cutoff=layer_separation_cutoff, vacuum_gap=vacuum_gap)
         
         def reset_is_layered_lw(self):
             """
@@ -801,7 +865,7 @@ class Generator(f90wrap.runtime.FortranModule):
             # allocate the structures
             structures = geom_rw.basis_array() #.allocate(n_structs)
             structures.allocate(n_structs)
-            _artemis.f90wrap_retrieve_last_generated_structures(n_structs, structures._handle)
+            _artemis.f90wrap_retrieve_last_generated_structures(structures._handle)
             structures = structures.toase()
 
             if return_exit_code:
@@ -810,6 +874,7 @@ class Generator(f90wrap.runtime.FortranModule):
 
         def generate(self, surface_lw=None, surface_up=None, thickness_lw=None, \
             thickness_up=None, num_layers_lw=None, num_layers_up=None, \
+            reduce_matches=None, \
             print_lattice_match_info=None, print_termination_info=None, \
             print_shift_info=None, break_on_fail=None, icheck_match=None, \
             interface_idx=None, generate_structures=None, seed=None, verbose=None, \
@@ -852,9 +917,10 @@ class Generator(f90wrap.runtime.FortranModule):
             structures = None
 
             exit_code = _artemis.f90wrap_intf_gen__generate__binding__agt(this=self._handle, \
-                surface_lw=surface_lw, surface_up=surface_up, thickness_lw=thickness_lw, \
-                thickness_up=thickness_up, num_layers_lw=num_layers_lw, \
-                num_layers_up=num_layers_up, \
+                surface_lw=surface_lw, surface_up=surface_up,
+                thickness_lw=thickness_lw, thickness_up=thickness_up,
+                num_layers_lw=num_layers_lw, num_layers_up=num_layers_up, \
+                reduce_matches=reduce_matches, \
                 print_lattice_match_info=print_lattice_match_info, \
                 print_termination_info=print_termination_info, \
                 print_shift_info=print_shift_info, break_on_fail=break_on_fail, \
@@ -1474,7 +1540,7 @@ class Generator(f90wrap.runtime.FortranModule):
         
         @require_mirror_swaps.setter
         def require_mirror_swaps(self, require_mirror_swaps):
-            _artemis.f90wrap_artemis_gen_type__set__require_mirr3bfa(self._handle, \
+            _artemis.f90wrap_artemis_gen_type__set__require_mirror_swaps(self._handle, \
                 require_mirror_swaps)
         
         @property
@@ -1554,9 +1620,9 @@ class Generator(f90wrap.runtime.FortranModule):
                 max_num_planes)
         
         @property
-        def fix_normal(self):
+        def compensate_normal(self):
             """
-            Element fix_normal ftype=logical pytype=bool
+            Element compensate_normal ftype=logical pytype=bool
             
             
             Defined at \
@@ -1565,12 +1631,12 @@ class Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_gen_type__get__fix_normal(self._handle)
+                _artemis.f90wrap_artemis_gen_type__get__compensate_normal(self._handle)
         
-        @fix_normal.setter
-        def fix_normal(self, fix_normal):
-            _artemis.f90wrap_artemis_gen_type__set__fix_normal(self._handle, \
-                fix_normal)
+        @compensate_normal.setter
+        def compensate_normal(self, compensate_normal):
+            _artemis.f90wrap_artemis_gen_type__set__compensate_normal(self._handle, \
+                compensate_normal)
         
         @property
         def bondlength_cutoff(self):
@@ -1584,11 +1650,11 @@ class Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_gen_type__get__bondlength_c21a8(self._handle)
+                _artemis.f90wrap_artemis_gen_type__get__bondlength_cutoff(self._handle)
         
         @bondlength_cutoff.setter
         def bondlength_cutoff(self, bondlength_cutoff):
-            _artemis.f90wrap_artemis_gen_type__set__bondlength_cbd11(self._handle, \
+            _artemis.f90wrap_artemis_gen_type__set__bondlength_cutoff(self._handle, \
                 bondlength_cutoff)
         
         @property
@@ -1610,7 +1676,7 @@ class Generator(f90wrap.runtime.FortranModule):
                 layer_separation_cutoff = \
                     f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
                                         self._handle,
-                                        _artemis.f90wrap_artemis_gen_type__array__layer_sepa90a5)
+                                        _artemis.f90wrap_artemis_gen_type__array__layer_separation_cutoff)
                 self._arrays[array_handle] = layer_separation_cutoff
             return layer_separation_cutoff
         
@@ -1702,8 +1768,8 @@ class Generator(f90wrap.runtime.FortranModule):
             ret.append(repr(self.max_num_terms))
             ret.append(',\n    max_num_planes : ')
             ret.append(repr(self.max_num_planes))
-            ret.append(',\n    fix_normal : ')
-            ret.append(repr(self.fix_normal))
+            ret.append(',\n    compensate_normal : ')
+            ret.append(repr(self.compensate_normal))
             ret.append(',\n    bondlength_cutoff : ')
             ret.append(repr(self.bondlength_cutoff))
             ret.append(',\n    layer_separation_cutoff : ')

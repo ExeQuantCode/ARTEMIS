@@ -35,7 +35,7 @@
 !!! get_wyckoff      (returns an array of the similar atoms)
 !!! get_shortest_bond
 !!!#############################################################################
-module edit_geom
+module artemis__geom_utils
   use artemis__constants, only: real32
   use artemis__geom_rw, only: basis_type,geom_write
   use artemis__misc, only: swap
@@ -2418,7 +2418,7 @@ contains
     real(real32), dimension(3) :: vec
     integer, dimension(2,2) :: atoms
     
-    min_bond = huge(1._real32)
+    min_bond = huge(0._real32)
     atoms = 0
     do is = 1, basis%nspec
        do js = is, basis%nspec
@@ -2494,4 +2494,4 @@ contains
   end subroutine share_strain
 !!!#############################################################################
 
-end module edit_geom
+end module artemis__geom_utils

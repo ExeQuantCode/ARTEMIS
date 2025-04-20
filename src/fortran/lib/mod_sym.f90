@@ -22,7 +22,7 @@ module artemis__sym
   use artemis__misc,        only: sort2D
   use misc_linalg,          only: modu,inverse_3x3,det,gcd,gen_group,cross
   use artemis__geom_rw,     only: basis_type
-  use edit_geom,            only: reducer, primitive_lat
+  use artemis__geom_utils,            only: reducer, primitive_lat
   implicit none
   integer :: ierror_sym=0
   integer :: s_start=1,s_end=0

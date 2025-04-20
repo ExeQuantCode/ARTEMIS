@@ -10,8 +10,10 @@ program artemis_executable
   implicit none
 
 
-  type(artemis_termination_generator_type) :: term_gen
-  type(artemis_interface_generator_type) :: intf_gen
+  integer :: i, unit
+  character(len=256) :: filename
+  type(artemis_generator_type) :: generator
+  type(basis_type), allocatable, dimension(:) :: structures
 
 
 
@@ -33,12 +35,29 @@ program artemis_executable
      write(*,'(1X,"task ",I0," set",/,1X,"Performing Cell Edits")') task
      if(lsurf_gen)then
         write(0,'(1X,"Finding terminations for lower material.")')
-        term_gen%layer_separation_cutoff = layer_sep
-        call term_gen%generate(struc1_bas,lw_mplane,axis,&
+
+        call generator%set_tolerance( &
+               tolerance = tolerance &
+        )
+        call generator%set_materials( &
+               structure_lw = struc1_bas, &
+               use_pricel_lw = lw_use_pricel &
+        )
+        call generator%set_surface_properties( &
+               miller_lw = lw_mplane, &
+               is_layered_lw = lw_layered &
+        )
+
+        structures = generator%get_terminations(1, &
              num_layers = lw_num_layers, &
              thickness = lw_thickness &
         )
-        call term_gen%write_structures(directory = "DTERMINATIONS", prefix= "term_")
+        do i = 1, size(structures)
+           write(filename, '(A,I0,A)') "term_", i, ".vasp"
+           open(newunit=unit, status='replace', file=trim(filename))
+           call geom_write(unit, structures(i))
+           close(unit)
+        end do
         write(0,'(1X,"Terminations printed.",/,1X,"Exiting...")')
         stop
      end if
@@ -49,38 +68,58 @@ program artemis_executable
 
   case(1) ! interfaces/ARTEMIS/SEARCH
      write(*,'(1X,"task ",I0," set",/,1X,"Performing Interface Generation")') task
+     call generator%set_tolerance( &
+          tolerance = tolerance &
+     )
+     call generator%set_materials( &
+          structure_lw = struc1_bas, structure_up = struc2_bas, &
+          use_pricel_lw = lw_use_pricel, use_pricel_up = up_use_pricel, &
+          elastic_constants_lw = [ lw_bulk_modulus ], &
+          elastic_constants_up = [ up_bulk_modulus ] &
+     )
+     call generator%set_surface_properties( &
+          miller_lw = lw_mplane, miller_up = up_mplane, &
+          is_layered_lw = lw_layered, is_layered_up = up_layered, &
+          layer_separation_cutoff = [ lw_layer_sep, up_layer_sep ] &
+     )
+     if(.not.ludef_lw_layered) call generator%reset_is_layered_lw()
+     if(.not.ludef_up_layered) call generator%reset_is_layered_up()
 
      !!-------------------------------------------------------------------------
      !! surface generator
      !!-------------------------------------------------------------------------
      if(lsurf_gen)then
-        
-        call system('mkdir -p DTERMINATIONS')
-        call chdir("DTERMINATIONS")
-        
         if(all(lw_mplane.eq.0))then
            write(*,'("No Miller plane defined for lower material.")')
            write(*,'("Skipping...")')
         else
            write(*,'(1X,"Finding terminations for lower material.")')
-           term_gen%layer_separation_cutoff = lw_layer_sep
-           call term_gen%generate(struc1_bas,lw_mplane,axis,&
+           structures = generator%get_terminations(1, &
                 num_layers = lw_num_layers, &
                 thickness = lw_thickness &
            )
-           call term_gen%write_structures(directory = "DTERMINATIONS", prefix= "lw_")
+           do i = 1, size(structures)
+              write(filename, '(A,I0,A)') "lw_term_", i, ".vasp"
+              open(newunit=unit, status='replace', file=trim(filename))
+              call geom_write(unit, structures(i))
+              close(unit)
+           end do
         end if
         if(all(up_mplane.eq.0))then
            write(*,'("No Miller plane defined for upper material.")')
            write(*,'("Skipping...")')
         else
            write(*,'(1X,"Finding terminations for upper material.")')
-           term_gen%layer_separation_cutoff = up_layer_sep
-           call term_gen%generate(struc2_bas,up_mplane,axis,&
+           structures = generator%get_terminations(2, &
                 num_layers = up_num_layers, &
                 thickness = up_thickness &
            )
-           call term_gen%write_structures(directory = "DTERMINATIONS", prefix= "up_")
+           do i = 1, size(structures)
+              write(filename, '(A,I0,A)') "up_term_", i, ".vasp"
+              open(newunit=unit, status='replace', file=trim(filename))
+              call geom_write(unit, structures(i))
+              close(unit)
+           end do
         end if
         write(*,'(1X,"Terminations printed.",/,1X,"Exiting...")')
         stop
@@ -91,30 +130,15 @@ program artemis_executable
      !! interface generator
      !!-------------------------------------------------------------------------
      if(irestart.eq.0)then
-        call intf_gen%set_tolerance( &
-               tolerance = tolerance &
-        )
-        call intf_gen%set_materials( &
-               structure_lw = struc1_bas, structure_up = struc2_bas, &
-               use_pricel_lw = lw_use_pricel, use_pricel_up = up_use_pricel, &
-               elastic_constants_lw = [ lw_bulk_modulus ], &
-               elastic_constants_up = [ up_bulk_modulus ] &
-        )
-        call intf_gen%set_surface_properties( &
-               miller_lw = lw_mplane, miller_up = up_mplane, &
-               is_layered_lw = lw_layered, is_layered_up = up_layered &
-        )
-        if(.not.ludef_lw_layered) call intf_gen%reset_is_layered_lw()
-        if(.not.ludef_up_layered) call intf_gen%reset_is_layered_up()
-        call intf_gen%generate( &
+        call generator%generate( &
              surface_lw = lw_surf, surface_up = up_surf, &
              print_lattice_match_info = lprint_matches, &
              print_termination_info = lprint_terms, &
              print_shift_info = lprint_shifts &
         )
-        call intf_gen%write_structures(directory = "DINTERFACES", prefix= "")
+        call generator%write_structures(directory = "DINTERFACES", prefix= "")
      else
-        call intf_gen%restart(struc1_bas)
+        call generator%restart(struc1_bas)
      end if
 
 

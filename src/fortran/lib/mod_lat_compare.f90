@@ -19,12 +19,11 @@ module lat_compare
   use misc_linalg, only: cross,uvec,modu,get_area,find_tf,det,reduce_vec_gcd,&
        inverse_3x3,get_vec_multiple,get_frac_denom
   use artemis__geom_rw, only: basis_type
-  use edit_geom, only: MATNORM,planecutter
+  use artemis__geom_utils, only: MATNORM,planecutter
   implicit none
-  integer :: ierr_compare
+  integer :: ierr_compare = 0
   logical :: lstop=.true.
-  logical :: lreduce=.false.
-  integer, private :: match_method=0
+  logical :: reduce=.false.
 
 
   
@@ -32,116 +31,6 @@ module lat_compare
  
   
 contains
-!!!#############################################################################
-!!! 
-!!!#############################################################################
-  function get_best_match(tol,basis1,basis2,str1,str2,lprint,ierr,plane1,plane2,nmiller,imatch) result(SAV)
-    implicit none
-    integer :: num_miller
-    character(3) :: str1,str2
-    logical :: lprint
-    type(tol_type) :: tol
-    type(basis_type) :: basis1,basis2
-    type(latmatch_type) :: SAV
-    integer, optional :: ierr,imatch,nmiller
-    integer, dimension(3), optional :: plane1,plane2
-    
-    if(present(imatch)) match_method=imatch
-    if(present(ierr))then
-       ierr_compare=ierr
-    else
-       ierr_compare=0
-    end if
-    num_miller=10
-    if(present(nmiller)) num_miller=nmiller
-
-    allocate(SAV%tf1(tol%nstore,3,3))
-    allocate(SAV%tf2(tol%nstore,3,3))
-    allocate(SAV%tol(tol%nstore,3))
-
-    SAV%tol(:,:)=10000
-    SAV%lat1=MATNORM(basis1%lat)
-    SAV%lat2=MATNORM(basis2%lat)
-
-    if(match_method.eq.0)then
-       if(present(plane1))then
-          if(present(plane2))then
-             call lattice_matching(&
-                  SAV,tol,basis1,basis2,&
-                  plane1=plane1,plane2=plane2,nmiller=num_miller,&
-                  lprint=lprint)
-          else
-             call lattice_matching(&
-                  SAV,tol,basis1,basis2,&
-                  plane1=plane1,nmiller=num_miller,&
-                  lprint=lprint)
-          end if
-       elseif(present(plane2))then
-          call lattice_matching(&
-               SAV,tol,basis1,basis2,&
-               plane2=plane2,nmiller=num_miller,&
-               lprint=lprint)
-       else
-          call lattice_matching(&
-               SAV,tol,basis1,basis2,&
-               plane2=plane2,nmiller=num_miller,&
-               lprint=lprint)
-       end if
-    else
-       call pick_axis(SAV,(/str1,str2/),lprint)
-       call cyc_lat1(SAV,tol,lprint)
-    end if
-    if(lprint) call endcode(SAV)
-!    if(any(isnan(SAV%tf1(:,:,:))).or.any(isnan(SAV%tf2(:,:,:))))then
-!       write(0,*) "CODE BROKE ON FINDING A MATCH (NaN)"
-!       write(0,*) "Exiting..."
-!       call exit()
-!    end if
-
-
-    return
-  end function get_best_match
-!!!#############################################################################
-
-
-!!!#############################################################################
-!!! Axis picker
-!!!#############################################################################
-  subroutine pick_axis(SAV,str,lprint)
-    implicit none
-    integer :: i
-    logical :: lprint
-    character(3), dimension(2) :: str
-    type(latmatch_type) :: SAV
-
-
-    do i=1,2
-       if(verify("abc",str(i)).eq.0) then
-          SAV%axes(i)=3
-          if(lprint) write(*,*) "Finding matches of all possible planes."
-       elseif(verify("abc",str(i)).eq.3) then
-          SAV%axes(i)=2
-          if(lprint) write(*,*) "Finding matches of the ab planes."
-       elseif(verify("abc",str(i)).eq.1) then
-          SAV%axes(i)=2
-          SAV%abc=cshift(SAV%abc,shift=1)
-          SAV%lat1(:,:)=cshift(SAV%lat1(:,:),shift=1,dim=1)
-          SAV%lat2(:,:)=cshift(SAV%lat2(:,:),shift=1,dim=1)
-          if(lprint) write(*,*) "Finding matches of the bc planes."
-       elseif(verify("abc",str(i)).eq.2) then
-          SAV%axes(i)=2
-          SAV%abc=cshift(SAV%abc,shift=2)
-          SAV%lat1(:,:)=cshift(SAV%lat1(:,:),shift=2,dim=1)
-          SAV%lat2(:,:)=cshift(SAV%lat2(:,:),shift=2,dim=1)
-          if(lprint) write(*,*) "Finding matches of the ca planes."
-       end if
-    end do
-
-
-    return    
-  end subroutine pick_axis
-!!!#############################################################################
-
 
 !!!#############################################################################
 !!! cycles lattice 1
@@ -161,26 +50,24 @@ contains
 !!!   - allows for negative values on the upper off-diagonal elements
 !!!   - stops transformation matrix from checking over previous superlattices
 !!!   - equivalent transformation matrix will have a determinant of zero
-  subroutine cyc_lat1(SAV,tol,ltmp)
+  subroutine cyc_lat1(SAV, tol, match_method, verbose)
     implicit none
+    type(latmatch_type), intent(inout) :: SAV
+    integer, intent(in) :: match_method
+    integer, intent(in) :: verbose
     integer :: i,j,k
     integer :: n_num,count1
     logical :: l1change
-    logical :: lprint
     type(tol_type) :: tol
-    type(latmatch_type) :: SAV
     integer, dimension(3,3) :: tf1,tf2
     integer, dimension(2,3) :: n
     real(real32), dimension(3,3) :: tlat1,tlat2
     real(real32), allocatable, dimension(:,:,:) :: match_tfs
-    logical, optional :: ltmp
 
     
 !!!-----------------------------------------------------------------------------
 !!! Initialised varaibles and allocates arrays
 !!!-----------------------------------------------------------------------------
-    lprint=.false.
-    if(present(ltmp)) lprint=ltmp
     allocate(match_tfs(tol%maxfit,3,3))
     match_tfs=0._real32
     SAV%nfit=0
@@ -279,7 +166,7 @@ contains
 !!! Generates corresponding superlattice of 2nd lattice that will best ...
 !!! ... fit with current superlattice of 1st lattice.
 !!!-----------------------------------------------------------------------------
-       tlat2=cyc_lat2(SAV,tol,tlat1,tf1,tf2,match_tfs)
+       tlat2=cyc_lat2(SAV,tol,tlat1,tf1,tf2,match_tfs, match_method)
        count1=count1+1
 
 
@@ -303,7 +190,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Checks whether corresponding superlattices are within tolerance factors
 !!!-----------------------------------------------------------------------------
-       if(tol_check(SAV,tol,tlat1,tlat2,tf1,tf2,lprint))then
+       if(tol_check(SAV,tol,tlat1,tlat2,tf1,tf2,verbose))then
           !!--------------------------------------------------------------------
           !! Handles counters accordingly
           !!--------------------------------------------------------------------
@@ -320,12 +207,12 @@ contains
 !!! Checks whether any stop conditions are met
 !!!-----------------------------------------------------------------------------
        if(SAV%nfit.eq.tol%maxfit) then
-          if(lprint) &
+          if(verbose.gt.0) &
                write(*,'(/,"Number of fits reached maxfits ",I0)') SAV%nfit
           return
        end if
        if(lstop.and.count1.gt.100) then
-          if(lprint) &
+          if(verbose.gt.0) &
                write(*,'(/,"Stopped as we reached ",I0," failed checks.")')&
                count1
           return
@@ -349,7 +236,7 @@ contains
 !!!#############################################################################
 !!! cycles lattice 2
 !!!#############################################################################
-  function cyc_lat2(SAV,tol,tlat1,tf1,tf2,match_tfs) result(tlat2)
+  function cyc_lat2(SAV,tol,tlat1,tf1,tf2,match_tfs, match_method) result(tlat2)
     implicit none
     integer :: i,j
     type(tol_type) :: tol
@@ -358,6 +245,7 @@ contains
     integer, dimension(3,3) :: it1_mat,it2_mat
     real(real32), dimension(3,3) :: t_mat,tlat1,tlat2
     real(real32), dimension(:,:,:) :: match_tfs
+    integer, intent(in) :: match_method
 
 
     select case(match_method)
@@ -375,7 +263,7 @@ contains
 !!! This can be used to make the simplest conversion from an identity ...
 !!! ... transformation of lat1 and the corresponding transformation of lat2.
 !!!-----------------------------------------------------------------------------
-    SAV%lreduced=.false.
+    SAV%reduced=.false.
     match_tfs(SAV%nfit+1,:,:)=find_tf((real(tf1,real32)),(real(tf2,real32)))
     if(any(isnan(match_tfs(SAV%nfit+1,:,:)))) goto 201
     t_mat(:,:)=match_tfs(SAV%nfit+1,:,:)
@@ -389,7 +277,7 @@ contains
     end if
 
 
-    reduce_if: if(lreduce)then
+    reduce_if: if(SAV%reduce)then
        !t_mat=transpose(t_mat) !NOT SURE WHY TRANSPOSED
        it1_mat(:,:)=0
        it2_mat(:,:)=0
@@ -411,7 +299,7 @@ contains
        if(abs(get_area(real(tf1(1,:),real32),real(tf1(2,:),real32))).lt.&
             abs(get_area(real(it1_mat(1,:),real32),real(it1_mat(2,:),real32))))&
             exit reduce_if
-       SAV%lreduced=.true.
+       SAV%reduced=.true.
        tf1=it1_mat
        tf2=it2_mat
        !tf2=matmul(tf2,it2_mat) !WHY WAS THIS USED?
@@ -633,18 +521,19 @@ contains
 !!!#############################################################################
 !!! Checks whether the supplied superlattices fit within the tolerances
 !!!#############################################################################
-  function tol_check(SAV,tol,tlat1,tlat2,tf1,tf2,lprint) result(lmatch)
+  function tol_check(SAV,tol,tlat1,tlat2,tf1,tf2,verbose) result(lmatch)
     implicit none
+    type(latmatch_type), intent(inout) :: SAV
+    real(real32), dimension(3,3), intent(in) :: tlat1, tlat2
+    integer, dimension(3,3), intent(inout) :: tf1, tf2
+    integer, intent(in) :: verbose
+
     integer :: i,j
     real(real32) :: ang1,ang2,t_area1,t_area2,diff
     logical :: la1a2,la1b2,l12,lmatch
     type(tol_type) :: tol
-    type(latmatch_type) :: SAV
-    integer, dimension(3,3) :: tf1,tf2
     real(real32), dimension(2) :: mag_mat1,mag_mat2
     real(real32), dimension(3) :: tvec
-    real(real32), dimension(3,3) :: tlat1,tlat2
-    logical, optional :: lprint
 
 
     lmatch=.false.
@@ -707,24 +596,22 @@ contains
        !!-----------------------------------------------------------------------
        !! Prints the mismatches for the current successful match
        !!-----------------------------------------------------------------------
-       if(present(lprint))then
-          if(lprint)then
-             write(*,'(/,A,I0,2X,A,I0)') &
-                  "Fit number: ",SAV%nfit+1,&
-                  "Area increase: ",&
-                  nint(get_area(real(tf1(1,:),real32),real(tf1(2,:),real32)))
-             write(*,'("   Transmat 1:    Transmat 2:")')
-             write(*,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
-             write(*,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
-                  tf1(1,1:3),tf2(1,1:3),&
-                  tf1(2,1:3),tf2(2,1:3),&
-                  tf1(3,1:3),tf2(3,1:3)
-             write(*,'(" vector mismatch (%) = ",F0.9)') diff*100._real32
-             write(*,'(" angle mismatch (°)  = ",F0.9)') abs(ang1-ang2)*180/pi
-             write(*,'(" area mismatch (%)   = ",F0.9)') (&
-                  1-abs(t_area1/t_area2))*100._real32
-             write(*,*) "reduced:",SAV%lreduced
-          end if
+       if(verbose.gt.0)then
+          write(*,'(/,A,I0,2X,A,I0)') &
+               "Fit number: ",SAV%nfit+1,&
+               "Area increase: ",&
+               nint(get_area(real(tf1(1,:),real32),real(tf1(2,:),real32)))
+          write(*,'("   Transmat 1:    Transmat 2:")')
+          write(*,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
+          write(*,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
+               tf1(1,1:3),tf2(1,1:3),&
+               tf1(2,1:3),tf2(2,1:3),&
+               tf1(3,1:3),tf2(3,1:3)
+          write(*,'(" vector mismatch (%) = ",F0.9)') diff*100._real32
+          write(*,'(" angle mismatch (°)  = ",F0.9)') abs(ang1-ang2)*180/pi
+          write(*,'(" area mismatch (%)   = ",F0.9)') (&
+               1-abs(t_area1/t_area2))*100._real32
+          write(*,*) "reduced:",SAV%reduced
        end if
        !!-----------------------------------------------------------------------
        !! Checks if best mismatch and saves accordingly
@@ -944,15 +831,24 @@ contains
 !!! Isiah lattice match
 !!! Program to match lattices of two position cards.
 !!!#############################################################################
-  subroutine lattice_matching(SAV,tol,bas1,bas2,plane1,plane2,nmiller,lprint)
+  subroutine lattice_matching( &
+       SAV, tol, structure_lw, structure_up, &
+       miller_lw, miller_up, max_num_planes, &
+       verbose &
+  )
     use artemis__sym
     use plane_matching
     implicit none
+
+    type(latmatch_type), intent(inout) :: SAV
+    type(basis_type), intent(in) :: structure_lw,structure_up
+    integer, dimension(3), intent(in) :: miller_lw,miller_up
+    integer, intent(in) :: max_num_planes
+    integer, intent(in) :: verbose
     
     type(sym_type) :: grp1,grp2
     type(tol_type) :: tol
     type(tol_type) :: pm_tol
-    type(latmatch_type) :: SAV
     real(real32), dimension(3,3) :: tf
     real(real32), dimension(3,3) :: lat1,lat2 !original lattices.
     real(real32), dimension(3,3) :: templat1,templat2 !tmp lattices to feed into plane matching.
@@ -983,10 +879,6 @@ contains
     integer, allocatable, dimension(:,:) :: ivtmp1,miller1,miller2
     integer, dimension(3) :: ivtmp2
 
-    type(basis_type), intent(in) :: bas1,bas2
-    integer, intent(in) :: nmiller
-    logical, optional, intent(in) :: lprint
-    integer, dimension(3), optional, intent(in) :: plane1,plane2
 
 
     !!--------------------------------------------------------------------------
@@ -1023,13 +915,13 @@ contains
     !!--------------------------------------------------------------------------
     s_end=0
     call sym_setup(grp1,lat1)!,predefined=.true.,new_start=.true.)
-    call check_sym(grp1,bas1,lsave=.true.)
+    call check_sym(grp1,structure_lw,lsave=.true.)
     allocate(tmpsym1(grp1%nsym,3,3))
     
 
     s_end=0
     call sym_setup(grp2,lat2)!,predefined=.true.,new_start=.true.)
-    call check_sym(grp2,bas2,lsave=.true.)
+    call check_sym(grp2,structure_up,lsave=.true.)
     allocate(tmpsym2(grp2%nsym,3,3))
 
 
@@ -1038,7 +930,7 @@ contains
     !!--------------------------------------------------------------------------
     loopsize=10
     allocate(ivtmp1((2*loopsize+1)**3,3))
-    !allocate(ivtmp1(nmiller,3))
+    !allocate(ivtmp1(max_num_planes,3))
 
 
     !!--------------------------------------------------------------------------
@@ -1046,9 +938,9 @@ contains
     !!--------------------------------------------------------------------------
     ivtmp1=0
     itmp1=0
-    if(present(plane1))then
-       allocate(miller1(1,size(plane1)))
-       miller1(1,:3)=plane1(:3)
+    if(any(miller_lw.gt.0))then
+       allocate(miller1(1,size(miller_lw)))
+       miller1(1,:3)=miller_lw(:3)
     else
        mloop1: do i1=1,loopsize
           m1=floor((i1)/2.0)*(-1)**i1
@@ -1060,7 +952,7 @@ contains
                      cycle mloop3
                 itmp1 = itmp1 + 1
                 ivtmp1(itmp1,:) = [ m1, m2, m3 ]
-                !if(itmp1.eq.nmiller) exit mloop1
+                !if(itmp1.eq.max_num_planes) exit mloop1
              end do mloop3
           end do mloop2
        end do mloop1
@@ -1073,7 +965,7 @@ contains
           ivtmp1(i,:) = ivtmp1(loc,:)
           ivtmp1(loc,:) = ivtmp2(:)
        end do
-       itmp1 = min(itmp1,nmiller)
+       itmp1 = min(itmp1,max_num_planes)
        allocate(miller1(itmp1,3))
        miller1(:,:) = ivtmp1(:itmp1,:)
     end if
@@ -1084,9 +976,9 @@ contains
     !!--------------------------------------------------------------------------
     itmp1 = 0
     ivtmp1 = 0
-    if(present(plane2))then
-       allocate(miller2(1,size(plane2)))
-       miller2(1,:3)=plane2(:3)
+    if(any(miller_up.gt.0))then
+       allocate(miller2(1,size(miller_up)))
+       miller2(1,:3)=miller_up(:3)
     else
        mloop4: do i1=1,loopsize
           m1=floor((i1)/2.0)*(-1)**i1
@@ -1098,7 +990,7 @@ contains
                      cycle mloop6
                 itmp1=itmp1+1
                 ivtmp1(itmp1,:)=(/m1,m2,m3/)
-                !if(itmp1.eq.nmiller) exit mloop4
+                !if(itmp1.eq.max_num_planes) exit mloop4
              end do mloop6
           end do mloop5
        end do mloop4
@@ -1111,26 +1003,24 @@ contains
           ivtmp1(i,:) = ivtmp1(loc,:)
           ivtmp1(loc,:) = ivtmp2(:)
        end do
-       itmp1 = min(itmp1,nmiller)
+       itmp1 = min(itmp1,max_num_planes)
        allocate(miller2(itmp1,3))
        miller2(:,:) = ivtmp1(:itmp1,:)
     end if
-    if(present(lprint))then
-       if(lprint)then
-          write(*,*)
-          write(*,'(1X,"Miller planes considered for lower material: ",I0)') &
-               size(miller1(:,1))
-          do i=1,size(miller1(:,1))
-             write(*,'(2X,I2,")",3X,3(3X,I0))') i,miller1(i,:)
-          end do
-          write(*,*)
-          write(*,'(1X,"Miller planes considered for upper material: ",I0)') &
-               size(miller2(:,1))
-          do i=1,size(miller2(:,1))
-             write(*,'(2X,I2,")",3X,3(3X,I0))') i,miller2(i,:)
-          end do
-          write(*,*)
-       end if
+    if(verbose.gt.0)then
+       write(*,*)
+       write(*,'(1X,"Miller planes considered for lower material: ",I0)') &
+            size(miller1(:,1))
+       do i=1,size(miller1(:,1))
+          write(*,'(2X,I2,")",3X,3(3X,I0))') i,miller1(i,:)
+       end do
+       write(*,*)
+       write(*,'(1X,"Miller planes considered for upper material: ",I0)') &
+            size(miller2(:,1))
+       do i=1,size(miller2(:,1))
+          write(*,'(2X,I2,")",3X,3(3X,I0))') i,miller2(i,:)
+       end do
+       write(*,*)
     end if
 
 
@@ -1305,7 +1195,7 @@ contains
     lvec1=.false.
     OUTLOOP: do i=1,tol%nstore
        SAV%tol(i,:) = saved_tolerances(i,:)
-       if_reduce: if(lreduce)then
+       if_reduce: if(reduce)then
           tf = find_tf(comb_trans_1(i,:,:),comb_trans_2(i,:,:))
           if(abs(abs(det(comb_trans_1(i,:,:)))-1._real32).lt.1.E-6_real32) exit if_reduce
           if(ierror.eq.1)then
@@ -1348,26 +1238,24 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Print the set of best matches
 !!!-----------------------------------------------------------------------------
-    if(present(lprint))then
-       if(lprint)then
-          do i=1,SAV%nfit
-             write(*,'(/,A,I0,2X,A,I0)') &
-                  "Fit number: ",i,&
-                  "Area increase: ",&
-                  nint(get_area(real(SAV%tf1(i,1,:),real32),real(SAV%tf1(i,2,:),real32)))
-             write(*,'("   Transmat 1:    Transmat 2:")')
-             write(*,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
-             write(*,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
-                  SAV%tf1(i,1,1:3),SAV%tf2(i,1,1:3),&
-                  SAV%tf1(i,2,1:3),SAV%tf2(i,2,1:3),&
-                  SAV%tf1(i,3,1:3),SAV%tf2(i,3,1:3)
-             write(*,'(" vector mismatch (%) = ",F0.9)') SAV%tol(i,1)
-             write(*,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(i,2)*180/pi
-             write(*,'(" area mismatch (%)   = ",F0.9)') SAV%tol(i,3)
-             write(*,*) "reduced:",lvec1(i)
-             write(*,*)
-          end do
-       end if
+    if(verbose.gt.0)then
+       do i=1,SAV%nfit
+          write(*,'(/,A,I0,2X,A,I0)') &
+               "Fit number: ",i,&
+               "Area increase: ",&
+               nint(get_area(real(SAV%tf1(i,1,:),real32),real(SAV%tf1(i,2,:),real32)))
+          write(*,'("   Transmat 1:    Transmat 2:")')
+          write(*,'((/,1X,3(3X,A1),3X,3(3X,A1)))') SAV%abc,SAV%abc
+          write(*,'(3(/,2X,3(I3," "),3X,3(I3," ")))') &
+               SAV%tf1(i,1,1:3),SAV%tf2(i,1,1:3),&
+               SAV%tf1(i,2,1:3),SAV%tf2(i,2,1:3),&
+               SAV%tf1(i,3,1:3),SAV%tf2(i,3,1:3)
+          write(*,'(" vector mismatch (%) = ",F0.9)') SAV%tol(i,1)
+          write(*,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(i,2)*180/pi
+          write(*,'(" area mismatch (%)   = ",F0.9)') SAV%tol(i,3)
+          write(*,*) "reduced:",lvec1(i)
+          write(*,*)
+       end do
     end if
 
 
