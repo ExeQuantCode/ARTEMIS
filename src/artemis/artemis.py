@@ -641,7 +641,19 @@ class Generator(f90wrap.runtime.FortranModule):
             bondlength_cutoff : float
             
             """
-            _artemis.f90wrap_intf_gen__set_shift_method__binding_agt(this=self._handle, \
+            
+            if shifts is not None:
+                # if shifts is a scalar, convert it to a 2D array, fortran order
+                if isinstance(shifts, float) or isinstance(shifts, int):
+                    shifts = numpy.array([[shifts]], order='F')
+                # if shifts is a 1D array, convert it to a 2D array, fortran order
+                elif len(shifts.shape) == 1:
+                    shifts = numpy.array([shifts], order='F')
+                # if shifts is a 2D array, convert it to a 2D array, fortran order
+                elif len(shifts.shape) == 2:
+                    shifts = numpy.array(shifts, order='F')
+
+            _artemis.f90wrap_intf_gen__set_shift_method__binding__agt(this=self._handle, \
                 method=method, num_shifts=num_shifts, shifts=shifts, \
                 interface_depth=interface_depth, separation_scale=separation_scale, \
                 depth_method=depth_method, bondlength_cutoff=bondlength_cutoff)
@@ -668,7 +680,7 @@ class Generator(f90wrap.runtime.FortranModule):
             require_mirror_swaps : bool
             
             """
-            _artemis.f90wrap_intf_gen__set_swap_method__binding_agt(this=self._handle, \
+            _artemis.f90wrap_intf_gen__set_swap_method__binding__agt(this=self._handle, \
                 method=method, num_swaps=num_swaps, swap_density=swap_density, \
                 swap_depth=swap_depth, swap_sigma=swap_sigma, \
                 require_mirror_swaps=require_mirror_swaps)
@@ -694,7 +706,7 @@ class Generator(f90wrap.runtime.FortranModule):
             compensate_normal : bool
             
             """
-            _artemis.f90wrap_intf_gen__set_match_method__binding_agt(this=self._handle, \
+            _artemis.f90wrap_intf_gen__set_match_method__binding__agt(this=self._handle, \
                 method=method, max_num_matches=max_num_matches, max_num_terms=max_num_terms, \
                 max_num_planes=max_num_planes, compensate_normal=compensate_normal)
         
@@ -732,7 +744,7 @@ class Generator(f90wrap.runtime.FortranModule):
             if isinstance(structure_up, Atoms):
                 structure_up = geom_rw.basis(atoms=structure_up)
 
-            _artemis.f90wrap_intf_gen__set_materials__binding_agt(this=self._handle, \
+            _artemis.f90wrap_intf_gen__set_materials__binding__agt(this=self._handle, \
                 structure_lw=structure_lw._handle, structure_up=structure_up._handle, \
                 elastic_constants_lw=elastic_constants_lw, \
                 elastic_constants_up=elastic_constants_up, use_pricel_lw=use_pricel_lw, \
@@ -765,7 +777,7 @@ class Generator(f90wrap.runtime.FortranModule):
             vacuum_gap : float
             
             """
-            _artemis.f90wrap_intf_gen__set_surface_properties__binding_agt(this=self._handle, \
+            _artemis.f90wrap_intf_gen__set_surface_properties__binding__agt(this=self._handle, \
                 miller_lw=miller_lw, miller_up=miller_up, is_layered_lw=is_layered_lw, \
                 is_layered_up=is_layered_up, \
                 layer_separation_cutoff_lw=layer_separation_cutoff_lw, \
@@ -786,7 +798,7 @@ class Generator(f90wrap.runtime.FortranModule):
             this : Artemis_generator_Type
             
             """
-            _artemis.f90wrap_intf_gen__reset_is_layered_lw__binding_agt(this=self._handle)
+            _artemis.f90wrap_intf_gen__reset_is_layered_lw__binding__agt(this=self._handle)
         
         def reset_is_layered_up(self):
             """
@@ -802,7 +814,7 @@ class Generator(f90wrap.runtime.FortranModule):
             this : Artemis_generator_Type
             
             """
-            _artemis.f90wrap_intf_gen__reset_is_layered_up__binding_agt(this=self._handle)
+            _artemis.f90wrap_intf_gen__reset_is_layered_up__binding__agt(this=self._handle)
         
         def get_terminations_lw(self, miller=None, surface=None, num_layers=None, \
             thickness=None, orthogonalise=None, normalise=None, break_on_fail=None, 
@@ -872,6 +884,29 @@ class Generator(f90wrap.runtime.FortranModule):
                 return structures, exit_code
             return structures
 
+        def get_interface_location(self, structure=None, axis=None):
+
+            """
+            get_interface_location__binding__artemis_gen_type(self, structure, axis)
+            
+            
+            Defined at \
+                ../src/fortran/lib/mod_intf_generator.f90 \
+                lines 1112-1124
+            
+            Parameters
+            ----------
+            this : Artemis_generator_Type
+            structure : Basis_Type
+            axis : int
+            
+            """
+            if isinstance(structure, Atoms):
+                structure = geom_rw.basis(atoms=structure)
+
+            return _artemis.f90wrap_intf_gen__get_interface_location__binding__agt(this=self._handle, \
+                structure=structure._handle, axis=axis)
+
         def generate(self, surface_lw=None, surface_up=None, thickness_lw=None, \
             thickness_up=None, num_layers_lw=None, num_layers_up=None, \
             reduce_matches=None, \
@@ -935,7 +970,7 @@ class Generator(f90wrap.runtime.FortranModule):
                 return structures, exit_code
             return structures
 
-        def restart(self, basis, interface_location=None, print_shift_info=None, \
+        def restart(self, structure, interface_location=None, print_shift_info=None, \
             seed=None, verbose=None, return_exit_code=False, calc=None):
             """
             restart__binding__artemis_gen_type(self, basis[, \
@@ -961,8 +996,12 @@ class Generator(f90wrap.runtime.FortranModule):
             exit_code = 0
             structures = None
 
+            # check if host is ase.Atoms object or a Fortran derived type basis_type
+            if isinstance(structure, Atoms):
+                structure = geom_rw.basis(atoms=structure)
+
             exit_code = _artemis.f90wrap_intf_gen__restart__binding__agt(this=self._handle, \
-                basis=basis._handle, interface_location=interface_location, \
+                structure=structure._handle, interface_location=interface_location, \
                 print_shift_info=print_shift_info, seed=seed, verbose=verbose)
             
             if ( exit_code != 0 and exit_code != None ) and not return_exit_code:

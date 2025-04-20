@@ -984,8 +984,8 @@ subroutine f90wrap_intf_gen__set_tolerance__bindind_agt(this, vector_mismatch, a
         angle_weight=angle_weight, area_weight=area_weight)
 end subroutine f90wrap_intf_gen__set_tolerance__bindind_agt
 
-subroutine f90wrap_intf_gen__set_shift_method__binding_agt(this, method, num_shifts, shifts, &
-    interface_depth, separation_scale, depth_method, bondlength_cutoff, n0)
+subroutine f90wrap_intf_gen__set_shift_method__binding__agt(this, method, num_shifts, shifts, &
+    interface_depth, separation_scale, depth_method, bondlength_cutoff, n0, n1)
     use artemis__generator, only: artemis_generator_type
     implicit none
     
@@ -996,19 +996,21 @@ subroutine f90wrap_intf_gen__set_shift_method__binding_agt(this, method, num_shi
     integer, intent(in), dimension(2) :: this
     integer, intent(in), optional :: method
     integer, intent(in), optional :: num_shifts
-    real(4), dimension(n0), intent(in), optional :: shifts
+    real(4), dimension(n0,n1), intent(in), optional :: shifts
     real(4), intent(in), optional :: interface_depth
     real(4), intent(in), optional :: separation_scale
     integer, intent(in), optional :: depth_method
     real(4), intent(in), optional :: bondlength_cutoff
     integer :: n0
     !f2py intent(hide), depend(shifts) :: n0 = shape(shifts,0)
+    integer :: n1
+    !f2py intent(hide), depend(shifts) :: n1 = shape(shifts,1)
     this_ptr = transfer(this, this_ptr)
     call this_ptr%p%set_shift_method(method=method, num_shifts=num_shifts, shifts=shifts, interface_depth=interface_depth, &
         separation_scale=separation_scale, depth_method=depth_method, bondlength_cutoff=bondlength_cutoff)
-end subroutine f90wrap_intf_gen__set_shift_method__binding_agt
+end subroutine f90wrap_intf_gen__set_shift_method__binding__agt
 
-subroutine f90wrap_intf_gen__set_swap_method__binding_agt(this, method, num_swaps, swap_density, &
+subroutine f90wrap_intf_gen__set_swap_method__binding__agt(this, method, num_swaps, swap_density, &
     swap_depth, swap_sigma, require_mirror_swaps)
     use artemis__generator, only: artemis_generator_type
     implicit none
@@ -1027,9 +1029,9 @@ subroutine f90wrap_intf_gen__set_swap_method__binding_agt(this, method, num_swap
     this_ptr = transfer(this, this_ptr)
     call this_ptr%p%set_swap_method(method=method, num_swaps=num_swaps, swap_density=swap_density, swap_depth=swap_depth, &
         swap_sigma=swap_sigma, require_mirror_swaps=require_mirror_swaps)
-end subroutine f90wrap_intf_gen__set_swap_method__binding_agt
+end subroutine f90wrap_intf_gen__set_swap_method__binding__agt
 
-subroutine f90wrap_intf_gen__set_match_method__binding_agt(this, method, max_num_matches, max_num_terms, &
+subroutine f90wrap_intf_gen__set_match_method__binding__agt(this, method, max_num_matches, max_num_terms, &
     max_num_planes, compensate_normal)
     use artemis__generator, only: artemis_generator_type
     implicit none
@@ -1047,9 +1049,9 @@ subroutine f90wrap_intf_gen__set_match_method__binding_agt(this, method, max_num
     this_ptr = transfer(this, this_ptr)
     call this_ptr%p%set_match_method(method=method, max_num_matches=max_num_matches, max_num_terms=max_num_terms, &
         max_num_planes=max_num_planes, compensate_normal=compensate_normal)
-end subroutine f90wrap_intf_gen__set_match_method__binding_agt
+end subroutine f90wrap_intf_gen__set_match_method__binding__agt
 
-subroutine f90wrap_intf_gen__set_materials__binding_agt(this, structure_lw, structure_up, &
+subroutine f90wrap_intf_gen__set_materials__binding__agt(this, structure_lw, structure_up, &
     elastic_constants_lw, elastic_constants_up, use_pricel_lw, use_pricel_up, n0, n1)
     use artemis__generator, only: artemis_generator_type
     use artemis__geom_rw, only: basis_type
@@ -1081,9 +1083,9 @@ subroutine f90wrap_intf_gen__set_materials__binding_agt(this, structure_lw, stru
     call this_ptr%p%set_materials(structure_lw=structure_lw_ptr%p, structure_up=structure_up_ptr%p, &
         elastic_constants_lw=elastic_constants_lw, elastic_constants_up=elastic_constants_up, use_pricel_lw=use_pricel_lw, &
         use_pricel_up=use_pricel_up)
-end subroutine f90wrap_intf_gen__set_materials__binding_agt
+end subroutine f90wrap_intf_gen__set_materials__binding__agt
 
-subroutine f90wrap_intf_gen__set_surface_properties__binding_agt( &
+subroutine f90wrap_intf_gen__set_surface_properties__binding__agt( &
     this, &
     miller_lw, miller_up, &
     is_layered_lw, is_layered_up, &
@@ -1115,9 +1117,9 @@ subroutine f90wrap_intf_gen__set_surface_properties__binding_agt( &
         layer_separation_cutoff_up=layer_separation_cutoff_up, &
         layer_separation_cutoff=layer_separation_cutoff, &
         vacuum_gap=vacuum_gap)
-end subroutine f90wrap_intf_gen__set_surface_properties__binding_agt
+end subroutine f90wrap_intf_gen__set_surface_properties__binding__agt
 
-subroutine f90wrap_intf_gen__reset_is_layered_lw__binding_agt(this)
+subroutine f90wrap_intf_gen__reset_is_layered_lw__binding__agt(this)
     use artemis__generator, only: artemis_generator_type
     implicit none
     
@@ -1128,9 +1130,9 @@ subroutine f90wrap_intf_gen__reset_is_layered_lw__binding_agt(this)
     integer, intent(in), dimension(2) :: this
     this_ptr = transfer(this, this_ptr)
     call this_ptr%p%reset_is_layered_lw()
-end subroutine f90wrap_intf_gen__reset_is_layered_lw__binding_agt
+end subroutine f90wrap_intf_gen__reset_is_layered_lw__binding__agt
 
-subroutine f90wrap_intf_gen__reset_is_layered_up__binding_agt(this)
+subroutine f90wrap_intf_gen__reset_is_layered_up__binding__agt(this)
     use artemis__generator, only: artemis_generator_type
     implicit none
     
@@ -1141,7 +1143,7 @@ subroutine f90wrap_intf_gen__reset_is_layered_up__binding_agt(this)
     integer, intent(in), dimension(2) :: this
     this_ptr = transfer(this, this_ptr)
     call this_ptr%p%reset_is_layered_up()
-end subroutine f90wrap_intf_gen__reset_is_layered_up__binding_agt
+end subroutine f90wrap_intf_gen__reset_is_layered_up__binding__agt
 
 
 
@@ -1203,6 +1205,39 @@ subroutine f90wrap_intf_gen__get_terminations__binding__agt( &
     ! Store local_structures in a module-level array so Python can retrieve it
     call store_last_generated_structures(local_structures)
 end subroutine f90wrap_intf_gen__get_terminations__binding__agt
+
+subroutine f90wrap_intf_gen__get_interface_location__binding__agt( &
+    this, structure, axis, &
+    ret_location, ret_axis)
+    use artemis__geom_rw, only: basis_type
+    use artemis__generator, only: artemis_generator_type
+    use artemis__interface_identifier, only: intf_info_type
+    implicit none
+
+    type basis_type_ptr_type
+        type(basis_type), pointer :: p => NULL()
+    end type basis_type_ptr_type
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    type(basis_type_ptr_type) :: structure_ptr
+    integer, intent(in), optional, dimension(2) :: structure
+    integer, intent(in), optional :: axis
+    integer, intent(out) :: ret_axis
+    real(4), dimension(2), intent(out) :: ret_location
+    type(intf_info_type) :: intf_info
+
+    this_ptr = transfer(this, this_ptr)
+    structure_ptr = transfer(structure, structure_ptr)
+    intf_info = this_ptr%p%get_interface_location(structure=structure_ptr%p, axis=axis)
+
+    ret_location = intf_info%loc
+    ret_axis = intf_info%axis
+end subroutine f90wrap_intf_gen__get_interface_location__binding__agt
+
+
 
 subroutine f90wrap_retrieve_last_generated_structures(structures)
     use artemis__geom_rw, only: basis_type
@@ -1277,7 +1312,7 @@ subroutine f90wrap_intf_gen__generate__binding__agt( &
         exit_code=exit_code)
 end subroutine f90wrap_intf_gen__generate__binding__agt
 
-subroutine f90wrap_intf_gen__restart__binding__agt(this, basis, interface_location, &
+subroutine f90wrap_intf_gen__restart__binding__agt(this, structure, interface_location, &
     print_shift_info, seed, verbose, exit_code)
     use artemis__generator, only: artemis_generator_type
     use artemis__geom_rw, only: basis_type
@@ -1292,14 +1327,14 @@ subroutine f90wrap_intf_gen__restart__binding__agt(this, basis, interface_locati
     type(artemis_generator_type_ptr_type) :: this_ptr
     integer, intent(in), dimension(2) :: this
     type(basis_type_ptr_type) :: structure_ptr
-    integer, intent(in), dimension(2) :: basis
+    integer, intent(in), dimension(2) :: structure
     real(4), dimension(2), intent(in), optional :: interface_location
     logical, intent(in), optional :: print_shift_info
     integer, intent(in), optional :: seed
     integer, intent(in), optional :: verbose
     integer, optional, intent(inout) :: exit_code
     this_ptr = transfer(this, this_ptr)
-    structure_ptr = transfer(basis, structure_ptr)
+    structure_ptr = transfer(structure, structure_ptr)
     call this_ptr%p%restart(structure=structure_ptr%p, interface_location=interface_location, print_shift_info=print_shift_info, &
         seed=seed, verbose=verbose, exit_code=exit_code)
 end subroutine f90wrap_intf_gen__restart__binding__agt

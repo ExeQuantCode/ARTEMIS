@@ -682,7 +682,7 @@ contains
     vol_inc = abs(det(basis%lat))
     if(vol_inc.lt.0.5_real32)then
        write(0,'(1X,"ERROR: Internal error in transformer function")')
-       write(0,'(2X,"transformer in mod_edit_geom.f90 been supplied a&
+       write(0,'(2X,"transformer in mod_geom_utils.f90 been supplied a&
             & lattice with almost zero determinant")')
        write(0,'(2X,"determinant = ",F0.9)') vol_inc
        write(0,'(3(1X,F7.2))') basis%lat
@@ -729,7 +729,7 @@ contains
     end do
     if(vol_inc.lt.minval(tolvec))then
        write(0,'(1X,"ERROR: Internal error in transformer function")')
-       write(0,'(2X,"transformer in mod_edit_geom.f90 been supplied a&
+       write(0,'(2X,"transformer in mod_geom_utils.f90 been supplied a&
             & transformation matrix with almost zero determinant")')
        write(0,'(2X,"determinant = ",F0.9)') vol_inc
        write(0,'(3(1X,F7.2))') tfmat
@@ -857,7 +857,7 @@ contains
     if(all(abs(tfmat-nint(tfmat)).lt.tol))then
        if(nint(basis%natom*vol_inc).ne.sbas%natom)then
           write(0,'(1X,"ERROR: Internal error in transformer function")')
-          write(0,'(2X,"Transformer in mod_edit_geom.f90 has failed to &
+          write(0,'(2X,"Transformer in mod_geom_utils.f90 has failed to &
                &generate enough atoms when extending the cell")')
           write(0,'(2X,"Generated ",I0," atoms, whilst expecting ",I0," atoms")') &
                sbas%natom,nint(basis%natom*vol_inc)
@@ -1443,7 +1443,7 @@ contains
 !!!-----------------------------------------------------------------------------
     if(dot_product(b(1,:),b(3,:)).gt.tol)then
        write(0,'("ERROR: Internatl error in planecutter")')
-       write(0,'(2X,"Error in planecutter subroutine in mod_edit_geom.f90")')
+       write(0,'(2X,"Error in planecutter subroutine in mod_geom_utils.f90")')
        write(0,'(2X,"b1 not perpendicular to b3")')
        write(0,'(2X,"b1 = ",3(1X,F0.3))') b(1,:)
        write(0,'(2X,"b3 = ",3(1X,F0.3))') b(3,:)
@@ -1453,7 +1453,7 @@ contains
        stop
     elseif(dot_product(b(2,:),b(3,:)).gt.tol)then
        write(0,'("ERROR: Internatl error in planecutter")')
-       write(0,'(2X,"Error in planecutter subroutine in mod_edit_geom.f90")')
+       write(0,'(2X,"Error in planecutter subroutine in mod_geom_utils.f90")')
        write(0,'(2X,"b2 not perpendicular to b3")')
        write(0,'(2X,"b2 = ",3(1X,F6.2))') b(2,:)
        write(0,'(2X,"b3 = ",3(1X,F6.2))') b(3,:)
@@ -1463,7 +1463,7 @@ contains
        stop
     elseif(dot_product(b(1,:),b(1,:)).lt.tol)then
        write(0,'("ERROR: Internatl error in planecutter")')
-       write(0,'(2X,"Error in planecutter subroutine in mod_edit_geom.f90")')
+       write(0,'(2X,"Error in planecutter subroutine in mod_geom_utils.f90")')
        write(0,'(2X,"b1 has zero size")')
        write(0,'(2X,"b1 = ",3(1X,F6.2))') b(1,:)
        write(0,'("Inform developers of this issue")')
@@ -1471,7 +1471,7 @@ contains
        stop
     elseif(dot_product(b(2,:),b(2,:)).lt.tol)then
        write(0,'("ERROR: Internatl error in planecutter")')
-       write(0,'(2X,"Error in planecutter subroutine in mod_edit_geom.f90")')
+       write(0,'(2X,"Error in planecutter subroutine in mod_geom_utils.f90")')
        write(0,'(2X,"b2 has zero size")')
        write(0,'(2X,"b2 = ",3(1X,F6.2))') b(2,:)
        write(0,'("Inform developers of this issue")')
@@ -1512,7 +1512,7 @@ contains
           write(0,'("row ",I0," of the following matrix")') i
           write(0,'(3(2X,F9.3))') (b(j,:),j=1,3)
           write(0,'(1X,"ERROR: Internal error in planecutter function")')
-          write(0,'(2X,"Planecutter in mod_edit_geom.f90 is unable to find a&
+          write(0,'(2X,"Planecutter in mod_geom_utils.f90 is unable to find a&
                & perpendicular plane")')
           b=0._real32
           exit
@@ -1525,7 +1525,7 @@ contains
     end if
     if(abs(det(b)).lt.tol)then
        write(0,'(1X,"ERROR: Internal error in planecutter function")')
-       write(0,'(2X,"Planecutter in mod_edit_geom.f90 has generated a 0&
+       write(0,'(2X,"Planecutter in mod_geom_utils.f90 has generated a 0&
             & determinant matrix")')
        write(0,'(3(2X,F9.3))') (b(j,:),j=1,3)
        b=0._real32
@@ -1952,7 +1952,7 @@ contains
     minspecloc = minloc(bas%spec(:)%num,mask=bas%spec(:)%num.ne.0,dim=1)
     if(bas%spec(minspecloc)%num.eq.1)then
        write(0,'("ERROR: Internal error in get_bulk")')
-       write(0,'(2X,"get_bulk subroutine in mod_edit_geom.f90 unable cannot &
+       write(0,'(2X,"get_bulk subroutine in mod_geom_utils.f90 unable cannot &
             &find enough atoms to reproduce a bulk from")')
        stop
     end if
@@ -2243,7 +2243,7 @@ contains
        end where
        if(all(.not.atom_mask))then
           write(0,'("ERROR: Internal error in get_wyckoff")')
-          write(0,'(2X,"Error in subroutine get_wyckoff in mod_edit_geom.f90")')
+          write(0,'(2X,"Error in subroutine get_wyckoff in mod_geom_utils.f90")')
           write(0,'(2X,"No bulk found")')
           write(0,'(2X,"Exiting subroutine...")')
           return
@@ -2270,7 +2270,7 @@ contains
        !if(lw_loc.eq.up_loc) up_loc = up_loc + 1.E-8_real32  !! IS THIS NEEDED?
        if(lw_loc.gt.up_loc)then
           write(0,'("ERROR: Internal error in get_wyckoff")')
-          write(0,'(2X,"Error in subroutine get_wyckoff in mod_edit_geom.f90")')
+          write(0,'(2X,"Error in subroutine get_wyckoff in mod_geom_utils.f90")')
           write(0,'(2X,"Region size is negative")')
           write(0,'(2X,"Stopping...")')
           stop
@@ -2392,7 +2392,7 @@ contains
 
        if(any(wyckoff%spec(is)%atom(:).eq.0))then
           write(0,'("ERROR: Internal error in get_wyckoff")')
-          write(0,'(2X,"Error in subroutine get_wyckoff in mod_edit_geom.f90")')
+          write(0,'(2X,"Error in subroutine get_wyckoff in mod_geom_utils.f90")')
           write(0,'(2X,"Not all wyckoff atoms found")')
           do ia=1,bas%spec(is)%num
              write(0,*) is,ia,wyckoff%spec(is)%atom(ia)

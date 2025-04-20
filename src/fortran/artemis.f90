@@ -4,6 +4,7 @@ module artemis
   use artemis__structure_cache, only: &
        store_last_generated_structures, &
        retrieve_last_generated_structures
+  use artemis__interface_identifier, only: intf_info_type
   use artemis__generator, only: artemis_generator_type
   implicit none
 

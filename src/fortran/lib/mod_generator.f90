@@ -13,7 +13,7 @@ module artemis__generator
   use artemis__io_utils,      only: err_abort, print_warning, stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
   use misc_linalg,            only: uvec,modu,get_area,inverse,cross
-  use interface_identifier,   only: intf_info_type,&
+  use artemis__interface_identifier,   only: intf_info_type,&
        get_interface,get_layered_axis,gen_DON
   use artemis__geom_utils,              only: planecutter,primitive_lat,ortho_axis,&
        shift_region,set_vacuum,transformer,shifter,reducer,&
@@ -129,10 +129,12 @@ module artemis__generator
     
     procedure, pass(this) :: get_terminations
     !! Return the terminations for structure
+    procedure, pass(this) :: get_interface_location
+    !! Get the interface location for the given structure
 
     procedure, pass(this) :: generate => generate_interfaces
     !! Generate interfaces from two bulk structures
-    procedure, pass(this) :: restart => generate_intefaces_from_existing
+    procedure, pass(this) :: restart => generate_interfaces_from_existing
     !! Generate interfaces from existing bulk structures
     procedure, pass(this) :: generate_perturbations => generate_shifts_and_swaps
     !! Generate perturbations for the given basis
@@ -253,26 +255,32 @@ contains
                this%shifts = reshape(shifts, [ size(shifts,dim=1)/3,3 ])
              else
                 write(err_msg,'(A,I0,A)') &
-                     "ERROR: The shifts vector has ", size(shifts, dim=1), &
+                     "The shifts vector has ", size(shifts, dim=1), &
                      " components. It should have 1 or 3."
-                call err_abort(trim(err_msg),fmtd=.true.)
+                call stop_program(trim(err_msg))
+                return
              end if
           end select
        rank(2)
-          if(size(shifts,dim=2).eq.3) then
+          select case(size(shifts,dim=2))
+          case(1)
+             allocate(this%shifts(size(shifts,1),3))
+             this%shifts(:,3) = shifts(:,1)
+          case(3)
              allocate(this%shifts(size(shifts,1),3))
              this%shifts = shifts
-          else
+          case default
              write(err_msg,'(A,I0,A)') &
-                  "ERROR: The shifts vector has ", size(shifts, dim=1), &
-                  " components. It should have 3."
-             call err_abort(trim(err_msg),fmtd=.true.)
-          end if
+                  "The shifts argument was improperly defined."
+             call stop_program(trim(err_msg))
+             return
+          end select
        rank default
           write(err_msg,'(A,I0,A)') &
-               "ERROR: The shifts vector has ", size(shifts, dim=1), &
+               "The shifts vector has ", size(shifts, dim=1), &
                " components. It should have 1, 2, or 3."
-          call err_abort(trim(err_msg),fmtd=.true.)
+          call stop_program(trim(err_msg))
+          return
        end select
     else
        if(allocated(this%shifts)) deallocate(this%shifts)
@@ -810,7 +818,43 @@ contains
 
 
 !###############################################################################
-  subroutine generate_intefaces_from_existing( &
+   function get_interface_location( &
+       this, structure, axis, verbose, exit_code &
+   ) result(output)
+    !! Get the interface location for the given structure
+    implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(inout) :: this
+    !! Instance of artemis generator type
+    type(basis_type), intent(in) :: structure
+    !! Atomic structure data
+    integer, intent(in), optional :: axis
+    !! Axis for the interface
+    integer, intent(in), optional :: verbose
+    !! Verbosity level
+    integer, intent(out), optional :: exit_code
+    !! Exit code for the program
+
+    type(intf_info_type) :: output
+    !! Output interface location
+
+    ! Local variables
+    integer :: axis_
+    !! Axis for the interface
+
+
+    axis_ = 0
+    if(present(axis)) axis_ = axis
+
+    output = get_interface(structure, axis_)
+
+   end function get_interface_location
+!###############################################################################
+
+
+!###############################################################################
+  subroutine generate_interfaces_from_existing( &
        this, structure, interface_location, &
        print_shift_info, seed, verbose, exit_code &
   )
@@ -894,7 +938,7 @@ contains
       intf%axis = this%axis
       intf%loc = interface_location
     else
-       intf=get_interface(structure%lat,structure,this%axis)
+       intf=get_interface(structure,this%axis)
        intf%loc=intf%loc/modu(structure%lat(intf%axis,:))
        if(verbose_.gt.0) write(*,*) "interface axis:",intf%axis
        if(verbose_.gt.0) write(*,*) "interface loc:",intf%loc
@@ -943,7 +987,7 @@ contains
 
     if(present(exit_code)) exit_code = exit_code_
 
-  end subroutine generate_intefaces_from_existing
+  end subroutine generate_interfaces_from_existing
 !###############################################################################
 
 
@@ -1932,20 +1976,20 @@ contains
        end do
     end select
     if(this%shift_method.gt.0)then
-       output_shifts(:,this%axis) = output_shifts(:,this%axis)*modu(basis%lat(this%axis,:))
+       output_shifts(:,this%axis) = output_shifts(:,this%axis) * modu(basis%lat(this%axis,:))
     end if
 
 
 !!!-----------------------------------------------------------------------------
 !!! Prints number of shifts to terminal
 !!!-----------------------------------------------------------------------------
-    if(verbose.gt.0) write(*,'(3X,"Number of unique shifts structures: ",I0)') this%num_shifts
+    if(verbose.gt.0) write(*,'(3X,"Number of unique shifts structures: ",I0)') size(output_shifts,1)
 
 
 !!!-----------------------------------------------------------------------------
 !!! Determines number of swaps across the interface
 !!!-----------------------------------------------------------------------------
-    nswaps_per_cell=nint(this%swap_density*get_area([basis%lat(abc(1),:)],[basis%lat(abc(2),:)]))
+    nswaps_per_cell = nint(this%swap_density*get_area([basis%lat(abc(1),:)],[basis%lat(abc(2),:)]))
     if(this%swap_method.ne.0)then
        if(verbose.gt.0) write(*,&
             '(" Generating ",I0," swaps per structure ")') nswaps_per_cell
@@ -1955,7 +1999,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Prints each unique shift structure
 !!!-----------------------------------------------------------------------------
-    shift_loop: do k=1,this%num_shifts
+    shift_loop: do k = 1, size(output_shifts,1), 1
        call tbas%copy(basis)
        toffset=output_shifts(k,:3)
        do iaxis=1,2
