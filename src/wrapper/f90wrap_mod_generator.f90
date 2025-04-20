@@ -930,7 +930,7 @@ subroutine f90wrap_artemis_gen_type__array__layer_sepa90a5(this, nd, dtype, dsha
     dloc = loc(this_ptr%p%layer_separation_cutoff)
 end subroutine f90wrap_artemis_gen_type__array__layer_sepa90a5
 
-subroutine f90wrap_intf_gen__artemis_interface_gen0ea8(this)
+subroutine f90wrap_intf_gen__artemis_gen_type_initialise(this)
     use artemis__generator, only: artemis_generator_type
     implicit none
     
@@ -941,9 +941,9 @@ subroutine f90wrap_intf_gen__artemis_interface_gen0ea8(this)
     integer, intent(out), dimension(2) :: this
     allocate(this_ptr%p)
     this = transfer(this_ptr, this)
-end subroutine f90wrap_intf_gen__artemis_interface_gen0ea8
+end subroutine f90wrap_intf_gen__artemis_gen_type_initialise
 
-subroutine f90wrap_intf_gen__artemis_interface_genbc51(this)
+subroutine f90wrap_intf_gen__artemis_gen_type_finalise(this)
     use artemis__generator, only: artemis_generator_type
     implicit none
     
@@ -954,9 +954,9 @@ subroutine f90wrap_intf_gen__artemis_interface_genbc51(this)
     integer, intent(in), dimension(2) :: this
     this_ptr = transfer(this, this_ptr)
     deallocate(this_ptr%p)
-end subroutine f90wrap_intf_gen__artemis_interface_genbc51
+end subroutine f90wrap_intf_gen__artemis_gen_type_finalise
 
-subroutine f90wrap_intf_gen__set_tolerance__bindinfd58(this, vector_mismatch, angle_mismatch, &
+subroutine f90wrap_intf_gen__set_tolerance__bindind_agt(this, vector_mismatch, angle_mismatch, &
     area_mismatch, max_length, max_area, max_fit, max_extension, angle_weight, area_weight)
     use artemis__generator, only: artemis_generator_type
     implicit none
@@ -982,9 +982,9 @@ subroutine f90wrap_intf_gen__set_tolerance__bindinfd58(this, vector_mismatch, an
         area_mismatch=area_mismatch, max_length=max_length, &
         max_area=max_area, max_fit=max_fit, max_extension=max_extension, &
         angle_weight=angle_weight, area_weight=area_weight)
-end subroutine f90wrap_intf_gen__set_tolerance__bindinfd58
+end subroutine f90wrap_intf_gen__set_tolerance__bindind_agt
 
-subroutine f90wrap_intf_gen__set_shift_method__bin4dc1(this, method, num_shifts, shifts, &
+subroutine f90wrap_intf_gen__set_shift_method__binding_agt(this, method, num_shifts, shifts, &
     interface_depth, separation_scale, depth_method, n0)
     use artemis__generator, only: artemis_generator_type
     implicit none
@@ -1007,9 +1007,9 @@ subroutine f90wrap_intf_gen__set_shift_method__bin4dc1(this, method, num_shifts,
         method=method, num_shifts=num_shifts, &
         shifts=shifts, interface_depth=interface_depth, &
         separation_scale=separation_scale, depth_method=depth_method)
-end subroutine f90wrap_intf_gen__set_shift_method__bin4dc1
+end subroutine f90wrap_intf_gen__set_shift_method__binding_agt
 
-subroutine f90wrap_intf_gen__set_materials__bindin017c(this, structure_lw, structure_up, &
+subroutine f90wrap_intf_gen__set_materials__binding_agt(this, structure_lw, structure_up, &
     elastic_constants_lw, elastic_constants_up, use_pricel_lw, use_pricel_up, n0, n1)
     use artemis__generator, only: artemis_generator_type
     use artemis__geom_rw, only: basis_type
@@ -1041,9 +1041,9 @@ subroutine f90wrap_intf_gen__set_materials__bindin017c(this, structure_lw, struc
     call this_ptr%p%set_materials(structure_lw=structure_lw_ptr%p, structure_up=structure_up_ptr%p, &
         elastic_constants_lw=elastic_constants_lw, elastic_constants_up=elastic_constants_up, use_pricel_lw=use_pricel_lw, &
         use_pricel_up=use_pricel_up)
-end subroutine f90wrap_intf_gen__set_materials__bindin017c
+end subroutine f90wrap_intf_gen__set_materials__binding_agt
 
-subroutine f90wrap_intf_gen__set_surface_propertie615d(this, miller_lw, miller_up, is_layered_lw, &
+subroutine f90wrap_intf_gen__set_surface_properties__binding_agt(this, miller_lw, miller_up, is_layered_lw, &
     is_layered_up)
     use artemis__generator, only: artemis_generator_type
     implicit none
@@ -1060,9 +1060,9 @@ subroutine f90wrap_intf_gen__set_surface_propertie615d(this, miller_lw, miller_u
     this_ptr = transfer(this, this_ptr)
     call this_ptr%p%set_surface_properties(miller_lw=miller_lw, miller_up=miller_up, is_layered_lw=is_layered_lw, &
         is_layered_up=is_layered_up)
-end subroutine f90wrap_intf_gen__set_surface_propertie615d
+end subroutine f90wrap_intf_gen__set_surface_properties__binding_agt
 
-subroutine f90wrap_intf_gen__reset_is_layered_lw__69b8(this)
+subroutine f90wrap_intf_gen__reset_is_layered_lw__binding_agt(this)
     use artemis__generator, only: artemis_generator_type
     implicit none
     
@@ -1073,9 +1073,9 @@ subroutine f90wrap_intf_gen__reset_is_layered_lw__69b8(this)
     integer, intent(in), dimension(2) :: this
     this_ptr = transfer(this, this_ptr)
     call this_ptr%p%reset_is_layered_lw()
-end subroutine f90wrap_intf_gen__reset_is_layered_lw__69b8
+end subroutine f90wrap_intf_gen__reset_is_layered_lw__binding_agt
 
-subroutine f90wrap_intf_gen__reset_is_layered_up__0b2c(this)
+subroutine f90wrap_intf_gen__reset_is_layered_up__binding_agt(this)
     use artemis__generator, only: artemis_generator_type
     implicit none
     
@@ -1086,7 +1086,7 @@ subroutine f90wrap_intf_gen__reset_is_layered_up__0b2c(this)
     integer, intent(in), dimension(2) :: this
     this_ptr = transfer(this, this_ptr)
     call this_ptr%p%reset_is_layered_up()
-end subroutine f90wrap_intf_gen__reset_is_layered_up__0b2c
+end subroutine f90wrap_intf_gen__reset_is_layered_up__binding_agt
 
 
 

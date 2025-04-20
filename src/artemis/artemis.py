@@ -518,681 +518,7 @@ class Geom_Rw(f90wrap.runtime.FortranModule):
 
 geom_rw = Geom_Rw()
 
-# class Geom_Rw(f90wrap.runtime.FortranModule):
-#     """
-#     Module geom_rw
-    
-    
-#     Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#         lines 13-1907
-    
-#     """
-#     @f90wrap.runtime.register_class("artemis.species_type")
-#     class species_type(f90wrap.runtime.FortranDerivedType):
-#         """
-#         Type(name=species_type)
-        
-        
-#         Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#             lines 34-47
-        
-#         """
-#         def __init__(self, handle=None):
-#             """
-#             self = Species_Type()
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 lines 34-47
-            
-            
-#             Returns
-#             -------
-#             this : Species_Type
-#             	Object to be constructed
-            
-            
-#             Automatically generated constructor for species_type
-#             """
-#             f90wrap.runtime.FortranDerivedType.__init__(self)
-#             result = _artemis.f90wrap_geom_rw__species_type_initialise()
-#             self._handle = result[0] if isinstance(result, tuple) else result
-        
-#         def __del__(self):
-#             """
-#             Destructor for class Species_Type
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 lines 34-47
-            
-#             Parameters
-#             ----------
-#             this : Species_Type
-#             	Object to be destructed
-            
-            
-#             Automatically generated destructor for species_type
-#             """
-#             if self._alloc:
-#                 _artemis.f90wrap_geom_rw__species_type_finalise(this=self._handle)
-        
-#         @property
-#         def atom(self):
-#             """
-#             Element atom ftype=real(real32) pytype=float
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 36
-            
-#             """
-#             array_ndim, array_type, array_shape, array_handle = \
-#                 _artemis.f90wrap_species_type__array__atom(self._handle)
-#             if array_handle in self._arrays:
-#                 atom = self._arrays[array_handle]
-#             else:
-#                 atom = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
-#                                         self._handle,
-#                                         _artemis.f90wrap_species_type__array__atom)
-#                 self._arrays[array_handle] = atom
-#             return atom
-        
-#         @atom.setter
-#         def atom(self, atom):
-#             self.atom[...] = atom
-        
-#         @property
-#         def mass(self):
-#             """
-#             Element mass ftype=real(real32) pytype=float
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 38
-            
-#             """
-#             return _artemis.f90wrap_species_type__get__mass(self._handle)
-        
-#         @mass.setter
-#         def mass(self, mass):
-#             _artemis.f90wrap_species_type__set__mass(self._handle, mass)
-        
-#         @property
-#         def charge(self):
-#             """
-#             Element charge ftype=real(real32) pytype=float
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 40
-            
-#             """
-#             return _artemis.f90wrap_species_type__get__charge(self._handle)
-        
-#         @charge.setter
-#         def charge(self, charge):
-#             _artemis.f90wrap_species_type__set__charge(self._handle, charge)
-        
-#         @property
-#         def radius(self):
-#             """
-#             Element radius ftype=real(real32) pytype=float
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 42
-            
-#             """
-#             return _artemis.f90wrap_species_type__get__radius(self._handle)
-        
-#         @radius.setter
-#         def radius(self, radius):
-#             _artemis.f90wrap_species_type__set__radius(self._handle, radius)
-        
-#         @property
-#         def name(self):
-#             """
-#             Element name ftype=character(len=3) pytype=str
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 44
-            
-#             """
-#             return _artemis.f90wrap_species_type__get__name(self._handle)
-        
-#         @name.setter
-#         def name(self, name):
-#             _artemis.f90wrap_species_type__set__name(self._handle, name)
-        
-#         @property
-#         def num(self):
-#             """
-#             Element num ftype=integer  pytype=int
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 46
-            
-#             """
-#             return _artemis.f90wrap_species_type__get__num(self._handle)
-        
-#         @num.setter
-#         def num(self, num):
-#             _artemis.f90wrap_species_type__set__num(self._handle, num)
-        
-#         def __str__(self):
-#             ret = ['<species_type>{\n']
-#             ret.append('    atom : ')
-#             ret.append(repr(self.atom))
-#             ret.append(',\n    mass : ')
-#             ret.append(repr(self.mass))
-#             ret.append(',\n    charge : ')
-#             ret.append(repr(self.charge))
-#             ret.append(',\n    radius : ')
-#             ret.append(repr(self.radius))
-#             ret.append(',\n    name : ')
-#             ret.append(repr(self.name))
-#             ret.append(',\n    num : ')
-#             ret.append(repr(self.num))
-#             ret.append('}')
-#             return ''.join(ret)
-        
-#         _dt_array_initialisers = []
-        
-    
-#     @f90wrap.runtime.register_class("artemis.basis_type")
-#     class basis_type(f90wrap.runtime.FortranDerivedType):
-#         """
-#         Type(name=basis_type)
-        
-        
-#         Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#             lines 49-83
-        
-#         """
-#         def __init__(self, handle=None):
-#             """
-#             self = Basis_Type()
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 lines 49-83
-            
-            
-#             Returns
-#             -------
-#             this : Basis_Type
-#             	Object to be constructed
-            
-            
-#             Automatically generated constructor for basis_type
-#             """
-#             f90wrap.runtime.FortranDerivedType.__init__(self)
-#             result = _artemis.f90wrap_geom_rw__basis_type_initialise()
-#             self._handle = result[0] if isinstance(result, tuple) else result
-        
-#         def __del__(self):
-#             """
-#             Destructor for class Basis_Type
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 lines 49-83
-            
-#             Parameters
-#             ----------
-#             this : Basis_Type
-#             	Object to be destructed
-            
-            
-#             Automatically generated destructor for basis_type
-#             """
-#             if self._alloc:
-#                 _artemis.f90wrap_geom_rw__basis_type_finalise(this=self._handle)
-        
-#         def allocate_species(self, num_species=None, species_symbols=None, \
-#             species_count=None, atoms=None):
-#             """
-#             allocate_species__binding__basis_type(self[, num_species, species_symbols, \
-#                 species_count, atoms])
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 lines 110-153
-            
-#             Parameters
-#             ----------
-#             this : Basis_Type
-#             num_species : int
-#             species_symbols : str array
-#             species_count : int array
-#             atoms : float array
-            
-#             """
-#             _artemis.f90wrap_geom_rw__allocate_species__binding__basis_type(this=self._handle, \
-#                 num_species=num_species, species_symbols=species_symbols, \
-#                 species_count=species_count, atoms=atoms)
-        
-#         def convert(self):
-#             """
-#             convert__binding__basis_type(self)
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 lines 1035-1057
-            
-#             Parameters
-#             ----------
-#             this : Basis_Type
-            
-#             """
-#             _artemis.f90wrap_geom_rw__convert__binding__basis_type(this=self._handle)
-        
-#         def change_lattice(self, lattice):
-#             """
-#             change_lattice__binding__basis_type(self, lattice)
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 lines 1061-1088
-            
-#             Parameters
-#             ----------
-#             this : Basis_Type
-#             lattice : float array
-            
-#             """
-#             _artemis.f90wrap_geom_rw__change_lattice__binding__basis_type(this=self._handle, \
-#                 lattice=lattice)
-        
-#         def normalise(self, ceil_val=None, floor_coords=None, round_coords=None, \
-#             zero_round=None):
-#             """
-#             normalise__binding__basis_type(self[, ceil_val, floor_coords, round_coords, \
-#                 zero_round])
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 lines 1097-1147
-            
-#             Parameters
-#             ----------
-#             this : Basis_Type
-#             ceil_val : float
-#             floor_coords : bool
-#             round_coords : bool
-#             zero_round : float
-            
-#             """
-#             _artemis.f90wrap_geom_rw__normalise__binding__basis_type(this=self._handle, \
-#                 ceil_val=ceil_val, floor_coords=floor_coords, round_coords=round_coords, \
-#                 zero_round=zero_round)
-        
-#         def copy(self, basis, length=None):
-#             """
-#             copy__binding__basis_type(self, basis[, length])
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 lines 1229-1290
-            
-#             Parameters
-#             ----------
-#             this : Basis_Type
-#             basis : Basis_Type
-#             length : int
-            
-#             ---------------------------------------------------------------------------
-#              determines whether user wants output basis extra translational dimension
-#             ---------------------------------------------------------------------------
-#             """
-#             _artemis.f90wrap_geom_rw__copy__binding__basis_type(this=self._handle, \
-#                 basis=basis._handle, length=length)
-        
-#         def get_lattice_constants(self, radians=None):
-#             """
-#             output = get_lattice_constants__binding__basis_type(self[, radians])
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 lines 1210-1225
-            
-#             Parameters
-#             ----------
-#             this : Basis_Type
-#             radians : bool
-            
-#             Returns
-#             -------
-#             output : float array
-            
-#             """
-#             output = \
-#                 _artemis.f90wrap_geom_rw__get_lattice_constants__binding__bc9a1(this=self._handle, \
-#                 radians=radians)
-#             return output
-        
-#         def remove_atom(self, ispec, iatom):
-#             """
-#             remove_atom__binding__basis_type(self, ispec, iatom)
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 lines 1294-1336
-            
-#             Parameters
-#             ----------
-#             this : Basis_Type
-#             ispec : int
-#             iatom : int
-            
-#             ---------------------------------------------------------------------------
-#              remove atom from basis
-#             ---------------------------------------------------------------------------
-#             """
-#             _artemis.f90wrap_geom_rw__remove_atom__binding__basis_type(this=self._handle, \
-#                 ispec=ispec, iatom=iatom)
-        
-#         def remove_atoms(self, atoms):
-#             """
-#             remove_atoms__binding__basis_type(self, atoms)
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 lines 1340-1403
-            
-#             Parameters
-#             ----------
-#             this : Basis_Type
-#             atoms : int array
-            
-#             ---------------------------------------------------------------------------
-#              reorder atoms to remove
-#             ---------------------------------------------------------------------------
-#             """
-#             _artemis.f90wrap_geom_rw__remove_atoms__binding__basis_type(this=self._handle, \
-#                 atoms=atoms)
-        
-#         def init_array_spec(self):
-#             self.spec = f90wrap.runtime.FortranDerivedTypeArray(self,
-#                                             _artemis.f90wrap_basis_type__array_getitem__spec,
-#                                             _artemis.f90wrap_basis_type__array_setitem__spec,
-#                                             _artemis.f90wrap_basis_type__array_len__spec,
-#                                             """
-#             Element spec ftype=type(species_type) pytype=Species_Type
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 51
-            
-#             """, Geom_Rw.species_type)
-#             return self.spec
-        
-#         @property
-#         def nspec(self):
-#             """
-#             Element nspec ftype=integer  pytype=int
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 53
-            
-#             """
-#             return _artemis.f90wrap_basis_type__get__nspec(self._handle)
-        
-#         @nspec.setter
-#         def nspec(self, nspec):
-#             _artemis.f90wrap_basis_type__set__nspec(self._handle, nspec)
-        
-#         @property
-#         def natom(self):
-#             """
-#             Element natom ftype=integer  pytype=int
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 55
-            
-#             """
-#             return _artemis.f90wrap_basis_type__get__natom(self._handle)
-        
-#         @natom.setter
-#         def natom(self, natom):
-#             _artemis.f90wrap_basis_type__set__natom(self._handle, natom)
-        
-#         @property
-#         def energy(self):
-#             """
-#             Element energy ftype=real(real32) pytype=float
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 57
-            
-#             """
-#             return _artemis.f90wrap_basis_type__get__energy(self._handle)
-        
-#         @energy.setter
-#         def energy(self, energy):
-#             _artemis.f90wrap_basis_type__set__energy(self._handle, energy)
-        
-#         @property
-#         def lat(self):
-#             """
-#             Element lat ftype=real(real32) pytype=float
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 59
-            
-#             """
-#             array_ndim, array_type, array_shape, array_handle = \
-#                 _artemis.f90wrap_basis_type__array__lat(self._handle)
-#             if array_handle in self._arrays:
-#                 lat = self._arrays[array_handle]
-#             else:
-#                 lat = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
-#                                         self._handle,
-#                                         _artemis.f90wrap_basis_type__array__lat)
-#                 self._arrays[array_handle] = lat
-#             return lat
-        
-#         @lat.setter
-#         def lat(self, lat):
-#             self.lat[...] = lat
-        
-#         @property
-#         def lcart(self):
-#             """
-#             Element lcart ftype=logical pytype=bool
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 61
-            
-#             """
-#             return _artemis.f90wrap_basis_type__get__lcart(self._handle)
-        
-#         @lcart.setter
-#         def lcart(self, lcart):
-#             _artemis.f90wrap_basis_type__set__lcart(self._handle, lcart)
-        
-#         @property
-#         def pbc(self):
-#             """
-#             Element pbc ftype=logical pytype=bool
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 63
-            
-#             """
-#             array_ndim, array_type, array_shape, array_handle = \
-#                 _artemis.f90wrap_basis_type__array__pbc(self._handle)
-#             if array_handle in self._arrays:
-#                 pbc = self._arrays[array_handle]
-#             else:
-#                 pbc = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
-#                                         self._handle,
-#                                         _artemis.f90wrap_basis_type__array__pbc)
-#                 self._arrays[array_handle] = pbc
-#             return pbc
-        
-#         @pbc.setter
-#         def pbc(self, pbc):
-#             self.pbc[...] = pbc
-        
-#         @property
-#         def sysname(self):
-#             """
-#             Element sysname ftype=character(len=128) pytype=str
-            
-            
-#             Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#                 line 65
-            
-#             """
-#             return _artemis.f90wrap_basis_type__get__sysname(self._handle)
-        
-#         @sysname.setter
-#         def sysname(self, sysname):
-#             _artemis.f90wrap_basis_type__set__sysname(self._handle, sysname)
-        
-#         def __str__(self):
-#             ret = ['<basis_type>{\n']
-#             ret.append('    nspec : ')
-#             ret.append(repr(self.nspec))
-#             ret.append(',\n    natom : ')
-#             ret.append(repr(self.natom))
-#             ret.append(',\n    energy : ')
-#             ret.append(repr(self.energy))
-#             ret.append(',\n    lat : ')
-#             ret.append(repr(self.lat))
-#             ret.append(',\n    lcart : ')
-#             ret.append(repr(self.lcart))
-#             ret.append(',\n    pbc : ')
-#             ret.append(repr(self.pbc))
-#             ret.append(',\n    sysname : ')
-#             ret.append(repr(self.sysname))
-#             ret.append('}')
-#             return ''.join(ret)
-        
-#         _dt_array_initialisers = [init_array_spec]
-        
-    
-#     @staticmethod
-#     def geom_read(unit, length=None, iostat=None):
-#         """
-#         basis = geom_read(unit[, length, iostat])
-        
-        
-#         Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#             lines 157-212
-        
-#         Parameters
-#         ----------
-#         unit : int
-#         length : int
-#         iostat : int
-        
-#         Returns
-#         -------
-#         basis : Basis_Type
-        
-#         """
-#         basis = _artemis.f90wrap_geom_rw__geom_read(unit=unit, length=length, \
-#             iostat=iostat)
-#         basis = f90wrap.runtime.lookup_class("artemis.basis_type").from_handle(basis, \
-#             alloc=True)
-#         return basis
-    
-#     @staticmethod
-#     def geom_write(unit, basis):
-#         """
-#         geom_write(unit, basis)
-        
-        
-#         Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#             lines 216-240
-        
-#         Parameters
-#         ----------
-#         unit : int
-#         basis : Basis_Type
-        
-#         """
-#         _artemis.f90wrap_geom_rw__geom_write(unit=unit, basis=basis._handle)
-    
-#     @staticmethod
-#     def get_element_properties(element, charge=None, mass=None, radius=None):
-#         """
-#         get_element_properties(element[, charge, mass, radius])
-        
-        
-#         Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#             lines 1407-1906
-        
-#         Parameters
-#         ----------
-#         element : str
-#         charge : float
-#         mass : float
-#         radius : float
-        
-#         ---------------------------------------------------------------------------
-#          Return the values
-#         ---------------------------------------------------------------------------
-#         """
-#         _artemis.f90wrap_geom_rw__get_element_properties(element=element, \
-#             charge=charge, mass=mass, radius=radius)
-    
-#     @property
-#     def igeom_input(self):
-#         """
-#         Element igeom_input ftype=integer  pytype=int
-        
-        
-#         Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#             line 24
-        
-#         """
-#         return _artemis.f90wrap_geom_rw__get__igeom_input()
-    
-#     @igeom_input.setter
-#     def igeom_input(self, igeom_input):
-#         _artemis.f90wrap_geom_rw__set__igeom_input(igeom_input)
-    
-#     @property
-#     def igeom_output(self):
-#         """
-#         Element igeom_output ftype=integer  pytype=int
-        
-        
-#         Defined at ../src/fortran/lib/mod_geom_rw.f90 \
-#             line 32
-        
-#         """
-#         return _artemis.f90wrap_geom_rw__get__igeom_output()
-    
-#     @igeom_output.setter
-#     def igeom_output(self, igeom_output):
-#         _artemis.f90wrap_geom_rw__set__igeom_output(igeom_output)
-    
-#     def __str__(self):
-#         ret = ['<geom_rw>{\n']
-#         ret.append('    igeom_input : ')
-#         ret.append(repr(self.igeom_input))
-#         ret.append(',\n    igeom_output : ')
-#         ret.append(repr(self.igeom_output))
-#         ret.append('}')
-#         return ''.join(ret)
-    
-#     _dt_array_initialisers = []
-    
 
-# geom_rw = Geom_Rw()
 
 class Generator(f90wrap.runtime.FortranModule):
     """
@@ -1235,7 +561,7 @@ class Generator(f90wrap.runtime.FortranModule):
             """
             f90wrap.runtime.FortranDerivedType.__init__(self)
             result = \
-                _artemis.f90wrap_intf_gen__artemis_interface_gen0ea8()
+                _artemis.f90wrap_intf_gen__artemis_gen_type_initialise()
             self._handle = result[0] if isinstance(result, tuple) else result
         
         def __del__(self):
@@ -1256,13 +582,13 @@ class Generator(f90wrap.runtime.FortranModule):
             Automatically generated destructor for artemis_generator_type
             """
             if self._alloc:
-                _artemis.f90wrap_intf_gen__artemis_interface_genbc51(this=self._handle)
+                _artemis.f90wrap_intf_gen__artemis_gen_type_finalise(this=self._handle)
         
         def set_tolerance(self, vector_mismatch=None, angle_mismatch=None, \
             area_mismatch=None, max_length=None, max_area=None, max_fit=None, \
             max_extension=None, angle_weight=None, area_weight=None):
             """
-            set_tolerance__binding__artemis_generator_type(self[, vector_mismatch, \
+            set_tolerance__binding__artemis_gen_type(self[, vector_mismatch, \
                 angle_mismatch, area_mismatch, max_length, max_area, max_fit, max_extension, \
                 angle_weight, area_weight])
             
@@ -1285,7 +611,7 @@ class Generator(f90wrap.runtime.FortranModule):
             area_weight : float
             
             """
-            _artemis.f90wrap_intf_gen__set_tolerance__bindinfd58(this=self._handle, \
+            _artemis.f90wrap_intf_gen__set_tolerance__bindind_agt(this=self._handle, \
                 vector_mismatch=vector_mismatch, angle_mismatch=angle_mismatch, \
                 area_mismatch=area_mismatch, max_length=max_length, max_area=max_area, \
                 max_fit=max_fit, max_extension=max_extension, angle_weight=angle_weight, \
@@ -1294,7 +620,7 @@ class Generator(f90wrap.runtime.FortranModule):
         def set_shift_method(self, method=None, num_shifts=None, shifts=None, \
             interface_depth=None, separation_scale=None, depth_method=None):
             """
-            set_shift_method__binding__artemis_generator_type(self[, method, \
+            set_shift_method__binding__artemis_gen_type(self[, method, \
                 num_shifts, shifts, interface_depth, separation_scale, depth_method])
             
             
@@ -1313,7 +639,7 @@ class Generator(f90wrap.runtime.FortranModule):
             depth_method : int
             
             """
-            _artemis.f90wrap_intf_gen__set_shift_method__bin4dc1(this=self._handle, \
+            _artemis.f90wrap_intf_gen__set_shift_method__binding_agt(this=self._handle, \
                 method=method, num_shifts=num_shifts, shifts=shifts, \
                 interface_depth=interface_depth, separation_scale=separation_scale, \
                 depth_method=depth_method)
@@ -1321,7 +647,7 @@ class Generator(f90wrap.runtime.FortranModule):
         def set_materials(self, structure_lw, structure_up, elastic_constants_lw=None, \
             elastic_constants_up=None, use_pricel_lw=None, use_pricel_up=None):
             """
-            set_materials__binding__artemis_generator_type(self, structure_lw, \
+            set_materials__binding__artemis_gen_type(self, structure_lw, \
                 structure_up[, elastic_constants_lw, elastic_constants_up, use_pricel_lw, \
                 use_pricel_up])
             
@@ -1352,7 +678,7 @@ class Generator(f90wrap.runtime.FortranModule):
             if isinstance(structure_up, Atoms):
                 structure_up = geom_rw.basis(atoms=structure_up)
 
-            _artemis.f90wrap_intf_gen__set_materials__bindin017c(this=self._handle, \
+            _artemis.f90wrap_intf_gen__set_materials__binding_agt(this=self._handle, \
                 structure_lw=structure_lw._handle, structure_up=structure_up._handle, \
                 elastic_constants_lw=elastic_constants_lw, \
                 elastic_constants_up=elastic_constants_up, use_pricel_lw=use_pricel_lw, \
@@ -1361,7 +687,7 @@ class Generator(f90wrap.runtime.FortranModule):
         def set_surface_properties(self, miller_lw=None, miller_up=None, \
             is_layered_lw=None, is_layered_up=None):
             """
-            set_surface_properties__binding__artemis_generator_type(self[, \
+            set_surface_properties__binding__artemis_gen_type(self[, \
                 miller_lw, miller_up, is_layered_lw, is_layered_up])
             
             
@@ -1378,13 +704,13 @@ class Generator(f90wrap.runtime.FortranModule):
             is_layered_up : bool
             
             """
-            _artemis.f90wrap_intf_gen__set_surface_propertie615d(this=self._handle, \
+            _artemis.f90wrap_intf_gen__set_surface_properties__binding_agt(this=self._handle, \
                 miller_lw=miller_lw, miller_up=miller_up, is_layered_lw=is_layered_lw, \
                 is_layered_up=is_layered_up)
         
         def reset_is_layered_lw(self):
             """
-            reset_is_layered_lw__binding__artemis_generator_type(self)
+            reset_is_layered_lw__binding__artemis_gen_type(self)
             
             
             Defined at \
@@ -1396,11 +722,11 @@ class Generator(f90wrap.runtime.FortranModule):
             this : Artemis_generator_Type
             
             """
-            _artemis.f90wrap_intf_gen__reset_is_layered_lw__69b8(this=self._handle)
+            _artemis.f90wrap_intf_gen__reset_is_layered_lw__binding_agt(this=self._handle)
         
         def reset_is_layered_up(self):
             """
-            reset_is_layered_up__binding__artemis_generator_type(self)
+            reset_is_layered_up__binding__artemis_gen_type(self)
             
             
             Defined at \
@@ -1412,11 +738,11 @@ class Generator(f90wrap.runtime.FortranModule):
             this : Artemis_generator_Type
             
             """
-            _artemis.f90wrap_intf_gen__reset_is_layered_up__0b2c(this=self._handle)
+            _artemis.f90wrap_intf_gen__reset_is_layered_up__binding_agt(this=self._handle)
         
         def get_terminations_lw(self, miller=None, surface=None, num_layers=None, \
             thickness=None, orthogonalise=None, normalise=None, break_on_fail=None, 
-            verbose=None, calc=None):
+            verbose=None, return_exit_code=False, calc=None):
             """
             
             Defined at \
@@ -1425,6 +751,8 @@ class Generator(f90wrap.runtime.FortranModule):
             Parameters
             ----------
             """
+            exit_code = 0
+            structures = None
 
             exit_code, n_structs = _artemis.f90wrap_intf_gen__get_terminations__binding__agt(this=self._handle,
                 identifier=1,
@@ -1433,19 +761,22 @@ class Generator(f90wrap.runtime.FortranModule):
                 orthogonalise=orthogonalise, normalise=normalise,
                 break_on_fail=break_on_fail,
                 verbose=verbose)
-            atoms = []
+            if ( exit_code != 0 and exit_code != None ) and not return_exit_code:
+                raise RuntimeError(f"Termination generation failed (exit code {exit_code})")
 
             # allocate the structures
             structures = geom_rw.basis_array() #.allocate(n_structs)
             structures.allocate(n_structs)
             _artemis.f90wrap_retrieve_last_generated_structures(n_structs, structures._handle)
-            atoms = structures.toase()
+            structures = structures.toase()
 
-            return atoms, exit_code
+            if return_exit_code:
+                return structures, exit_code
+            return structures
         
         def get_terminations_up(self, miller=None, surface=None, num_layers=None, \
             thickness=None, orthogonalise=None, normalise=None, break_on_fail=None, 
-            verbose=None, calc=None):
+            verbose=None, return_exit_code=False, calc=None):
             """
             
             Defined at \
@@ -1454,6 +785,8 @@ class Generator(f90wrap.runtime.FortranModule):
             Parameters
             ----------
             """
+            exit_code = 0
+            structures = None
 
             exit_code, n_structs = _artemis.f90wrap_intf_gen__get_terminations__binding__agt(this=self._handle,
                 identifier=2,
@@ -1462,24 +795,27 @@ class Generator(f90wrap.runtime.FortranModule):
                 orthogonalise=orthogonalise, normalise=normalise,
                 break_on_fail=break_on_fail,
                 verbose=verbose)
-            atoms = []
+            if ( exit_code != 0 and exit_code != None ) and not return_exit_code:
+                raise RuntimeError(f"Termination generation failed (exit code {exit_code})")
 
             # allocate the structures
             structures = geom_rw.basis_array() #.allocate(n_structs)
             structures.allocate(n_structs)
             _artemis.f90wrap_retrieve_last_generated_structures(n_structs, structures._handle)
-            atoms = structures.toase()
+            structures = structures.toase()
 
-            return atoms, exit_code
+            if return_exit_code:
+                return structures, exit_code
+            return structures
 
         def generate(self, surface_lw=None, surface_up=None, thickness_lw=None, \
             thickness_up=None, num_layers_lw=None, num_layers_up=None, \
             print_lattice_match_info=None, print_termination_info=None, \
             print_shift_info=None, break_on_fail=None, icheck_match=None, \
             interface_idx=None, generate_structures=None, seed=None, verbose=None, \
-            exit_code=None, calc=None):
+            return_exit_code=False, calc=None):
             """
-            generate__binding__artemis_generator_type(self[, surface_lw, \
+            generate__binding__artemis_gen_type(self[, surface_lw, \
                 surface_up, thickness_lw, thickness_up, num_layers_lw, num_layers_up, \
                 print_lattice_match_info, print_termination_info, print_shift_info, \
                 break_on_fail, icheck_match, interface_idx, generate_structures, seed, \
@@ -1515,7 +851,7 @@ class Generator(f90wrap.runtime.FortranModule):
             exit_code = 0
             structures = None
 
-            exit_code = _artemis.f90wrap_intf_gen__generate__binding__ar04c1(this=self._handle, \
+            exit_code = _artemis.f90wrap_intf_gen__generate__binding__agt(this=self._handle, \
                 surface_lw=surface_lw, surface_up=surface_up, thickness_lw=thickness_lw, \
                 thickness_up=thickness_up, num_layers_lw=num_layers_lw, \
                 num_layers_up=num_layers_up, \
@@ -1525,14 +861,18 @@ class Generator(f90wrap.runtime.FortranModule):
                 icheck_match=icheck_match, interface_idx=interface_idx, \
                 generate_structures=generate_structures, seed=seed, verbose=verbose
             )
+            if ( exit_code != 0 and exit_code != None )  and not return_exit_code:
+                raise RuntimeError(f"Interface generation failed (exit code {exit_code})")
         
             structures = self.get_structures(calc)
-            return structures, exit_code
+            if return_exit_code:
+                return structures, exit_code
+            return structures
 
         def restart(self, basis, interface_location=None, print_shift_info=None, \
-            seed=None):
+            seed=None, verbose=None, return_exit_code=False, calc=None):
             """
-            restart__binding__artemis_generator_type(self, basis[, \
+            restart__binding__artemis_gen_type(self, basis[, \
                 interface_location, print_shift_info, seed])
             
             
@@ -1552,9 +892,20 @@ class Generator(f90wrap.runtime.FortranModule):
              Set the random seed
             ---------------------------------------------------------------------------
             """
-            _artemis.f90wrap_intf_gen__restart__binding__agt(this=self._handle, \
+            exit_code = 0
+            structures = None
+
+            exit_code = _artemis.f90wrap_intf_gen__restart__binding__agt(this=self._handle, \
                 basis=basis._handle, interface_location=interface_location, \
-                print_shift_info=print_shift_info, seed=seed)
+                print_shift_info=print_shift_info, seed=seed, verbose=verbose)
+            
+            if ( exit_code != 0 and exit_code != None ) and not return_exit_code:
+                raise RuntimeError(f"Interface generation failed (exit code {exit_code})")
+
+            structures = self.get_structures(calc)
+            if return_exit_code:
+                return structures, exit_code
+            return structures
         
         def get_structures(self, calculator=None):
             """
