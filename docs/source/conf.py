@@ -7,8 +7,8 @@ import sys
 
 # from unittest.mock import Mock
 #
-# MOCK_MODULES = ["artemis._artemis"]  # List any other modules if needed
-# sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+MOCK_MODULES = ["artemis._artemis"]  # List any other modules if needed
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # sys.path.insert(0, os.path.abspath(os.path.join('..', '..', 'src', 'raffle')))  # Sets the base path to find your modules
 sys.path.insert(0, os.path.abspath(os.path.join('..', '..', 'src')))  # Sets the base path to find your modules

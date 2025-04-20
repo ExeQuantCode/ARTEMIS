@@ -1949,7 +1949,7 @@ contains
     write(unit,'("Lower material primitive cell used: ",L1)') lw_pricel
     write(unit,'("Upper material primitive cell used: ",L1)') lw_pricel
     write(unit,*)
-    write(unit,'("Lattice match:")')
+    write(unit,'("Lattice match: ",I0)') ifit
     write(unit,'((1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
          SAV%abc,SAV%abc,&
          SAV%tf1(ifit,1,1:3),SAV%tf2(ifit,1,1:3),&

@@ -55,7 +55,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/ExeQuantCode/artemis"
-Documentation = "https://artemis-fortran.readthedocs.io/"
+Documentation = "https://artemis-materials.readthedocs.io/"
 Repository = "https://github.com/ExeQuantCode/artemis"
 Issues = "https://github.com/ExeQuantCode/artemis/issues"
 
