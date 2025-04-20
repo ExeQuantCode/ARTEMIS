@@ -11,7 +11,7 @@ module shifting
   use artemis__geom_utils, only: split_bas,get_centre_atom,set_vacuum,shifter
   use artemis__io_utils
   use artemis__io_utils_extd, only: err_abort_print_struc
-  use interface_identifier
+  use artemis__interface_identifier
   implicit none
 
   real(real32) :: f_scale = 0.5_real32
@@ -744,7 +744,7 @@ contains
        bulk_DON,bulk_map,lprint,max_bondlength) result(res_shifts)
     use artemis__sym, only: gldfnd,confine_type
     use artemis__geom_utils, only: get_bulk,wyck_spec_type,get_wyckoff
-    use interface_identifier, only: gen_single_DON,nstep_default,den_of_neigh_type
+    use artemis__interface_identifier, only: gen_single_DON,nstep_default,den_of_neigh_type
     implicit none
     integer :: i,j,k,l,is,ia,ja,jb,jc,count1,itmp1
     integer :: ntrans,iatom,nneigh,ncheck
@@ -871,8 +871,10 @@ contains
        do i=1,2
           wyckoff(i)=get_wyckoff(splitbas(i),axis)
           if(.not.allocated(wyckoff(i)%spec))then
-             write(*,'(1X,"Using centre atoms as bulk representation")')
+             write(*,'(1X,"Using centre atoms as bulk representation for parent slab", I0)') i
              lwyckoff(i)=.false.
+          else
+             write(*,'(1X,"Using Wyckoff atoms as bulk representation for parent slab", I0)') i
           end if
        end do
     else

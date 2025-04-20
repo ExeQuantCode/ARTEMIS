@@ -3,7 +3,7 @@
 !!! Code part of the ARTEMIS group (Hepplestone research group).
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
-module interface_identifier
+module artemis__interface_identifier
   use artemis__constants, only: real32
   use artemis__misc, only: swap,sort1D
   use misc_linalg, only: modu,simeq,get_area,uvec
@@ -44,32 +44,30 @@ contains
 !!!#############################################################################
 !!! gets the interface location using CAD method
 !!!#############################################################################
-  function get_interface(lat,bas,axis) result(intf)
+  function get_interface(basis, axis) result(intf)
     implicit none
+    type(basis_type), intent(in) :: basis
     integer :: nstep
     real(real32) :: dist_max
-    type(basis_type) :: bas
     type(intf_info_type) :: intf
-    real(real32), dimension(3,3) :: lat
     type(den_of_spec_type), allocatable, dimension(:) :: DOS
 
     integer, optional, intent(in) :: axis
 
 
-    dist_max=12.0
-    DOS=gen_DOS(lat,bas,dist_max)
-    nstep=size(DOS(1)%atom(1,1,:))
+    dist_max = 12._real32
+    DOS = gen_DOS(basis%lat,basis,dist_max)
+    nstep = size(DOS(1)%atom(1,1,:))
 
-    if(present(axis))then
-       intf%axis=axis
-    else
-       intf%axis=get_intf_axis_DOS(DOS,lat,bas,dist_max)
+    intf%axis = 0
+    if(present(axis)) intf%axis = axis
+    if(intf%axis.eq.0)then
+       intf%axis = get_intf_axis_DOS(DOS, basis%lat, basis, dist_max)
     end if
 
-    intf%loc=get_intf_CAD(lat,bas,intf%axis,nstep)
+    intf%loc=get_intf_CAD(basis%lat, basis, intf%axis, nstep)
 
     if(intf%loc(1).gt.intf%loc(2)) call swap(intf%loc(1),intf%loc(2))
-
 
   end function get_interface
 !!!#############################################################################
@@ -741,6 +739,7 @@ contains
     real(real32), allocatable, dimension(:,:) :: CAD,deriv
     real(real32), allocatable, dimension(:,:,:) :: CADD
     logical, optional :: lprint
+    real(real32) :: diff
 
 
 !!!-----------------------------------------------------------------------------
@@ -853,10 +852,20 @@ contains
 !!! finds the turning points of the multiCADD and attributes them to ...
 !!! ... the two interfaces
 !!!-----------------------------------------------------------------------------
-    ivec1=get_turn_points([multiCADD(:)],window=8,lperiodic=.true.)
-    intf_loc(1)=dist(ivec1(size(ivec1)))
-    intf_loc(2)=dist(ivec1(size(ivec1)-1))
+    ivec1 = get_turn_points([multiCADD(:)],window=8,lperiodic=.true.)
 
+    intf_loc(1)=dist(ivec1(size(ivec1)))
+    do i = size(ivec1) - 1, 1, -1
+       diff = abs(intf_loc(1)-dist(ivec1(i)))
+       ! map back into the original space if greater than the size of the cell
+       if(abs(diff).gt.0.5*modu(lat(axis,:)))then
+          diff = diff - sign(1._real32,diff) * modu(lat(axis,:))
+       end if
+       if(abs(diff).gt.2._real32)then
+          intf_loc(2)=dist(ivec1(i))
+          exit
+       end if
+    end do
 
 
   end function get_intf_CAD
@@ -1127,4 +1136,4 @@ contains
 !!!#############################################################################
 
 
-end module interface_identifier
+end module artemis__interface_identifier
