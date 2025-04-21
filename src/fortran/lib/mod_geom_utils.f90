@@ -61,8 +61,6 @@ module artemis__geom_utils
   end interface get_closest_atom
 
 
-!!!updated 2023/02/16
-
 
 contains
 
@@ -71,8 +69,8 @@ contains
     !! Check if two basis structures have the same stoichiometry ratio
     !!
     !! This function compares the stoichiometry ratios of two basis structures
-    !! It returns true if the relative proportions of all atomic species are identical
-    !! and all species names match between both structures
+    !! It returns true if the relative proportions of all atomic species are 
+    !! identical and all species names match between both structures
     implicit none
     type(basis_type), intent(in) :: basis1, basis2
     logical :: output
@@ -129,10 +127,7 @@ contains
     end do
 
   end function compare_stoichiometry
-
-
-
-
+!###############################################################################
 
 
 !!!#############################################################################
