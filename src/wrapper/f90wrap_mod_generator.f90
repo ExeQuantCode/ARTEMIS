@@ -1207,7 +1207,7 @@ subroutine f90wrap_intf_gen__get_terminations__binding__agt( &
 end subroutine f90wrap_intf_gen__get_terminations__binding__agt
 
 subroutine f90wrap_intf_gen__get_interface_location__binding__agt( &
-    this, structure, axis, &
+    this, structure, axis, return_fractional, &
     ret_location, ret_axis)
     use artemis__geom_rw, only: basis_type
     use artemis__generator, only: artemis_generator_type
@@ -1225,13 +1225,18 @@ subroutine f90wrap_intf_gen__get_interface_location__binding__agt( &
     type(basis_type_ptr_type) :: structure_ptr
     integer, intent(in), optional, dimension(2) :: structure
     integer, intent(in), optional :: axis
+    logical, intent(in), optional :: return_fractional
     integer, intent(out) :: ret_axis
     real(4), dimension(2), intent(out) :: ret_location
     type(intf_info_type) :: intf_info
 
     this_ptr = transfer(this, this_ptr)
     structure_ptr = transfer(structure, structure_ptr)
-    intf_info = this_ptr%p%get_interface_location(structure=structure_ptr%p, axis=axis)
+    intf_info = this_ptr%p%get_interface_location( &
+        structure=structure_ptr%p, &
+        axis=axis &
+        return_fractional=return_fractional &
+    )
 
     ret_location = intf_info%loc
     ret_axis = intf_info%axis

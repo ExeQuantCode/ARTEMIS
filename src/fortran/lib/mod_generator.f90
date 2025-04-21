@@ -819,7 +819,7 @@ contains
 
 !###############################################################################
    function get_interface_location( &
-       this, structure, axis, verbose, exit_code &
+       this, structure, axis, return_fractional, verbose, exit_code &
    ) result(output)
     !! Get the interface location for the given structure
     implicit none
@@ -831,6 +831,8 @@ contains
     !! Atomic structure data
     integer, intent(in), optional :: axis
     !! Axis for the interface
+    logical, intent(in), optional :: return_fractional
+    !! Return the interface location in fractional coordinates
     integer, intent(in), optional :: verbose
     !! Verbosity level
     integer, intent(out), optional :: exit_code
@@ -842,12 +844,19 @@ contains
     ! Local variables
     integer :: axis_
     !! Axis for the interface
-
+    logical :: return_fractional_
+    !! Return fractional coordinates
 
     axis_ = 0
+    return_fractional_ = .true.
     if(present(axis)) axis_ = axis
+    if(present(return_fractional)) return_fractional_ = return_fractional
 
     output = get_interface(structure, axis_)
+
+    if(return_fractional_)then
+       output%loc = output%loc/modu(structure%lat(axis_,:))
+    end if
 
    end function get_interface_location
 !###############################################################################
