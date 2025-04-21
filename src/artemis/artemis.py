@@ -894,18 +894,32 @@ class Generator(f90wrap.runtime.FortranModule):
                 ../src/fortran/lib/mod_intf_generator.f90 \
                 lines 1112-1124
             
-            Parameters
-            ----------
-            this : Artemis_generator_Type
-            structure : Basis_Type
-            axis : int
-            
+            Parameters:
+                this : Artemis_generator_Type
+                structure : Basis_Type
+                axis : int
+
+            Returns:
+                location : list of floats
+                    The location of the interface in the structure (in Å).
+                axis : int
+                    The axis of the interface.
             """
             if isinstance(structure, Atoms):
                 structure = geom_rw.basis(atoms=structure)
 
-            return _artemis.f90wrap_intf_gen__get_interface_location__binding__agt(this=self._handle, \
+            ret_location, ret_axis = _artemis.f90wrap_intf_gen__get_interface_location__binding__agt(this=self._handle, \
                 structure=structure._handle, axis=axis)
+            
+            if ret_axis != axis and axis is not None:
+                raise RuntimeError(f"Interface location generation failed (axis {ret_axis} != {axis})")
+            
+            # convert the location from numpy array to list
+            if isinstance(ret_location, numpy.ndarray):
+                ret_location = ret_location.tolist()
+
+            return ret_location, ret_axis
+                
 
         def generate(self, surface_lw=None, surface_up=None, thickness_lw=None, \
             thickness_up=None, num_layers_lw=None, num_layers_up=None, \
