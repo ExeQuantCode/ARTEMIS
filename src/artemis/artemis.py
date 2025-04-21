@@ -884,7 +884,7 @@ class Generator(f90wrap.runtime.FortranModule):
                 return structures, exit_code
             return structures
 
-        def get_interface_location(self, structure=None, axis=None):
+        def get_interface_location(self, structure=None, axis=None, return_fractional=True):
 
             """
             get_interface_location__binding__artemis_gen_type(self, structure, axis)
@@ -898,6 +898,9 @@ class Generator(f90wrap.runtime.FortranModule):
                 this : Artemis_generator_Type
                 structure : Basis_Type
                 axis : int
+                return_fractional : bool
+                    If True, return the location in fractional coordinates.
+                    If False, return the location in angstroms.
 
             Returns:
                 location : list of floats
@@ -909,7 +912,7 @@ class Generator(f90wrap.runtime.FortranModule):
                 structure = geom_rw.basis(atoms=structure)
 
             ret_location, ret_axis = _artemis.f90wrap_intf_gen__get_interface_location__binding__agt(this=self._handle, \
-                structure=structure._handle, axis=axis)
+                structure=structure._handle, axis=axis, return_fractional=return_fractional)
             
             if ret_axis != axis and axis is not None:
                 raise RuntimeError(f"Interface location generation failed (axis {ret_axis} != {axis})")
