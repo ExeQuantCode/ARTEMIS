@@ -107,6 +107,7 @@ module artemis__generator
 
     type(tol_type) :: tolerance
     !! Tolerance structure
+    real(real32) :: tol_sym = 1.E-6_real32
 
    contains
     procedure, pass(this) :: set_tolerance
@@ -637,7 +638,7 @@ contains
        call structure_compare%copy(this%structure_lw, length=4)
        if(this%use_pricel_lw)then
           if(verbose_.gt.0) write(*,'(1X,"Using primitive cell for material")')
-          call get_primitive_cell(structure)
+          call get_primitive_cell(structure, tol_sym=this%tol_sym)
        end if
        miller_ = this%miller_lw
        prefix = "lw"
@@ -647,7 +648,7 @@ contains
        call structure_compare%copy(this%structure_up, length=4)
        if(this%use_pricel_up)then
           if(verbose_.gt.0) write(*,'(1X,"Using primitive cell for material")')
-          call get_primitive_cell(structure)
+          call get_primitive_cell(structure, tol_sym=this%tol_sym)
        end if
        miller_ = this%miller_up
        prefix = "up"
@@ -740,7 +741,7 @@ contains
     confine%laxis(this%axis) = .true.
     if(allocated(trans)) deallocate(trans)
     allocate(trans(minval(structure%spec(:)%num+2),3))
-    call gldfnd(confine, structure, structure, trans, ntrans)
+    call gldfnd(confine, structure, structure, trans, ntrans, this%tol_sym)
     tfmat(:,:) = 0._real32
     tfmat(1,1) = 1._real32
     tfmat(2,2) = 1._real32
@@ -766,7 +767,8 @@ contains
     ! get the terminations
     term = get_termination_info( &
          structure, this%axis, &
-         verbose = verbose_, layer_sep = layer_sep, &
+         verbose = verbose_, tol_sym = this%tol_sym, &
+         layer_sep = layer_sep, &
          break_on_fail = break_on_fail_ &
     )
     if(term%nterm .eq. 0)then
@@ -1209,9 +1211,10 @@ contains
     !---------------------------------------------------------------------------
     ! Retrieve the primitive cells if necessary
     !---------------------------------------------------------------------------
+    write(*,*) "tar0"
     if(this%use_pricel_lw)then
        if(verbose_.gt.0) write(*,'(1X,"Using primitive cell for lower material")')
-       call get_primitive_cell(structure_lw)
+       call get_primitive_cell(structure_lw, tol_sym=this%tol_sym)
     else
        if(verbose_.gt.0) write(*,'(1X,"Using supplied cell for lower material")')
        call reducer(structure_lw)
@@ -1219,12 +1222,13 @@ contains
     end if
     if(this%use_pricel_up)then
        if(verbose_.gt.0) write(*,'(1X,"Using primitive cell for upper material")')
-       call get_primitive_cell(structure_up)
+       call get_primitive_cell(structure_up, tol_sym=this%tol_sym)
     else
        if(verbose_.gt.0) write(*,'(1X,"Using supplied cell for upper material")')
        call reducer(structure_up)
        structure_up%lat = primitive_lat(structure_up%lat)
     end if
+    write(*,*) "tar1"
 
 
     !---------------------------------------------------------------------------
@@ -1261,6 +1265,7 @@ contains
           call stop_program(trim(err_msg))
        end select
     end if
+    write(*,*) "tar2"
 
     ludef_surface_lw = .false.
     ludef_surface_up = .false.
@@ -1289,6 +1294,7 @@ contains
             " One of these must be greater than 0."
        call stop_program(trim(err_msg))
     end if
+    write(*,*) "tar3"
 
 
     !---------------------------------------------------------------------------
@@ -1302,6 +1308,7 @@ contains
     if(verbose_.gt.0) write(*,'(1X,"Avg min bulk bond: ",F0.3," Å")') avg_min_bond
     if(verbose_.gt.0) write(*,'(1X,"Trans-interfacial scaling factor: ",F0.3)') this%separation_scale
     if(this%shift_method.eq.-1) this%num_shifts = 1
+    write(*,*) "tar4"
     
 
     !---------------------------------------------------------------------------
@@ -1358,6 +1365,7 @@ contains
        lw_map=-1
        up_map=-1       
     end if
+    write(*,*) "tar1"
 
 
     !---------------------------------------------------------------------------
@@ -1406,6 +1414,7 @@ contains
     elseif(this%is_layered_up.and.layered_axis_up.gt.0.and.all(miller_up.eq.0))then
        miller_up(layered_axis_up)=1
     end if
+    write(*,*) "tar2"
 
 
     !---------------------------------------------------------------------------
@@ -1427,7 +1436,8 @@ contains
             structure_lw, structure_up, &
             miller_lw = miller_lw, miller_up = miller_up, &
             max_num_planes = this%max_num_planes, &
-            verbose = merge(1,verbose_,print_lattice_match_info_) &
+            verbose = merge(1,verbose_,print_lattice_match_info_), &
+            tol_sym = this%tol_sym &
        )
     case default
        call SAV%constrain_axes(miller_lw, miller_up, verbose = verbose_)
@@ -1447,6 +1457,7 @@ contains
        if(verbose_.gt.0) write(*,'(1X,"Told not to generate structures, just find matches.")')
        return
     end if
+    write(*,*) "tar3"
 
        
 !!!-----------------------------------------------------------------------------
@@ -1526,7 +1537,7 @@ contains
        confine%laxis(this%axis)=.true.
        if(allocated(trans)) deallocate(trans)
        allocate(trans(minval(supercell_lw%spec(:)%num+2),3))
-       call gldfnd(confine,supercell_lw,supercell_lw,trans,ntrans)
+       call gldfnd(confine, supercell_lw, supercell_lw, trans, ntrans, this%tol_sym)
        tfmat(:,:)=0._real32
        tfmat(1,1)=1._real32
        tfmat(2,2)=1._real32
@@ -1558,6 +1569,7 @@ contains
        lw_term = get_termination_info( &
             supercell_lw, this%axis, &
             verbose = merge(1,verbose_,print_termination_info_), &
+            tol_sym = this%tol_sym, &
             layer_sep = this%layer_separation_cutoff(1), &
             break_on_fail = break_on_fail_ &
        )
@@ -1609,7 +1621,7 @@ contains
        !!-----------------------------------------------------------------------
        deallocate(trans)
        allocate(trans(minval(supercell_up%spec(:)%num+2),3))
-       call gldfnd(confine,supercell_up,supercell_up,trans,ntrans)
+       call gldfnd(confine, supercell_up, supercell_up, trans,ntrans, this%tol_sym)
        tfmat(:,:)=0._real32
        tfmat(1,1)=1._real32
        tfmat(2,2)=1._real32
@@ -1642,6 +1654,7 @@ contains
        up_term = get_termination_info( &
             supercell_up, this%axis, &
             verbose = merge(1,verbose_,print_termination_info_), &
+            tol_sym = this%tol_sym, &
             layer_sep = this%layer_separation_cutoff(2), &
             break_on_fail = break_on_fail_ &
        )
@@ -1958,7 +1971,8 @@ contains
                offset=this%shifts(1,:3),&
                lprint=print_shift_info, &
                bulk_DON=bulk_DON,bulk_map=map,&
-               max_bondlength=this%bondlength_cutoff)
+               max_bondlength=this%bondlength_cutoff,&
+               tol_sym=this%tol_sym)
        else
           output_shifts = get_shifts_DON(&
                bas=basis,&
@@ -1968,7 +1982,8 @@ contains
                c_scale=this%separation_scale, &
                offset=this%shifts(1,:3),&
                lprint=print_shift_info,&
-               max_bondlength=this%bondlength_cutoff)
+               max_bondlength=this%bondlength_cutoff,&
+               tol_sym=this%tol_sym)
        end if
        if(size(output_shifts(:,1)).eq.0)then
           write(0,'(2X,"No shifts were identified with ISHIFT = 4 for this lattice match")')
@@ -2068,7 +2083,9 @@ contains
        !!-----------------------------------------------------------------------
        if_swap: if(this%swap_method.ne.0)then
           bas_arr = rand_swapper(tbas%lat,tbas,this%axis,this%swap_depth,&
-               nswaps_per_cell,this%num_swaps,intf_loc,this%swap_method,seed_arr,sigma=this%swap_sigma,&
+               nswaps_per_cell,this%num_swaps,intf_loc,this%swap_method,&
+               seed_arr,tol_sym=this%tol_sym,&
+               sigma=this%swap_sigma,&
                require_mirror=this%require_mirror_swaps)
           ngen_swaps = this%num_swaps
           LOOPswaps: do l=1,this%num_swaps

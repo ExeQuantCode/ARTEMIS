@@ -49,7 +49,7 @@ contains
 
 !###############################################################################
   function get_termination_info( &
-       basis, axis, verbose, layer_sep, break_on_fail &
+       basis, axis, verbose, tol_sym, layer_sep, break_on_fail &
   ) result(term)
     !! Function to find the terminations of a material along a given axis
     implicit none
@@ -62,6 +62,8 @@ contains
     !! 1=a, 2=b, 3=c
     integer, intent(in) :: verbose
     !! Verbosity level
+    real(real32), intent(in) :: tol_sym
+    !! Tolerance for symmetry operations
     real(real32), intent(in), optional :: layer_sep
     !! Minimum separation between layers
     logical, intent(in), optional :: break_on_fail
@@ -266,7 +268,7 @@ contains
     ! this is done to constrain the matching of two basises in certain directions
     grp_store%confine%l = .false.
     grp_store%confine%laxis(axis) = .false.
-    call check_sym(grp_store,bas1=basis,iperm=-1,lsave=.true.)
+    call check_sym(grp_store,basis=basis,iperm=-1,lsave=.true.,tol_sym=tol_sym)
     inv_mat = 0._real32
     do i=1,3
        inv_mat(i,i) = -1._real32
@@ -308,8 +310,8 @@ contains
                   abs(term_arr_uniq(j)%hmax-term_arr_uniq(j)%hmin)).gt.tolerance) &
                   cycle sym_loop1
              call clone_grp(grp_store,grp1)
-             call check_sym(grp1,bas1=basis_arr(mterm),&
-                  iperm=-1,tmpbas2=basis_arr(j),lsave=.true.)
+             call check_sym(grp1,basis=basis_arr(mterm),&
+                  iperm=-1,tmpbas2=basis_arr(j),lsave=.true.,tol_sym=tol_sym)
              if(grp1%nsymop.ne.0)then
                 if(grp1%sym_save(1,axis,axis).eq.-1._real32)then
                    ireject = ireject + 1
@@ -376,7 +378,7 @@ contains
        else
           call clone_grp(grp_store,grp1)
           call check_sym(grp1,basis_arr(itmp2),&
-               iperm=-1,lsave=.true.,lcheck_all=.true.)
+               iperm=-1,lsave=.true.,lcheck_all=.true.,tol_sym=tol_sym)
           ltmp1=.false.
 
           ! Check if pure translations are present in comparison termination?
@@ -394,7 +396,8 @@ contains
 
           call clone_grp(grp_store,grp1)
           call check_sym(grp1,basis_arr(itmp2),&
-               tmpbas2=basis_arr_reject(i),iperm=-1,lsave=.true.,lcheck_all=.true.)
+               tmpbas2=basis_arr_reject(i),iperm=-1,lsave=.true.,&
+               lcheck_all=.true., tol_sym=tol_sym)
 
           ! Check det of all symmetry operations. If any are 1, move on
           ! This is because they are just rotations as can be captured ...

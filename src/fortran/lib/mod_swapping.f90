@@ -29,7 +29,7 @@ contains
 !!! Main function to be called from ARTEMIS
 !!!#############################################################################
   function rand_swapper(lat,bas,axis,width,nswaps_per_cell,nswap,intf_loc,&
-       iswap,seed_arr,sigma,require_mirror) result(bas_arr)
+       iswap,seed_arr,tol_sym,sigma,require_mirror) result(bas_arr)
     implicit none
     integer :: i,j,is,iout,itmp,count1
     integer :: axis,nswap
@@ -57,6 +57,7 @@ contains
     real(real32), dimension(2), intent(in) :: intf_loc !USE 1
     type(basis_type), allocatable, dimension(:) :: bas_arr
     real(real32), dimension(3,3), intent(in) :: lat
+    real(real32), intent(in) :: tol_sym
 
 
 !!!-----------------------------------------------------------------------------
@@ -144,13 +145,13 @@ contains
 !!! NOT NEEDED?
 !!! To Replace with
     lmirror = .false.
-    call check_sym(grp,tmpbas,lsave=.true.)
+    call check_sym(grp,tmpbas,lsave=.true., tol_sym=tol_sym)
     intf_sym_loop: do i=1,grp%nsymop
        !if(symops(i).eq.1) cycle intf_sym_loop
        if(abs(grp%sym(i,4,axis)).lt.tiny) cycle intf_sym_loop
        if(abs(grp%sym(i,axis,axis)+1._real32).gt.tiny) cycle intf_sym_loop
        intf_sym(1:4,1:4) = grp%sym(i,1:4,1:4)
-       bas_map = basis_map(intf_sym,tmpbas)
+       bas_map = basis_map(intf_sym,tmpbas, tol_sym=tol_sym)
        lmirror = .true.
        exit intf_sym_loop
     end do intf_sym_loop
@@ -185,7 +186,7 @@ contains
 
 10  deallocate(grp%sym)
     call sym_setup(grp,lat,new_start=.true.)
-    call check_sym(grp,tmpbas)!,lsave=.true.)
+    call check_sym(grp,tmpbas, tol_sym=tol_sym)!,lsave=.true.)
     
     
     dintf=intf_loc(1)
@@ -250,11 +251,11 @@ contains
                lw_close_list,up_close_list,&
                lw_weight_list,up_weight_list)
        end select
-       !call check_sym(tmpbas,itmp)
+       !call check_sym(tmpbas,itmp,tol_sym=tol_sym)
        !call loadbar(iout,10)
 
        do j=1,iout
-          call check_sym(grp,bas1=tmpbas,tmpbas2=bas_arr(j))!,itmp,bas_arr(j))
+          call check_sym(grp,basis=tmpbas,tmpbas2=bas_arr(j),tol_sym=tol_sym)!,itmp,bas_arr(j))
           if(grp%nsymop.ne.0) cycle symloop
        end do
 
