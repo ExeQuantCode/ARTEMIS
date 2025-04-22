@@ -848,14 +848,14 @@ contains
     !! Return fractional coordinates
 
     axis_ = 0
-    return_fractional_ = .true.
+    return_fractional_ = .false.
     if(present(axis)) axis_ = axis
     if(present(return_fractional)) return_fractional_ = return_fractional
 
     output = get_interface(structure, axis_)
 
     if(return_fractional_)then
-       output%loc = output%loc/modu(structure%lat(axis_,:))
+       output%loc = output%loc/modu(structure%lat(output%axis,:))
     end if
 
    end function get_interface_location
