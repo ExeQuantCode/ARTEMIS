@@ -146,11 +146,11 @@ contains
 !!! To Replace with
     lmirror = .false.
     call check_sym(grp,tmpbas,lsave=.true., tol_sym=tol_sym)
-    intf_sym_loop: do i=1,grp%nsymop
+    intf_sym_loop: do i = 1, grp%nsymop
        !if(symops(i).eq.1) cycle intf_sym_loop
-       if(abs(grp%sym(i,4,axis)).lt.tiny) cycle intf_sym_loop
-       if(abs(grp%sym(i,axis,axis)+1._real32).gt.tiny) cycle intf_sym_loop
-       intf_sym(1:4,1:4) = grp%sym(i,1:4,1:4)
+       if(abs(grp%sym(4,axis,i)).lt.tiny) cycle intf_sym_loop
+       if(abs(grp%sym(axis,axis,i)+1._real32).gt.tiny) cycle intf_sym_loop
+       intf_sym(1:4,1:4) = grp%sym(1:4,1:4,i)
        bas_map = basis_map(intf_sym,tmpbas, tol_sym=tol_sym)
        lmirror = .true.
        exit intf_sym_loop
