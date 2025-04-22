@@ -616,7 +616,7 @@ contains
        !!-----------------------------------------------------------------------
        !! Checks if best mismatch and saves accordingly
        !!-----------------------------------------------------------------------
-       best_check: do i=1,tol%nstore
+       best_check: do i=1,SAV%max_num_matches
           if(i.gt.SAV%nfit)then
              SAV%tol(i,1)=diff*100._real32
              SAV%tol(i,2)=abs(ang1-ang2)
@@ -631,7 +631,7 @@ contains
              if(nint(get_area(real(tf1(1,:),real32),real(tf1(2,:),real32))).ge.&
                   nint(get_area(real(SAV%tf1(i,1,:),real32),real(SAV%tf1(i,2,:),real32))))&
                   cycle best_check
-             do j=tol%nstore,i+1,-1
+             do j=SAV%max_num_matches,i+1,-1
                 SAV%tol(j,:)=SAV%tol(j-1,:)
                 SAV%tf1(j,:,:)=SAV%tf1(j-1,:,:)
                 SAV%tf2(j,:,:)=SAV%tf2(j-1,:,:)
@@ -668,7 +668,7 @@ contains
 
     tiny=1.E-6_real32
     lcheck=.false.
-    lat_loop: do i=1,min(tol%nstore,SAV%nfit)
+    lat_loop: do i=1,min(SAV%max_num_matches,SAV%nfit)
        tlat=matmul(SAV%tf1(i,:,:),SAV%lat1)
        ang1=acos(dot_product(lat(1,:),lat(2,:))/(&
             sqrt(dot_product(lat(1,:),lat(1,:)))*&
@@ -885,22 +885,21 @@ contains
     !! sets initial variables
     !!--------------------------------------------------------------------------
     SAV%nfit = 0
-    allocate(transform1_saved(tol%nstore,3,3))
-    allocate(transform2_saved(tol%nstore,3,3))
-    allocate(Tsaved_1(tol%nstore,2,2))
-    allocate(Tsaved_2(tol%nstore,2,2))
+    allocate(transform1_saved(SAV%max_num_matches,3,3))
+    allocate(transform2_saved(SAV%max_num_matches,3,3))
+    allocate(Tsaved_1(SAV%max_num_matches,2,2))
+    allocate(Tsaved_2(SAV%max_num_matches,2,2))
     transform1_saved = 0._real32
     transform2_saved = 0._real32
     Tsaved_1 = 0._real32
     Tsaved_2 = 0._real32
-    allocate(tolerances(tol%nstore,3))
-    allocate(saved_tolerances(tol%nstore,3))
+    allocate(tolerances(SAV%max_num_matches,3))
+    allocate(saved_tolerances(SAV%max_num_matches,3))
     saved_tolerances = INF
     lat1 = SAV%lat1
     lat2 = SAV%lat2
     pm_tol%maxsize=tol%maxsize
     pm_tol%maxfit=tol%maxfit
-    pm_tol%nstore=tol%nstore
     pm_tol%vec=tol%vec
     pm_tol%ang=tol%ang
     pm_tol%area=tol%area
@@ -1124,25 +1123,25 @@ contains
 
 
           !!--------------------------------------------------------------------
-          !! Find the (tol%nstore) best matches overall
+          !! Find the (SAV%max_num_matches) best matches overall
           !!--------------------------------------------------------------------
           loop110: do i=1,num_of_transforms
              IF101: if ( dot_product(tolerances(i,:),vaa_weighting).le.&
-                  dot_product(saved_tolerances(tol%nstore,:),vaa_weighting) )then
+                  dot_product(saved_tolerances(SAV%max_num_matches,:),vaa_weighting) )then
                 temp_mat1(:,:) = real(Tcellmatch_1(i,:,:),real32)
                 temp_mat2(:,:) = real(Tcellmatch_2(i,:,:),real32)
                 IF102: if (.not.is_duplicate(&
                      (Tsaved_1),(Tsaved_2),&
                      (temp_mat1),(temp_mat2),&
                      tmpsym1,tmpsym2) ) then
-                   saved_tolerances(tol%nstore,:) = tolerances(i,:)
-                   Tsaved_1(tol%nstore,:,:) = temp_mat1(:,:)
-                   Tsaved_2(tol%nstore,:,:) = temp_mat2(:,:)
-                   transform1_saved(tol%nstore,:,:) = real(transform1(:,:),real32)
-                   transform2_saved(tol%nstore,:,:) = real(transform2(:,:),real32)
+                   saved_tolerances(SAV%max_num_matches,:) = tolerances(i,:)
+                   Tsaved_1(SAV%max_num_matches,:,:) = temp_mat1(:,:)
+                   Tsaved_2(SAV%max_num_matches,:,:) = temp_mat2(:,:)
+                   transform1_saved(SAV%max_num_matches,:,:) = real(transform1(:,:),real32)
+                   transform2_saved(SAV%max_num_matches,:,:) = real(transform2(:,:),real32)
 
 
-                   if(SAV%nfit.lt.tol%nstore) SAV%nfit = SAV%nfit + 1
+                   if(SAV%nfit.lt.SAV%max_num_matches) SAV%nfit = SAV%nfit + 1
                    call datasortmain_tols(saved_tolerances,&
                         Tsaved_1,Tsaved_2,transform1_saved,transform2_saved)
                 end if IF102
@@ -1157,15 +1156,15 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Convert the 2x2 transformations to 3x3 matrices
 !!!-----------------------------------------------------------------------------
-    allocate(big_T_1(tol%nstore,3,3))
-    allocate(big_T_2(tol%nstore,3,3))
+    allocate(big_T_1(SAV%max_num_matches,3,3))
+    allocate(big_T_2(SAV%max_num_matches,3,3))
     big_T_1(:,:,:) = 0
     big_T_2(:,:,:) = 0
-    loop101: do i=1,tol%nstore
+    loop101: do i=1,SAV%max_num_matches
        big_T_1(i,3,3) = 1
        big_T_2(i,3,3) = 1
     end do loop101
-    loop103: do i=1,tol%nstore
+    loop103: do i=1,SAV%max_num_matches
        big_T_1(i,:2,:2) = (Tsaved_1(i,:,:))
        big_T_2(i,:2,:2) = (Tsaved_2(i,:,:))
     end do loop103
@@ -1174,9 +1173,9 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Combine 3x3 planecutter matrix with 3x3 plane matching matrix 
 !!!-----------------------------------------------------------------------------
-    allocate(comb_trans_1(tol%nstore,3,3))
-    allocate(comb_trans_2(tol%nstore,3,3))
-    loop104: do i=1,tol%nstore
+    allocate(comb_trans_1(SAV%max_num_matches,3,3))
+    allocate(comb_trans_2(SAV%max_num_matches,3,3))
+    loop104: do i=1,SAV%max_num_matches
        dummy_mat1(:,:) = big_T_1(i,:,:)
        dummy_mat2(:,:) = transform1_saved(i,:,:)
        comb_trans_1(i,:,:) = matmul((dummy_mat1),(dummy_mat2))
@@ -1191,9 +1190,9 @@ contains
 !!! Reduce transformation matrices if necessary
 !!!-----------------------------------------------------------------------------
     write(*,*) "Performing lattice match reduction"
-    allocate(lvec1(tol%nstore))
+    allocate(lvec1(SAV%max_num_matches))
     lvec1=.false.
-    OUTLOOP: do i=1,tol%nstore
+    OUTLOOP: do i=1,SAV%max_num_matches
        SAV%tol(i,:) = saved_tolerances(i,:)
        if_reduce: if(reduce)then
           tf = find_tf(comb_trans_1(i,:,:),comb_trans_2(i,:,:))

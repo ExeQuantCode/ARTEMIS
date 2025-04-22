@@ -8,7 +8,7 @@
 !!!#############################################################################
 !!! MAYBE HAVE FINDSYM IN HERE IN ORDER TO EDIT TOLSYM?
 module inputs
-  use artemis__constants, only: real32, ierror, pi
+  use artemis__constants, only: real32, pi
   use artemis__misc, only: flagmaker,file_check
   use artemis__geom_rw, only: basis_type,geom_read
   use artemis__io_utils, only: &
@@ -17,20 +17,48 @@ module inputs
        err_abort
   use artemis__io_utils_extd, only: setup_input_fmt, setup_output_fmt
   use aspect, only: aspect_type, edit_structure
-  use lat_compare, only: reduce,tol_type
+  use lat_compare, only: tol_type
   use infile_tools
   use infile_print
   use artemis__sym, only: set_symmetry_tolerance
   implicit none
-  integer :: nout,clock,task,task_defect,axis,icheck_intf,iintf
-  integer :: irestart,idepth,imatch,ishift,iswap
+  integer :: max_num_matches, max_num_terms, max_num_planes
+  !! Maximum number of matches, terminations and Miller planes for matching
+  logical :: compensate_normal
+  !! Boolean whether to compensate for mismatch strain by adjusting the
+  !! interface normal axis
+  integer :: match_method, shift_method, swap_method, depth_method
+  !! Integer to determine which method to use for matching, shifting and swapping
+  integer :: num_shifts
+  !! Number of shifts to be generated per termination pair
+  real(real32) :: interface_depth, separation_scale, bondlength_cutoff
+  !! Interface depth, separation scale, and maximum bondlength considered for
+  !! the shifting method
+  real(real32), allocatable, dimension(:,:) :: shifts
+  !! Array of shifts to be applied to the upper structure in the interface
+
+  integer :: num_swaps
+  !! Number of swaps to be generated per shift
+  real(real32) :: swap_density, swap_sigma, swap_depth
+  !! Swap density, swap sigma and swap depth for the swapping method
+  logical :: require_mirror_swaps
+  !! Boolean whether to require swaps to be mirrors on each interface
+
+  logical :: reduce_matches
+  !! Reduce lattice matches to their smallest cell (UNSTABLE)
+
+  logical :: break_on_fail
+  integer :: icheck_term_pair, interface_idx
+  integer :: clock, verbose
+
+  integer :: nout,task,task_defect,axis
+  integer :: irestart
   integer :: lw_num_layers,up_num_layers
-  integer :: nshift,nterm,nintf,nswap,nmiller
-  real(real32) :: max_bondlength,swap_sigma,swap_depth
+  integer :: nintf
   real(real32) :: lw_thickness, up_thickness
   real(real32) :: lw_bulk_modulus, up_bulk_modulus
-  real(real32) :: c_scale,intf_depth,vacuum
-  real(real32) :: layer_sep,lw_layer_sep,up_layer_sep,swap_den,tol_sym
+  real(real32) :: vacuum
+  real(real32) :: layer_sep,lw_layer_sep,up_layer_sep,tol_sym
   character(len=20) :: input_fmt,output_fmt
   character(200) :: struc1_file,struc2_file,out_filename
   character(100) :: dirname,shiftdir,swapdir,subdir_prefix
@@ -40,9 +68,6 @@ module inputs
   logical :: lortho,lnorm_lat
   logical :: ludef_lw_layered,ludef_up_layered,ludef_axis
   logical :: lpresent_struc2
-  logical :: lswap_mirror
-  logical :: lc_fix
-  logical :: lbreak_on_no_term
   type(basis_type) :: struc1_bas,struc2_bas
   type(tol_type) :: tolerance
   type(aspect_type) :: edits
@@ -50,7 +75,6 @@ module inputs
   integer, dimension(3) :: lw_mplane,up_mplane
   integer, allocatable, dimension(:) :: seed
   real(real32), dimension(2) :: udef_intf_loc
-  real(real32), allocatable, dimension(:,:) :: offset
   real(real32), dimension(3,3) :: struc1_lat,struc2_lat
 
 
@@ -87,12 +111,13 @@ contains
     swapdir="DSWAPS"
     subdir_prefix="D"
     n=1
-    clock=0
+    clock = 0
+    verbose = 0
     allocate(seed(n))
-    imatch=0
-    ishift=4
-    idepth=0   !!! SWAP DEFAULT DEPTH METHOD !!!
-    intf_depth=1.5_real32
+    match_method = 0
+    shift_method = 4
+    depth_method = 0   !!! SWAP DEFAULT DEPTH METHOD !!!
+    interface_depth = 1.5_real32
     layer_sep=1._real32
     lw_layer_sep=0._real32
     up_layer_sep=0._real32
@@ -108,13 +133,13 @@ contains
     vacuum=14._real32
     lw_surf=0
     up_surf=0
-    c_scale=1.5_real32
-    max_bondlength=4.0
-    nmiller=10
-    nshift=5
-    nterm=5
+    separation_scale = 1._real32
+    bondlength_cutoff = 4._real32
+    max_num_planes = 10
+    num_shifts = 5
+    max_num_terms = 5
     nintf=100
-    tolerance%nstore=5
+    max_num_matches=5
     tolerance%maxlen=20._real32
     tolerance%maxarea=400._real32
     tolerance%maxfit=100
@@ -126,14 +151,14 @@ contains
     lprint_shifts=.false.
     lprint_matches=.false.
     lgen_interfaces=.true.
-    reduce=.false.
-    iswap = 0
-    nswap = 5
-    swap_den = 5.E-2_real32
+    reduce_matches=.false.
+    swap_method = 0
+    num_swaps = 5
+    swap_density = 5.E-2_real32
     swap_sigma = -1.0
     swap_depth = 3.0
-    lswap_mirror = .true.
-    icheck_intf=-1
+    require_mirror_swaps = .true.
+    icheck_term_pair=-1
     lw_layered=.false.
     up_layered=.false.
     ludef_lw_layered=.false.
@@ -142,7 +167,7 @@ contains
     lnorm_lat=.true.
     lw_surf=0
     up_surf=0
-    iintf=-1
+    interface_idx=-1
     tol_sym = 1.E-6_real32
     udef_intf_loc = [ -1._real32, -1._real32 ]
     lw_use_pricel=.true.
@@ -150,8 +175,8 @@ contains
 
     lw_bulk_modulus=0.E0
     up_bulk_modulus=0.E0
-    lc_fix=.true.
-    lbreak_on_no_term = .true.
+    compensate_normal=.true.
+    break_on_fail = .true.
 
 
 !!!-----------------------------------------------------------------------------
@@ -231,7 +256,7 @@ contains
        elseif(index(buffer,'-v').eq.1)then
           flag="-v"
           call flagmaker(buffer,flag,i,skip,empty)
-          if(.not.empty) read(buffer,*) ierror
+          if(.not.empty) read(buffer,*) verbose
        elseif(index(buffer,'--version').eq.1)then
           flag="--version"
           write(*,'(1X,"ARTEMIS version: ",A)') trim(artemis__version__)
@@ -369,7 +394,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! changes interface depth depending on IDEPTH method
 !!!-----------------------------------------------------------------------------
-    if(idepth.eq.0) intf_depth=0._real32
+    if(depth_method.eq.0) interface_depth=0._real32
 
 
 
@@ -519,7 +544,7 @@ contains
        case("SUBDIR_PREFIX")
           call assign(buffer,subdir_prefix,readvar(6))
        case("IPRINT")
-          call assign(buffer,ierror,       readvar(7))
+          call assign(buffer,verbose,      readvar(7))
        case("CLOCK")
           call assign(buffer,clock,        readvar(8))
        case("INPUT_FMT")
@@ -680,14 +705,14 @@ contains
     integer :: Reason,j,iudef_nshift
     character(1024) :: store
     character(1024) :: buffer,tagname
-    logical :: ludef_offset, ludef_lw_layer_sep, ludef_up_layer_sep
+    logical :: ludef_shifts, ludef_lw_layer_sep, ludef_up_layer_sep
     integer, intent(in) :: unit
     integer, intent(inout) :: count
     integer, dimension(57) :: readvar
     logical, optional, intent(in) :: skip
 
 
-    ludef_offset=.false.
+    ludef_shifts=.false.
     ludef_lw_layer_sep=.false.
     ludef_up_layer_sep=.false.
     readvar=0
@@ -743,7 +768,7 @@ contains
              read(store,*) up_surf
           end select
        case("SHIFT")
-          ludef_offset=.true.
+          ludef_shifts=.true.
           iudef_nshift=0
           store=''
           store=buffer(index(buffer,"SHIFT")+len("SHIFT"):)
@@ -753,30 +778,30 @@ contains
                   line=iudef_nshift,string=store,rm_cmt=.true.)
              count=count+iudef_nshift
              iudef_nshift=iudef_nshift-1 !removes counting of ENDSHIFT line
-             allocate(offset(iudef_nshift,3))
-             read(store,*) (offset(j,:3),j=1,iudef_nshift)
+             allocate(shifts(iudef_nshift,3))
+             read(store,*) (shifts(j,:3),j=1,iudef_nshift)
           else
              call assign(buffer,store,         readvar(9))
-             allocate(offset(1,3))
+             allocate(shifts(1,3))
              select case(icount(store))
              case(1)
-                offset(1,:)=0._real32
-                read(store,*) offset(1,3)
+                shifts(1,:)=0._real32
+                read(store,*) shifts(1,3)
                 iudef_nshift = 1
              case(3)
-                read(store,*) offset(1,:)
-                if(all(offset.ge.0._real32)) iudef_nshift=1
+                read(store,*) shifts(1,:)
+                if(all(shifts.ge.0._real32)) iudef_nshift=1
              case default
                 call err_abort('ERROR: Invalid number of arguments provided to SHIFT&
                      &\nValid number of arguments is 1 or 3.&')
              end select
           end if
        case("NSHIFT")
-          call assign(buffer,nshift,             readvar(10))
+          call assign(buffer,num_shifts,         readvar(10))
        case("NTERM")
-          call assign(buffer,nterm,              readvar(11))
+          call assign(buffer,max_num_terms,      readvar(11))
        case("NMATCH")
-          call assign(buffer,tolerance%nstore,   readvar(12))
+          call assign(buffer,max_num_matches,    readvar(12))
        case("TOL_VEC")
           call assign(buffer,tolerance%vec,      readvar(13))
        case("TOL_ANG")
@@ -794,36 +819,36 @@ contains
        case("LGEN_INTERFACES")
           call assign(buffer,lgen_interfaces,    readvar(20))
        case("IMATCH")
-          call assign(buffer,imatch,             readvar(21))
+          call assign(buffer,match_method,       readvar(21))
        case("ISHIFT")
-          call assign(buffer,ishift,             readvar(22))
+          call assign(buffer,shift_method,       readvar(22))
        case("LREDUCE")
-          call assign(buffer,reduce,            readvar(23))
+          call assign(buffer,reduce_matches,     readvar(23))
        case("LPRINT_SHIFTS")
           call assign(buffer,lprint_shifts,      readvar(24))
        case("C_SCALE")
-          call assign(buffer,c_scale,            readvar(25))
+          call assign(buffer,separation_scale,   readvar(25))
        case("INTF_DEPTH")
-          call assign(buffer,intf_depth,         readvar(26))
-          idepth=0
+          call assign(buffer,interface_depth,    readvar(26))
+          depth_method=0
        case("IDEPTH")
-          call assign(buffer,idepth,             readvar(27))
+          call assign(buffer,depth_method,       readvar(27))
        case("NINTF")
           call assign(buffer,nintf,              readvar(28))
        case("ISWAP")
-          call assign(buffer,iswap,              readvar(29))
+          call assign(buffer,swap_method,        readvar(29))
        case("NSWAP")
-          call assign(buffer,nswap,              readvar(30))
+          call assign(buffer,num_swaps,          readvar(30))
        case("SWAP_DENSITY")
-          call assign(buffer,swap_den,           readvar(31))
+          call assign(buffer,swap_density,       readvar(31))
        case("SHIFTDIR")
           call assign(buffer,shiftdir,           readvar(32))
        case("SWAPDIR")
           call assign(buffer,swapdir,            readvar(33))
        case("ICHECK")
-          call assign(buffer,icheck_intf,        readvar(34))
+          call assign(buffer,icheck_term_pair,   readvar(34))
        case("NMILLER")
-          call assign(buffer,nmiller,            readvar(35))
+          call assign(buffer,max_num_planes,     readvar(35))
        case("MAXLEN")
           call assign(buffer,tolerance%maxlen,   readvar(36))
        case("MAXAREA")
@@ -835,7 +860,7 @@ contains
           call assign(buffer,up_layered,         readvar(39))
           ludef_up_layered=.true.
        case("IINTF")
-          call assign(buffer,iintf,              readvar(40))
+          call assign(buffer,interface_idx,      readvar(40))
        case("LAYER_SEP")
           call assign(buffer,layer_sep,          readvar(41))
        case("LW_LAYER_SEP")
@@ -845,7 +870,7 @@ contains
           call assign(buffer,up_layer_sep,       readvar(43))
           ludef_up_layer_sep=.true.
        case("MBOND_MAXLEN")
-          call assign(buffer,max_bondlength,     readvar(44))
+          call assign(buffer,bondlength_cutoff,  readvar(44))
        case("SWAP_SIGMA")
           call assign(buffer,swap_sigma,         readvar(45))
        case("SWAP_DEPTH")
@@ -853,7 +878,7 @@ contains
        case("INTF_LOC")
           call assign_vec(buffer,udef_intf_loc,  readvar(47))
        case("LMIRROR")
-          call assign(buffer,lswap_mirror,       readvar(48))
+          call assign(buffer,require_mirror_swaps, readvar(48))
        case("LORTHO")
           call assign(buffer,lortho,             readvar(49))
        case("LW_USE_PRICEL")
@@ -865,13 +890,13 @@ contains
        case("UP_BULK_MODULUS")
           call assign(buffer,up_bulk_modulus,    readvar(53))
        case("LC_FIX")
-          call assign(buffer,lc_fix,             readvar(54))
+          call assign(buffer,compensate_normal,  readvar(54))
        case("LBREAK_ON_NO_TERM")
-          call assign(buffer,lbreak_on_no_term, readvar(55))
+          call assign(buffer,break_on_fail,      readvar(55))
        case("LW_MIN_THICKNESS")
-          call assign(buffer,lw_thickness,     readvar(56))
+          call assign(buffer,lw_thickness,       readvar(56))
        case("UP_MIN_THICKNESS")
-          call assign(buffer,up_thickness,     readvar(57))
+          call assign(buffer,up_thickness,       readvar(57))
        case default
           write(0,'("NOTE: unable to assign variable on line ",I0)') count
        end select
@@ -879,30 +904,30 @@ contains
 
 
     if(readvar(25).eq.0)then
-       select case(ishift)
+       select case(shift_method)
        case(0,4)
-          c_scale = 1._real32
+          separation_scale = 1._real32
        end select
     end if
 
 
-    if(ludef_offset)then
-       if(readvar(22).eq.1.and.ishift.ne.0.and.all(offset.ge.0._real32))then
-          write(0,*) "ISHIFT = ",ishift
-          write(0,*) "SHIFT = ",offset
+    if(ludef_shifts)then
+       if(readvar(22).eq.1.and.shift_method.ne.0.and.all(shifts.ge.0._real32))then
+          write(0,*) "ISHIFT = ",shift_method
+          write(0,*) "SHIFT = ",shifts
           call err_abort('ERROR: Contradictory tags used (ISHIFT and SHIFT) &
                &\nNo free shifting directions available&
                &\nExiting...',.true.)
-       elseif(readvar(22).eq.1.and.ishift.ne.0.and.size(offset(:,1),dim=1).gt.1)then
+       elseif(readvar(22).eq.1.and.shift_method.ne.0.and.size(shifts(:,1),dim=1).gt.1)then
           call err_abort('ERROR: Contradictory tags used (ISHIFT and SHIFT) &
                &\nExiting...',.true.)
-       elseif(all(offset.ge.0._real32))then
-          ishift=0
-          nshift=iudef_nshift
+       elseif(all(shifts.ge.0._real32))then
+          shift_method=0
+          num_shifts=iudef_nshift
        end if
     else
-       allocate(offset(1,3))
-       offset(1,:)=(/-1._real32,-1._real32,-1._real32/)
+       allocate(shifts(1,3))
+       shifts(1,:)=(/-1._real32,-1._real32,-1._real32/)
     end if
 
     ! set lw_ and up_layer_sep if not defined
@@ -1014,28 +1039,28 @@ contains
        write(UNIT,'("INTERFACES")')
        write(UNIT,'(2X,"LGEN_INTERFACES = ",L)') lgen_interfaces
        write(UNIT,'(2X,"NINTF = ",I0)') nintf
-       write(UNIT,'(2X,"IMATCH = ",I0)') imatch
-       write(UNIT,'(2X,"NMATCH = ",I0)') tolerance%nstore
+       write(UNIT,'(2X,"IMATCH = ",I0)') match_method
+       write(UNIT,'(2X,"NMATCH = ",I0)') max_num_matches
        write(UNIT,'(2X,"TOL_VEC = ",F0.7)') tolerance%vec*100
        write(UNIT,'(2X,"TOL_ANG = ",F0.7)') tolerance%ang*360/(2*pi)
        write(UNIT,'(2X,"TOL_AREA = ",F0.7)') tolerance%area*100
        write(UNIT,*)
-       write(UNIT,'(2X,"NMILLER  = ",3(I0,1X))') nmiller
+       write(UNIT,'(2X,"NMILLER  = ",3(I0,1X))') max_num_planes
        write(UNIT,'(2X,"LW_MILLER_PLANE  = ",3(I0,1X))') lw_mplane
        write(UNIT,'(2X,"UP_MILLER_PLANE  = ",3(I0,1X))') up_mplane
        write(UNIT,'(2X,"LW_SLAB_THICKNESS = ",I0)') lw_num_layers
        write(UNIT,'(2X,"UP_SLAB_THICKNESS = ",I0)') up_num_layers
        if(ludef_lw_layered) write(UNIT,'(2X,"LW_LAYERED = ",L)') lw_layered
        if(ludef_up_layered) write(UNIT,'(2X,"UP_LAYERED = ",L)') lw_layered
-       write(UNIT,'(2X,"NTERM = ",I0)') nterm
+       write(UNIT,'(2X,"NTERM = ",I0)') max_num_terms
        write(UNIT,*)
-       write(UNIT,'(2X,"ISHIFT = ",I0)') ishift
-       write(UNIT,'(2X,"NSHIFT = ",I0)') nshift
-       write(UNIT,'(2X,"C_SCALE = ",F0.7)') c_scale
+       write(UNIT,'(2X,"ISHIFT = ",I0)') shift_method
+       write(UNIT,'(2X,"NSHIFT = ",I0)') num_shifts
+       write(UNIT,'(2X,"C_SCALE = ",F0.7)') separation_scale
        write(UNIT,*)
-       write(UNIT,'(2X,"ISWAP = ",I0)') iswap
-       write(UNIT,'(2X,"NSWAP = ",I0)') nswap
-       write(UNIT,'(2X,"SWAP_DENSITY = ",F0.5)') swap_den
+       write(UNIT,'(2X,"ISWAP = ",I0)') swap_method
+       write(UNIT,'(2X,"NSWAP = ",I0)') num_swaps
+       write(UNIT,'(2X,"SWAP_DENSITY = ",F0.5)') swap_density
        write(UNIT,*)
        write(UNIT,'(2X,"LSURF_GEN   = ",L1)') lsurf_gen
        write(UNIT,'("END INTERFACES")')

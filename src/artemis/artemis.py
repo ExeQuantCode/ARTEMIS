@@ -928,14 +928,14 @@ class Generator(f90wrap.runtime.FortranModule):
             thickness_up=None, num_layers_lw=None, num_layers_up=None, \
             reduce_matches=None, \
             print_lattice_match_info=None, print_termination_info=None, \
-            print_shift_info=None, break_on_fail=None, icheck_match=None, \
+            print_shift_info=None, break_on_fail=None, icheck_term_pair=None, \
             interface_idx=None, generate_structures=None, seed=None, verbose=None, \
             return_exit_code=False, calc=None):
             """
             generate__binding__artemis_gen_type(self[, surface_lw, \
                 surface_up, thickness_lw, thickness_up, num_layers_lw, num_layers_up, \
                 print_lattice_match_info, print_termination_info, print_shift_info, \
-                break_on_fail, icheck_match, interface_idx, generate_structures, seed, \
+                break_on_fail, icheck_term_pair, interface_idx, generate_structures, seed, \
                 verbose, exit_code])
             
             
@@ -956,7 +956,7 @@ class Generator(f90wrap.runtime.FortranModule):
             print_termination_info : bool
             print_shift_info : bool
             break_on_fail : bool
-            icheck_match : int
+            icheck_term_pair : int
             interface_idx : int
             generate_structures : bool
             seed : int
@@ -976,7 +976,7 @@ class Generator(f90wrap.runtime.FortranModule):
                 print_lattice_match_info=print_lattice_match_info, \
                 print_termination_info=print_termination_info, \
                 print_shift_info=print_shift_info, break_on_fail=break_on_fail, \
-                icheck_match=icheck_match, interface_idx=interface_idx, \
+                icheck_term_pair=icheck_term_pair, interface_idx=interface_idx, \
                 generate_structures=generate_structures, seed=seed, verbose=verbose
             )
             if ( exit_code != 0 and exit_code != None )  and not return_exit_code:
