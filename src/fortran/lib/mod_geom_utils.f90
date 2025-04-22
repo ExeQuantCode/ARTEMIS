@@ -435,23 +435,23 @@ contains
 !!!#############################################################################
 !!! Shifts the basis along a, b or c by amount 'shift'
 !!!#############################################################################
-  subroutine shifter(bas,axis,shift,ltmp)
+  subroutine shifter(basis,axis,shift,renormalise)
     implicit none
-    integer :: i,j,k,axis
-    real(real32) :: shift
-    type(basis_type) :: bas
-    logical, optional ::ltmp
-    logical :: lrenorm
+    type(basis_type), intent(inout) :: basis
+    integer, intent(in) :: axis
+    real(real32), intent(in) :: shift
+    logical, optional, intent(in) ::renormalise
+    integer :: i,j
+    logical :: renormalise_
 
-    k=axis
-    lrenorm=.false.
-    if(present(ltmp)) lrenorm=ltmp
+    renormalise_=.false.
+    if(present(renormalise)) renormalise_ = renormalise
 
-    do i=1,bas%nspec
-       do j=1,bas%spec(i)%num
-          bas%spec(i)%atom(j,k)=bas%spec(i)%atom(j,k) + shift
-          if(lrenorm) bas%spec(i)%atom(j,k)=bas%spec(i)%atom(j,k) - &
-               floor(bas%spec(i)%atom(j,k))
+    do i=1,basis%nspec
+       do j=1,basis%spec(i)%num
+         basis%spec(i)%atom(j,axis) = basis%spec(i)%atom(j,axis) + shift
+          if(renormalise_) basis%spec(i)%atom(j,axis) = basis%spec(i)%atom(j,axis) - &
+               floor(basis%spec(i)%atom(j,axis))
        end do
     end do
 

@@ -769,8 +769,16 @@ contains
          structure, this%axis, &
          verbose = verbose_, tol_sym = this%tol_sym, &
          layer_sep = layer_sep, &
-         break_on_fail = break_on_fail_ &
+         exit_code = exit_code_ &
     )
+    if(exit_code_.ne.0)then
+       write(err_msg,'(A,I0,A)') &
+            "The termination generator failed with exit code ", exit_code_
+       if(break_on_fail_)then
+          call stop_program(trim(err_msg))
+          return
+       end if
+    end if
     if(term%nterm .eq. 0)then
        write(warn_msg, '(A,I0,1X,I0,1X,I0,A)') &
             "No terminations found for Miller plane (",miller_,")"
@@ -1563,8 +1571,16 @@ contains
             verbose = merge(1,verbose_,print_termination_info_), &
             tol_sym = this%tol_sym, &
             layer_sep = this%layer_separation_cutoff(1), &
-            break_on_fail = break_on_fail_ &
+            exit_code = exit_code_ &
        )
+       if(exit_code_.ne.0)then
+          write(err_msg,'(A,I0,A)') &
+               "The termination generator failed with exit code ", exit_code_
+          if(break_on_fail_)then
+             call stop_program(trim(err_msg))
+             return
+          end if
+       end if
        if(lw_term%nterm .eq. 0)then
           write(0,'("WARNING: &
                &No terminations found for lower material Miller plane &
@@ -1648,8 +1664,16 @@ contains
             verbose = merge(1,verbose_,print_termination_info_), &
             tol_sym = this%tol_sym, &
             layer_sep = this%layer_separation_cutoff(2), &
-            break_on_fail = break_on_fail_ &
+            exit_code = exit_code_ &
        )
+       if(exit_code_.ne.0)then
+          write(err_msg,'(A,I0,A)') &
+               "The termination generator failed with exit code ", exit_code_
+          if(break_on_fail_)then
+             call stop_program(trim(err_msg))
+             return
+          end if
+       end if
        if(up_term%nterm .eq. 0)then
           write(0,'("WARNING: &
                &No terminations found for upper material Miller plane &

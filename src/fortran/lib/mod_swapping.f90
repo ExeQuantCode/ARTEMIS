@@ -9,12 +9,12 @@ module swapping
   use misc_maths, only: gauss
   use misc_linalg, only: modu
   use artemis__geom_rw, only: basis_type
-  use artemis__sym, only: sym_setup,check_sym,sym_type,basmap_type,basis_map
+  use artemis__sym, only: sym_setup,check_sym,sym_type,basis_map_type,basis_map
   use artemis__io_utils, only: err_abort
   implicit none
   real(real32) :: tiny=5.E-5_real32
   logical :: lmirror
-  type(basmap_type) :: bas_map
+  type(basis_map_type) :: bas_map
 
   private
   
@@ -121,7 +121,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! set up symmetries
 !!!-----------------------------------------------------------------------------
-    call sym_setup(grp,lat)
+    call sym_setup(grp,lat, tol_sym = tol_sym)
     call tmpbas%copy(bas)
     call store_bas%copy(tmpbas)
 
@@ -185,7 +185,7 @@ contains
     end if
 
 10  deallocate(grp%sym)
-    call sym_setup(grp,lat,new_start=.true.)
+    call sym_setup(grp,lat,new_start=.true., tol_sym = tol_sym)
     call check_sym(grp,tmpbas, tol_sym=tol_sym)!,lsave=.true.)
     
     

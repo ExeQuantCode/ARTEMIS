@@ -24,9 +24,7 @@ module artemis__sym
   use artemis__geom_rw,     only: basis_type
   use artemis__geom_utils,            only: reducer, primitive_lat
   implicit none
-  integer :: s_start=1,s_end=0
   real(real32) :: tol_sym_default = 1.E-6_real32
-  character(1) :: verb_sym = "n"
   integer, allocatable, dimension(:) :: symops_compare
 
   interface get_wyckoff_atoms
@@ -51,9 +49,9 @@ module artemis__sym
   type spcmap_type
      integer, allocatable ,dimension(:) :: atom
   end type spcmap_type
-  type basmap_type
+  type basis_map_type
      type(spcmap_type), allocatable, dimension(:) :: spec
-  end type basmap_type
+  end type basis_map_type
 
   type confine_type
      !! apply any confinement/constraints on symmetries
@@ -74,6 +72,7 @@ module artemis__sym
      integer :: npntop = 0
      logical :: lspace = .true.
      logical :: lmolec = .false.
+     integer :: start_idx = 1, end_idx  =0
      integer, allocatable, dimension(:) :: op
      real(real32), allocatable, dimension(:,:,:) :: sym
      type(confine_type) :: confine
@@ -81,7 +80,6 @@ module artemis__sym
   end type sym_type
 
 
-  public :: s_start,s_end
   public :: sym_type
   public :: clone_grp
   public :: sym_setup,check_sym,gldfnd
@@ -90,12 +88,7 @@ module artemis__sym
   
   public :: confine_type
 
-  public :: basmap_type,basis_map
-
-  public :: wyck_type
-  public :: get_wyckoff_atoms
-
-  public :: symops_compare
+  public :: basis_map_type, basis_map
 
 
 !!!updated 2023/02/14
@@ -142,8 +135,8 @@ contains
 
     new_start_ = .true.
     if(present(new_start)) new_start_ = new_start
-    if(new_start_.or.s_end.eq.0)then
-       s_end=grp%nsym
+    if(new_start_.or.grp%end_idx.eq.0)then
+       grp%end_idx = grp%nsym
     end if
 
   end subroutine sym_setup
@@ -156,7 +149,7 @@ contains
 !!! tfbas   : transformed basis
 !!!#############################################################################
   subroutine check_sym( &
-       grp, basis, iperm, tmpbas2, wyckoff, lsave, lat, loc, lcheck_all, &
+       grp, basis, iperm, tmpbas2, wyckoff, lsave, lat, loc, check_all_sym, &
        verbose, tol_sym &
   )
     implicit none
@@ -164,7 +157,7 @@ contains
     type(sym_type), intent(inout) :: grp
 
     integer, optional, intent(in) :: iperm
-    logical, optional, intent(in) :: lsave,lcheck_all
+    logical, optional, intent(in) :: lsave,check_all_sym
     type(basis_type), optional, intent(in) :: tmpbas2
     type(wyck_type), optional, intent(inout) :: wyckoff
     real(real32), dimension(3), optional, intent(in) :: loc
@@ -175,10 +168,11 @@ contains
     integer :: i,j,k,iatom,jatom,ispec,itmp1
     integer :: is,isym,jsym,count,ntrans
     integer :: samecount,oldnpntop
-    logical :: lpresent,lsaving,lwyckoff,ltransformed
+    logical :: lsave_,lwyckoff,ltransformed, is_a_symmetry
     integer :: verbose_
+    logical :: check_all_sym_
     real(real32) :: tol_sym_
-    type(basis_type) :: bas2,tfbas
+    type(basis_type) :: basis2, tfbas
     real(real32), dimension(3) :: diff
     real(real32), dimension(3,3) :: ident
     type(wyck_type), allocatable, dimension(:) :: wyck_check
@@ -211,25 +205,21 @@ contains
        grp%op = 0
     end if
     if(present(lsave))then
-       lsaving = lsave
+       lsave_ = lsave
     else
-       lsaving = .false.
+       lsave_ = .false.
     end if
 
 
 !!!-----------------------------------------------------------------------------
 !!! checks for optional arguments and assigns values if not present
 !!!-----------------------------------------------------------------------------
+    check_all_sym_ = .true.
     if(present(tmpbas2)) then
-       bas2 = tmpbas2
-       if(present(lcheck_all))then
-          lpresent = .not.lcheck_all
-       else
-          lpresent = .true.
-       end if
+       call basis2%copy(tmpbas2)
+       if(present(check_all_sym)) check_all_sym_ = check_all_sym
     else
-       bas2 = basis
-       lpresent = .false.
+       call basis2%copy(basis)
     end if
     allocate(tmpsav(grp%nsym*minval(basis%spec(:)%num),4,4))
     itmp1 = maxval(basis%spec(:)%num)
@@ -291,16 +281,14 @@ contains
 !!! applying symmetries to basis to see if the basis conforms to any of them
 !!!-----------------------------------------------------------------------------
     itmp1 = 1
-    symloop: do isym=s_start,s_end
-       if(verb_sym.eq.'d') write(77,*) isym !,a,b,c
-       if(verb_sym.eq.'d') write(77,204) grp%sym(isym,1:4,1:4)
-       if(verbose_.eq.2.or.verbose_.eq.3) write(77,204)  &
+    symloop: do isym = grp%start_idx, grp%end_idx, 1
+       if(verbose_.eq.2.or.verbose_.eq.3) write(*,204)  &
             grp%sym(isym,1:4,1:4)
        !------------------------------------------------------------------------
        ! apply symmetry operator to basis
        !------------------------------------------------------------------------
-       do ispec=1,basis%nspec
-          do iatom=1,basis%spec(ispec)%num
+       do ispec = 1, basis%nspec, 1
+          do iatom = 1, basis%spec(ispec)%num, 1
              tfbas%spec(ispec)%atom(iatom,1:3) = &
                   matmul(basis%spec(ispec)%atom(iatom,1:4),grp%sym(isym,1:4,1:3))
              do j=1,3
@@ -314,15 +302,16 @@ contains
        ! check whether transformed basis matches original basis
        !------------------------------------------------------------------------
        count=0
-       spcheck: do ispec=1,basis%nspec
+       is_a_symmetry = .true.
+       spcheck: do ispec = 1, basis%nspec, 1
           diff = 0._real32
           samecount = 0
           wyck_check(itmp1)%spec(ispec)%atom = 0
-          atmcheck: do iatom=1,basis%spec(ispec)%num
-             atmcyc: do jatom=1,basis%spec(ispec)%num
+          atmcheck: do iatom = 1, basis%spec(ispec)%num, 1
+             atmcyc: do jatom = 1, basis%spec(ispec)%num, 1
                 !if(wyck_check(itmp1)%spec(ispec)%atom(jatom).ne.0) cycle atmcyc
                 diff = tfbas%spec(ispec)%atom(iatom,1:3) - &
-                     bas2%spec(ispec)%atom(jatom,1:3)
+                     basis2%spec(ispec)%atom(jatom,1:3)
                 diff(:) = diff(:) - floor(diff(:))
                 where(abs(diff(:)-1._real32).lt.tol_sym_)
                    diff(:)=0._real32
@@ -333,20 +322,28 @@ contains
                 end if
                 if((iatom.eq.basis%spec(ispec)%num).and.&
                      (jatom.eq.basis%spec(ispec)%num))then
-                   if (samecount.ne.basis%spec(ispec)%num) goto 10
+                   if (samecount.ne.basis%spec(ispec)%num)then
+                     is_a_symmetry = .false.
+                     exit spcheck
+                   end if
                 end if
              end do atmcyc
              count = count + samecount
           end do atmcheck
-          if(samecount.ne.basis%spec(ispec)%num) goto 10
+          if(samecount.ne.basis%spec(ispec)%num)then
+             is_a_symmetry = .false.
+             exit spcheck
+          end if
        end do spcheck
-       grp%npntop = grp%npntop + 1
-       grp%nsymop = grp%nsymop + 1
-       itmp1 = grp%nsymop + 1
-       tmpsav(grp%nsymop,:,:) = grp%sym(isym,:,:)
-       grp%op(grp%nsymop) = isym
-       if(grp%nsymop.ne.0.and.lpresent) exit symloop
-10     trans = 0._real32
+       if(is_a_symmetry)then
+          grp%npntop = grp%npntop + 1
+          grp%nsymop = grp%nsymop + 1
+          itmp1 = grp%nsymop + 1
+          tmpsav(grp%nsymop,:,:) = grp%sym(isym,:,:)
+          grp%op(grp%nsymop) = isym
+          if(grp%nsymop.ne.0.and..not.check_all_sym_) exit symloop
+       end if
+       trans = 0._real32
        ntrans = 0
        !------------------------------------------------------------------------
        ! checks if translations are valid with the current symmetry operation
@@ -358,20 +355,20 @@ contains
              ltransformed=.true.
           end if
           call gldfnd(grp%confine,&
-               bas2,tfbas,&
+               basis2,tfbas,&
                trans,ntrans,&
                tol_sym_,&
                transformed=ltransformed,&
                wyck_check=wyck_check(itmp1:))
           if(ntrans.gt.0) then
-             if(lpresent.and..not.lsaving)then
+             if(.not.check_all_sym_.and..not.lsave_)then
                 grp%nsymop = grp%nsymop + 1
                 exit symloop
              end if
-             transloop: do i=1,ntrans
+             transloop: do i = 1, ntrans, 1
                 if(dot_product(trans(i,:),trans(i,:)).lt.tol_sym_) &
                      cycle transloop
-                if(verbose_.eq.3) write(77,*) trans(i,:)
+                if(verbose_.eq.3) write(*,*) trans(i,:)
                 if(isym.ne.1)then
                    do jsym=2,grp%nsymop
                       if(grp%op(jsym).eq.1) then
@@ -392,7 +389,7 @@ contains
                 tmpsav(grp%nsymop,4,1:3) = trans(i,:)
                 grp%op(grp%nsymop) = isym
              end do transloop
-             if(lpresent) exit symloop
+             if(.not.check_all_sym_) exit symloop
           end if
        end if
        oldnpntop = grp%npntop
@@ -402,7 +399,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! allocates and saves the array sym_save if the first time submitted
 !!!-----------------------------------------------------------------------------
-    if(lsaving)then
+    if(lsave_)then
        if(allocated(grp%sym_save)) deallocate(grp%sym_save)
        allocate(grp%sym_save(grp%nsymop,4,4))
        grp%sym_save=0._real32
@@ -430,7 +427,7 @@ contains
     end if iperm_if
 
 
-    if(lsaving)then
+    if(lsave_)then
        deallocate(grp%sym)
        call move_alloc(grp%sym_save, grp%sym)
        grp%nsym = grp%nsymop
@@ -448,9 +445,6 @@ contains
        end if
     end if
 
-
-
-    return
   end subroutine check_sym
 !!!#############################################################################
 
@@ -597,8 +591,7 @@ contains
 !!! Checks whether this translation has already been saved
 !!!-----------------------------------------------------------------------------
        do i = 1, ntrans
-          if(all(ttrans(:).eq.trans(i,:))) cycle trloop
-          !if(all(abs(ttrans(:)-trans(i,:)).lt.tol_sym)) cycle trloop
+          if(all(abs(ttrans(:)-trans(i,:)).lt.tol_sym)) cycle trloop
        end do
        ntrans = ntrans + 1
        trans(ntrans,1:3) = ttrans(1:3)
@@ -819,21 +812,21 @@ contains
 
 
     if(grp%confine%l)then
-       laxis=grp%confine%laxis
+       laxis = grp%confine%laxis
     else
-       laxis=.not.grp%confine%laxis
+       laxis = .not.grp%confine%laxis
     end if
 
 
 !!!-----------------------------------------------------------------------------
 !!! set up inverse lattice
 !!!-----------------------------------------------------------------------------
-    lat=inlat
+    lat = inlat
     if(grp%lmolec)then
-       invlat=0._real32
-       lat=0._real32
+       invlat = 0._real32
+       lat    = 0._real32
     else
-       invlat=inverse_3x3(lat)
+       invlat = inverse_3x3(lat)
     end if
 
 
@@ -841,9 +834,9 @@ contains
 !!! initialise values and symmetry matrix
 !!!-----------------------------------------------------------------------------
     allocate(tsym1(50000,4,4))
-    tsym1=0._real32
+    tsym1 = 0._real32
     tsym1(:,4,4)=1._real32
-    count=0
+    count = 0
 
 
 !!!-----------------------------------------------------------------------------
@@ -969,8 +962,8 @@ contains
     tsym2(:,4,4)=1._real32
     count=0
     samecheck: do isym=1,grp%nsym
-       tmat1=matmul((invlat),tsym1(isym,:3,:3))
-       tmat1=matmul(tmat1,(lat))
+       tmat1 = matmul((invlat),tsym1(isym,:3,:3))
+       tmat1 = matmul(tmat1,(lat))
        do i=1,3
           do j=1,3
              if(abs(tmat1(i,j)).lt.tol_sym) tmat1(i,j)=0._real32
@@ -984,12 +977,11 @@ contains
        if(abs(abs(det(tmat1))-1._real32).gt.tol_sym) cycle samecheck
        !!-----------------------------------------------------------------------
        if(.not.all(abs(tmat1-nint(tmat1)).lt.tol_sym)) cycle samecheck
-       do jsym=1,count
+       do jsym = 1, count, 1
           if(all(abs(tmat1-tsym2(jsym,:3,:3)).lt.tol_sym)) cycle samecheck
-          !if(all(tsym1(isym,:3,:3).eq.tsym2(jsym,:3,:3))) cycle samecheck
        end do
-       count=count+1
-       tsym2(count,:3,:3)=tmat1
+       count = count + 1
+       tsym2(count,:3,:3) = tmat1
     end do samecheck
     grp%nsym=count
     deallocate(tsym1)
@@ -1008,15 +1000,16 @@ contains
 !!!#############################################################################
 !!! clone ingrp to outgrp
 !!!#############################################################################
-  subroutine clone_grp(ingrp,outgrp)
+  subroutine clone_grp(from, to)
     implicit none
-    type(sym_type), intent(in) :: ingrp
-    type(sym_type), intent(out) :: outgrp
+    type(sym_type), intent(in) :: from
+    type(sym_type), intent(out) :: to
     
     
-    allocate(outgrp%op(size(ingrp%op)))
-    allocate(outgrp%sym(size(ingrp%sym(:,1,1)),4,4))
-    outgrp = ingrp
+    if(allocated(from%op)) allocate(to%op(size(from%op)))
+    if(allocated(from%sym)) allocate(to%sym(size(from%sym,dim=1),4,4))
+    if(allocated(from%sym_save)) allocate(to%sym_save(size(from%sym_save,dim=1),4,4))
+    to = from
 
   end subroutine clone_grp
 !!!#############################################################################
@@ -1387,7 +1380,7 @@ contains
     real(real32), intent(in), optional :: tol_sym
 
     integer :: j,ispec,iatom,jatom,dim
-    type(basmap_type) :: bas_map
+    type(basis_map_type) :: bas_map
     type(basis_type) :: bas2,tfbas
     real(real32), dimension(3) :: diff
 

@@ -913,14 +913,12 @@ contains
     !!--------------------------------------------------------------------------
     !! finds and stores symmetry operations for each lattice
     !!--------------------------------------------------------------------------
-    s_end=0
-    call sym_setup(grp1,lat1)!,predefined=.true.,new_start=.true.)
+    call sym_setup(grp1,lat1, tol_sym=tol_sym,new_start=.true.)!,predefined=.true.)
     call check_sym(grp1,structure_lw,lsave=.true.,tol_sym=tol_sym)
     allocate(tmpsym1(grp1%nsym,3,3))
     
 
-    s_end=0
-    call sym_setup(grp2,lat2)!,predefined=.true.,new_start=.true.)
+    call sym_setup(grp2,lat2, tol_sym=tol_sym,new_start=.true.)!,predefined=.true.)
     call check_sym(grp2,structure_up,lsave=.true.,tol_sym=tol_sym)
     allocate(tmpsym2(grp2%nsym,3,3))
 
