@@ -1234,7 +1234,7 @@ subroutine f90wrap_intf_gen__get_interface_location__binding__agt( &
     structure_ptr = transfer(structure, structure_ptr)
     intf_info = this_ptr%p%get_interface_location( &
         structure=structure_ptr%p, &
-        axis=axis &
+        axis=axis, &
         return_fractional=return_fractional &
     )
 

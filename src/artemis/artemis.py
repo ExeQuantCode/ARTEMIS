@@ -884,7 +884,7 @@ class Generator(f90wrap.runtime.FortranModule):
                 return structures, exit_code
             return structures
 
-        def get_interface_location(self, structure=None, axis=None, return_fractional=True):
+        def get_interface_location(self, structure=None, axis=None, return_fractional=False):
 
             """
             get_interface_location__binding__artemis_gen_type(self, structure, axis)
