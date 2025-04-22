@@ -834,7 +834,7 @@ contains
   subroutine lattice_matching( &
        SAV, tol, structure_lw, structure_up, &
        miller_lw, miller_up, max_num_planes, &
-       verbose &
+       verbose, tol_sym &
   )
     use artemis__sym
     use plane_matching
@@ -845,6 +845,7 @@ contains
     integer, dimension(3), intent(in) :: miller_lw,miller_up
     integer, intent(in) :: max_num_planes
     integer, intent(in) :: verbose
+    real(real32), intent(in) :: tol_sym
     
     type(sym_type) :: grp1,grp2
     type(tol_type) :: tol
@@ -914,13 +915,13 @@ contains
     !!--------------------------------------------------------------------------
     s_end=0
     call sym_setup(grp1,lat1)!,predefined=.true.,new_start=.true.)
-    call check_sym(grp1,structure_lw,lsave=.true.)
+    call check_sym(grp1,structure_lw,lsave=.true.,tol_sym=tol_sym)
     allocate(tmpsym1(grp1%nsym,3,3))
     
 
     s_end=0
     call sym_setup(grp2,lat2)!,predefined=.true.,new_start=.true.)
-    call check_sym(grp2,structure_up,lsave=.true.)
+    call check_sym(grp2,structure_up,lsave=.true.,tol_sym=tol_sym)
     allocate(tmpsym2(grp2%nsym,3,3))
 
 

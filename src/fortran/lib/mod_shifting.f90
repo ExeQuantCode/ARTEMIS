@@ -740,12 +740,36 @@ contains
 !!!#############################################################################
 !!! generate shifts by filling missing neighours for surface atoms
 !!!#############################################################################
-  function get_shifts_DON(bas,axis,intf_loc,nstore,c_scale,offset,&
+  function get_shifts_DON(bas,axis,intf_loc,nstore,tol_sym,c_scale,offset,&
        bulk_DON,bulk_map,lprint,max_bondlength) result(res_shifts)
     use artemis__sym, only: gldfnd,confine_type
     use artemis__geom_utils, only: get_bulk,wyck_spec_type,get_wyckoff
     use artemis__interface_identifier, only: gen_single_DON,nstep_default,den_of_neigh_type
     implicit none
+    type(basis_type), intent(in) :: bas
+    !! Interface structure
+    integer, intent(in) :: axis
+    !! Axis of the interface
+    real(real32), dimension(:), intent(in) :: intf_loc
+    !! Location of the interfaces
+    integer, intent(in) :: nstore
+    !! Number of shifts to be generated
+    real(real32), intent(in) :: tol_sym
+    !! Tolerance for symmetry
+    real(real32), optional :: c_scale
+    !! Scaling factor for the interface separation
+    real(real32), dimension(3), optional, intent(in) :: offset
+    !! Input offset of the two interface substructures
+    logical, optional :: lprint
+    !! Boolean whether to print the shifts
+    type(bulk_DON_type), dimension(:), optional, intent(in) :: bulk_DON
+    !! Bulk DONs to be used for the interface
+    integer, dimension(:,:,:), optional, intent(in) :: bulk_map
+    !! Mapping of bulk atoms to the interface atoms
+    real(real32), intent(in), optional :: max_bondlength
+    !! Cutoff bondlength to consider first neighbours
+
+
     integer :: i,j,k,l,is,ia,ja,jb,jc,count1,itmp1
     integer :: ntrans,iatom,nneigh,ncheck
     real(real32) :: stepsize,max_sep,dist_max
@@ -766,17 +790,6 @@ contains
     integer, allocatable, dimension(:,:) :: shift_store
     real(real32), allocatable, dimension(:,:) :: res_shifts,trans,regions
 
-    integer, intent(in) :: axis,nstore
-    real(real32), intent(in), optional :: max_bondlength
-    type(basis_type), intent(in) :: bas
-    real(real32), dimension(:), intent(in) :: intf_loc
-    real(real32), optional :: c_scale
-    logical, optional :: lprint
-    real(real32), dimension(3), optional, intent(in) :: offset
-
-
-    integer, dimension(:,:,:), optional, intent(in) :: bulk_map
-    type(bulk_DON_type), dimension(:), optional, intent(in) :: bulk_DON
 
 
     !integer :: OMP_GET_NUM_THREADS,OMP_GET_MAX_THREADS,OMP_GET_THREAD_NUM,CHUNK
@@ -847,7 +860,7 @@ contains
 !!!-----------------------------------------------------------------------------
     min_trans=1._real32
     do i=1,2
-       call gldfnd(confine,splitbas(i),splitbas(i),trans,ntrans)
+       call gldfnd(confine, splitbas(i), splitbas(i), trans, ntrans, tol_sym)
        if(ntrans.eq.0) cycle
        do j=1,ntrans
           do k=1,2

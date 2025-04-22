@@ -21,6 +21,7 @@ program artemis_executable
 !!! set up global variables
 !!!-----------------------------------------------------------------------------
   call set_global_vars()
+  generator%tol_sym = tol_sym
 
 
 !!!-----------------------------------------------------------------------------
@@ -37,20 +38,23 @@ program artemis_executable
         write(0,'(1X,"Finding terminations for lower material.")')
 
         call generator%set_tolerance( &
-               tolerance = tolerance &
+             tolerance = tolerance &
         )
         call generator%set_materials( &
-               structure_lw = struc1_bas, &
-               use_pricel_lw = lw_use_pricel &
+             structure_lw = struc1_bas, &
+             use_pricel_lw = lw_use_pricel &
         )
         call generator%set_surface_properties( &
-               miller_lw = lw_mplane, &
-               is_layered_lw = lw_layered &
+             miller_lw = lw_mplane, &
+             is_layered_lw = lw_layered, &
+             vacuum_gap = vacuum_gap, &
+             layer_separation_cutoff = layer_sep &
         )
 
         structures = generator%get_terminations(1, &
              num_layers = lw_num_layers, &
-             thickness = lw_thickness &
+             thickness = lw_thickness, &
+             orthogonalise = lortho &
         )
         do i = 1, size(structures)
            write(filename, '(A,I0,A)') "term_", i, ".vasp"
@@ -68,6 +72,8 @@ program artemis_executable
 
   case(1) ! interfaces/ARTEMIS/SEARCH
      write(*,'(1X,"task ",I0," set",/,1X,"Performing Interface Generation")') task
+     generator%max_num_structures = max_num_structures
+     generator%axis = axis
      call generator%set_tolerance( &
           tolerance = tolerance &
      )
@@ -104,7 +110,8 @@ program artemis_executable
      call generator%set_surface_properties( &
           miller_lw = lw_mplane, miller_up = up_mplane, &
           is_layered_lw = lw_layered, is_layered_up = up_layered, &
-          layer_separation_cutoff = [ lw_layer_sep, up_layer_sep ] &
+          layer_separation_cutoff = [ lw_layer_sep, up_layer_sep ], &
+          vacuum_gap = vacuum_gap &
      )
      if(.not.ludef_lw_layered) call generator%reset_is_layered_lw()
      if(.not.ludef_up_layered) call generator%reset_is_layered_up()
@@ -120,7 +127,8 @@ program artemis_executable
            write(*,'(1X,"Finding terminations for lower material.")')
            structures = generator%get_terminations(1, &
                 num_layers = lw_num_layers, &
-                thickness = lw_thickness &
+                thickness = lw_thickness, &
+                orthogonalise = lortho &
            )
            do i = 1, size(structures)
               write(filename, '(A,I0,A)') "lw_term_", i, ".vasp"
@@ -136,7 +144,8 @@ program artemis_executable
            write(*,'(1X,"Finding terminations for upper material.")')
            structures = generator%get_terminations(2, &
                 num_layers = up_num_layers, &
-                thickness = up_thickness &
+                thickness = up_thickness, &
+                orthogonalise = lortho &
            )
            do i = 1, size(structures)
               write(filename, '(A,I0,A)') "up_term_", i, ".vasp"
@@ -154,6 +163,9 @@ program artemis_executable
      !! interface generator
      !!-------------------------------------------------------------------------
      if(irestart.eq.0)then
+        !!! NEED TO BE ABLE TO SET MAX_NUM_STRUCTURES
+        !!! lortho, printing directories and directory space
+        !!! sort out match, term, shift, and swap data
         call generator%generate( &
              surface_lw = lw_surf, surface_up = up_surf, &
              thickness_lw = lw_thickness, thickness_up = up_thickness, &

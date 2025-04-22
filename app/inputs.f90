@@ -20,7 +20,6 @@ module inputs
   use lat_compare, only: tol_type
   use infile_tools
   use infile_print
-  use artemis__sym, only: set_symmetry_tolerance
   implicit none
   integer :: max_num_matches, max_num_terms, max_num_planes
   !! Maximum number of matches, terminations and Miller planes for matching
@@ -51,13 +50,24 @@ module inputs
   integer :: icheck_term_pair, interface_idx
   integer :: clock, verbose
 
-  integer :: nout,task,task_defect,axis
+  real(real32) :: vacuum_gap
+  !! Vacuum gap (FOR SURFACE GENERATION ONLY)
+  logical :: lortho
+  !! Boolean whether to orthogonalise the lattice (FOR SURFACE GENERATION ONLY)
+  integer :: max_num_structures
+  !!! Maximum number of structures to be generated
+
+  integer :: axis
+  !! Integer to determine which axis to use for the interface
+
+  type(tol_type) :: tolerance
+  !! Tolerance settings for lattice matchings
+
+  integer :: nout,task,task_defect
   integer :: irestart
   integer :: lw_num_layers,up_num_layers
-  integer :: nintf
   real(real32) :: lw_thickness, up_thickness
   real(real32) :: lw_bulk_modulus, up_bulk_modulus
-  real(real32) :: vacuum
   real(real32) :: layer_sep,lw_layer_sep,up_layer_sep,tol_sym
   character(len=20) :: input_fmt,output_fmt
   character(200) :: struc1_file,struc2_file,out_filename
@@ -65,11 +75,10 @@ module inputs
   logical :: lsurf_gen,lprint_matches,lprint_terms,lgen_interfaces,lprint_shifts
   logical :: lw_use_pricel, up_use_pricel
   logical :: lw_layered,up_layered
-  logical :: lortho,lnorm_lat
+  logical :: lnorm_lat
   logical :: ludef_lw_layered,ludef_up_layered,ludef_axis
   logical :: lpresent_struc2
   type(basis_type) :: struc1_bas,struc2_bas
-  type(tol_type) :: tolerance
   type(aspect_type) :: edits
   integer, dimension(2) :: lw_surf,up_surf
   integer, dimension(3) :: lw_mplane,up_mplane
@@ -130,7 +139,7 @@ contains
     up_num_layers=0
     lw_thickness=-1._real32
     up_thickness=-1._real32
-    vacuum=14._real32
+    vacuum_gap=14._real32
     lw_surf=0
     up_surf=0
     separation_scale = 1._real32
@@ -138,7 +147,7 @@ contains
     max_num_planes = 10
     num_shifts = 5
     max_num_terms = 5
-    nintf=100
+    max_num_structures=100
     max_num_matches=5
     tolerance%maxlen=20._real32
     tolerance%maxarea=400._real32
@@ -399,12 +408,6 @@ contains
 
 
 !!!-----------------------------------------------------------------------------
-!!! sets the symmetry tolerance for the artemis__sym module
-!!!-----------------------------------------------------------------------------
-    call set_symmetry_tolerance(tol_sym)
-
-
-!!!-----------------------------------------------------------------------------
 !!! make the output directory
 !!!-----------------------------------------------------------------------------
     if(task.ne.0.and..not.lsurf_gen)then
@@ -648,7 +651,7 @@ contains
              edits%bounds(edits%nedits,1)=assign_list(store,tag_list,2)
              edits%val(edits%nedits)=assign_list(store,tag_list,3)
           else
-             call assign(buffer, vacuum,        readvar(7))
+             call assign(buffer, vacuum_gap,        readvar(7))
           end if
        case("TFMAT")
           readvar(8) = readvar(8) + 1
@@ -834,7 +837,7 @@ contains
        case("IDEPTH")
           call assign(buffer,depth_method,       readvar(27))
        case("NINTF")
-          call assign(buffer,nintf,              readvar(28))
+          call assign(buffer,max_num_structures, readvar(28))
        case("ISWAP")
           call assign(buffer,swap_method,        readvar(29))
        case("NSWAP")
@@ -1038,7 +1041,7 @@ contains
     elseif(task.eq.1)then
        write(UNIT,'("INTERFACES")')
        write(UNIT,'(2X,"LGEN_INTERFACES = ",L)') lgen_interfaces
-       write(UNIT,'(2X,"NINTF = ",I0)') nintf
+       write(UNIT,'(2X,"NINTF = ",I0)') max_num_structures
        write(UNIT,'(2X,"IMATCH = ",I0)') match_method
        write(UNIT,'(2X,"NMATCH = ",I0)') max_num_matches
        write(UNIT,'(2X,"TOL_VEC = ",F0.7)') tolerance%vec*100
