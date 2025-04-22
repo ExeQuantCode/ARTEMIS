@@ -220,7 +220,7 @@ contains
     else
        call basis2%copy(basis)
     end if
-    allocate(tmpsav(grp%nsym*minval(basis%spec(:)%num),4,4))
+    allocate(tmpsav(4,4,grp%nsym*minval(basis%spec(:)%num)))
     itmp1 = maxval(basis%spec(:)%num)
 
 
@@ -282,14 +282,14 @@ contains
     itmp1 = 1
     symloop: do isym = grp%start_idx, grp%end_idx, 1
        if(verbose_.eq.2.or.verbose_.eq.3) write(*,204)  &
-            grp%sym(isym,1:4,1:4)
+            grp%sym(1:4,1:4,isym)
        !------------------------------------------------------------------------
        ! apply symmetry operator to basis
        !------------------------------------------------------------------------
        do ispec = 1, basis%nspec, 1
           do iatom = 1, basis%spec(ispec)%num, 1
              tfbas%spec(ispec)%atom(iatom,1:3) = &
-                  matmul(basis%spec(ispec)%atom(iatom,1:4),grp%sym(isym,1:4,1:3))
+                  matmul(basis%spec(ispec)%atom(iatom,1:4),grp%sym(1:4,1:3,isym))
              do j=1,3
                 tfbas%spec(ispec)%atom(iatom,j) = &
                      tfbas%spec(ispec)%atom(iatom,j) - &
@@ -338,7 +338,7 @@ contains
           grp%npntop = grp%npntop + 1
           grp%nsymop = grp%nsymop + 1
           itmp1 = grp%nsymop + 1
-          tmpsav(grp%nsymop,:,:) = grp%sym(isym,:,:)
+          tmpsav(:,:,grp%nsymop) = grp%sym(:,:,isym)
           grp%op(grp%nsymop) = isym
           if(grp%nsymop.ne.0.and..not.check_all_sym_) exit symloop
        end if
@@ -348,7 +348,7 @@ contains
        ! checks if translations are valid with the current symmetry operation
        !------------------------------------------------------------------------
        if(grp%lspace) then
-          if(all(abs(grp%sym(isym,1:3,1:3)-ident).lt.tol_sym_))then
+          if(all(abs(grp%sym(1:3,1:3,isym)-ident).lt.tol_sym_))then
              ltransformed=.false.
           else
              ltransformed=.true.
@@ -371,9 +371,9 @@ contains
                 if(isym.ne.1)then
                    do jsym=2,grp%nsymop
                       if(grp%op(jsym).eq.1) then
-                         if(all(abs(trans(i,1:3)-tmpsav(jsym,4,1:3)).lt.&
+                         if(all(abs(trans(i,1:3)-tmpsav(4,1:3,jsym)).lt.&
                               tol_sym_)) cycle transloop
-                         diff = trans(i,1:3) - tmpsav(jsym,4,1:3)
+                         diff = trans(i,1:3) - tmpsav(4,1:3,jsym)
                          diff = diff - ceiling( diff - 0.5_real32 )
                          do k=1,i
                             if(all(abs(diff-trans(k,1:3)).lt.tol_sym_)) &
@@ -384,8 +384,8 @@ contains
                 end if
                 grp%nsymop = grp%nsymop + 1
                 itmp1 = grp%nsymop + 1
-                tmpsav(grp%nsymop,:,:) = grp%sym(isym,:,:)
-                tmpsav(grp%nsymop,4,1:3) = trans(i,:)
+                tmpsav(:,:,grp%nsymop) = grp%sym(:,:,isym)
+                tmpsav(4,1:3,grp%nsymop) = trans(i,:)
                 grp%op(grp%nsymop) = isym
              end do transloop
              if(.not.check_all_sym_) exit symloop
@@ -400,10 +400,10 @@ contains
 !!!-----------------------------------------------------------------------------
     if(lsave_)then
        if(allocated(grp%sym_save)) deallocate(grp%sym_save)
-       allocate(grp%sym_save(grp%nsymop,4,4))
+       allocate(grp%sym_save(4,4,grp%nsymop))
        grp%sym_save=0._real32
-       grp%sym_save(:grp%nsymop,:,:)=tmpsav(:grp%nsymop,:,:)
-       grp%sym_save(:,4,4)=1._real32
+       grp%sym_save(:,:,:grp%nsymop) = tmpsav(:,:,:grp%nsymop)
+       grp%sym_save(4,4,:) = 1._real32
        deallocate(tmpsav)
     end if
 
@@ -615,7 +615,7 @@ contains
     integer :: i
     real(real32) :: cosPi3,sinPi3,mcosPi3,msinPi3
     real(real32), dimension(3,3) :: inversion,invlat,tmat1
-    real(real32), dimension(64,3,3) :: fundam_mat
+    real(real32), dimension(3,3,64) :: fundam_mat
 
 
     cosPi3 = 0.5_real32
@@ -624,131 +624,131 @@ contains
     msinPi3 = -sinPi3
 
 
-    fundam_mat(1,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,1)=transpose(reshape((/&
          1._real32,  0._real32,  0._real32,  0._real32,  1._real32,  0._real32,  0._real32,  0._real32,  1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(2,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,2)=transpose(reshape((/&
          -1._real32,  0._real32,  0._real32,  0._real32, -1._real32,  0._real32,  0._real32, 0._real32,  1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(3,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,3)=transpose(reshape((/&
          -1._real32,  0._real32,  0._real32,  0._real32,  1._real32,  0._real32,  0._real32, 0._real32, -1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(4,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,4)=transpose(reshape((/&
          1._real32,  0._real32,  0._real32,  0._real32, -1._real32,  0._real32,  0._real32,  0._real32, -1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(5,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,5)=transpose(reshape((/&
          0._real32,  1._real32,  0._real32,  1._real32,  0._real32,  0._real32,  0._real32,  0._real32, -1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(6,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,6)=transpose(reshape((/&
          0._real32, -1._real32,  0._real32,  -1._real32,  0._real32,  0._real32,  0._real32, 0._real32, -1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(7,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,7)=transpose(reshape((/&
          0._real32, -1._real32,  0._real32,  1._real32,  0._real32,  0._real32,  0._real32,  0._real32,  1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(8,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,8)=transpose(reshape((/&
          0._real32,  1._real32,  0._real32,  -1._real32,  0._real32,  0._real32,  0._real32, 0._real32,  1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(9,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,9)=transpose(reshape((/&
          0._real32,  0._real32,  1._real32,  0._real32, -1._real32,  0._real32,  1._real32,  0._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(10,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,10)=transpose(reshape((/&
          0._real32,  0._real32, -1._real32,  0._real32, -1._real32,  0._real32,  -1._real32, 0._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(11,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,11)=transpose(reshape((/&
          0._real32,  0._real32, -1._real32,   0._real32,  1._real32,  0._real32,  1._real32, 0._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(12,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,12)=transpose(reshape((/&
          0._real32,  0._real32,  1._real32,  0._real32,  1._real32,  0._real32,  -1._real32, 0._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(13,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,13)=transpose(reshape((/&
          -1._real32,  0._real32,  0._real32,  0._real32,  0._real32,  1._real32,  0._real32, 1._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(14,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,14)=transpose(reshape((/&
          -1._real32,  0._real32,  0._real32,  0._real32,  0._real32, -1._real32,  0._real32, -1._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(15,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,15)=transpose(reshape((/&
          1._real32,  0._real32,  0._real32,  0._real32,  0._real32, -1._real32,  0._real32,  1._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(16,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,16)=transpose(reshape((/&
          1._real32,  0._real32,  0._real32,  0._real32,  0._real32,  1._real32,  0._real32, -1._real32,  0._real32/),&
          shape(inversion)))
 
-    fundam_mat(17,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,17)=transpose(reshape((/&
          0._real32,  0._real32,  1._real32,  1._real32,  0._real32,  0._real32,  0._real32,  1._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(18,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,18)=transpose(reshape((/&
          0._real32,  0._real32, -1._real32, -1._real32,  0._real32,  0._real32,  0._real32,  1._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(19,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,19)=transpose(reshape((/&
          0._real32,  0._real32, -1._real32,  1._real32,  0._real32,  0._real32,  0._real32, -1._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(20,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,20)=transpose(reshape((/&
          0._real32,  0._real32,  1._real32, -1._real32,  0._real32,  0._real32,  0._real32, -1._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(21,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,21)=transpose(reshape((/&
          0._real32,  1._real32,  0._real32,  0._real32,  0._real32,  1._real32,  1._real32,  0._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(22,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,22)=transpose(reshape((/&
          0._real32, -1._real32,  0._real32,  0._real32,  0._real32, -1._real32,  1._real32,  0._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(23,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,23)=transpose(reshape((/&
          0._real32, -1._real32,  0._real32,  0._real32,  0._real32,  1._real32, -1._real32,  0._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(24,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,24)=transpose(reshape((/&
          0._real32,  1._real32,  0._real32,  0._real32,  0._real32, -1._real32, -1._real32,  0._real32,  0._real32 /),&
          shape(inversion)))
 
-    fundam_mat(25,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,25)=transpose(reshape((/&
          cosPi3,  sinPi3, 0._real32, msinPi3,  cosPi3, 0._real32, 0._real32, 0._real32,  1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(26,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,26)=transpose(reshape((/&
          cosPi3, msinPi3, 0._real32,  sinPi3,  cosPi3, 0._real32, 0._real32, 0._real32,  1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(27,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,27)=transpose(reshape((/&
          mcosPi3,  sinPi3, 0._real32, msinPi3, mcosPi3, 0._real32, 0._real32, 0._real32, 1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(28,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,28)=transpose(reshape((/&
          mcosPi3, msinPi3, 0._real32,  sinPi3, mcosPi3, 0._real32, 0._real32, 0._real32, 1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(29,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,29)=transpose(reshape((/&
          cosPi3, msinPi3, 0._real32, msinPi3, mcosPi3, 0._real32, 0._real32, 0._real32, -1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(30,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,30)=transpose(reshape((/&
          cosPi3,  sinPi3, 0._real32,  sinPi3, mcosPi3, 0._real32, 0._real32, 0._real32, -1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(31,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,31)=transpose(reshape((/&
          mcosPi3, msinPi3, 0._real32, msinPi3,  cosPi3, 0._real32, 0._real32, 0._real32, -1._real32 /),&
          shape(inversion)))
 
-    fundam_mat(32,1:3,1:3)=transpose(reshape((/&
+    fundam_mat(1:3,1:3,32)=transpose(reshape((/&
          mcosPi3,  sinPi3, 0._real32,  sinPi3,  cosPi3, 0._real32, 0._real32, 0._real32, -1._real32 /),&
          shape(inversion)))
 
@@ -758,29 +758,29 @@ contains
 
 
     do i=1,32
-       fundam_mat(i+32,:3,:3) = matmul(inversion,fundam_mat(i,:3,:3))
+       fundam_mat(:3,:3,i+32) = matmul(inversion,fundam_mat(:3,:3,i))
     end do
 
 
     grp%nsym=0
     invlat=inverse_3x3(lat)
-    do i=1,64
-       tmat1=matmul(lat,fundam_mat(i,:3,:3))
+    do i = 1, 64, 1
+       tmat1=matmul(lat,fundam_mat(:3,:3,i))
        tmat1=matmul(tmat1,(invlat))
        !! ensure that the matrix preserves size of 1
        !! this is likely redundant
        if(abs(abs(det(tmat1))-1._real32).gt.tol_sym) cycle
        if(all(abs(tmat1-nint(tmat1)).le.tol_sym))then
           grp%nsym=grp%nsym+1
-          fundam_mat(grp%nsym,:,:)=fundam_mat(i,:,:)
+          fundam_mat(:,:,grp%nsym)=fundam_mat(:,:,i)
        end if
     end do
 
 
-    allocate(grp%sym(grp%nsym,4,4))
-    grp%sym(:,:,:)=0._real32
-    grp%sym(:,4,4)=1._real32
-    grp%sym(:grp%nsym,:3,:3)=fundam_mat(:grp%nsym,:3,:3)
+    allocate(grp%sym(4,4,grp%nsym))
+    grp%sym(:,:,:) = 0._real32
+    grp%sym(4,4,:) = 1._real32
+    grp%sym(:3,:3,:grp%nsym) = fundam_mat(:3,:3,:grp%nsym)
     grp%nlatsym=grp%nsym
 
 
@@ -832,9 +832,9 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! initialise values and symmetry matrix
 !!!-----------------------------------------------------------------------------
-    allocate(tsym1(50000,4,4))
+    allocate(tsym1(4,4,50000))
     tsym1 = 0._real32
-    tsym1(:,4,4)=1._real32
+    tsym1(4,4,:) = 1._real32
     count = 0
 
 
@@ -849,13 +849,13 @@ contains
           else
              tht = 2._real32*pi/real(n) !=2*pi/n          
           end if
-          tsym1(count,1:3,1:3)=transpose(reshape((/&
+          tsym1(1:3,1:3,count)=transpose(reshape((/&
                cos(tht) ,  sin(tht),   0._real32,&
                -sin(tht),  cos(tht),   0._real32,&
                0._real32     ,      0._real32,   1._real32/), shape(rotmat)))
           do i=1,3
              do j=1,3
-                if(abs(tsym1(count,i,j)).lt.tol_sym) tsym1(count,i,j)=0._real32
+                if(abs(tsym1(i,j,count)).lt.tol_sym) tsym1(i,j,count)=0._real32
              end do
           end do
        end do mksyml
@@ -873,13 +873,13 @@ contains
           else
              tht = 2._real32*pi/real(n) !=2*pi/n
           end if
-          rotmat=transpose(reshape((/&
+          rotmat = transpose(reshape((/&
                1._real32,      0._real32,      0._real32,  &
                0._real32,  cos(tht),  sin(tht),&
                0._real32, -sin(tht),  cos(tht)/), shape(rotmat)))
-          rot2: do irot=1,nrot
-             count=count+1
-             tsym1(count,1:3,1:3)=matmul(rotmat(1:3,1:3),tsym1(irot,1:3,1:3))
+          rot2: do irot = 1, nrot
+             count = count + 1
+             tsym1(1:3,1:3,count) = matmul(rotmat(1:3,1:3),tsym1(1:3,1:3,irot))
           end do rot2
        end do philoop
        nrot=count
@@ -896,18 +896,16 @@ contains
           else
              tht = 2._real32*pi/real(n) !=2*pi/n 
           end if
-          rotmat=transpose(reshape((/&
+          rotmat = transpose(reshape((/&
                cos(tht) ,  0._real32,  sin(tht),&
                0._real32     ,  1._real32,      0._real32,    &
                -sin(tht),  0._real32,  cos(tht)/), shape(rotmat)))
           rot3: do irot=1,nrot
-             count=count+1
-             tsym1(count,1:3,1:3)=matmul(rotmat(1:3,1:3),tsym1(irot,1:3,1:3))
-             do i=1,3
-                do j=1,3
-                   if(abs(tsym1(count,i,j)).lt.tol_sym) tsym1(count,i,j)=0._real32
-                end do
-             end do
+             count = count + 1
+             tsym1(1:3,1:3,count) = matmul(rotmat(1:3,1:3),tsym1(1:3,1:3,irot))
+             where (abs(tsym1(1:3,1:3,count)).lt.tol_sym)
+                tsym1(1:3,1:3,count) = 0._real32
+             end where
           end do rot3
        end do psiloop
        nrot=count
@@ -930,44 +928,44 @@ contains
           cloop: do ic=cmin,2
              c=(-1._real32)**ic
              !           if((a*b*c).ne.(-1._real32)) cycle cloop
-             refmat(1:3,1:3)=transpose(reshape((/&
+             refmat(1:3,1:3) = transpose(reshape((/&
                   a,     0._real32,  0._real32,&
                   0._real32,  b   ,  0._real32,&
                   0._real32,  0._real32,     c/), shape(rotmat)))
-             refloop: do irot=1,nrot
-                count=count+1
-                tsym1(count,1:3,1:3)=matmul(refmat(1:3,1:3),tsym1(irot,1:3,1:3))
+             refloop: do irot = 1, nrot
+                count = count + 1
+                tsym1(1:3,1:3,count) = matmul(refmat(1:3,1:3),tsym1(1:3,1:3,irot))
              end do refloop
           end do cloop
        end do bloop
     end do aloop
-    grp%nsym=count
+    grp%nsym = count
 
 
     if(grp%lmolec)then
-       allocate(grp%sym(grp%nsym,4,4))
-       grp%sym(:grp%nsym,:,:)=tsym1(:grp%nsym,:,:)
+       allocate(grp%sym(4,4,grp%nsym))
+       grp%sym(:,:,:grp%nsym)=tsym1(:,:,:grp%nsym)
        deallocate(tsym1)
        return
     end if
     !! best so far
-    !     sym(isym,1:3,1:3)=matmul(transpose(lat),sym(isym,1:3,1:3))
-    !     sym(isym,1:3,1:3)=matmul(sym(isym,1:3,1:3),(invlat))
+    !     sym(1:3,1:3,isym)=matmul(transpose(lat),sym(1:3,1:3,isym))
+    !     sym(1:3,1:3,isym)=matmul(sym(1:3,1:3,isym),(invlat))
 !!!-----------------------------------------------------------------------------
 !!! checks all made symmetries to see if they apply to the supplied lattice
 !!!-----------------------------------------------------------------------------
-    allocate(tsym2(grp%nsym,4,4))
-    tsym2=0._real32
-    tsym2(:,4,4)=1._real32
-    count=0
-    samecheck: do isym=1,grp%nsym
-       tmat1 = matmul((invlat),tsym1(isym,:3,:3))
+    allocate(tsym2(4,4,grp%nsym))
+    tsym2 = 0._real32
+    tsym2(4,4,:) = 1._real32
+    count = 0
+    samecheck: do isym = 1, grp%nsym
+       tmat1 = matmul((invlat),tsym1(:3,:3,isym))
        tmat1 = matmul(tmat1,(lat))
-       do i=1,3
-          do j=1,3
-             if(abs(tmat1(i,j)).lt.tol_sym) tmat1(i,j)=0._real32
+       do i = 1, 3
+          do j = 1, 3
+             if(abs(tmat1(i,j)).lt.tol_sym) tmat1(i,j) = 0._real32
              if(abs(1._real32-abs(tmat1(i,j))).lt.tol_sym) &
-                  tmat1(i,j)=sign(1._real32,tmat1(i,j))
+                  tmat1(i,j) = sign(1._real32,tmat1(i,j))
           end do
        end do
        !!-----------------------------------------------------------------------
@@ -977,18 +975,18 @@ contains
        !!-----------------------------------------------------------------------
        if(.not.all(abs(tmat1-nint(tmat1)).lt.tol_sym)) cycle samecheck
        do jsym = 1, count, 1
-          if(all(abs(tmat1-tsym2(jsym,:3,:3)).lt.tol_sym)) cycle samecheck
+          if(all(abs(tmat1-tsym2(:3,:3,jsym)).lt.tol_sym)) cycle samecheck
        end do
        count = count + 1
-       tsym2(count,:3,:3) = tmat1
+       tsym2(:3,:3,count) = tmat1
     end do samecheck
-    grp%nsym=count
+    grp%nsym = count
     deallocate(tsym1)
-    allocate(grp%sym(grp%nsym,4,4))
-    grp%sym(:grp%nsym,:4,:4)=tsym2(:grp%nsym,:4,:4)
+    allocate(grp%sym(4,4,grp%nsym))
+    grp%sym(:4,:4,:grp%nsym)=tsym2(:4,:4,:grp%nsym)
     deallocate(tsym2)
 
-    grp%nlatsym=grp%nsym
+    grp%nlatsym = grp%nsym
 
 
     return
@@ -1006,8 +1004,8 @@ contains
     
     
     if(allocated(from%op)) allocate(to%op(size(from%op)))
-    if(allocated(from%sym)) allocate(to%sym(size(from%sym,dim=1),4,4))
-    if(allocated(from%sym_save)) allocate(to%sym_save(size(from%sym_save,dim=1),4,4))
+    if(allocated(from%sym)) allocate(to%sym(4,4,size(from%sym,dim=3)))
+    if(allocated(from%sym_save)) allocate(to%sym_save(4,4,size(from%sym_save,dim=3)))
     to = from
 
   end subroutine clone_grp
@@ -1105,7 +1103,7 @@ contains
              !!-----------------------------------------------------------------
              do ja=1, itmp1
                 if(all(abs(basis%spec(is)%atom(ia,1:3)-atom_store(ja,1:3)).lt.&
-                     (/tol_sym,tol_sym,tol_sym/))) cycle atcheck
+                     [ tol_sym,tol_sym,tol_sym ])) cycle atcheck
              end do
              itmp1=itmp1+1
              atom_store(itmp1,:)=basis%spec(is)%atom(ia,:)
