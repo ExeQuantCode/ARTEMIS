@@ -1211,7 +1211,6 @@ contains
     !---------------------------------------------------------------------------
     ! Retrieve the primitive cells if necessary
     !---------------------------------------------------------------------------
-    write(*,*) "tar0"
     if(this%use_pricel_lw)then
        if(verbose_.gt.0) write(*,'(1X,"Using primitive cell for lower material")')
        call get_primitive_cell(structure_lw, tol_sym=this%tol_sym)
@@ -1228,7 +1227,6 @@ contains
        call reducer(structure_up)
        structure_up%lat = primitive_lat(structure_up%lat)
     end if
-    write(*,*) "tar1"
 
 
     !---------------------------------------------------------------------------
@@ -1265,7 +1263,6 @@ contains
           call stop_program(trim(err_msg))
        end select
     end if
-    write(*,*) "tar2"
 
     ludef_surface_lw = .false.
     ludef_surface_up = .false.
@@ -1294,7 +1291,6 @@ contains
             " One of these must be greater than 0."
        call stop_program(trim(err_msg))
     end if
-    write(*,*) "tar3"
 
 
     !---------------------------------------------------------------------------
@@ -1308,7 +1304,6 @@ contains
     if(verbose_.gt.0) write(*,'(1X,"Avg min bulk bond: ",F0.3," Å")') avg_min_bond
     if(verbose_.gt.0) write(*,'(1X,"Trans-interfacial scaling factor: ",F0.3)') this%separation_scale
     if(this%shift_method.eq.-1) this%num_shifts = 1
-    write(*,*) "tar4"
     
 
     !---------------------------------------------------------------------------
@@ -1365,7 +1360,6 @@ contains
        lw_map=-1
        up_map=-1       
     end if
-    write(*,*) "tar1"
 
 
     !---------------------------------------------------------------------------
@@ -1414,7 +1408,6 @@ contains
     elseif(this%is_layered_up.and.layered_axis_up.gt.0.and.all(miller_up.eq.0))then
        miller_up(layered_axis_up)=1
     end if
-    write(*,*) "tar2"
 
 
     !---------------------------------------------------------------------------
@@ -1457,7 +1450,6 @@ contains
        if(verbose_.gt.0) write(*,'(1X,"Told not to generate structures, just find matches.")')
        return
     end if
-    write(*,*) "tar3"
 
        
 !!!-----------------------------------------------------------------------------
