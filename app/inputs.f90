@@ -744,8 +744,8 @@ contains
           end if
           call assign(buffer,lw_num_layers,     readvar(3))
        case("UP_NUM_LAYERS", "UP_SLAB_THICKNESS")
-          if(index(buffer,"LW_SLAB_THICKNESS").ne.0)then
-             write(0,'(1X,A)') "WARNING: UP_SLAB_THICKNESS is deprecated, use LW_NUM_LAYERS instead"
+          if(index(buffer,"UP_SLAB_THICKNESS").ne.0)then
+             write(0,'(1X,A)') "WARNING: UP_SLAB_THICKNESS is deprecated, use UP_NUM_LAYERS instead"
           end if
           call assign(buffer,up_num_layers,     readvar(4))
        case("LW_MILLER")
