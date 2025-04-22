@@ -520,6 +520,436 @@ geom_rw = Geom_Rw()
 
 
 
+
+class Misc_Types(f90wrap.runtime.FortranModule):
+    """
+    Module artemis__misc_types
+    
+    
+    Defined at \
+        ../fortran/lib/mod_misc_types.f90 \
+        lines 1-261
+    
+    """
+    @f90wrap.runtime.register_class("artemis.struc_data_type")
+    class struc_data_type(f90wrap.runtime.FortranDerivedType):
+        """
+        Type(name=struc_data_type)
+        
+        
+        Defined at \
+            ../fortran/lib/mod_misc_types.f90 \
+            lines 24-42
+        
+        """
+        def __init__(self, handle=None):
+            """
+            self = Struc_Data_Type()
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                lines 24-42
+            
+            
+            Returns
+            -------
+            this : Struc_Data_Type
+            	Object to be constructed
+            
+            
+            Automatically generated constructor for struc_data_type
+            """
+            f90wrap.runtime.FortranDerivedType.__init__(self)
+            result = _artemis.f90wrap_misc_types__struc_data_type_initialise()
+            self._handle = result[0] if isinstance(result, tuple) else result
+        
+        def __del__(self):
+            """
+            Destructor for class Struc_Data_Type
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                lines 24-42
+            
+            Parameters
+            ----------
+            this : Struc_Data_Type
+            	Object to be destructed
+            
+            
+            Automatically generated destructor for struc_data_type
+            """
+            if self._alloc:
+                _artemis.f90wrap_misc_types__struc_data_type_finalise(this=self._handle)
+        
+        @property
+        def match_idx(self):
+            """
+            Element match_idx ftype=integer  pytype=int
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 25
+            
+            """
+            return _artemis.f90wrap_struc_data_type__get__match_idx(self._handle)
+        
+        @match_idx.setter
+        def match_idx(self, match_idx):
+            _artemis.f90wrap_struc_data_type__set__match_idx(self._handle, match_idx)
+        
+        @property
+        def shift_idx(self):
+            """
+            Element shift_idx ftype=integer  pytype=int
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 26
+            
+            """
+            return _artemis.f90wrap_struc_data_type__get__shift_idx(self._handle)
+        
+        @shift_idx.setter
+        def shift_idx(self, shift_idx):
+            _artemis.f90wrap_struc_data_type__set__shift_idx(self._handle, shift_idx)
+        
+        @property
+        def swap_idx(self):
+            """
+            Element swap_idx ftype=integer  pytype=int
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 27
+            
+            """
+            return _artemis.f90wrap_struc_data_type__get__swap_idx(self._handle)
+        
+        @swap_idx.setter
+        def swap_idx(self, swap_idx):
+            _artemis.f90wrap_struc_data_type__set__swap_idx(self._handle, swap_idx)
+        
+        @property
+        def from_pricel_lw(self):
+            """
+            Element from_pricel_lw ftype=logical pytype=bool
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 28
+            
+            """
+            return _artemis.f90wrap_struc_data_type__get__from_pricel_lw(self._handle)
+        
+        @from_pricel_lw.setter
+        def from_pricel_lw(self, from_pricel_lw):
+            _artemis.f90wrap_struc_data_type__set__from_pricel_lw(self._handle, \
+                from_pricel_lw)
+        
+        @property
+        def from_pricel_up(self):
+            """
+            Element from_pricel_up ftype=logical pytype=bool
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 29
+            
+            """
+            return _artemis.f90wrap_struc_data_type__get__from_pricel_up(self._handle)
+        
+        @from_pricel_up.setter
+        def from_pricel_up(self, from_pricel_up):
+            _artemis.f90wrap_struc_data_type__set__from_pricel_up(self._handle, \
+                from_pricel_up)
+        
+        @property
+        def term_lw_idx(self):
+            """
+            Element term_lw_idx ftype=integer pytype=int
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 30
+            
+            """
+            array_ndim, array_type, array_shape, array_handle = \
+                _artemis.f90wrap_struc_data_type__array__term_lw_idx(self._handle)
+            if array_handle in self._arrays:
+                term_lw_idx = self._arrays[array_handle]
+            else:
+                term_lw_idx = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
+                                        self._handle,
+                                        _artemis.f90wrap_struc_data_type__array__term_lw_idx)
+                self._arrays[array_handle] = term_lw_idx
+            return term_lw_idx
+        
+        @term_lw_idx.setter
+        def term_lw_idx(self, term_lw_idx):
+            self.term_lw_idx[...] = term_lw_idx
+        
+        @property
+        def term_up_idx(self):
+            """
+            Element term_up_idx ftype=integer pytype=int
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 31
+            
+            """
+            array_ndim, array_type, array_shape, array_handle = \
+                _artemis.f90wrap_struc_data_type__array__term_up_idx(self._handle)
+            if array_handle in self._arrays:
+                term_up_idx = self._arrays[array_handle]
+            else:
+                term_up_idx = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
+                                        self._handle,
+                                        _artemis.f90wrap_struc_data_type__array__term_up_idx)
+                self._arrays[array_handle] = term_up_idx
+            return term_up_idx
+        
+        @term_up_idx.setter
+        def term_up_idx(self, term_up_idx):
+            self.term_up_idx[...] = term_up_idx
+        
+        @property
+        def transform_lw(self):
+            """
+            Element transform_lw ftype=integer pytype=int
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 32
+            
+            """
+            array_ndim, array_type, array_shape, array_handle = \
+                _artemis.f90wrap_struc_data_type__array__transform_lw(self._handle)
+            if array_handle in self._arrays:
+                transform_lw = self._arrays[array_handle]
+            else:
+                transform_lw = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
+                                        self._handle,
+                                        _artemis.f90wrap_struc_data_type__array__transform_lw)
+                self._arrays[array_handle] = transform_lw
+            return transform_lw
+        
+        @transform_lw.setter
+        def transform_lw(self, transform_lw):
+            self.transform_lw[...] = transform_lw
+        
+        @property
+        def transform_up(self):
+            """
+            Element transform_up ftype=integer pytype=int
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 33
+            
+            """
+            array_ndim, array_type, array_shape, array_handle = \
+                _artemis.f90wrap_struc_data_type__array__transform_up(self._handle)
+            if array_handle in self._arrays:
+                transform_up = self._arrays[array_handle]
+            else:
+                transform_up = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
+                                        self._handle,
+                                        _artemis.f90wrap_struc_data_type__array__transform_up)
+                self._arrays[array_handle] = transform_up
+            return transform_up
+        
+        @transform_up.setter
+        def transform_up(self, transform_up):
+            self.transform_up[...] = transform_up
+        
+        @property
+        def approx_thickness_lw(self):
+            """
+            Element approx_thickness_lw ftype=real(real32) pytype=float
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 34
+            
+            """
+            return _artemis.f90wrap_struc_data_type__get__approx_thickness_lw(self._handle)
+        
+        @approx_thickness_lw.setter
+        def approx_thickness_lw(self, approx_thickness_lw):
+            _artemis.f90wrap_struc_data_type__set__approx_thickness_lw(self._handle, \
+                approx_thickness_lw)
+        
+        @property
+        def approx_thickness_up(self):
+            """
+            Element approx_thickness_up ftype=real(real32) pytype=float
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 35
+            
+            """
+            return _artemis.f90wrap_struc_data_type__get__approx_thickness_up(self._handle)
+        
+        @approx_thickness_up.setter
+        def approx_thickness_up(self, approx_thickness_up):
+            _artemis.f90wrap_struc_data_type__set__approx_thickness_up(self._handle, \
+                approx_thickness_up)
+        
+        @property
+        def mismatch(self):
+            """
+            Element mismatch ftype=real(real32) pytype=float
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 36
+            
+            """
+            array_ndim, array_type, array_shape, array_handle = \
+                _artemis.f90wrap_struc_data_type__array__mismatch(self._handle)
+            if array_handle in self._arrays:
+                mismatch = self._arrays[array_handle]
+            else:
+                mismatch = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
+                                        self._handle,
+                                        _artemis.f90wrap_struc_data_type__array__mismatch)
+                self._arrays[array_handle] = mismatch
+            return mismatch
+        
+        @mismatch.setter
+        def mismatch(self, mismatch):
+            self.mismatch[...] = mismatch
+        
+        @property
+        def shift(self):
+            """
+            Element shift ftype=real(real32) pytype=float
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 37
+            
+            """
+            array_ndim, array_type, array_shape, array_handle = \
+                _artemis.f90wrap_struc_data_type__array__shift(self._handle)
+            if array_handle in self._arrays:
+                shift = self._arrays[array_handle]
+            else:
+                shift = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
+                                        self._handle,
+                                        _artemis.f90wrap_struc_data_type__array__shift)
+                self._arrays[array_handle] = shift
+            return shift
+        
+        @shift.setter
+        def shift(self, shift):
+            self.shift[...] = shift
+        
+        @property
+        def swap_density(self):
+            """
+            Element swap_density ftype=real(real32) pytype=float
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 39
+            
+            """
+            return _artemis.f90wrap_struc_data_type__get__swap_density(self._handle)
+        
+        @swap_density.setter
+        def swap_density(self, swap_density):
+            _artemis.f90wrap_struc_data_type__set__swap_density(self._handle, swap_density)
+        
+        @property
+        def approx_eff_swap_conc(self):
+            """
+            Element approx_eff_swap_conc ftype=real(real32) pytype=float
+            
+            
+            Defined at \
+                ../fortran/lib/mod_misc_types.f90 \
+                line 40
+            
+            """
+            array_ndim, array_type, array_shape, array_handle = \
+                _artemis.f90wrap_struc_data_type__array__approx_eff_swap_conc(self._handle)
+            if array_handle in self._arrays:
+                approx_eff_swap_conc = self._arrays[array_handle]
+            else:
+                approx_eff_swap_conc = \
+                    f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
+                                        self._handle,
+                                        _artemis.f90wrap_struc_data_type__array__approx_eff_swap_conc)
+                self._arrays[array_handle] = approx_eff_swap_conc
+            return approx_eff_swap_conc
+        
+        @approx_eff_swap_conc.setter
+        def approx_eff_swap_conc(self, approx_eff_swap_conc):
+            self.approx_eff_swap_conc[...] = approx_eff_swap_conc
+        
+        def __str__(self):
+            ret = ['<struc_data_type>{\n']
+            ret.append('    match_idx : ')
+            ret.append(repr(self.match_idx))
+            ret.append(',\n    shift_idx : ')
+            ret.append(repr(self.shift_idx))
+            ret.append(',\n    swap_idx : ')
+            ret.append(repr(self.swap_idx))
+            ret.append(',\n    from_pricel_lw : ')
+            ret.append(repr(self.from_pricel_lw))
+            ret.append(',\n    from_pricel_up : ')
+            ret.append(repr(self.from_pricel_up))
+            ret.append(',\n    term_lw_idx : ')
+            ret.append(repr(self.term_lw_idx))
+            ret.append(',\n    term_up_idx : ')
+            ret.append(repr(self.term_up_idx))
+            ret.append(',\n    transform_lw : ')
+            ret.append(repr(self.transform_lw))
+            ret.append(',\n    transform_up : ')
+            ret.append(repr(self.transform_up))
+            ret.append(',\n    approx_thickness_lw : ')
+            ret.append(repr(self.approx_thickness_lw))
+            ret.append(',\n    approx_thickness_up : ')
+            ret.append(repr(self.approx_thickness_up))
+            ret.append(',\n    mismatch : ')
+            ret.append(repr(self.mismatch))
+            ret.append(',\n    shift : ')
+            ret.append(repr(self.shift))
+            ret.append(',\n    swap_density : ')
+            ret.append(repr(self.swap_density))
+            ret.append(',\n    approx_eff_swap_conc : ')
+            ret.append(repr(self.approx_eff_swap_conc))
+            ret.append('}')
+            return ''.join(ret)
+        
+        _dt_array_initialisers = []
+
+
+misc_types = Misc_Types()
+
+
+
+
 class Generator(f90wrap.runtime.FortranModule):
     """
     Module artemis__generator
@@ -584,6 +1014,219 @@ class Generator(f90wrap.runtime.FortranModule):
             if self._alloc:
                 _artemis.f90wrap_intf_gen__artemis_gen_type_finalise(this=self._handle)
         
+        def get_all_structures_data(self):
+            """
+            output = get_all_structure_data__binding__artemis_generator_type(self)
+            
+            
+            Defined at \
+                ../fortran/lib/mod_generator.f90 \
+                lines 134-146
+            
+            Parameters
+            ----------
+            this : Artemis_Generator_Type
+            
+            Returns
+            -------
+            output : Struc_Data_Type array
+            
+            """
+            output = []
+            for i in range(self.num_structures):
+                output.append(self.get_structure_data(i))
+
+            # output = \
+            #     _artemis.f90wrap_intf_gen__get_all_structures_data__binding_agt(this=self._handle)
+            # output = \
+            #     f90wrap.runtime.lookup_class("artemis.struc_data_type").from_handle(output, \
+            #     alloc=True)
+            return output
+        
+        def get_structure_data(self, idx):
+            """
+            output = get_structure_data__binding__artemis_generator_type(self, idx)
+            
+            
+            Defined at \
+                ../fortran/lib/mod_generator.f90 \
+                lines 150-160
+            
+            Parameters
+            ----------
+            this : Artemis_Generator_Type
+            idx : int
+            
+            Returns
+            -------
+            output : Struc_Data_Type
+            
+            """
+            output = \
+                _artemis.f90wrap_intf_gen__get_structure_data__binding_agt(this=self._handle, \
+                idx=idx)
+            output = \
+                f90wrap.runtime.lookup_class("artemis.struc_data_type").from_handle(output, \
+                alloc=True)
+            
+            output_dict = {
+                'match_idx': output.match_idx,
+                'shift_idx': output.shift_idx,
+                'swap_idx': output.swap_idx,
+                'from_pricel_lw': output.from_pricel_lw,
+                'from_pricel_up': output.from_pricel_up,
+                'term_lw_idx': output.term_lw_idx,
+                'term_up_idx': output.term_up_idx,
+                'transform_lw': output.transform_lw,
+                'transform_up': output.transform_up,
+                'approx_thickness_lw': output.approx_thickness_lw,
+                'approx_thickness_up': output.approx_thickness_up,
+                'mismatch': output.mismatch,
+                'shift': output.shift,
+                'swap_density': output.swap_density,
+                'approx_eff_swap_conc': output.approx_eff_swap_conc
+            }
+
+            return output_dict
+        
+        def get_all_structures_mismatch(self):
+            """
+            output = get_all_structures_mismatch__binding__artemis_generator_type(self)
+            
+            
+            Defined at \
+                ../fortran/lib/mod_generator.f90 \
+                lines 130-142
+            
+            Parameters
+            ----------
+            this : Artemis_Generator_Type
+            
+            Returns
+            -------
+            output : float array
+            
+            """
+            output = \
+                _artemis.f90wrap_intf_gen__get_all_structures_mismatch__binding_agt(this=self._handle)
+            return output
+        
+        def get_structure_mismatch(self, idx):
+            """
+            output = get_structure_mismatch__binding__artemis_generator_type(self, idx)
+            
+            
+            Defined at \
+                ../fortran/lib/mod_generator.f90 \
+                lines 146-156
+            
+            Parameters
+            ----------
+            this : Artemis_Generator_Type
+            idx : int
+            
+            Returns
+            -------
+            output : float array
+            
+            """
+            output = \
+                _artemis.f90wrap_intf_gen__get_structure_mismatch__binding_agt(this=self._handle, \
+                idx=idx)
+            return output
+        
+        def get_all_structures_transform(self):
+            """
+            output = get_all_structures_transform__binding__artemis_generator_type(self)
+            
+            
+            Defined at \
+                ../fortran/lib/mod_generator.f90 \
+                lines 160-174
+            
+            Parameters
+            ----------
+            this : Artemis_Generator_Type
+            
+            Returns
+            -------
+            output : int array
+            
+            """
+            output = \
+                _artemis.f90wrap_intf_gen__get_all_structures_transform__binding_agt(this=self._handle)
+            return output
+        
+        def get_structure_transform(self, idx):
+            """
+            output = get_structure_transform__binding__artemis_generator_type(self, idx)
+            
+            
+            Defined at \
+                ../fortran/lib/mod_generator.f90 \
+                lines 178-189
+            
+            Parameters
+            ----------
+            this : Artemis_Generator_Type
+            idx : int
+            
+            Returns
+            -------
+            output : int array
+            
+            """
+            output = \
+                _artemis.f90wrap_intf_gen__get_structure_transform__binding_agt(this=self._handle, \
+                idx=idx)
+            return output
+        
+        def get_all_structures_shift(self):
+            """
+            output = get_all_structures_shifts__binding__artemis_generator_type(self)
+            
+            
+            Defined at \
+                ../fortran/lib/mod_generator.f90 \
+                lines 193-205
+            
+            Parameters
+            ----------
+            this : Artemis_Generator_Type
+            
+            Returns
+            -------
+            output : float array
+            
+            """
+            output = \
+                _artemis.f90wrap_intf_gen__get_all_structures_shift__binding_agt(this=self._handle)
+            return output
+        
+        def get_structure_shift(self, idx):
+            """
+            output = get_structure_shifts__binding__artemis_generator_type(self, idx)
+            
+            
+            Defined at \
+                ../fortran/lib/mod_generator.f90 \
+                lines 209-219
+            
+            Parameters
+            ----------
+            this : Artemis_Generator_Type
+            idx : int
+            
+            Returns
+            -------
+            output : float array
+            
+            """
+            output = \
+                _artemis.f90wrap_intf_gen__get_structure_shift__binding_agt(this=self._handle, \
+                idx=idx)
+            return output
+        
         def set_tolerance(self, vector_mismatch=None, angle_mismatch=None, \
             area_mismatch=None, max_length=None, max_area=None, max_fit=None, \
             max_extension=None, angle_weight=None, area_weight=None):
@@ -626,7 +1269,7 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_generator.f90 \
+                ../fortran/lib/mod_generator.f90 \
                 lines 180-252
             
             Parameters
@@ -666,7 +1309,7 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_generator.f90 \
+                ../fortran/lib/mod_generator.f90 \
                 lines 259-283
             
             Parameters
@@ -693,7 +1336,7 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_generator.f90 \
+                ../fortran/lib/mod_generator.f90 \
                 lines 290-310
             
             Parameters
@@ -719,7 +1362,7 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 lines 252-287
             
             Parameters
@@ -761,7 +1404,7 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_generator.f90 \
+                ../fortran/lib/mod_generator.f90 \
                 lines 364-435
             
             Parameters
@@ -790,7 +1433,7 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 lines 322-329
             
             Parameters
@@ -806,7 +1449,7 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 lines 333-340
             
             Parameters
@@ -1073,23 +1716,23 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 line 32
             
             """
             structure_lw_handle = \
-                _artemis.f90wrap_artemis_generator_type__get__structure_lw(self._handle)
+                _artemis.f90wrap_artemis_gen_type__get__structure_lw(self._handle)
             if tuple(structure_lw_handle) in self._objs:
                 structure_lw = self._objs[tuple(structure_lw_handle)]
             else:
-                structure_lw = artemis__geom_rw.basis_type.from_handle(structure_lw_handle)
+                structure_lw = geom_rw.basis_type.from_handle(structure_lw_handle)
                 self._objs[tuple(structure_lw_handle)] = structure_lw
             return structure_lw
         
         @structure_lw.setter
         def structure_lw(self, structure_lw):
             structure_lw = structure_lw._handle
-            _artemis.f90wrap_artemis_generator_type__set__structure_lw(self._handle, \
+            _artemis.f90wrap_artemis_gen_type__set__structure_lw(self._handle, \
                 structure_lw)
         
         @property
@@ -1099,23 +1742,23 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 line 32
             
             """
             structure_up_handle = \
-                _artemis.f90wrap_artemis_generator_type__get__structure_up(self._handle)
+                _artemis.f90wrap_artemis_gen_type__get__structure_up(self._handle)
             if tuple(structure_up_handle) in self._objs:
                 structure_up = self._objs[tuple(structure_up_handle)]
             else:
-                structure_up = artemis__geom_rw.basis_type.from_handle(structure_up_handle)
+                structure_up = geom_rw.basis_type.from_handle(structure_up_handle)
                 self._objs[tuple(structure_up_handle)] = structure_up
             return structure_up
         
         @structure_up.setter
         def structure_up(self, structure_up):
             structure_up = structure_up._handle
-            _artemis.f90wrap_artemis_generator_type__set__structure_up(self._handle, \
+            _artemis.f90wrap_artemis_gen_type__set__structure_up(self._handle, \
                 structure_up)
         
         @property
@@ -1125,19 +1768,19 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 line 34
             
             """
             array_ndim, array_type, array_shape, array_handle = \
-                _artemis.f90wrap_artemis_generator_type__array__elastic_co4c3f(self._handle)
+                _artemis.f90wrap_artemis_gen_type__array__elastic_co4c3f(self._handle)
             if array_handle in self._arrays:
                 elastic_constants_lw = self._arrays[array_handle]
             else:
                 elastic_constants_lw = \
                     f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
                                         self._handle,
-                                        _artemis.f90wrap_artemis_generator_type__array__elastic_co4c3f)
+                                        _artemis.f90wrap_artemis_gen_type__array__elastic_co4c3f)
                 self._arrays[array_handle] = elastic_constants_lw
             return elastic_constants_lw
         
@@ -1152,19 +1795,19 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 line 34
             
             """
             array_ndim, array_type, array_shape, array_handle = \
-                _artemis.f90wrap_artemis_generator_type__array__elastic_coedb6(self._handle)
+                _artemis.f90wrap_artemis_gen_type__array__elastic_coedb6(self._handle)
             if array_handle in self._arrays:
                 elastic_constants_up = self._arrays[array_handle]
             else:
                 elastic_constants_up = \
                     f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
                                         self._handle,
-                                        _artemis.f90wrap_artemis_generator_type__array__elastic_coedb6)
+                                        _artemis.f90wrap_artemis_gen_type__array__elastic_coedb6)
                 self._arrays[array_handle] = elastic_constants_up
             return elastic_constants_up
         
@@ -1179,16 +1822,16 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 line 36
             
             """
             return \
-                _artemis.f90wrap_artemis_generator_type__get__use_pricel_lw(self._handle)
+                _artemis.f90wrap_artemis_gen_type__get__use_pricel_lw(self._handle)
         
         @use_pricel_lw.setter
         def use_pricel_lw(self, use_pricel_lw):
-            _artemis.f90wrap_artemis_generator_type__set__use_pricel_lw(self._handle, \
+            _artemis.f90wrap_artemis_gen_type__set__use_pricel_lw(self._handle, \
                 use_pricel_lw)
         
         @property
@@ -1198,16 +1841,16 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 line 36
             
             """
             return \
-                _artemis.f90wrap_artemis_generator_type__get__use_pricel_up(self._handle)
+                _artemis.f90wrap_artemis_gen_type__get__use_pricel_up(self._handle)
         
         @use_pricel_up.setter
         def use_pricel_up(self, use_pricel_up):
-            _artemis.f90wrap_artemis_generator_type__set__use_pricel_up(self._handle, \
+            _artemis.f90wrap_artemis_gen_type__set__use_pricel_up(self._handle, \
                 use_pricel_up)
         
         @property
@@ -1217,18 +1860,18 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 line 38
             
             """
             array_ndim, array_type, array_shape, array_handle = \
-                _artemis.f90wrap_artemis_generator_type__array__miller_lw(self._handle)
+                _artemis.f90wrap_artemis_gen_type__array__miller_lw(self._handle)
             if array_handle in self._arrays:
                 miller_lw = self._arrays[array_handle]
             else:
                 miller_lw = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
                                         self._handle,
-                                        _artemis.f90wrap_artemis_generator_type__array__miller_lw)
+                                        _artemis.f90wrap_artemis_gen_type__array__miller_lw)
                 self._arrays[array_handle] = miller_lw
             return miller_lw
         
@@ -1243,18 +1886,18 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 line 38
             
             """
             array_ndim, array_type, array_shape, array_handle = \
-                _artemis.f90wrap_artemis_generator_type__array__miller_up(self._handle)
+                _artemis.f90wrap_artemis_gen_type__array__miller_up(self._handle)
             if array_handle in self._arrays:
                 miller_up = self._arrays[array_handle]
             else:
                 miller_up = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
                                         self._handle,
-                                        _artemis.f90wrap_artemis_generator_type__array__miller_up)
+                                        _artemis.f90wrap_artemis_gen_type__array__miller_up)
                 self._arrays[array_handle] = miller_up
             return miller_up
 
@@ -1269,16 +1912,16 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 line 40
             
             """
             return \
-                _artemis.f90wrap_artemis_generator_type__get__is_layered_lw(self._handle)
+                _artemis.f90wrap_artemis_gen_type__get__is_layered_lw(self._handle)
         
         @is_layered_lw.setter
         def is_layered_lw(self, is_layered_lw):
-            _artemis.f90wrap_artemis_generator_type__set__is_layered_lw(self._handle, \
+            _artemis.f90wrap_artemis_gen_type__set__is_layered_lw(self._handle, \
                 is_layered_lw)
         
         @property
@@ -1288,16 +1931,16 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 line 40
             
             """
             return \
-                _artemis.f90wrap_artemis_generator_type__get__is_layered_up(self._handle)
+                _artemis.f90wrap_artemis_gen_type__get__is_layered_up(self._handle)
         
         @is_layered_up.setter
         def is_layered_up(self, is_layered_up):
-            _artemis.f90wrap_artemis_generator_type__set__is_layered_up(self._handle, \
+            _artemis.f90wrap_artemis_gen_type__set__is_layered_up(self._handle, \
                 is_layered_up)
         
         @property
@@ -1307,16 +1950,16 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 line 42
             
             """
             return \
-                _artemis.f90wrap_artemis_generator_type__get__ludef_is_lay4aa6(self._handle)
+                _artemis.f90wrap_artemis_gen_type__get__ludef_is_lay4aa6(self._handle)
         
         @ludef_is_layered_lw.setter
         def ludef_is_layered_lw(self, ludef_is_layered_lw):
-            _artemis.f90wrap_artemis_generator_type__set__ludef_is_lay87a5(self._handle, \
+            _artemis.f90wrap_artemis_gen_type__set__ludef_is_lay87a5(self._handle, \
                 ludef_is_layered_lw)
         
         @property
@@ -1326,16 +1969,16 @@ class Generator(f90wrap.runtime.FortranModule):
             
             
             Defined at \
-                /Users/nedtaylor/DCoding/DGit/ARTEMIS/src/fortran/lib/mod_intf_generator.f90 \
+                ../fortran/lib/mod_intf_generator.f90 \
                 line 42
             
             """
             return \
-                _artemis.f90wrap_artemis_generator_type__get__ludef_is_lay60fd(self._handle)
+                _artemis.f90wrap_artemis_gen_type__get__ludef_is_lay60fd(self._handle)
         
         @ludef_is_layered_up.setter
         def ludef_is_layered_up(self, ludef_is_layered_up):
-            _artemis.f90wrap_artemis_generator_type__set__ludef_is_laye6e4(self._handle, \
+            _artemis.f90wrap_artemis_gen_type__set__ludef_is_laye6e4(self._handle, \
                 ludef_is_layered_up)
         
         @property
@@ -1459,31 +2102,21 @@ class Generator(f90wrap.runtime.FortranModule):
             _artemis.f90wrap_artemis_gen_type__set__depth_method(self._handle, \
                 depth_method)
         
-        @property
-        def shift_data(self):
-            """
-            Element shift_data ftype=real(real32) pytype=float
+        def init_array_structure_data(self):
+            self.structure_data = f90wrap.runtime.FortranDerivedTypeArray(self,
+                                            _artemis.f90wrap_artemis_gen_type__array_getitem__structure_data,
+                                            _artemis.f90wrap_artemis_gen_type__array_setitem__structure_data,
+                                            _artemis.f90wrap_artemis_gen_type__array_len__structure_data,
+                                            """
+            Element structure_data ftype=type(struc_data_type) pytype=Struc_Data_Type
             
             
             Defined at \
-                ../src/fortran/lib/mod_intf_generator.f90 \
-                line 43
+                ../fortran/lib/mod_generator.f90 line \
+                56
             
-            """
-            array_ndim, array_type, array_shape, array_handle = \
-                _artemis.f90wrap_artemis_gen_type__array__shift_data(self._handle)
-            if array_handle in self._arrays:
-                shift_data = self._arrays[array_handle]
-            else:
-                shift_data = f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
-                                        self._handle,
-                                        _artemis.f90wrap_artemis_gen_type__array__shift_data)
-                self._arrays[array_handle] = shift_data
-            return shift_data
-        
-        @shift_data.setter
-        def shift_data(self, shift_data):
-            self.shift_data[...] = shift_data
+            """, Misc_Types.struc_data_type)
+            return self.structure_data
         
         @property
         def swap_method(self):
