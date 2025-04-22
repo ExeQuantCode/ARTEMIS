@@ -240,7 +240,6 @@ contains
     )
 
 
-
     !---------------------------------------------------------------------------
     ! Handle inversion matrix (centre of inversion must be accounted for)
     !---------------------------------------------------------------------------
@@ -325,13 +324,13 @@ contains
          predefined=.false., new_start=.true., &
          tol_sym=tol_sym &
     )
-    allocate(tmpsym(count(abs(grp_store%sym(3,3,:)+1._real32).lt.tolerance),4,4))
+    allocate(tmpsym(4,4,count(abs(grp_store%sym(3,3,:)+1._real32).lt.tolerance)))
     allocate(tmpop(count(abs(grp_store%sym(3,3,:)+1._real32).lt.tolerance)))
     itmp1 = 0
     do i=1,grp_store%nsym
        if(abs(grp_store%sym(3,3,i)+1._real32).lt.tolerance)then
           itmp1=itmp1+1
-          tmpsym(itmp1,:,:) = grp_store%sym(:,:,i)
+          tmpsym(:,:,itmp1) = grp_store%sym(:,:,i)
           tmpop(itmp1) = i
        end if
     end do
