@@ -16,6 +16,7 @@ module artemis__misc_types
 
   type latmatch_type
      integer :: nfit
+     integer :: max_num_matches = 5
      logical :: reduce = .false.
      logical :: reduced = .false.
      character(1) :: abc(3)= [ 'a', 'b', 'c' ]
@@ -30,7 +31,6 @@ module artemis__misc_types
   end type latmatch_type
 
   type tol_type
-     integer :: nstore = 5
      integer :: maxfit = 100
      integer :: maxsize = 10
      real(real32) :: maxlen=20._real32
@@ -64,17 +64,19 @@ contains
   
 !###############################################################################
   subroutine latmatch_init( &
-       this, tol, lattice_lw, lattice_up, reduce_matches &
+       this, tol, lattice_lw, lattice_up, max_num_matches, reduce_matches &
   )
     implicit none
     class(latmatch_type), intent(inout) :: this
     type(tol_type), intent(in) :: tol
+    integer, intent(in) :: max_num_matches
     real(real32), dimension(3,3), intent(in) :: lattice_lw,lattice_up
     logical, intent(in) :: reduce_matches
 
-    allocate(this%tf1(tol%nstore,3,3))
-    allocate(this%tf2(tol%nstore,3,3))
-    allocate(this%tol(tol%nstore,3))
+    this%max_num_matches = max_num_matches
+    allocate(this%tf1(this%max_num_matches,3,3))
+    allocate(this%tf2(this%max_num_matches,3,3))
+    allocate(this%tol(this%max_num_matches,3))
 
     this%tol(:,:) = huge(0._real32)
     this%lat1 = MATNORM(lattice_lw)

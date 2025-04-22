@@ -71,6 +71,30 @@ program artemis_executable
      call generator%set_tolerance( &
           tolerance = tolerance &
      )
+     call generator%set_match_method( &
+          method = match_method, &
+          max_num_matches = max_num_matches, & ! this is maxfit/nstore
+          max_num_terms = max_num_terms, &
+          max_num_planes = max_num_planes, &
+          compensate_normal = compensate_normal &
+     )
+     call generator%set_shift_method( &
+          method = shift_method, &
+          num_shifts = num_shifts, &
+          shifts = shifts, &
+          interface_depth = interface_depth, &
+          separation_scale = separation_scale, &
+          depth_method = depth_method, &
+          bondlength_cutoff = bondlength_cutoff &
+     )
+     call generator%set_swap_method( &
+          method = swap_method, &
+          num_swaps = num_swaps, &
+          swap_density = swap_density, &
+          swap_depth = swap_depth, &
+          swap_sigma = swap_sigma, &
+          require_mirror_swaps = require_mirror_swaps &
+     )
      call generator%set_materials( &
           structure_lw = struc1_bas, structure_up = struc2_bas, &
           use_pricel_lw = lw_use_pricel, use_pricel_up = up_use_pricel, &
@@ -132,9 +156,17 @@ program artemis_executable
      if(irestart.eq.0)then
         call generator%generate( &
              surface_lw = lw_surf, surface_up = up_surf, &
+             thickness_lw = lw_thickness, thickness_up = up_thickness, &
+             num_layers_lw = lw_num_layers, num_layers_up = up_num_layers, &
+             reduce_matches = reduce_matches, &
              print_lattice_match_info = lprint_matches, &
              print_termination_info = lprint_terms, &
-             print_shift_info = lprint_shifts &
+             print_shift_info = lprint_shifts, &
+             break_on_fail = break_on_fail, &
+             icheck_term_pair = icheck_term_pair, &
+             interface_idx = interface_idx, &
+             seed = clock, &
+             verbose = verbose &
         )
         call generator%write_structures(directory = "DINTERFACES", prefix= "")
      else

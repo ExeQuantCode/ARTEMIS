@@ -186,7 +186,6 @@ contains
        if(present(max_length)) this%tolerance%maxlen = max_length
        if(present(max_area)) this%tolerance%maxarea = max_area
        if(present(max_fit)) this%tolerance%maxfit = max_fit
-       ! if(present(nstore)) this%tolerance%nstore = nstore
        if(present(max_extension)) this%tolerance%maxsize = max_extension
        if(present(angle_weight)) this%tolerance%ang_weight = angle_weight
        if(present(area_weight)) this%tolerance%area_weight = area_weight
@@ -1009,7 +1008,7 @@ contains
        reduce_matches, &
        print_lattice_match_info, print_termination_info, print_shift_info, &
        break_on_fail, &
-       icheck_match, interface_idx, &
+       icheck_term_pair, interface_idx, &
        generate_structures, &
        seed, verbose, exit_code &
   )
@@ -1042,7 +1041,7 @@ contains
     !! Print termination information
     logical, intent(in), optional :: print_shift_info
     !! Print shift information
-    integer, intent(in), optional :: icheck_match
+    integer, intent(in), optional :: icheck_term_pair
     !! Index of the lattice match to check
     integer, intent(in), optional :: interface_idx
     !! Index of the interface to output
@@ -1105,7 +1104,7 @@ contains
     !! Number of seeds for the random number generator.
     integer, dimension(:), allocatable :: seed_arr
     !! Array of seeds for the random number generator.
-    integer :: icheck_match_
+    integer :: icheck_term_pair_
     !! Index of the lattice match to check
     integer :: interface_idx_
     !! Index of the interface to output
@@ -1147,8 +1146,8 @@ contains
     if(present(verbose)) verbose_ = verbose
     if(present(reduce_matches)) reduce_matches_ = reduce_matches
 
-    icheck_match_ = -1; interface_idx_ = -1
-    if(present(icheck_match)) icheck_match_ = icheck_match
+    icheck_term_pair_ = -1; interface_idx_ = -1
+    if(present(icheck_term_pair)) icheck_term_pair_ = icheck_term_pair
     if(present(interface_idx)) interface_idx_ = interface_idx
 
     break_on_fail_ = .false.
@@ -1454,7 +1453,7 @@ contains
     end if
     call SAV%init( &
          this%tolerance, structure_lw%lat, structure_up%lat, &
-         reduce_matches_ &
+         this%max_num_matches, reduce_matches_ &
     )
     select case(this%match_method)
     case(0)
@@ -1469,16 +1468,16 @@ contains
        call SAV%constrain_axes(miller_lw, miller_up, verbose = verbose_)
        call cyc_lat1(SAV, this%tolerance, this%match_method, verbose = verbose_)
     end select
-    if(min(this%tolerance%nstore,SAV%nfit).eq.0)then
+    if(min(this%max_num_matches,SAV%nfit).eq.0)then
        write(err_msg,'("No matches found between the two structures")')
        call print_warning(trim(err_msg))
        return
     else
        if(verbose_.gt.0) write(*,'(1X,"Number of matches found: ",I0)')&
-            min(this%tolerance%nstore,SAV%nfit)
+            min(this%max_num_matches,SAV%nfit)
     end if
     if(verbose_.gt.0) write(*,'(1X,"Maximum number of generated interfaces will be: ",I0)')&
-         this%max_num_terms*this%num_shifts*this%tolerance%nstore
+         this%max_num_terms * this%num_shifts * this%max_num_matches
     if(.not.generate_structures_)then
        if(verbose_.gt.0) write(*,'(1X,"Told not to generate structures, just find matches.")')
        return
@@ -1494,7 +1493,7 @@ contains
        if(verbose_.gt.0) write(*,'(1X,"Generating only interfaces for match ",I0)') interface_idx_
     else
        intf_start=1
-       intf_end=min(this%tolerance%nstore,SAV%nfit)
+       intf_end=min(this%max_num_matches,SAV%nfit)
     end if
     iunique=0
 !!!-----------------------------------------------------------------------------
@@ -1839,14 +1838,14 @@ contains
                   1.5_real32*init_offset(this%axis) - 2._real32*this%vacuum_gap )/modu(intf_basis%lat(this%axis,:))
              if(ierror.ge.1)then
                 write(0,*) "interface:",intf_loc
-                if(ierror.eq.1.and.iunique.eq.icheck_match_-1)then
+                if(ierror.eq.1.and.iunique.eq.icheck_term_pair_-1)then
                   !  call chdir(intf_dir)
                    call err_abort_print_struc(slab_lw,"lw_term.vasp",&
                         "",.false.)
                    call err_abort_print_struc(slab_up,"up_term.vasp",&
                         "As IPRINT = 1 and ICHECK has been set, &
                         &code is now exiting...")
-                elseif(ierror.eq.2.and.iunique.eq.icheck_match_-1)then
+                elseif(ierror.eq.2.and.iunique.eq.icheck_term_pair_-1)then
                   !  call chdir(intf_dir)
                    call err_abort_print_struc(intf_basis,"test_intf.vasp",&
                         "As IPRINT = 2 and ICHECK has been set, &

@@ -1274,7 +1274,7 @@ subroutine f90wrap_intf_gen__generate__binding__agt( &
     num_layers_lw, num_layers_up, &
     reduce_matches, &
     print_lattice_match_info, print_termination_info, print_shift_info, &
-    break_on_fail, icheck_match, interface_idx, &
+    break_on_fail, icheck_term_pair, interface_idx, &
     generate_structures, &
     seed, verbose, exit_code, &
     n0, n1)
@@ -1297,7 +1297,7 @@ subroutine f90wrap_intf_gen__generate__binding__agt( &
     logical, intent(in), optional :: print_termination_info
     logical, intent(in), optional :: print_shift_info
     logical, intent(in), optional :: break_on_fail
-    integer, intent(in), optional :: icheck_match
+    integer, intent(in), optional :: icheck_term_pair
     integer, intent(in), optional :: interface_idx
     logical, intent(in), optional :: generate_structures
     integer, intent(in), optional :: seed
@@ -1312,7 +1312,7 @@ subroutine f90wrap_intf_gen__generate__binding__agt( &
         thickness_up=thickness_up, num_layers_lw=num_layers_lw, num_layers_up=num_layers_up, &
         reduce_matches=reduce_matches, &
         print_lattice_match_info=print_lattice_match_info, print_termination_info=print_termination_info, &
-        print_shift_info=print_shift_info, break_on_fail=break_on_fail, icheck_match=icheck_match, &
+        print_shift_info=print_shift_info, break_on_fail=break_on_fail, icheck_term_pair=icheck_term_pair, &
         interface_idx=interface_idx, generate_structures=generate_structures, seed=seed, verbose=verbose, &
         exit_code=exit_code)
 end subroutine f90wrap_intf_gen__generate__binding__agt
