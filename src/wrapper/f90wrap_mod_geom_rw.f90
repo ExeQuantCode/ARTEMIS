@@ -1,4 +1,4 @@
-! Module artemis__geom_rw defined in file ../src/lib/mod_geom_rw.f90
+! Module artemis__geom_rw defined in file ../fortran/lib/mod_geom_rw.f90
 
 subroutine f90wrap_species_type__array__atom(this, nd, dtype, dshape, dloc)
     use artemis__geom_rw, only: species_type
@@ -861,5 +861,5 @@ subroutine f90wrap_geom_rw__set__igeom_output(f90wrap_igeom_output)
     artemis__geom_rw_igeom_output = f90wrap_igeom_output
 end subroutine f90wrap_geom_rw__set__igeom_output
 
-! End of module artemis__geom_rw defined in file ../src/lib/mod_geom_rw.f90
+! End of module artemis__geom_rw defined in file ../fortran/lib/mod_geom_rw.f90
 

@@ -7,7 +7,7 @@
 module artemis__generator
   use artemis__constants,     only: real32, ierror, pi
   use artemis__misc,          only: to_lower,to_upper
-  use artemis__misc_types,    only: abstract_artemis_generator_type, latmatch_type, tol_type
+  use artemis__misc_types,    only: abstract_artemis_generator_type, latmatch_type, tol_type, struc_data_type
   use artemis__geom_rw,       only: basis_type,geom_write
   use lat_compare,            only: lattice_matching, cyc_lat1
   use artemis__io_utils,      only: err_abort, print_warning, stop_program
@@ -61,17 +61,8 @@ module artemis__generator
     integer :: depth_method = 0
     !! Method for determining the depth to which consider atoms from interface
 
-    integer, dimension(:,:,:,:), allocatable :: match_data
-    !! Data of matches for each interface
-    !! indices 1 and 2 are the transformation matrices
-    !! index 3 is length 2, where element 1 is lower, element 2 is upper
-    !! index 4 is the interface number in structures
-    real(real32), dimension(:,:), allocatable :: mismatch_data
-    !! Data of mismatches for each interface
-    !! index 1 is length 3, element 1 = length, element 2 = angle, element 3 = area
-    !! index 2 is the interface number in structures
-    real(real32), dimension(:,:), allocatable :: shift_data
-    !! Data of shifts for each interface, where index 1 is the interface number in structures
+    type(struc_data_type), dimension(:), allocatable :: structure_data
+    !! Structure data
 
     integer :: swap_method = 0
     !! Swap method
@@ -110,6 +101,23 @@ module artemis__generator
     real(real32) :: tol_sym = 1.E-6_real32
 
    contains
+    procedure, pass(this) :: get_all_structures_data
+    !! Get the structure data for all structures
+    procedure, pass(this) :: get_structure_data
+    !! Get the structure data for a specific structure
+    procedure, pass(this) :: get_all_structures_mismatch
+    !! Get the mismatch data for all structures
+    procedure, pass(this) :: get_structure_mismatch
+    !! Get the mismatch data for a specific structure
+    procedure, pass(this) :: get_all_structures_transform
+    !! Get the structure data for a specific structure
+    procedure, pass(this) :: get_structure_transform
+    !! Get the structure data for a specific structure
+    procedure, pass(this) :: get_all_structures_shift
+    !! Get the shifts for all structures
+    procedure, pass(this) :: get_structure_shift
+    !! Get the shifts for a specific structure
+
     procedure, pass(this) :: set_tolerance
     !! Set tolerance for identifying good lattice matches
     procedure, pass(this) :: set_shift_method
@@ -127,7 +135,7 @@ module artemis__generator
     !! Reset the is_layered flags for the lower bulk structure
     procedure, pass(this) :: reset_is_layered_up
     !! Reset the is_layered flags for the upper bulk structure
-    
+
     procedure, pass(this) :: get_terminations
     !! Return the terminations for structure
     procedure, pass(this) :: get_interface_location
@@ -142,6 +150,181 @@ module artemis__generator
   end type artemis_generator_type
 
 contains
+
+!###############################################################################
+  function get_all_structures_data(this) result(output)
+    !! Get the structure data for all structures
+    implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(in) :: this
+    !! Instance of artemis generator type
+
+    type(struc_data_type), dimension(this%num_structures) :: output
+    !! Structure data
+
+    ! Local variables
+    integer :: i
+
+    do i = 1, this%num_structures
+       output(i) = this%structure_data(i)
+    end do
+
+  end function get_all_structures_data
+!###############################################################################
+
+
+!###############################################################################
+  function get_structure_data(this, idx) result(output)
+    !! Get the structure data for a specific structure
+    implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(in) :: this
+    !! Instance of artemis generator type
+    integer, intent(in) :: idx
+    !! Index of the structure
+
+    type(struc_data_type) :: output
+    !! Structure data
+
+    output = this%structure_data(idx)
+
+  end function get_structure_data
+!###############################################################################
+
+
+!###############################################################################
+  function get_all_structures_mismatch(this) result(output)
+    !! Get the mismatch data for all structures
+    implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(in) :: this
+    !! Instance of artemis generator type
+
+    real(real32), dimension(3,this%num_structures) :: output
+    !! Mismatch data
+
+    ! Local variables
+    integer :: i
+
+    do i = 1, this%num_structures
+       output(:,i) = this%structure_data(i)%mismatch
+    end do
+
+  end function get_all_structures_mismatch
+!###############################################################################
+
+
+!###############################################################################
+  function get_structure_mismatch(this, idx) result(output)
+    !! Get the mismatch data for a specific structure
+    implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(in) :: this
+    !! Instance of artemis generator type
+    integer, intent(in) :: idx
+    !! Index of the structure
+      
+    real(real32), dimension(3) :: output
+    !! Mismatch data
+
+    output = this%structure_data(idx)%mismatch
+
+  end function get_structure_mismatch
+!###############################################################################
+
+
+!###############################################################################
+  function get_all_structures_transform(this) result(output)
+    !! Get the structure data for a specific structure
+    implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(in) :: this
+    !! Instance of artemis generator type
+
+    integer, dimension(3,3,2,this%num_structures) :: output
+    !! Transformation data
+
+    ! Local variables
+    integer :: i
+    ! Loop over all structures
+
+    do i = 1, this%num_structures
+       output(:,:,1,i) = this%structure_data(i)%transform_lw
+       output(:,:,2,i) = this%structure_data(i)%transform_up
+    end do
+
+  end function get_all_structures_transform
+!###############################################################################
+
+
+!###############################################################################
+  function get_structure_transform(this, idx) result(output)
+    !! Get the structure data for a specific structure
+    implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(in) :: this
+    !! Instance of artemis generator type
+    integer, intent(in) :: idx
+    !! Index of the structure
+
+    integer, dimension(3,3,2) :: output
+    !! Transformation data
+
+    output(:,:,1) = this%structure_data(idx)%transform_lw
+    output(:,:,2) = this%structure_data(idx)%transform_up
+
+  end function get_structure_transform
+!###############################################################################
+
+
+!###############################################################################
+  function get_all_structures_shift(this) result(output)
+    !! Get the shifts for all structures
+    implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(in) :: this
+    !! Instance of artemis generator type
+
+    real(real32), dimension(3,this%num_structures) :: output
+    !! Shift data
+
+    ! Local variables
+    integer :: i
+
+    do i = 1, this%num_structures
+       output(:,i) = this%structure_data(i)%shift
+    end do
+
+  end function get_all_structures_shift
+!###############################################################################
+
+
+!###############################################################################
+   function get_structure_shift(this, idx) result(output)
+      !! Get the shifts for a specific structure
+      implicit none
+   
+      ! Arguments
+      class(artemis_generator_type), intent(in) :: this
+      !! Instance of artemis generator type
+      integer, intent(in) :: idx
+      !! Index of the structure
+   
+      real(real32), dimension(3) :: output
+      !! Shift data
+   
+      output = this%structure_data(idx)%shift
+   
+   end function get_structure_shift
+!###############################################################################
+
 
 !###############################################################################
   subroutine set_tolerance( &
@@ -502,6 +685,13 @@ contains
           call stop_program(trim(err_msg))
           return
        end select
+    end if
+    if(any(this%layer_separation_cutoff.lt.1.E-2_real32))then
+       write(err_msg,'(A,I0,A)') &
+            "A layer separation this small is not realistic: ", &
+            this%layer_separation_cutoff
+       call stop_program(trim(err_msg))
+       return
     end if
    
    end subroutine set_surface_properties
@@ -902,6 +1092,8 @@ contains
     !! Minimum bond length
     type(intf_info_type) :: intf
     !! Interface information
+    type(struc_data_type) :: struc_data
+    !! Structure data
     real(real32), dimension(3) :: vtmp1
     !! Temporary vector
     logical :: print_shift_info_
@@ -1000,6 +1192,7 @@ contains
     call this%generate_perturbations( &
          structure, intf%loc, &
          min_bond, bulk_DON, &
+         struc_data, &
          print_shift_info_, seed_arr, verbose_, exit_code_ &
     )
 
@@ -1122,6 +1315,9 @@ contains
     !! Boolean whether to generate structures or just print information
 
 
+    type(struc_data_type) :: struc_data
+    !! Structure data (i.e. mismatch, terminations, etc)
+
     integer :: ntrans, iunique, itmp1, num_structures_old
     integer :: layered_axis_lw, layered_axis_up
     type(confine_type) :: confine
@@ -1214,6 +1410,7 @@ contains
     call structure_lw%copy(this%structure_lw, length=4)
     call structure_up%copy(this%structure_up, length=4)
     if(.not.allocated(this%structures)) allocate(this%structures(0))
+    if(.not.allocated(this%structure_data)) allocate(this%structure_data(0))
 
 
     !---------------------------------------------------------------------------
@@ -1859,8 +2056,20 @@ contains
              !------------------------------------------------------------------
              ! Write information of current match to file in save directory
              !------------------------------------------------------------------
-             call  output_intf_data(SAV, ifit, lw_term, iterm_lw, up_term, iterm_up,&
+             call output_intf_data(SAV, ifit, lw_term, iterm_lw, up_term, iterm_up,&
                   this%use_pricel_lw, this%use_pricel_up)
+             struc_data = struc_data_type( &
+                  match_idx = ifit, &
+                  from_pricel_lw = this%use_pricel_lw, &
+                  from_pricel_up = this%use_pricel_up, &
+                  term_lw_idx = iterm_lw, &
+                  term_up_idx = iterm_up, &
+                  approx_thickness_lw = max(thickness_lw_,height_lw), &
+                  approx_thickness_up = max(thickness_up_,height_up), &
+                  transform_lw = SAV%tf1(ifit,:,:), &
+                  transform_up = SAV%tf2(ifit,:,:), &
+                  mismatch = SAV%tol(ifit,:3) &
+             )
 
 
              !------------------------------------------------------------------
@@ -1869,6 +2078,7 @@ contains
              call this%generate_perturbations( &
                   intf_basis, intf_loc, avg_min_bond, &
                   bulk_DON, &
+                  struc_data, &
                   print_shift_info_, &
                   seed_arr, &
                   verbose_, &
@@ -1896,7 +2106,7 @@ contains
 !!!#############################################################################
 !!! ISWAP METHOD NOT YET SET UP
   subroutine generate_shifts_and_swaps( &
-       this, basis, intf_loc, bond, bulk_DON, print_shift_info, &
+       this, basis, intf_loc, bond, bulk_DON, struc_data, print_shift_info, &
        seed_arr, verbose, exit_code, map &
   )
     implicit none
@@ -1906,6 +2116,7 @@ contains
     real(real32), intent(in) :: bond
     type(bulk_DON_type), dimension(2), intent(in) :: bulk_DON
     !! Distribution functions for the lower and upper bulk structures
+    type(struc_data_type), intent(in) :: struc_data
     logical, intent(in) :: print_shift_info
     integer, dimension(:), intent(in) :: seed_arr
     integer, intent(in) :: verbose
@@ -1918,6 +2129,8 @@ contains
     real(real32) :: dtmp1
     type(basis_type) :: tbas
     type(bond_type) :: min_bond
+    type(struc_data_type) :: struc_data_shift
+    type(struc_data_type), dimension(:), allocatable :: struc_data_swaps
     character(len=256) :: err_msg
     integer, dimension(3) :: abc
     real(real32), dimension(3) :: toffset
@@ -2089,8 +2302,12 @@ contains
       !  open(unit=ounit,file=trim(adjustl(filename)))
       !  call geom_write(ounit,tbas)
       !  close(ounit)
+       struc_data_shift = struc_data
+       struc_data_shift%shift_idx = k
+       struc_data_shift%shift = toffset
        this%structures = [ this%structures, tbas ]
        this%num_structures = size(this%structures, dim = 1)
+       this%structure_data = [ this%structure_data, struc_data_shift ]
        if(this%num_structures.ge.this%max_num_structures) return
 
 
@@ -2113,11 +2330,20 @@ contains
           if(ngen_swaps.eq.0)then
              exit if_swap
           end if
+          if(allocated(struc_data_swaps)) deallocate(struc_data_swaps)
+          allocate(struc_data_swaps(ngen_swaps))
+          do l=1,ngen_swaps
+             struc_data_swaps(l) = struc_data_shift
+             struc_data_swaps(l)%swap_idx = l
+             struc_data_swaps(l)%swap_density = this%swap_density
+             ! struc_data_swaps(l)%approx_eff_swap_conc = 
+          end do
          !  call chdir(dirpath)
          !  call system('mkdir -p '//trim(adjustl(swapdir)))
          !  call chdir(swapdir)
          !  write(*,'(3X,"Number of unique swap structures: ",I0)') ngen_swaps
           this%structures = [ this%structures, bas_arr(1:ngen_swaps) ]
+          this%structure_data = [ this%structure_data, struc_data_swaps ]
          !  do l=1,ngen_swaps
          !     write(dirpath,'(A,I0.2)') trim(adjustl(subdir_prefix)),l
          !     call system('mkdir -p '//trim(adjustl(dirpath)))

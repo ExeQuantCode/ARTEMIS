@@ -9,10 +9,58 @@ module artemis__misc_types
 
   private
 
+  public :: struc_data_type
   public :: latmatch_type
   public :: tol_type
   public :: abstract_artemis_generator_type
 
+
+  type struc_data_type
+     integer :: match_idx = 0
+     integer :: shift_idx = 0
+     integer :: swap_idx  = 0
+     logical :: from_pricel_lw = .false.
+     logical :: from_pricel_up = .false.
+     integer, dimension(2) :: term_lw_idx = 0
+     integer, dimension(2) :: term_up_idx = 0
+     integer, dimension(3,3) :: transform_lw = 0
+     integer, dimension(3,3) :: transform_up = 0
+     real(real32) :: approx_thickness_lw = 0._real32
+     real(real32) :: approx_thickness_up = 0._real32
+     real(real32), dimension(3) :: mismatch
+     real(real32), dimension(3) :: shift = 0._real32
+     ! real(real32), dimension(:,:) :: swaps !!! UNSURE HOW TO DO THIS
+     real(real32) :: swap_density = 0._real32
+     real(real32), dimension(2) :: approx_eff_swap_conc = 0._real32
+  !  contains
+  !    procedure, pass(this) :: init => init_struc_data_type
+  end type struc_data_type
+
+  interface struc_data_type
+     module function init_struc_data_type( &
+          match_idx, &
+          from_pricel_lw, from_pricel_up, &
+          term_lw_idx, term_up_idx, &
+          transform_lw, transform_up, &
+          approx_thickness_lw, approx_thickness_up, &
+          mismatch, &
+          shift_idx, shift, &
+          swap_idx, swap_density, approx_eff_swap_conc &
+     ) result(output)
+       integer, intent(in) :: match_idx
+       logical, intent(in) :: from_pricel_lw, from_pricel_up
+       integer, dimension(2), intent(in) :: term_lw_idx, term_up_idx
+       integer, dimension(3,3), intent(in) :: transform_lw, transform_up
+       real(real32), intent(in) :: approx_thickness_lw, approx_thickness_up
+       real(real32), dimension(3), intent(in) :: mismatch
+       integer, intent(in), optional :: shift_idx
+       real(real32), dimension(3), intent(in), optional :: shift
+       integer, intent(in), optional :: swap_idx
+       real(real32), intent(in), optional :: swap_density
+       real(real32), dimension(2), intent(in), optional :: approx_eff_swap_conc
+       type(struc_data_type) :: output
+     end function init_struc_data_type
+  end interface struc_data_type
 
   type latmatch_type
      integer :: nfit
@@ -62,6 +110,55 @@ module artemis__misc_types
 
 contains
   
+!###############################################################################
+  module function init_struc_data_type( &
+       match_idx, &
+       from_pricel_lw, from_pricel_up, &
+       term_lw_idx, term_up_idx, &
+       transform_lw, transform_up, &
+       approx_thickness_lw, approx_thickness_up, &
+       mismatch, &
+       shift_idx, shift, &
+       swap_idx, swap_density, approx_eff_swap_conc &
+  ) result(output)
+    implicit none
+    integer, intent(in) :: match_idx
+    logical, intent(in) :: from_pricel_lw, from_pricel_up
+    integer, dimension(2), intent(in) :: term_lw_idx, term_up_idx
+    integer, dimension(3,3), intent(in) :: transform_lw, transform_up
+    real(real32), intent(in) :: approx_thickness_lw, approx_thickness_up
+    real(real32), dimension(3), intent(in) :: mismatch
+    integer, intent(in), optional :: shift_idx
+    real(real32), dimension(3), intent(in), optional :: shift
+    integer, intent(in), optional :: swap_idx
+    real(real32), intent(in), optional :: swap_density
+    real(real32), dimension(2), intent(in), optional :: approx_eff_swap_conc
+
+    type(struc_data_type) :: output
+
+    output%match_idx = match_idx
+    output%from_pricel_lw = from_pricel_lw
+    output%from_pricel_up = from_pricel_up
+    output%term_lw_idx = term_lw_idx
+    output%term_up_idx = term_up_idx
+    output%transform_lw = transform_lw
+    output%transform_up = transform_up
+    output%approx_thickness_lw = approx_thickness_lw
+    output%approx_thickness_up = approx_thickness_up
+    output%mismatch = mismatch
+
+    if(present(shift)) output%shift = shift
+    if(present(shift_idx)) output%shift_idx = shift_idx
+
+    if(present(swap_idx)) output%swap_idx = swap_idx
+    if(present(swap_density)) output%swap_density = swap_density
+    if(present(approx_eff_swap_conc)) output%approx_eff_swap_conc = approx_eff_swap_conc
+
+  end function init_struc_data_type
+
+!###############################################################################
+
+
 !###############################################################################
   subroutine latmatch_init( &
        this, tol, lattice_lw, lattice_up, max_num_matches, reduce_matches &

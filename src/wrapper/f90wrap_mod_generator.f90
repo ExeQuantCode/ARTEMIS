@@ -1,4 +1,4 @@
-! Module artemis__generator defined in file ../src/fortran/lib/mod_intf_generator.f90
+! Module artemis__generator defined in file ../fortran/lib/mod_intf_generator.f90
 
 subroutine f90wrap_artemis_gen_type__get__num_structures(this, f90wrap_num_structures)
     use artemis__generator, only: artemis_generator_type
@@ -546,30 +546,88 @@ subroutine f90wrap_artemis_gen_type__set__depth_method(this, f90wrap_depth_metho
     this_ptr%p%depth_method = f90wrap_depth_method
 end subroutine f90wrap_artemis_gen_type__set__depth_method
 
-subroutine f90wrap_artemis_gen_type__array__shift_data(this, nd, dtype, dshape, dloc)
+subroutine f90wrap_artemis_gen_type__array_getitem__structure_data(f90wrap_this, f90wrap_i, structure_dataitem)
     use artemis__generator, only: artemis_generator_type
-    use, intrinsic :: iso_c_binding, only : c_int
+    use artemis__misc_types, only: struc_data_type
     implicit none
+    
     type artemis_generator_type_ptr_type
         type(artemis_generator_type), pointer :: p => NULL()
     end type artemis_generator_type_ptr_type
-    integer(c_int), intent(in) :: this(2)
+    type struc_data_type_ptr_type
+        type(struc_data_type), pointer :: p => NULL()
+    end type struc_data_type_ptr_type
+    integer, intent(in) :: f90wrap_this(2)
     type(artemis_generator_type_ptr_type) :: this_ptr
-    integer(c_int), intent(out) :: nd
-    integer(c_int), intent(out) :: dtype
-    integer(c_int), dimension(10), intent(out) :: dshape
-    integer*8, intent(out) :: dloc
+    integer, intent(in) :: f90wrap_i
+    integer, intent(out) :: structure_dataitem(2)
+    type(struc_data_type_ptr_type) :: structure_data_ptr
     
-    nd = 2
-    dtype = 11
-    this_ptr = transfer(this, this_ptr)
-    if (allocated(this_ptr%p%shift_data)) then
-        dshape(1:2) = shape(this_ptr%p%shift_data)
-        dloc = loc(this_ptr%p%shift_data)
+    this_ptr = transfer(f90wrap_this, this_ptr)
+    if (allocated(this_ptr%p%structure_data)) then
+        if (f90wrap_i < 1 .or. f90wrap_i > size(this_ptr%p%structure_data)) then
+            call f90wrap_abort("array index out of range")
+        else
+            structure_data_ptr%p => this_ptr%p%structure_data(f90wrap_i)
+            structure_dataitem = transfer(structure_data_ptr,structure_dataitem)
+        endif
     else
-        dloc = 0
+        call f90wrap_abort("derived type array not allocated")
     end if
-end subroutine f90wrap_artemis_gen_type__array__shift_data
+end subroutine f90wrap_artemis_gen_type__array_getitem__structure_data
+
+subroutine f90wrap_artemis_gen_type__array_setitem__structure_data(f90wrap_this, f90wrap_i, structure_dataitem)
+    use artemis__generator, only: artemis_generator_type
+    use artemis__misc_types, only: struc_data_type
+    implicit none
+    
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    type struc_data_type_ptr_type
+        type(struc_data_type), pointer :: p => NULL()
+    end type struc_data_type_ptr_type
+    integer, intent(in) :: f90wrap_this(2)
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    integer, intent(in) :: f90wrap_i
+    integer, intent(in) :: structure_dataitem(2)
+    type(struc_data_type_ptr_type) :: structure_data_ptr
+    
+    this_ptr = transfer(f90wrap_this, this_ptr)
+    if (allocated(this_ptr%p%structure_data)) then
+        if (f90wrap_i < 1 .or. f90wrap_i > size(this_ptr%p%structure_data)) then
+            call f90wrap_abort("array index out of range")
+        else
+            structure_data_ptr = transfer(structure_dataitem,structure_data_ptr)
+            this_ptr%p%structure_data(f90wrap_i) = structure_data_ptr%p
+        endif
+    else
+        call f90wrap_abort("derived type array not allocated")
+    end if
+end subroutine f90wrap_artemis_gen_type__array_setitem__structure_data
+
+subroutine f90wrap_artemis_gen_type__array_len__structure_data(f90wrap_this, f90wrap_n)
+    use artemis__generator, only: artemis_generator_type
+    use artemis__misc_types, only: struc_data_type
+    implicit none
+    
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    type struc_data_type_ptr_type
+        type(struc_data_type), pointer :: p => NULL()
+    end type struc_data_type_ptr_type
+    integer, intent(out) :: f90wrap_n
+    integer, intent(in) :: f90wrap_this(2)
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    
+    this_ptr = transfer(f90wrap_this, this_ptr)
+    if (allocated(this_ptr%p%structure_data)) then
+        f90wrap_n = size(this_ptr%p%structure_data)
+    else
+        f90wrap_n = 0
+    end if
+end subroutine f90wrap_artemis_gen_type__array_len__structure_data
 
 subroutine f90wrap_artemis_gen_type__get__swap_method(this, f90wrap_swap_method)
     use artemis__generator, only: artemis_generator_type
@@ -955,6 +1013,144 @@ subroutine f90wrap_intf_gen__artemis_gen_type_finalise(this)
     this_ptr = transfer(this, this_ptr)
     deallocate(this_ptr%p)
 end subroutine f90wrap_intf_gen__artemis_gen_type_finalise
+
+subroutine f90wrap_intf_gen__get_all_structures_data__binding_agt(ret_output, this, n0)
+    use artemis__generator, only: artemis_generator_type
+    use artemis__misc_types, only: struc_data_type
+    implicit none
+    
+    type struc_data_type_xnum_array
+        type(struc_data_type), dimension(:), allocatable :: items
+    end type struc_data_type_xnum_array
+
+    type struc_data_type_xnum_array_ptr_type
+        type(struc_data_type_xnum_array), pointer :: p => NULL()
+    end type struc_data_type_xnum_array_ptr_type
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    type(struc_data_type_xnum_array_ptr_type) :: ret_output_ptr
+    integer, intent(out), dimension(2) :: ret_output
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    integer :: n0
+    this_ptr = transfer(this, this_ptr)
+    allocate(ret_output_ptr%p)
+    ret_output_ptr%p%items = this_ptr%p%get_all_structures_data()
+    ret_output = transfer(ret_output_ptr, ret_output)
+end subroutine f90wrap_intf_gen__get_all_structures_data__binding_agt
+
+subroutine f90wrap_intf_gen__get_structure_data__binding_agt(this, ret_output, idx)
+    use artemis__generator, only: artemis_generator_type
+    use artemis__misc_types, only: struc_data_type
+    implicit none
+    
+    type struc_data_type_ptr_type
+        type(struc_data_type), pointer :: p => NULL()
+    end type struc_data_type_ptr_type
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    type(struc_data_type_ptr_type) :: ret_output_ptr
+    integer, intent(out), dimension(2) :: ret_output
+    integer, intent(in) :: idx
+    this_ptr = transfer(this, this_ptr)
+    allocate(ret_output_ptr%p)
+    ret_output_ptr%p = this_ptr%p%get_structure_data(idx=idx+1)
+    ret_output = transfer(ret_output_ptr, ret_output)
+end subroutine f90wrap_intf_gen__get_structure_data__binding_agt
+
+subroutine f90wrap_intf_gen__get_all_structures_mismatch__binding_agt(ret_output, this, n0)
+    use artemis__generator, only: artemis_generator_type
+    implicit none
+    
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    real(4), intent(out), dimension(3,n0) :: ret_output
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    integer :: n0
+    this_ptr = transfer(this, this_ptr)
+    ret_output = this_ptr%p%get_all_structures_mismatch()
+end subroutine f90wrap_intf_gen__get_all_structures_mismatch__binding_agt
+
+subroutine f90wrap_intf_gen__get_structure_mismatch__binding_agt(this, ret_output, idx)
+    use artemis__generator, only: artemis_generator_type
+    implicit none
+    
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    real(4), dimension(3), intent(out) :: ret_output
+    integer, intent(in) :: idx
+    this_ptr = transfer(this, this_ptr)
+    ret_output = this_ptr%p%get_structure_mismatch(idx=idx)
+end subroutine f90wrap_intf_gen__get_structure_mismatch__binding_agt
+
+subroutine f90wrap_intf_gen__get_all_structures_transform__binding_agt(ret_output, this, n0)
+    use artemis__generator, only: artemis_generator_type
+    implicit none
+    
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    integer, intent(out), dimension(3,3,2,n0) :: ret_output
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    integer :: n0
+    this_ptr = transfer(this, this_ptr)
+    ret_output = this_ptr%p%get_all_structures_transform()
+end subroutine f90wrap_intf_gen__get_all_structures_transform__binding_agt
+
+subroutine f90wrap_intf_gen__get_structure_transform__binding_agt(this, ret_output, idx)
+    use artemis__generator, only: artemis_generator_type
+    implicit none
+    
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    integer, dimension(3,3,2), intent(out) :: ret_output
+    integer, intent(in) :: idx
+    this_ptr = transfer(this, this_ptr)
+    ret_output = this_ptr%p%get_structure_transform(idx=idx)
+end subroutine f90wrap_intf_gen__get_structure_transform__binding_agt
+
+subroutine f90wrap_intf_gen__get_all_structures_shift__binding_agt(ret_output, this, n0)
+    use artemis__generator, only: artemis_generator_type
+    implicit none
+    
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    real(4), intent(out), dimension(3,n0) :: ret_output
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    integer :: n0
+    this_ptr = transfer(this, this_ptr)
+    ret_output = this_ptr%p%get_all_structures_shift()
+end subroutine f90wrap_intf_gen__get_all_structures_shift__binding_agt
+
+subroutine f90wrap_intf_gen__get_structure_shift__binding_agt(this, ret_output, idx)
+    use artemis__generator, only: artemis_generator_type
+    implicit none
+    
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    real(4), dimension(3), intent(out) :: ret_output
+    integer, intent(in) :: idx
+    this_ptr = transfer(this, this_ptr)
+    ret_output = this_ptr%p%get_structure_shift(idx=idx)
+end subroutine f90wrap_intf_gen__get_structure_shift__binding_agt
 
 subroutine f90wrap_intf_gen__set_tolerance__bindind_agt(this, vector_mismatch, angle_mismatch, &
     area_mismatch, max_length, max_area, max_fit, max_extension, angle_weight, area_weight)
@@ -1464,5 +1660,5 @@ subroutine f90wrap_artemis_gen_type__array_len__structures( &
 end subroutine f90wrap_artemis_gen_type__array_len__structures
 !###############################################################################
 
-! End of module artemis__generator defined in file ../src/fortran/lib/mod_intf_generator.f90
+! End of module artemis__generator defined in file ../fortran/lib/mod_intf_generator.f90
 
