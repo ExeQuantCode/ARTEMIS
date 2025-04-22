@@ -272,8 +272,8 @@ contains
        exit signloop1
     end do signloop1
 
-    symloop1: do i=1,size(sym(:,1,1),dim=1)
-       vec_out=matmul(vec_in,sym(i,:3,:3))
+    symloop1: do i=1,size(sym,dim=3)
+       vec_out=matmul(vec_in,sym(:3,:3,i))
        if(all(abs(vec_out-vec_in).lt.tol)) cycle symloop1
        vec_tmp1(:)=abs(vec_in(:))-abs(vec_out(:))
        vec_tmp2(:)=vec_in(:)-vec_out(:)
@@ -321,10 +321,10 @@ contains
     !vec_in1=(/ real(vec1(1),real32), real(vec1(2),real32), 0._real32/)
     !vec_in2=(/ real(vec2(1),real32), real(vec2(2),real32), 0._real32/)
 
-    symloop1: do i=1,size(sym(:,1,1),dim=1)
+    symloop1: do i=1,size(sym,dim=3)
        ! matmul inmat with sym
        ! then compare to mat_checklist
-       vec_out=matmul(vec_in,sym(i,:3,:3))
+       vec_out=matmul(vec_in,sym(:3,:3,i))
        if(all(abs(vec_out-vec_in).lt.tol)) cycle symloop1
        vec_tmp1(:)=abs(vec_in(:))-abs(vec_out(:))
        vec_tmp2(:)=vec_in(:)-vec_out(:)
@@ -343,8 +343,8 @@ contains
     !outval=.true.
     !vec_in=(/ real(vec1(1),real32), real(vec1(2),real32), 0._real32/)
     !
-    !symloop1: do i=1,size(sym(:,1,1),dim=1)
-    !   vec_out=matmul(vec_in,sym(i,:3,:3))
+    !symloop1: do i=1,size(sym,dim=3)
+    !   vec_out=matmul(vec_in,sym(:3,:3,i))
     !   if(all(abs(vec_out-vec_in).lt.tol)) cycle symloop1
     !   vec_tmp1(:)=abs(vec_in(:))-abs(vec_out(:))
     !   vec_tmp2(:)=vec_in(:)-vec_out(:)
@@ -455,12 +455,12 @@ contains
 !!! ... when compared against the list
 !!!------------------------------------------------------------------------
     matched_loc = 0
-    sym_loop1: do isym=1,size(sym1(:,1,1))
-       !mat1 = matmul(inmat(:2,:2),transpose(sym1(isym,:2,:2)))
-       mat1 = matmul(inmat(:2,:2),(sym1(isym,:2,:2)))
-       do jsym=1,size(sym2(:,1,1))
-          !mat2 = matmul(inmat(:2,3:4),transpose(sym2(jsym,:2,:2)))
-          mat2 = transpose(matmul(inmat(:2,3:4),(sym2(jsym,:2,:2))))
+    sym_loop1: do isym = 1, size(sym1,dim=3), 1
+       !mat1 = matmul(inmat(:2,:2),transpose(sym1(:2,:2,isym)))
+       mat1 = matmul(inmat(:2,:2),(sym1(:2,:2,isym)))
+       do jsym = 1, size(sym2,dim=3), 1
+          !mat2 = matmul(inmat(:2,3:4),transpose(sym2(:2,:2,jsym)))
+          mat2 = transpose(matmul(inmat(:2,3:4),(sym2(:2,:2,jsym))))
           tf = find_tf_2x2(mat1,mat2)
           !if(ltest_print)then
           !!if(any(ISNAN(tf)))then
@@ -469,9 +469,9 @@ contains
           !   !      all(abs(inmat(:2,3:4)-test2).lt.tol))then
           !   write(0,*) isym,jsym
           !
-          !   write(0,'(2(2X,F7.3))') sym1(isym,:2,:2)
+          !   write(0,'(2(2X,F7.3))') sym1(:2,:2,isym)
           !   write(0,*)
-          !   write(0,'(2(2X,F7.3))') sym2(jsym,:2,:2)
+          !   write(0,'(2(2X,F7.3))') sym2(:2,:2,jsym)
           !   write(0,*) "mat1"
           !   write(0,'(2(2X,F7.3))') mat1
           !   write(0,*) "mat2"
@@ -481,8 +481,8 @@ contains
           !   write(0,*)
           !
           !!   !if(isym.eq.1) stop
-          !!   !if(jsym.eq.size(sym2(:,1,1))) stop
-          !!   !if(isym.eq.size(sym1(:,1,1))) stop
+          !!   !if(jsym.eq.size(sym2,dim=3)) stop
+          !!   !if(isym.eq.size(sym1,dim=3)) stop
           !!   !stop
           !end if
 

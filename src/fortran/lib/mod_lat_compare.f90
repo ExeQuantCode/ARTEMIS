@@ -915,12 +915,12 @@ contains
     !!--------------------------------------------------------------------------
     call sym_setup(grp1,lat1, tol_sym=tol_sym,new_start=.true.)!,predefined=.true.)
     call check_sym(grp1,structure_lw,lsave=.true.,tol_sym=tol_sym)
-    allocate(tmpsym1(grp1%nsym,3,3))
+    allocate(tmpsym1(3,3,grp1%nsym))
     
 
     call sym_setup(grp2,lat2, tol_sym=tol_sym,new_start=.true.)!,predefined=.true.)
     call check_sym(grp2,structure_up,lsave=.true.,tol_sym=tol_sym)
-    allocate(tmpsym2(grp2%nsym,3,3))
+    allocate(tmpsym2(3,3,grp2%nsym))
 
 
     !!--------------------------------------------------------------------------
@@ -946,7 +946,7 @@ contains
              m2=floor((i2)/2.0)*(-1)**i2
              mloop3: do i3=1,loopsize
                 m3=floor((i3)/2.0)*(-1)**i3
-                if ( .not.is_unique( [ m1, m2, m3 ], grp1%sym(:,:3,:3) ) ) &
+                if ( .not.is_unique( [ m1, m2, m3 ], grp1%sym(:3,:3,:) ) ) &
                      cycle mloop3
                 itmp1 = itmp1 + 1
                 ivtmp1(itmp1,:) = [ m1, m2, m3 ]
@@ -984,7 +984,7 @@ contains
              m2=floor((i2)/2.0)*(-1)**i2
              mloop6: do i3=1,loopsize
                 m3=floor((i3)/2.0)*(-1)**i3
-                if ( .not.is_unique( (/m1,m2,m3/), grp2%sym(:,:3,:3) ) ) &
+                if ( .not.is_unique( (/m1,m2,m3/), grp2%sym(:3,:3,:) ) ) &
                      cycle mloop6
                 itmp1=itmp1+1
                 ivtmp1(itmp1,:)=(/m1,m2,m3/)
@@ -1025,18 +1025,18 @@ contains
     !!--------------------------------------------------------------------------
     !! cycles through the unique miller planes to find matches
     !!--------------------------------------------------------------------------
-    allocate(tmpsym(max(grp1%nsym,grp2%nsym),3,3))
+    allocate(tmpsym(3,3,max(grp1%nsym,grp2%nsym)))
     MAINLOOP1: do m1 = 1, size( miller1, dim = 1 )
        transform1 = nint(planecutter(lat1,real(miller1(m1,:),real32)))
        if (all(transform1 .eq. 0)) cycle MAINLOOP1
        templat1 = matmul(transform1,lat1)
        tmpsym = 0._real32
        do i=1,grp1%nsym
-          tmpsym(i,:3,:3) = &
-               matmul(grp1%sym(i,:3,:3),inverse_3x3(real(transform1,real32)))
+          tmpsym(:3,:3,i) = &
+               matmul(grp1%sym(:3,:3,i),inverse_3x3(real(transform1,real32)))
           ! next step required to transform properly into the space?
-          tmpsym(i,:3,:3) = &
-               matmul(real(transform1,real32),tmpsym(i,:3,:3))
+          tmpsym(:3,:3,i) = &
+               matmul(real(transform1,real32),tmpsym(:3,:3,i))
        end do
 
        nsym1=0
@@ -1044,33 +1044,33 @@ contains
 !!! IS THIS REASONABLE TO DO IT THIS WAY? OR DO WE NEED TO CHANGE sym TO BE IN THE NEW LAT?
 !!! Wait, should it be instead that the cross product of the a-b plane is always consistent?
        rvec1=cross([templat1(1,:)],[templat1(2,:)])
-       do i=1,grp1%nsym
-          rmat1=matmul(tmpsym(i,:3,:3),templat1(:,:))
+       do i = 1, grp1%nsym, 1
+          rmat1=matmul(tmpsym(:3,:3,i),templat1(:,:))
           rvec2=cross([rmat1(1,:)],[rmat1(2,:)])
           if(all(abs( rvec1(:) - rvec2(:) ).lt.1.E-8_real32).or.&
                all(abs( rvec1(:) + rvec2(:) ).lt.1.E-8_real32))then
              nsym1 = nsym1 + 1
-             tmpsym1(nsym1,:3,:3) = tmpsym(i,:3,:3)
+             tmpsym1(:3,:3,nsym1) = tmpsym(:3,:3,i)
           else
              cycle
           end if
           ! redundant if a-b plane works instead.
           !if(all(&
-          !     abs( templat1(3,:) - matmul(templat1(3,:),tmpsym(i,:3,:3)) )&
+          !     abs( templat1(3,:) - matmul(templat1(3,:),tmpsym(:3,:3,i)) )&
           !     .lt.1.E-8_real32).or.&
           !     all(&
-          !     abs( templat1(3,:) + matmul(templat1(3,:),tmpsym(i,:3,:3)) )&
+          !     abs( templat1(3,:) + matmul(templat1(3,:),tmpsym(:3,:3,i)) )&
           !     .lt.1.E-8_real32))then
           !   nsym1=nsym1+1
-          !   tmpsym1(nsym1,:3,:3) = tmpsym(i,:3,:3)
+          !   tmpsym1(:3,:3,nsym1) = tmpsym(:3,:3,i)
           !end if
           !write(0,*) "################################"
           !write(0,*) i
-          !write(0,'(3(2X,F7.2))') tmpsym(i,:3,:3)
+          !write(0,'(3(2X,F7.2))') tmpsym(:3,:3,i)
           !write(0,*)
-          !write(0,'(3(2X,F7.2))') rvec1!(templat1(j,:),j=1,3)!(grp1%sym(i,j,:3),j=1,3) !tmpsym(i,:3,:3)
+          !write(0,'(3(2X,F7.2))') rvec1!(templat1(j,:),j=1,3)!(grp1%sym(j,:3,i),j=1,3) !tmpsym(:3,:3,i)
           !write(0,*)
-          !write(0,'(3(2X,F7.2))') rvec2!matmul(templat1(3,:),tmpsym(i,:3,:3))!(tmpsym(i,j,:3),j=1,3)
+          !write(0,'(3(2X,F7.2))') rvec2!matmul(templat1(3,:),tmpsym(:3,:3,i))!(tmpsym(j,:3,i),j=1,3)
        end do
        !stop
 
@@ -1081,29 +1081,29 @@ contains
           templat2 = matmul(transform2,lat2)
           
           tmpsym=0._real32
-          do i=1,grp2%nsym
-             tmpsym(i,:3,:3) = &
-                  matmul(grp2%sym(i,:3,:3),inverse_3x3(real(transform2,real32)))
+          do i = 1, grp2%nsym, 1
+             tmpsym(:3,:3,i) = &
+                  matmul(grp2%sym(:3,:3,i),inverse_3x3(real(transform2,real32)))
              ! next step required to transform properly into the space?
-             tmpsym(i,:3,:3) = &
-                  matmul(real(transform2,real32),tmpsym(i,:3,:3))
+             tmpsym(:3,:3,i) = &
+                  matmul(real(transform2,real32),tmpsym(:3,:3,i))
           end do
           nsym2=0
-          tmpsym2=0._real32
-          do i=1,grp2%nsym
+          tmpsym2 = 0._real32
+          do i = 1, grp2%nsym, 1
              !write(0,*) "################################"
              !write(0,*) i
-             !write(0,'(3(2X,F7.2))') (grp2%sym(i,j,:3),j=1,3) !tmpsym(i,:3,:3)
+             !write(0,'(3(2X,F7.2))') (grp2%sym(j,:3,i),j=1,3) !tmpsym(:3,:3,i)
              !write(0,*)
-             !write(0,'(3(2X,F7.2))') (tmpsym(i,j,:3),j=1,3)
+             !write(0,'(3(2X,F7.2))') (tmpsym(j,:3,i),j=1,3)
              if(all(&
-                  abs( templat2(3,:) - matmul(templat2(3,:),tmpsym(i,:3,:3)) )&
+                  abs( templat2(3,:) - matmul(templat2(3,:),tmpsym(:3,:3,i)) )&
                   .lt.1.E-8_real32).or.&
                   all(&
-                  abs( templat2(3,:) + matmul(templat2(3,:),tmpsym(i,:3,:3)) )&
+                  abs( templat2(3,:) + matmul(templat2(3,:),tmpsym(:3,:3,i)) )&
                   .lt.1.E-8_real32))then
-                nsym2=nsym2+1
-                tmpsym2(nsym2,:3,:3) = tmpsym(i,:3,:3)
+                nsym2 = nsym2 + 1
+                tmpsym2(:3,:3,nsym2) = tmpsym(:3,:3,i)
              end if
           end do
 
@@ -1118,7 +1118,7 @@ contains
                transforms2=Tcellmatch_2,&
                ntransforms=num_of_transforms,&
                matched_tols=tolerances,&
-               sym1=tmpsym1(:nsym1,:,:),sym2=tmpsym2(:nsym2,:,:))
+               sym1=tmpsym1(:,:,:nsym1),sym2=tmpsym2(:,:,:nsym2))
 
 
           !!--------------------------------------------------------------------

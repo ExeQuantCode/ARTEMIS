@@ -6,7 +6,7 @@ module artemis__terminations
   use artemis__io_utils,  only: err_abort
   use artemis__io_utils_extd, only: err_abort_print_struc
   use misc_linalg,        only: modu, cross, uvec, det
-  use artemis__sym,       only: sym_type, check_sym, sym_setup, clone_grp, s_end
+  use artemis__sym,       only: sym_type, check_sym, sym_setup, clone_grp
   use artemis__geom_utils,          only: shifter, transformer, ortho_axis, set_vacuum
   implicit none
 
@@ -49,7 +49,7 @@ contains
 
 !###############################################################################
   function get_termination_info( &
-       basis, axis, verbose, tol_sym, layer_sep, break_on_fail &
+       basis, axis, verbose, tol_sym, layer_sep, exit_code &
   ) result(term)
     !! Function to find the terminations of a material along a given axis
     implicit none
@@ -64,17 +64,16 @@ contains
     !! Verbosity level
     real(real32), intent(in) :: tol_sym
     !! Tolerance for symmetry operations
-    real(real32), intent(in), optional :: layer_sep
+    real(real32), intent(in) :: layer_sep
     !! Minimum separation between layers
-    logical, intent(in), optional :: break_on_fail
-    !! Boolean whether to break on failure to find terminations
+    integer, intent(inout) :: exit_code
 
     ! Local variables
     integer :: i, j, is, nterm, mterm, dim, ireject
     !! Loop indices and dimensions
     integer :: itmp1, itmp2, init, min_loc
     !! Temporary indices
-    logical :: lunique, ltmp1, lmirror, break_on_fail_
+    logical :: lunique, ltmp1, lmirror
     !! Boolean flags
     real(real32) :: rtmp1, tol, height, max_sep, c_along, centre
     !! Temporary variables
@@ -108,25 +107,14 @@ contains
 
     abc = [ 1, 2, 3 ]
     term%nterm = 0
-    s_end=0
+    grp_store%end_idx = 0
     grp_store%confine%l=.false.
     grp_store%confine%axis=axis
     grp_store%confine%laxis=.false.
     !---------------------------------------------------------------------------
-    ! Set printing option
-    !---------------------------------------------------------------------------
-    break_on_fail_ = .false.
-    if(present(break_on_fail)) break_on_fail_ = break_on_fail
-
-
-    !---------------------------------------------------------------------------
     ! Set the surface identification tolerance
     !---------------------------------------------------------------------------
-    if(present(layer_sep))then
-       layer_sep_ = layer_sep
-    else
-      layer_sep_ = 1._real32  !!!tolerance of 1 Å for defining a layer
-    end if
+    layer_sep_ = layer_sep
 
     abc=cshift(abc,3-axis)
     c_along = abs(dot_product(basis%lat(axis,:),&
@@ -160,11 +148,8 @@ contains
        end if
     end do
     if(max_sep.lt.layer_sep_)then
-       if(break_on_fail_)then
-          write(0,'("ERROR: Error in artemis__sym.f90")')
-       else
-          write(0,'("WARNING:")')
-       end if
+       exit_code = 1
+       write(0,'("ERROR: Error in artemis__sym.f90")')
        write(0,'(2X,"get_terminations subroutine unable to find a separation &
             &in the material that is greater than LAYER_SEP")')
        write(0,'(2X,"Writing material to ''unlayerable.vasp''")')
@@ -177,16 +162,7 @@ contains
             &support the Miller plane")')
        write(0,'(2X,"Please inform the developers of this and give details &
             &of what structure caused this")')
-       if(break_on_fail_)then
-          write( 0, &
-               '("To allow the program to continue, set &
-               &LBREAK_ON_NO_TERM = F")' &
-          )
-          write(0,'("Stopping...")')
-          call exit()
-       else
-          return
-       end if
+       return
     end if
     basis_list(:,axis) = basis_list(:,axis) - height
     basis_list(:,axis) = basis_list(:,axis) - floor(basis_list(:,axis))
@@ -252,12 +228,16 @@ contains
     !---------------------------------------------------------------------------
     ! Print location of unique terminations
     !---------------------------------------------------------------------------
-    mterm = 0
     ireject = 0
     grp_store%lspace = .true.
     grp_store%confine%l = .true.
     grp_store%confine%laxis(axis) = .true.
-    call sym_setup(grp_store,basis%lat,predefined=.false.,new_start=.true.)
+    call sym_setup( &
+         grp_store, &
+         basis%lat, &
+         predefined=.false., new_start=.true., &
+         tol_sym=tol_sym &
+    )
 
 
 
@@ -275,7 +255,7 @@ contains
     end do
     itmp1 = 0
     do i=1,grp_store%nsym
-       if(all(abs(grp_store%sym(i,:3,:3)-inv_mat).lt.tolerance))then
+       if(all(abs(grp_store%sym(:3,:3,i)-inv_mat).lt.tolerance))then
           itmp1 = i
           exit
        end if
@@ -285,8 +265,8 @@ contains
        call err_abort(err_msg)
     end if
     do i = 1, grp_store%nsym
-       if(all(abs(grp_store%sym(i,:3,:3)-inv_mat).lt.tolerance)) &
-            grp_store%sym(itmp1,4,:3) = grp_store%sym(i,4,:3)
+       if(all(abs(grp_store%sym(:3,:3,i)-inv_mat).lt.tolerance)) &
+            grp_store%sym(4,:3,itmp1) = grp_store%sym(4,:3,i)
     end do
 
 
@@ -298,14 +278,15 @@ contains
     grp_store%confine%laxis(axis) = .true.
     allocate(term_arr_uniq(2*nterm))
     allocate(reject_match(nterm,2))
-    shift_loop1:do i=1,nterm
+    mterm = 0
+    shift_loop1: do i = 1, nterm, 1
        mterm = mterm + 1
 
        basis_arr(mterm) = basis
        centre = term_arr(i)%hmin + (term_arr(i)%hmax - term_arr(i)%hmin)/2._real32
-       call shifter(basis_arr(mterm),axis,1-centre,.true.)
+       call shifter(basis_arr(mterm),axis,1._real32 - centre,.true.)
        sym_if: if(i.ne.1)then
-          sym_loop1:do j=1,mterm-1
+          sym_loop1: do j = 1, mterm - 1, 1
              if(abs(abs(term_arr(i)%hmax-term_arr(i)%hmin) - &
                   abs(term_arr_uniq(j)%hmax-term_arr_uniq(j)%hmin)).gt.tolerance) &
                   cycle sym_loop1
@@ -313,7 +294,7 @@ contains
              call check_sym(grp1,basis=basis_arr(mterm),&
                   iperm=-1,tmpbas2=basis_arr(j),lsave=.true.,tol_sym=tol_sym)
              if(grp1%nsymop.ne.0)then
-                if(grp1%sym_save(1,axis,axis).eq.-1._real32)then
+                if(abs(grp1%sym_save(axis,axis,1)+1._real32).lt.tolerance)then
                    ireject = ireject + 1
                    reject_match(ireject,:) = [ i, j ]
                    basis_arr_reject(ireject) = basis_arr(mterm)
@@ -338,14 +319,19 @@ contains
     !---------------------------------------------------------------------------
     ! Set up mirror/inversion symmetries of the matrix
     !---------------------------------------------------------------------------
-    call sym_setup(grp_store,basis%lat,predefined=.false.,new_start=.true.)
-    allocate(tmpsym(count(grp_store%sym(:,3,3).eq.-1._real32),4,4))
-    allocate(tmpop(count(grp_store%sym(:,3,3).eq.-1._real32)))
+    call sym_setup( &
+         grp_store, &
+         basis%lat, &
+         predefined=.false., new_start=.true., &
+         tol_sym=tol_sym &
+    )
+    allocate(tmpsym(count(abs(grp_store%sym(3,3,:)+1._real32).lt.tolerance),4,4))
+    allocate(tmpop(count(abs(grp_store%sym(3,3,:)+1._real32).lt.tolerance)))
     itmp1 = 0
     do i=1,grp_store%nsym
-       if(grp_store%sym(i,3,3).eq.-1._real32)then
+       if(abs(grp_store%sym(3,3,i)+1._real32).lt.tolerance)then
           itmp1=itmp1+1
-          tmpsym(itmp1,:,:) = grp_store%sym(i,:,:)
+          tmpsym(itmp1,:,:) = grp_store%sym(:,:,i)
           tmpop(itmp1) = i
        end if
     end do
@@ -354,7 +340,7 @@ contains
     call move_alloc(tmpsym,grp_store%sym)
     allocate(grp_store%op(itmp1))
     grp_store%op(:) = tmpop(:itmp1)
-    s_end = grp_store%nsym
+    grp_store%end_idx = grp_store%nsym
 
 
     !---------------------------------------------------------------------------
@@ -378,41 +364,41 @@ contains
        else
           call clone_grp(grp_store,grp1)
           call check_sym(grp1,basis_arr(itmp2),&
-               iperm=-1,lsave=.true.,lcheck_all=.true.,tol_sym=tol_sym)
+               iperm=-1,lsave=.true.,check_all_sym=.true.,tol_sym=tol_sym)
           ltmp1=.false.
 
           ! Check if pure translations are present in comparison termination?
-          !!    if(all(abs(grp1%sym_save(j,:3,:3)-ident).le.tolerance))then
+          !!    if(all(abs(grp1%sym_save(:3,:3,j)-ident).le.tolerance))then
           !!       write(0,*) "FOUND TRANSLATION"
           !!       cycle reject_loop1
           !!    end if
           !! end do
           ! Check if inversions are present in comparison termination
           do j=1,grp1%nsymop
-             if(abs(det(grp1%sym_save(j,:3,:3))+1._real32).le.tolerance) ltmp1=.true.
+             if(abs(det(grp1%sym_save(:3,:3,j))+1._real32).le.tolerance) ltmp1=.true.
           end do
           ! If they are not, then no point comparing. It is a new termination
-          if(.not.ltmp1) exit prior_check 
+          if(.not.ltmp1) exit prior_check
 
           call clone_grp(grp_store,grp1)
           call check_sym(grp1,basis_arr(itmp2),&
                tmpbas2=basis_arr_reject(i),iperm=-1,lsave=.true.,&
-               lcheck_all=.true., tol_sym=tol_sym)
+               check_all_sym=.true., tol_sym=tol_sym)
 
           ! Check det of all symmetry operations. If any are 1, move on
           ! This is because they are just rotations as can be captured ...
           ! ... through lattice matches.
           ! Solely inversions are unique and must be captured.
           do j=1,grp1%nsymop
-             if(abs(det(grp1%sym_save(j,:3,:3))-1._real32).le.tolerance) lunique=.false.
+             if(abs(det(grp1%sym_save(:3,:3,j))-1._real32).le.tolerance) lunique=.false.
           end do
-          if(grp1%sym_save(1,4,axis).eq.&
+          if(grp1%sym_save(4,axis,1).eq.&
                2._real32*min(term_arr_uniq(itmp2)%hmin,0.5_real32-term_arr_uniq(itmp2)%hmin))then
              lunique=.false.
           end if
 
-          if(.not.(all(grp1%sym_save(1,axis,:3).eq.vec_compare(:)).and.&
-               all(grp1%sym_save(1,:3,axis).eq.vec_compare(:)))) lunique=.false.
+          if(.not.(all(grp1%sym_save(axis,:3,1).eq.vec_compare(:)).and.&
+               all(grp1%sym_save(:3,axis,1).eq.vec_compare(:)))) lunique=.false.
           
        end if prior_check
 
@@ -442,9 +428,9 @@ contains
     term%lmirror = lmirror
     if(verbose.gt.0)&
          write(*,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
-    rtmp1 = term_arr_uniq(1)%hmin-1.E-6_real32
+    rtmp1 = term_arr_uniq(1)%hmin - 1.E-6_real32
     itmp1 = 1
-    do i=1,mterm
+    do i = 1, mterm, 1
        allocate(term%arr(i)%ladder(term_arr_uniq(i)%nstep))
        term%arr(i)%hmin = term_arr_uniq(itmp1)%hmin
        term%arr(i)%hmax = term_arr_uniq(itmp1)%hmax
