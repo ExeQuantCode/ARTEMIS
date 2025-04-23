@@ -11,7 +11,7 @@ program artemis_executable
 
 
   integer :: i, unit
-  character(len=256) :: filename
+  character(len=256) :: filepath, filename
   type(artemis_generator_type) :: generator
   type(basis_type), allocatable, dimension(:) :: structures
 
@@ -180,7 +180,21 @@ program artemis_executable
              seed = clock, &
              verbose = verbose &
         )
-        call generator%write_structures(directory = "DINTERFACES", prefix= "")
+      !   call generator%write_structures(directory = "DINTERFACES", prefix= "")
+        do i = 1, generator%num_structures
+           write(filepath, '(A,"/",A,I0.2)') trim(dirname), trim(subdir_prefix), generator%structure_data(i)%match_idx
+           if(generator%structure_data(i)%shift_idx.gt.0)then
+               write(filepath, '(A,"/",A,"/",A,I0.2)') trim(filepath), trim(shiftdir), trim(subdir_prefix), generator%structure_data(i)%shift_idx
+           end if
+           if(generator%structure_data(i)%swap_idx.gt.0)then
+               write(filepath, '(A,"/",A,"/",A,I0.2)') trim(filepath), trim(swapdir), trim(subdir_prefix), generator%structure_data(i)%swap_idx
+           end if
+           call system("mkdir -p " // trim(filepath))
+           write(filename, '(A,"/",A)') trim(filepath), "POSCAR"
+           open(newunit=unit, status='replace', file=trim(filename))
+           call geom_write(unit, generator%structures(i))
+           close(unit)
+        end do
      else
         call generator%restart(struc1_bas)
      end if
