@@ -116,8 +116,8 @@ contains
     struc2_file=""
     out_filename=""
     dirname="DINTERFACES"
-    shiftdir="DSHIFTS"
-    swapdir="DSWAPS"
+    shiftdir="DSHIFT"
+    swapdir="DSWAP"
     subdir_prefix="D"
     n=1
     clock = 0
