@@ -210,12 +210,6 @@ License
 ------------
 This work is licensed under a [GPL v3 license]([https://opensource.org/license/mit/](https://www.gnu.org/licenses/gpl-3.0.en.html)).
 
-Code Coverage
--------------
-
-Automated reporting on unit test code coverage in the README is achieved through utilising the [cmake-modules](https://github.com/rpavlik/cmake-modules) and [dynamic-badges-action](https://github.com/Schneegans/dynamic-badges-action?tab=readme-ov-file) projects.
-
-
 Developers
 ------------
 - Ned Thaddues Taylor  
