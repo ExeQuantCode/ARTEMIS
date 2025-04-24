@@ -53,12 +53,16 @@ program artemis_executable
         )
 
         structures = generator%get_terminations(1, &
+             surface = lw_surf, &
              num_layers = lw_num_layers, &
              thickness = lw_thickness, &
              orthogonalise = lortho &
         )
+        filepath = "DTERMINATIONS"
+        call system("mkdir -p " // trim(filepath))
         do i = 1, size(structures)
-           write(filename, '(A,I0,A)') "term_", i, ".vasp"
+           write(filename, '(A,"/POSCAR_term",I0)') &
+                trim(adjustl(filepath)), i
            open(newunit=unit, status='replace', file=trim(filename))
            call geom_write(unit, structures(i))
            close(unit)
@@ -131,8 +135,11 @@ program artemis_executable
                 thickness = lw_thickness, &
                 orthogonalise = lortho &
            )
+           filepath = "DTERMINATIONS/DLW_TERMS"
+           call system("mkdir -p " // trim(filepath))
            do i = 1, size(structures)
-              write(filename, '(A,I0,A)') "lw_term_", i, ".vasp"
+              write(filename, '(A,"/POSCAR_term",I0)') &
+                   trim(adjustl(filepath)), i
               open(newunit=unit, status='replace', file=trim(filename))
               call geom_write(unit, structures(i))
               close(unit)
@@ -148,8 +155,11 @@ program artemis_executable
                 thickness = up_thickness, &
                 orthogonalise = lortho &
            )
+           filepath = "DTERMINATIONS/DUP_TERMS"
+           call system("mkdir -p " // trim(filepath))
            do i = 1, size(structures)
-              write(filename, '(A,I0,A)') "up_term_", i, ".vasp"
+              write(filename, '(A,"/POSCAR_term",I0)') &
+                   trim(adjustl(filepath)), i
               open(newunit=unit, status='replace', file=trim(filename))
               call geom_write(unit, structures(i))
               close(unit)
