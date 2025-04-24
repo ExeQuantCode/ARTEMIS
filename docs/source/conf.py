@@ -5,8 +5,8 @@ import datetime
 import os
 import sys
 
-# from unittest.mock import Mock
-#
+from unittest.mock import Mock
+
 MOCK_MODULES = ["artemis._artemis"]  # List any other modules if needed
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
