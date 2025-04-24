@@ -1332,7 +1332,6 @@ contains
 
     integer :: ntrans, iunique, itmp1, num_structures_old
     integer :: layered_axis_lw, layered_axis_up
-    real(real32) :: dtmp1, bondlength
     type(confine_type) :: confine
     type(latmatch_type) :: SAV
     type(term_arr_type) :: lw_term, up_term
