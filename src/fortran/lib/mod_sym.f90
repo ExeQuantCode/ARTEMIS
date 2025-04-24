@@ -1134,10 +1134,9 @@ contains
     !!-----------------------------------------------------------------------
     !! Reduce the lattice to symmetry definition
     !!-----------------------------------------------------------------------
-    call reducer(basis)
     !! next line necessary as FCC and BCC do not conform to Niggli reduced ...
     !! ... cell definitions.
-    basis%lat = primitive_lat(basis%lat)
+    call primitive_lat(basis)
 
 
     

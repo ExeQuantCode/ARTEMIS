@@ -1433,16 +1433,14 @@ contains
        call get_primitive_cell(structure_lw, tol_sym=this%tol_sym)
     else
        if(verbose_.gt.0) write(*,'(1X,"Using supplied cell for lower material")')
-       call reducer(structure_lw)
-       structure_lw%lat = primitive_lat(structure_lw%lat)
+       call primitive_lat(structure_lw)
     end if
     if(this%use_pricel_up)then
        if(verbose_.gt.0) write(*,'(1X,"Using primitive cell for upper material")')
        call get_primitive_cell(structure_up, tol_sym=this%tol_sym)
     else
        if(verbose_.gt.0) write(*,'(1X,"Using supplied cell for upper material")')
-       call reducer(structure_up)
-       structure_up%lat = primitive_lat(structure_up%lat)
+       call primitive_lat(structure_up)
     end if
 
 
