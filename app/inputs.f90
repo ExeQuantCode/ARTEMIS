@@ -587,7 +587,7 @@ contains
     character(1024) :: buffer,tagname,store
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(13) :: readvar
+    integer, dimension(14) :: readvar
     logical, optional, intent(in) :: skip
     character(len=6), dimension(4) :: &
          tag_list = ["axis  ","loc   ","val   ","bounds"]
@@ -678,6 +678,8 @@ contains
           call assign(buffer,lnorm_lat,        readvar(12))
        case("MIN_THICKNESS")
           call assign(buffer,lw_thickness,     readvar(13))
+       case("USE_PRICEL")
+          call assign(buffer,lw_use_pricel,    readvar(14))
        case default
           write(*,'("NOTE: unable to assign variable on line ",I0)') count
        end select

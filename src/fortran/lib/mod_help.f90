@@ -29,7 +29,7 @@ module mod_help
 
 
   ! Cell_edits number of tags
-  integer, parameter :: ntags_cell_edits=13
+  integer, parameter :: ntags_cell_edits=14
   ! Cell_edits tags
   integer, parameter :: iout_file_tag=1
   integer, parameter :: ilsurf_gen_CE_tag=2
@@ -44,6 +44,7 @@ module mod_help
   integer, parameter :: isurf_tag=11
   integer, parameter :: ilnorm_lat_tag=12
   integer, parameter :: imin_thick_tag=13
+  integer, parameter :: iuse_pricel_tag=14
 
   integer, parameter :: ntags_depr_cell_edits=1
   ! Cell_edits deprecated tags
@@ -333,6 +334,15 @@ contains
          'Defines the minimum thickness of the lower crystal (in Å).\n&
          &The generated slab will be the smallest possible thickness equal to &
          &or greater than this value.'
+
+    tag(iuse_pricel_tag)%name    = 'USE_PRICEL'
+    tag(iuse_pricel_tag)%type    = 'L'
+    tag(iuse_pricel_tag)%summary = 'Use primitive cell'
+    tag(iuse_pricel_tag)%allowed = 'TRUE or FALSE'
+    tag(iuse_pricel_tag)%default = 'TRUE'
+    tag(iuse_pricel_tag)%description = &
+         'Defines whether to generate and use the primitive unit cell &
+         &for the crystal'
 
     tag(imiller_tag)%name    = 'MILLER_PLANE'
     tag(imiller_tag)%type    = 'U'
