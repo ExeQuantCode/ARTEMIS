@@ -47,6 +47,7 @@ Installation using pip
 For Python, the easiest installation is through pip:
 
 .. code-block:: bash
+
     pip install .
 
 Depending on your setup, this will install the Python package and all its dependencies in different places.
