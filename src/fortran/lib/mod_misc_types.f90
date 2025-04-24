@@ -23,6 +23,10 @@ module artemis__misc_types
      logical :: from_pricel_up = .false.
      integer, dimension(2) :: term_lw_idx = 0
      integer, dimension(2) :: term_up_idx = 0
+     real(real32), dimension(4) :: term_lw_bounds = 0._real32
+     real(real32), dimension(4) :: term_up_bounds = 0._real32
+     integer, dimension(2) :: term_lw_natom = 0
+     integer, dimension(2) :: term_up_natom = 0
      integer, dimension(3,3) :: transform_lw = 0
      integer, dimension(3,3) :: transform_up = 0
      real(real32) :: approx_thickness_lw = 0._real32
@@ -32,8 +36,7 @@ module artemis__misc_types
      ! real(real32), dimension(:,:) :: swaps !!! UNSURE HOW TO DO THIS
      real(real32) :: swap_density = 0._real32
      real(real32), dimension(2) :: approx_eff_swap_conc = 0._real32
-  !  contains
-  !    procedure, pass(this) :: init => init_struc_data_type
+
   end type struc_data_type
 
   interface struc_data_type
@@ -41,6 +44,8 @@ module artemis__misc_types
           match_idx, &
           from_pricel_lw, from_pricel_up, &
           term_lw_idx, term_up_idx, &
+          term_lw_bounds, term_up_bounds, &
+          term_lw_natom, term_up_natom, &
           transform_lw, transform_up, &
           approx_thickness_lw, approx_thickness_up, &
           mismatch, &
@@ -50,6 +55,8 @@ module artemis__misc_types
        integer, intent(in) :: match_idx
        logical, intent(in) :: from_pricel_lw, from_pricel_up
        integer, dimension(2), intent(in) :: term_lw_idx, term_up_idx
+       real(real32), dimension(4), intent(in) :: term_lw_bounds, term_up_bounds
+       integer, dimension(2), intent(in) :: term_lw_natom, term_up_natom
        integer, dimension(3,3), intent(in) :: transform_lw, transform_up
        real(real32), intent(in) :: approx_thickness_lw, approx_thickness_up
        real(real32), dimension(3), intent(in) :: mismatch
@@ -115,6 +122,8 @@ contains
        match_idx, &
        from_pricel_lw, from_pricel_up, &
        term_lw_idx, term_up_idx, &
+       term_lw_bounds, term_up_bounds, &
+       term_lw_natom, term_up_natom, &
        transform_lw, transform_up, &
        approx_thickness_lw, approx_thickness_up, &
        mismatch, &
@@ -125,6 +134,8 @@ contains
     integer, intent(in) :: match_idx
     logical, intent(in) :: from_pricel_lw, from_pricel_up
     integer, dimension(2), intent(in) :: term_lw_idx, term_up_idx
+    real(real32), dimension(4), intent(in) :: term_lw_bounds, term_up_bounds
+    integer, dimension(2), intent(in) :: term_lw_natom, term_up_natom
     integer, dimension(3,3), intent(in) :: transform_lw, transform_up
     real(real32), intent(in) :: approx_thickness_lw, approx_thickness_up
     real(real32), dimension(3), intent(in) :: mismatch
@@ -141,6 +152,10 @@ contains
     output%from_pricel_up = from_pricel_up
     output%term_lw_idx = term_lw_idx
     output%term_up_idx = term_up_idx
+    output%term_lw_bounds = term_lw_bounds
+    output%term_up_bounds = term_up_bounds
+    output%term_lw_natom = term_lw_natom
+    output%term_up_natom = term_up_natom
     output%transform_lw = transform_lw
     output%transform_up = transform_up
     output%approx_thickness_lw = approx_thickness_lw

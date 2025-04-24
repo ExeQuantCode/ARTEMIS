@@ -5,7 +5,7 @@
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
 module artemis__generator
-  use artemis__constants,     only: real32, ierror, pi
+  use artemis__constants,     only: real32, pi
   use artemis__misc,          only: to_lower,to_upper
   use artemis__misc_types,    only: abstract_artemis_generator_type, latmatch_type, tol_type, struc_data_type
   use artemis__geom_rw,       only: basis_type,geom_write
@@ -117,6 +117,11 @@ module artemis__generator
     !! Get the shifts for all structures
     procedure, pass(this) :: get_structure_shift
     !! Get the shifts for a specific structure
+
+    procedure, pass(this) :: write_match_and_term_data
+    !! Write the match and termination data to a file
+    procedure, pass(this) :: write_shift_data
+    !! Write the shift data to a file
 
     procedure, pass(this) :: set_tolerance
     !! Set tolerance for identifying good lattice matches
@@ -1728,33 +1733,13 @@ contains
        !! Determines the cell change for the upper lattice to get the new DON
        !!-----------------------------------------------------------------------
        if(this%shift_method.eq.4)then
-          !! Issue with using this method when large deformations result in large
-          !! angle changes. REMOVING IT FOR NOW AND RETURNING TO CALCULATING DONS
-          !! FOR THE SUPERCELL.
           t1up_map=0 !TEMPORARY TO USE SUPERCELL DONS.
-          !do i=1,2
-          !   mtmp1(i,:) = &
-          !        ( modu(lw_lat(i,:)) )*uvec(supercell_up%lat(i,:))
-          !end do
-          !mtmp1(3,:) = supercell_up%lat(3,:)
           !DONsupercell_up%lat = matmul(mtmp1,inverse(real(SAV%tf2(ifit,:,:),real32)))
-          !if(ierror.eq.1)then
-          !   write(0,*) "#####################################"
-          !   write(0,*) "ifit", ifit
-          !   write(0,*) "undeformed lattice"
-          !   write(0,'(3(2X,F6.2))') (mtmp1(i,:),i=1,3)
-          !   write(0,*)
-          !   write(0,*) "deformed lattice"
-          !   write(0,'(3(2X,F8.4))') (DONsupercell_up%lat(i,:),i=1,3)
-          !   write(0,*)
-          !end if
           deallocate(bulk_DON(2)%spec)
           bulk_DON(2)%spec=gen_DON(supercell_up%lat,supercell_up,&
                dist_max=this%bondlength_cutoff,&
                scale_dist=.false.,&
                norm=.true.)
-          !call err_abort_print_struc(structure_up,"bulk_up_term.vasp",&
-          !     "",.false.)
        end if
 
 
@@ -1785,7 +1770,7 @@ contains
        if(.not.compare_stoichiometry(structure_lw,supercell_lw))then
           write(0,'(1X,"ERROR: Internal error in generate_interfaces")')
           write(0,'(2X,"The gldfnd subroutine could not reproduce a valid primitive cell for the lower material on match ",I0)') ifit
-          if(ierror.eq.1)then
+          if(verbose_.gt.1)then
              call err_abort_print_struc(supercell_lw, "broken_primitive.vasp", &
               "Code exiting due to IPRINT = 1")
           end if
@@ -1878,7 +1863,7 @@ contains
        if(.not.compare_stoichiometry(structure_up,supercell_up))then
           write(0,'(1X,"ERROR: Internal error in generate_interfaces")')
           write(0,'(2X,"The gldfnd subroutine could not reproduce a valid primitive cell for the upper material on match ",I0)') ifit
-          if(ierror.eq.1)then
+          if(verbose_.gt.1)then
              call err_abort_print_struc(supercell_up, "broken_primitive.vasp", &
               "Code exiting due to IPRINT = 1")
           end if
@@ -2062,16 +2047,16 @@ contains
                   this%vacuum_gap)/modu(intf_basis%lat(this%axis,:))
              intf_loc(2) = ( modu(slab_lw%lat(this%axis,:)) + modu(slab_up%lat(this%axis,:)) + &
                   1.5_real32*init_offset(this%axis) - 2._real32*this%vacuum_gap )/modu(intf_basis%lat(this%axis,:))
-             if(ierror.ge.1)then
+             if(verbose_.ge.1)then
                 write(0,*) "interface:",intf_loc
-                if(ierror.eq.1.and.iunique.eq.icheck_term_pair_-1)then
+                if(verbose_.eq.1.and.iunique.eq.icheck_term_pair_-1)then
                   !  call chdir(intf_dir)
                    call err_abort_print_struc(slab_lw,"lw_term.vasp",&
                         "",.false.)
                    call err_abort_print_struc(slab_up,"up_term.vasp",&
                         "As IPRINT = 1 and ICHECK has been set, &
                         &code is now exiting...")
-                elseif(ierror.eq.2.and.iunique.eq.icheck_term_pair_-1)then
+                elseif(verbose_.eq.2.and.iunique.eq.icheck_term_pair_-1)then
                   !  call chdir(intf_dir)
                    call err_abort_print_struc(intf_basis,"test_intf.vasp",&
                         "As IPRINT = 2 and ICHECK has been set, &
@@ -2091,14 +2076,30 @@ contains
              !------------------------------------------------------------------
              ! Write information of current match to file in save directory
              !------------------------------------------------------------------
-             call output_intf_data(SAV, ifit, lw_term, iterm_lw, up_term, iterm_up,&
-                  this%use_pricel_lw, this%use_pricel_up)
+            !  call output_intf_data(SAV, ifit, lw_term, iterm_lw, up_term, iterm_up,&
+            !       this%use_pricel_lw, this%use_pricel_up)
              struc_data = struc_data_type( &
                   match_idx = ifit, &
                   from_pricel_lw = this%use_pricel_lw, &
                   from_pricel_up = this%use_pricel_up, &
-                  term_lw_idx = iterm_lw, &
-                  term_up_idx = iterm_up, &
+                  term_lw_idx = [iterm_lw,max(surface_lw_(2),iterm_lw)], &
+                  term_up_idx = [iterm_up,max(surface_up_(2),iterm_up)], &
+                  term_lw_bounds = [ lw_term%arr(iterm_lw)%hmin, &
+                                     lw_term%arr(iterm_lw)%hmax, &
+                                     lw_term%arr(max(surface_lw_(2),iterm_lw))%hmin, &
+                                     lw_term%arr(max(surface_lw_(2),iterm_lw))%hmax &
+                  ], &
+                  term_up_bounds = [ up_term%arr(iterm_up)%hmin, &
+                                     up_term%arr(iterm_up)%hmax, &
+                                     up_term%arr(max(surface_up_(2),iterm_up))%hmin, &
+                                     up_term%arr(max(surface_up_(2),iterm_up))%hmax &
+                  ], &
+                  term_lw_natom = [ lw_term%arr(iterm_lw)%natom, &
+                       lw_term%arr(max(surface_lw_(2),iterm_lw))%natom &
+                  ], &
+                  term_up_natom = [ up_term%arr(iterm_up)%natom, &
+                       up_term%arr(max(surface_up_(2),iterm_up))%natom &
+                  ], &
                   approx_thickness_lw = max(thickness_lw_,height_lw), &
                   approx_thickness_up = max(thickness_up_,height_up), &
                   transform_lw = SAV%tf1(ifit,:,:), &
@@ -2233,7 +2234,7 @@ contains
                nstore=this%num_shifts, &
                c_scale=this%separation_scale, &
                offset=this%shifts(1,:3),&
-               lprint=print_shift_info, &
+               verbose=merge(1,verbose,print_shift_info), &
                bulk_DON=bulk_DON,bulk_map=map,&
                max_bondlength=this%bondlength_cutoff,&
                tol_sym=this%tol_sym)
@@ -2245,7 +2246,7 @@ contains
                nstore=this%num_shifts, &
                c_scale=this%separation_scale, &
                offset=this%shifts(1,:3),&
-               lprint=print_shift_info,&
+               verbose=merge(1,verbose,print_shift_info), &
                max_bondlength=this%bondlength_cutoff,&
                tol_sym=this%tol_sym)
        end if
@@ -2352,9 +2353,12 @@ contains
        if_swap: if(this%swap_method.ne.0)then
           bas_arr = rand_swapper(tbas%lat,tbas,this%axis,this%swap_depth,&
                nswaps_per_cell,this%num_swaps,intf_loc,this%swap_method,&
-               seed_arr,tol_sym=this%tol_sym,&
-               sigma=this%swap_sigma,&
-               require_mirror=this%require_mirror_swaps)
+               seed_arr, &
+               tol_sym = this%tol_sym, &
+               verbose = verbose, &
+               sigma=this%swap_sigma, &
+               require_mirror=this%require_mirror_swaps &
+          )
           ngen_swaps = this%num_swaps
           LOOPswaps: do l=1,this%num_swaps
              if (bas_arr(l)%nspec.eq.0) then
@@ -2404,51 +2408,150 @@ contains
 !!!#############################################################################
 
 
-!!!#############################################################################
-!!! write structure data in each structure directory
-!!!#############################################################################
-  subroutine output_intf_data(SAV, ifit, lw_term, term_lw_idx, up_term, term_up_idx, lw_pricel,up_pricel)
+!###############################################################################
+  subroutine write_match_and_term_data(this, idx, directory, filename)
+    !! This subroutine writes the match and termination data to a file
     implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(in) :: this
+    !! Instance of artemis generator type
+    integer, intent(in) :: idx
+    !! List of indices for the structures to be written
+    character(len=*), intent(in) :: directory
+    !! Directory where the files will be written
+    character(len=*), intent(in) :: filename
+    !! Name of the file to be written
+
+    ! Local variables
     integer :: unit
 
-    integer, intent(in) :: ifit, term_lw_idx, term_up_idx
-    logical, intent(in) :: lw_pricel,up_pricel
-    type(term_arr_type), intent(in) :: lw_term, up_term
-    type(latmatch_type), intent(in) :: SAV
 
+    open(newunit=unit, file=trim(adjustl(directory))//"/"//trim(adjustl(filename)))
+    associate( struc_data => this%structure_data(idx) )
+       write(unit,'("Lower material primitive cell used: ",L1)') struc_data%from_pricel_lw
+       write(unit,'("Upper material primitive cell used: ",L1)') struc_data%from_pricel_up
+       write(unit,*)
+       write(unit,'("Lattice match: ",I0)') struc_data%match_idx
+       write(unit,'((1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
+            "a", "b", "c", "a", "b", "c", &
+            struc_data%transform_lw(1,1:3), struc_data%transform_up(1,1:3), &
+            struc_data%transform_lw(2,1:3), struc_data%transform_up(2,1:3), &
+            struc_data%transform_lw(3,1:3), struc_data%transform_up(3,1:3)
+       write(unit,'(" vector mismatch (%) = ",F0.9)') struc_data%mismatch(1)
+       write(unit,'(" angle mismatch (°)  = ",F0.9)') struc_data%mismatch(2) * 180._real32 / pi
+       write(unit,'(" area mismatch (%)   = ",F0.9)') struc_data%mismatch(3)
+       write(unit,*)
+       write(unit,'(" Lower crystal Miller plane: ",3(I3," "))') struc_data%transform_lw(3,1:3)
+       write(unit,'(" Lower termination")')
+       write(unit,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
+       write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+               struc_data%term_lw_idx(1), &
+               struc_data%term_lw_bounds(1:2), &
+               struc_data%term_lw_natom(1)
+       write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+               struc_data%term_lw_idx(2), &
+               struc_data%term_lw_bounds(3:4), &
+               struc_data%term_lw_natom(2)
+       write(unit,*)
+       write(unit,'(" Upper crystal Miller plane: ",3(I3," "))') struc_data%transform_up(3,1:3)
+       write(unit,'(" Upper termination")')
+       write(unit,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
+       write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+               struc_data%term_up_idx(1), &
+               struc_data%term_up_bounds(1:2), &
+               struc_data%term_up_natom(1)
+       write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+               struc_data%term_up_idx(2), &
+               struc_data%term_up_bounds(3:4), &
+               struc_data%term_up_natom(2)
+       write(unit,*)
+    end associate
 
-    
-    unit=99
-    open(unit=unit, file="struc_dat.txt")
-    write(unit,'("Lower material primitive cell used: ",L1)') lw_pricel
-    write(unit,'("Upper material primitive cell used: ",L1)') lw_pricel
-    write(unit,*)
-    write(unit,'("Lattice match: ",I0)') ifit
-    write(unit,'((1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
-         SAV%abc,SAV%abc,&
-         SAV%tf1(ifit,1,1:3),SAV%tf2(ifit,1,1:3),&
-         SAV%tf1(ifit,2,1:3),SAV%tf2(ifit,2,1:3),&
-         SAV%tf1(ifit,3,1:3),SAV%tf2(ifit,3,1:3)
-    write(unit,'(" vector mismatch (%) = ",F0.9)') SAV%tol(ifit,1)
-    write(unit,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(ifit,2)*180/pi
-    write(unit,'(" area mismatch (%)   = ",F0.9)') SAV%tol(ifit,3)
-    write(unit,*)
-    write(unit,'(" Lower crystal Miller plane: ",3(I3," "))') SAV%tf1(ifit,3,1:3)
-    write(unit,'(" Lower termination")')
-    write(unit,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
-    write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
-            term_lw_idx,lw_term%arr(term_lw_idx)%hmin,lw_term%arr(term_lw_idx)%hmax,lw_term%arr(term_lw_idx)%natom
-    write(unit,*)
-    write(unit,'(" Upper crystal Miller plane: ",3(I3," "))') SAV%tf2(ifit,3,1:3)
-    write(unit,'(" Upper termination")')
-    write(unit,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
-    write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
-            term_up_idx,up_term%arr(term_up_idx)%hmin,up_term%arr(term_up_idx)%hmax,up_term%arr(term_up_idx)%natom
-    write(unit,*)
     close(unit)
+
+  end subroutine write_match_and_term_data
+!###############################################################################
+
+
+!###############################################################################
+  subroutine write_shift_data(this, idx_list, directory, filename)
+    !! This subroutine writes the shift data to a file
+    implicit none
+
+    ! Arguments
+    class(artemis_generator_type), intent(in) :: this
+    !! Instance of artemis generator type
+    integer, dimension(:), intent(in) :: idx_list
+    !! List of indices for the structures to be written
+    character(len=*), intent(in) :: directory
+    !! Directory where the files will be written
+    character(len=*), intent(in) :: filename
+    !! Name of the file to be written
+
+    ! Local variables
+    integer :: i
+    integer :: unit
+
+
+    open(newunit=unit, file=trim(adjustl(directory))//"/"//trim(adjustl(filename)))
+    write(unit, &
+         '("# shift_num    shift (a,b,c) units=(direct,direct,Å)")')
+    do i = 1, size(idx_list), 1
+       write(unit,'(2X,I0.2,15X,"(",2(" ",F9.6,", ")," ",F9.6," )")') &
+            idx_list(i), this%structure_data(idx_list(i))%shift
+    end do
+    close(unit)
+
+  end subroutine write_shift_data
+!###############################################################################
+
+
+! !!!#############################################################################
+! !!! write structure data in each structure directory
+! !!!#############################################################################
+!   subroutine output_intf_data(SAV, ifit, lw_term, term_lw_idx, up_term, term_up_idx, lw_pricel,up_pricel)
+!     implicit none
+!     integer :: unit
+
+!     integer, intent(in) :: ifit, term_lw_idx, term_up_idx
+!     logical, intent(in) :: lw_pricel,up_pricel
+!     type(term_arr_type), intent(in) :: lw_term, up_term
+!     type(latmatch_type), intent(in) :: SAV
+
+
     
-    return
-  end subroutine output_intf_data
-!!!#############################################################################
+!     unit=99
+!     open(unit=unit, file="struc_dat.txt")
+!     write(unit,'("Lower material primitive cell used: ",L1)') lw_pricel
+!     write(unit,'("Upper material primitive cell used: ",L1)') lw_pricel
+!     write(unit,*)
+!     write(unit,'("Lattice match: ",I0)') ifit
+!     write(unit,'((1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
+!          SAV%abc,SAV%abc,&
+!          SAV%tf1(ifit,1,1:3),SAV%tf2(ifit,1,1:3),&
+!          SAV%tf1(ifit,2,1:3),SAV%tf2(ifit,2,1:3),&
+!          SAV%tf1(ifit,3,1:3),SAV%tf2(ifit,3,1:3)
+!     write(unit,'(" vector mismatch (%) = ",F0.9)') SAV%tol(ifit,1)
+!     write(unit,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(ifit,2)*180/pi
+!     write(unit,'(" area mismatch (%)   = ",F0.9)') SAV%tol(ifit,3)
+!     write(unit,*)
+!     write(unit,'(" Lower crystal Miller plane: ",3(I3," "))') SAV%tf1(ifit,3,1:3)
+!     write(unit,'(" Lower termination")')
+!     write(unit,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
+!     write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+!             term_lw_idx,lw_term%arr(term_lw_idx)%hmin,lw_term%arr(term_lw_idx)%hmax,lw_term%arr(term_lw_idx)%natom
+!     write(unit,*)
+!     write(unit,'(" Upper crystal Miller plane: ",3(I3," "))') SAV%tf2(ifit,3,1:3)
+!     write(unit,'(" Upper termination")')
+!     write(unit,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
+!     write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
+!             term_up_idx,up_term%arr(term_up_idx)%hmin,up_term%arr(term_up_idx)%hmax,up_term%arr(term_up_idx)%natom
+!     write(unit,*)
+!     close(unit)
+    
+!     return
+!   end subroutine output_intf_data
+! !!!#############################################################################
 
 end module artemis__generator

@@ -14,7 +14,7 @@
 !!! convert_n_tf1!!! endcode
 !!!#############################################################################
 module lat_compare
-  use artemis__constants, only: real32, pi, INF, ierror
+  use artemis__constants, only: real32, pi, INF
   use artemis__misc_types, only: latmatch_type, tol_type
   use misc_linalg, only: cross,uvec,modu,get_area,find_tf,det,reduce_vec_gcd,&
        inverse_3x3,get_vec_multiple,get_frac_denom
@@ -1196,7 +1196,7 @@ contains
        if_reduce: if(reduce)then
           tf = find_tf(comb_trans_1(i,:,:),comb_trans_2(i,:,:))
           if(abs(abs(det(comb_trans_1(i,:,:)))-1._real32).lt.1.E-6_real32) exit if_reduce
-          if(ierror.eq.1)then
+          if(verbose.ge.1)then
              write(0,*) i
              write(0,'( 3( 3(F7.3,1X), /) )') tf
           end if

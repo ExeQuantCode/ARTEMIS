@@ -4,7 +4,7 @@
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
 module shifting
-  use artemis__constants, only: real32, ierror, pi, INF
+  use artemis__constants, only: real32, pi, INF
   use misc_maths, only: get_nth_plane
   use misc_linalg, only: modu
   use artemis__geom_rw, only: basis_type,geom_write
@@ -741,7 +741,7 @@ contains
 !!! generate shifts by filling missing neighours for surface atoms
 !!!#############################################################################
   function get_shifts_DON(bas,axis,intf_loc,nstore,tol_sym,c_scale,offset,&
-       bulk_DON,bulk_map,lprint,max_bondlength) result(res_shifts)
+       bulk_DON,bulk_map,verbose,max_bondlength) result(res_shifts)
     use artemis__sym, only: gldfnd,confine_type
     use artemis__geom_utils, only: get_bulk,wyck_spec_type,get_wyckoff
     use artemis__interface_identifier, only: gen_single_DON,nstep_default,den_of_neigh_type
@@ -756,11 +756,11 @@ contains
     !! Number of shifts to be generated
     real(real32), intent(in) :: tol_sym
     !! Tolerance for symmetry
-    real(real32), optional :: c_scale
+    real(real32), intent(in), optional :: c_scale
     !! Scaling factor for the interface separation
     real(real32), dimension(3), optional, intent(in) :: offset
     !! Input offset of the two interface substructures
-    logical, optional :: lprint
+    integer, intent(in), optional :: verbose
     !! Boolean whether to print the shifts
     type(bulk_DON_type), dimension(:), optional, intent(in) :: bulk_DON
     !! Bulk DONs to be used for the interface
@@ -772,6 +772,7 @@ contains
 
     integer :: i,j,k,l,is,ia,ja,jb,jc,count1,itmp1
     integer :: ntrans,iatom,nneigh,ncheck
+    integer :: verbose_
     real(real32) :: stepsize,max_sep,dist_max
     real(real32) :: rtmp1,rtmp2,rtmp3
     real(real32) :: val,dtmp1,dtmp2
@@ -815,6 +816,8 @@ contains
 
 
 
+    verbose_ = 0
+    if(present(verbose)) verbose_ = verbose
 !!!-----------------------------------------------------------------------------
 !!! check if bulk DONs supplied
 !!!-----------------------------------------------------------------------------
@@ -872,7 +875,7 @@ contains
     where(abs(min_trans).lt.1.E-5_real32)
        min_trans=1._real32
     end where
-    if(ierror.eq.1) write(*,*) "repeated_trans:",min_trans
+    if(verbose_.eq.1) write(*,*) "repeated_trans:",min_trans
 
 
 !!!-----------------------------------------------------------------------------
@@ -908,9 +911,9 @@ contains
        dist_max = 4.0
     end if
     allocate(DON_missing(2,bas%nspec))
-    if(ierror.ge.1) write(*,*)
+    if(verbose_.ge.1) write(*,*)
     region_loop: do i=1,2
-       if(ierror.ge.1) write(*,'&
+       if(verbose_.ge.1) write(*,'&
             &(2X,"is",2X,"ia",4X,"nmissing",4X,"bond size (Å)",8X,"position")')
 
        count1 = 0
@@ -993,7 +996,7 @@ contains
                      ( maxloc(DON_missing(i,is)%atom(ia,:plane_loc(1)),dim=1) &
                      - 1 ) * dist_max/nstep_default
                 neighbour(i,count1)%num = itmp1
-                if(ierror.ge.1)&
+                if(verbose_.ge.1)&
                      write(*,'(2X,I2,3X,I3,7X,I2,9X,F0.3,8X,3(1X,F5.2))') &
                      is,ia,&
                      neighbour(i,count1)%num,&
@@ -1035,7 +1038,7 @@ contains
              end if
           end do atom_loop1
        end do spec_loop
-       if(ierror.ge.1)then
+       if(verbose_.ge.1)then
           write(*,*) "nneigh:",count1
           write(*,*)
        end if
@@ -1061,7 +1064,7 @@ contains
     intf(2)%neigh(:)%pos(3) = intf(2)%neigh(:)%pos(3) - lowest_atom(2)
     lowest_atom(1) = minval(intf(1)%neigh(:)%pos(3),dim=1)
     highest_atom(2) = maxval(intf(2)%neigh(:)%pos(3),dim=1)
-    if(abs(ierror).ge.1)then
+    if(abs(verbose_).ge.1)then
        write(*,*) "lowest atom:",lowest_atom
        write(*,*) "highest atom:",highest_atom
     end if
@@ -1101,7 +1104,7 @@ contains
        nstep(3) = nstep(3) + 1
     end do
     if(present(offset))then
-       if(ierror.ge.1) write(*,'(1X,"user-defined offset:",3(3X,F7.3))') offset
+       if(verbose_.ge.1) write(*,'(1X,"user-defined offset:",3(3X,F7.3))') offset
        add = -1.0
        do i=1,3
           if(offset(i).ge.0._real32)then
@@ -1124,7 +1127,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Determines neighbours for each grid point 
 !!!-----------------------------------------------------------------------------
-    if(abs(ierror).ge.1)then
+    if(abs(verbose_).ge.1)then
        write(*,'(1X,A,3(2X,F8.4))') &
             "lat:",modu(bas%lat(1,:)),modu(bas%lat(2,:)),modu(bas%lat(3,:))
        write(*,'(1X,A,3(2X,F8.4))') "gridsize:",gridsize
@@ -1282,26 +1285,27 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Sets output of shifts
 !!!-----------------------------------------------------------------------------
-    write(*,'("Determined shifts (gridsize:",3(2X,F6.4),")")') gridsize
-    write(*,'(" num   fit_val   x    y    z")')
-    do i=1,nstore
+    if(verbose_.gt.0)then
+       write(*,'("Determined shifts (gridsize:",3(2X,F6.4),")")') gridsize
+       write(*,'(" num   fit_val   x    y    z")')
+    end if
+    do i = 1, nstore, 1
        res_shifts(i,:) = real(shift_store(i,:),real32)/real(ngrid(:)-1,real32)
        res_shifts(i,:2) = res_shifts(i,:2) + add(:2)
-       write(*,'(1X,I3,":",2X,F6.2,3(2X,I3))') i,fit_store(i),shift_store(i,:)
+       if(verbose_.gt.0) &
+            write(*,'(1X,I3,":",2X,F6.2,3(2X,I3))') i,fit_store(i),shift_store(i,:)
     end do
     res_shifts(:,axis) = (res_shifts(:,axis)*max_sep)/modu(bas%lat(axis,:)) + &
          add(axis)
-    if(present(c_scale)) res_shifts(:,axis) = res_shifts(:,axis)*c_scale
+    if(present(c_scale)) res_shifts(:,axis) = res_shifts(:,axis) * c_scale
 
 
-    if(present(lprint))then
-       if(lprint)then
-          write(*,'(1X,"Shifts to be applied (Å)")')
-          do i=1,nstore
-             write(*,'(I3,":",2X,3(2X,F7.4))') &
-                  i,res_shifts(i,:2),res_shifts(i,3)*modu(bas%lat(axis,:))
-          end do
-       end if
+    if(verbose_.gt.0)then
+       write(*,'(1X,"Shifts to be applied (Å)")')
+       do i = 1, nstore, 1
+          write(*,'(I3,":",2X,3(2X,F7.4))') &
+               i,res_shifts(i,:2),res_shifts(i,3)*modu(bas%lat(axis,:))
+       end do
     end if
        
 
