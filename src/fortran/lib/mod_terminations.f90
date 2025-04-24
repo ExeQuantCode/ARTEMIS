@@ -1,9 +1,9 @@
 module artemis__terminations
   !! Module for handling termination identification and generation
-  use artemis__constants, only: real32, tolerance
+  use artemis__constants, only: real32
   use artemis__geom_rw,   only: basis_type, geom_write
   use artemis__misc,      only: sort_col, to_lower, to_upper
-  use artemis__io_utils,  only: err_abort
+  use artemis__io_utils,  only: err_abort, stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
   use misc_linalg,        only: modu, cross, uvec, det
   use artemis__sym,       only: sym_type, check_sym, sym_setup, clone_grp
@@ -16,8 +16,8 @@ module artemis__terminations
   public :: term_arr_type
   public :: get_termination_info
   public :: set_layer_tol
-  public :: set_slab_height
-  public :: build_slab
+  public :: build_slab_supercell
+  public :: cut_slab_to_height
 
 
   type term_type
@@ -75,7 +75,7 @@ contains
     !! Temporary indices
     logical :: lunique, ltmp1, lmirror
     !! Boolean flags
-    real(real32) :: rtmp1, tol, height, max_sep, c_along, centre
+    real(real32) :: rtmp1, height, max_sep, c_along, centre
     !! Temporary variables
     real(real32) :: layer_sep_
     !! Minimum separation between layers
@@ -255,18 +255,19 @@ contains
        inv_mat(i,i) = -1._real32
     end do
     itmp1 = 0
-    do i=1,grp_store%nsym
-       if(all(abs(grp_store%sym(:3,:3,i)-inv_mat).lt.tolerance))then
+    do i = 1, grp_store%nsym
+       if(all(abs(grp_store%sym(:3,:3,i)-inv_mat).lt.tol_sym))then
           itmp1 = i
           exit
        end if
     end do
     if(itmp1.eq.0)then
-       write(err_msg,*) "No inversion symmetry found!"
-       call err_abort(err_msg)
+       call stop_program("No inversion symmetry found!")
+       exit_code = max(exit_code, 1)
+       return
     end if
     do i = 1, grp_store%nsym
-       if(all(abs(grp_store%sym(:3,:3,i)-inv_mat).lt.tolerance)) &
+       if(all(abs(grp_store%sym(:3,:3,i)-inv_mat).lt.tol_sym)) &
             grp_store%sym(4,:3,itmp1) = grp_store%sym(4,:3,i)
     end do
 
@@ -289,13 +290,13 @@ contains
        sym_if: if(i.ne.1)then
           sym_loop1: do j = 1, mterm - 1, 1
              if(abs(abs(term_arr(i)%hmax-term_arr(i)%hmin) - &
-                  abs(term_arr_uniq(j)%hmax-term_arr_uniq(j)%hmin)).gt.tolerance) &
+                  abs(term_arr_uniq(j)%hmax-term_arr_uniq(j)%hmin)).gt.tol_sym) &
                   cycle sym_loop1
              call clone_grp(grp_store,grp1)
              call check_sym(grp1,basis=basis_arr(mterm),&
                   iperm=-1,tmpbas2=basis_arr(j),lsave=.true.,tol_sym=tol_sym)
              if(grp1%nsymop.ne.0)then
-                if(abs(grp1%sym_save(axis,axis,1)+1._real32).lt.tolerance)then
+                if(abs(grp1%sym_save(axis,axis,1)+1._real32).lt.tol_sym)then
                    ireject = ireject + 1
                    reject_match(ireject,:) = [ i, j ]
                    basis_arr_reject(ireject) = basis_arr(mterm)
@@ -600,7 +601,7 @@ contains
 
 
 !###############################################################################
-  subroutine set_slab_height( basis, map, term, surf, &
+  subroutine build_slab_supercell( basis, map, term, surf, &
        height, num_layers, thickness, num_cells, &
        term_start, term_end, term_step &
   )
@@ -667,7 +668,7 @@ contains
        if(any(surf.gt.term%nterm))then
           write(msg, '("INVALID SURFACE VALUES!\nOne or more value &
                &exceeds the maximum number of terminations in the &
-               structure.\n&
+               &structure.\n&
                &  Supplied values: ",I0,1X,I0,"\n&
                &  Maximum allowed: ",I0)') surf, term%nterm
           call err_abort(trim(msg),fmtd=.true.)
@@ -736,6 +737,10 @@ contains
           slab_thickness = abs( dot_product(uvec(cross([ basis%lat(1,:) ], [ basis%lat(3,:) ])), [ basis%lat(2,:) ]) )
        case(3)
           slab_thickness = abs( dot_product(uvec(cross([ basis%lat(1,:) ], [ basis%lat(2,:) ])), [ basis%lat(3,:) ]) )
+       case default
+          write(msg, '("INVALID SURFACE AXIS!")')
+          call stop_program(trim(msg))
+          return
        end select
        ! get the largest separation between two terminations
        if(ludef_surf)then
@@ -826,13 +831,13 @@ contains
     term%tol = term%tol/real(num_cells,real32)
     
 
-  end subroutine set_slab_height
+  end subroutine build_slab_supercell
 !###############################################################################
 
 
 
 !###############################################################################
-  subroutine build_slab( &
+  subroutine cut_slab_to_height( &
        basis, map, term, surf, thickness, num_cells, num_layers, &
        height, prefix, lcycle, &
        orthogonalise, vacuum &
@@ -842,7 +847,7 @@ contains
     !! This procedure builds a slab of the specified terminations from a
     !! supplied supercell. The supercell must be large enough to be able to
     !! be cut down to the required slab size. The supercell is built by
-    !! set_slab_height.
+    !! build_slab_supercell.
     implicit none
 
     ! Arguments
@@ -862,7 +867,7 @@ contains
     integer, intent(in) :: num_cells
     !! Number of cells in the input slab
     real(real32), intent(in) :: height
-    !! Height of the slab if user-defined surf (calculated in set_slab_height)
+    !! Height of the slab if user-defined surf (calculated in build_slab_supercell)
     character(2), intent(in) :: prefix
     !! Prefix for file names
     !! (e.g. "lw" for lower, "up" for upper)
@@ -933,6 +938,10 @@ contains
     case(3)
        surface_normal_vec = uvec(cross( [ basis%lat(1,:) ], [ basis%lat(2,:)] ))
        slab_thickness = abs( dot_product(surface_normal_vec, [ basis%lat(3,:) ]) )
+    case default
+       write(msg, '("INVALID SURFACE AXIS!")')
+       call stop_program(trim(msg))
+       return
     end select
     if(thickness.gt.0._real32)then
        rtmp1 = slab_thickness / num_cells * ( num_cells - 1 )
@@ -1075,7 +1084,7 @@ contains
     call basis%normalise(ceil_val=0.9999_real32,floor_coords=.true.,zero_round=0._real32)
 
 
-  end subroutine build_slab
+  end subroutine cut_slab_to_height
 !###############################################################################
 
 end module artemis__terminations

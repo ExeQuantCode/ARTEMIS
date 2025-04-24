@@ -6,22 +6,24 @@
 !!!#############################################################################
 module artemis__generator
   use artemis__constants,     only: real32, pi
-  use artemis__misc,          only: to_lower,to_upper
-  use artemis__misc_types,    only: abstract_artemis_generator_type, latmatch_type, tol_type, struc_data_type
-  use artemis__geom_rw,       only: basis_type,geom_write
+  use artemis__misc,          only: to_lower, to_upper
+  use artemis__misc_types,    only: abstract_artemis_generator_type, &
+       latmatch_type, tol_type, struc_data_type
+  use artemis__geom_rw,       only: basis_type
   use lat_compare,            only: lattice_matching, cyc_lat1
   use artemis__io_utils,      only: err_abort, print_warning, stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
   use misc_linalg,            only: uvec,modu,get_area,inverse,cross
   use artemis__interface_identifier,   only: intf_info_type,&
        get_interface,get_layered_axis,gen_DON
-  use artemis__geom_utils,              only: planecutter,primitive_lat,ortho_axis,&
-       shift_region,set_vacuum,transformer,shifter,reducer,&
-       get_min_bulk_bond,get_min_bond,get_shortest_bond,bond_type,&
+  use artemis__geom_utils,    only: planecutter, primitive_lat, ortho_axis,&
+       shift_region, set_vacuum, transformer, shifter, reducer, &
+       get_min_bulk_bond, get_min_bond, get_shortest_bond, bond_type, &
        share_strain, MATNORM, basis_stack, compare_stoichiometry
-  use artemis__sym,           only: confine_type,gldfnd,&
+  use artemis__sym,           only: confine_type, gldfnd,&
        get_primitive_cell
-  use artemis__terminations,  only: get_termination_info, term_arr_type, set_slab_height, set_layer_tol, build_slab
+  use artemis__terminations,  only: get_termination_info, term_arr_type, &
+       set_layer_tol, build_slab_supercell, cut_slab_to_height
   use swapping,               only: rand_swapper
   use shifting !!! CHANGE TO SHIFTER?
   implicit none
@@ -571,12 +573,13 @@ contains
     !! Use primitive cell for lower bulk structure
     logical, intent(in), optional :: use_pricel_up
 
-    ! Local variables
-    character(len=256) :: err_msg
 
-
-    if(present(structure_lw)) call this%structure_lw%copy(structure_lw, length=4)
-    if(present(structure_up)) call this%structure_up%copy(structure_up, length=4)
+    if(present(structure_lw))then
+       if(structure_lw%natom.gt.0) call this%structure_lw%copy(structure_lw, length=4)
+    end if
+    if(present(structure_up))then
+       if(structure_up%natom.gt.0) call this%structure_up%copy(structure_up, length=4)
+    end if
 
     !---------------------------------------------------------------------------
     ! Handle the elastic constants
@@ -986,7 +989,7 @@ contains
     call set_layer_tol(term)
 
     ! determine required extension and perform that
-    call set_slab_height(structure, bas_map, term, surface_,&
+    call build_slab_supercell(structure, bas_map, term, surface_,&
          height, num_layers_, thickness_, num_cells,&
          term_start, term_end, term_step &
     )
@@ -1011,7 +1014,7 @@ contains
        call output(i)%copy(structure, length=4)
        if(allocated(t1bas_map)) deallocate(t1bas_map)
        allocate(t1bas_map,source=bas_map)
-       call build_slab(output(i),bas_map,term,[iterm,surface_(2)],&
+       call cut_slab_to_height(output(i),bas_map,term,[iterm,surface_(2)],&
             thickness_, num_cells, num_layers_, height,&
             prefix, lcycle, orthogonalise_, this%vacuum_gap &
        )
@@ -1091,9 +1094,9 @@ contains
     !! Exit code for the program
 
     ! Local variables
-    integer :: is,ia,js,ja
+    integer :: is, ia, js, ja
     !! Loop variables
-    real(real32) :: dtmp1,min_bond,min_bond1,min_bond2
+    real(real32) :: rtmp1,min_bond,min_bond1,min_bond2
     !! Minimum bond length
     type(intf_info_type) :: intf
     !! Interface information
@@ -1115,8 +1118,6 @@ contains
     !! Verbosity level
     integer :: exit_code_
     !! Exit code for the program
-    character(len=256) :: err_msg
-    !! Error message
 
 
     !---------------------------------------------------------------------------
@@ -1171,8 +1172,8 @@ contains
                      structure%spec(js)%atom(ja,intf%axis).lt.intf%loc(2) ) )then
                    vtmp1 = (structure%spec(is)%atom(ia,:3)-structure%spec(js)%atom(ja,:3))
                    vtmp1 = matmul(vtmp1,structure%lat)
-                   dtmp1 = modu(vtmp1)
-                   if(dtmp1.lt.min_bond1) min_bond1 = dtmp1
+                   rtmp1 = modu(vtmp1)
+                   if(rtmp1.lt.min_bond1) min_bond1 = rtmp1
                 elseif( &
                      ( structure%spec(is)%atom(ia,intf%axis).lt.intf%loc(1).or.&
                      structure%spec(is)%atom(ia,intf%axis).gt.intf%loc(2) ).and.&
@@ -1180,8 +1181,8 @@ contains
                      structure%spec(js)%atom(ja,intf%axis).gt.intf%loc(2) ) )then
                    vtmp1 = (structure%spec(is)%atom(ia,:3)-structure%spec(js)%atom(ja,:3))
                    vtmp1 = matmul(vtmp1,structure%lat)
-                   dtmp1 = modu(vtmp1)
-                   if(dtmp1.lt.min_bond2) min_bond2 = dtmp1
+                   rtmp1 = modu(vtmp1)
+                   if(rtmp1.lt.min_bond2) min_bond2 = rtmp1
                 end if
 
              end do atomloop2
@@ -1324,6 +1325,10 @@ contains
 
     type(struc_data_type) :: struc_data
     !! Structure data (i.e. mismatch, terminations, etc)
+    character(len=256) :: filename
+    !! Filename for error output data
+    real(real32) :: rtmp1, bondlength
+    !! Temporary variables
 
     integer :: ntrans, iunique, itmp1, num_structures_old
     integer :: layered_axis_lw, layered_axis_up
@@ -1815,7 +1820,7 @@ contains
        if(any(surface_lw_.gt.lw_term%nterm))then
           write(err_msg, '("surface_lw_ACE VALUES INVALID!\nOne or more value &
                &exceeds the maximum number of terminations in the &
-               structure.\n&
+               &structure.\n&
                &  Supplied values: ",I0,1X,I0,"\n&
                &  Maximum allowed: ",I0)') surface_lw_, lw_term%nterm
           call err_abort(trim(err_msg),fmtd=.true.)
@@ -1839,7 +1844,7 @@ contains
        !!-----------------------------------------------------------------------
        !! Defines height of lower slab from user-defined values
        !!-----------------------------------------------------------------------
-       call set_slab_height(supercell_lw,t1lw_map,lw_term,surface_lw_,&
+       call build_slab_supercell(supercell_lw,t1lw_map,lw_term,surface_lw_,&
             height_lw,num_layers_lw_, thickness_lw_,num_cells_lw,&
             term_lw_start_idx,term_lw_end_idx,term_lw_step &
        )
@@ -1908,7 +1913,7 @@ contains
        if(any(surface_up_.gt.up_term%nterm))then
           write(err_msg, '("surface_up_ACE VALUES INVALID!\nOne or more value &
                &exceeds the maximum number of terminations in the &
-               structure.\n&
+               &structure.\n&
                &  Supplied values: ",I0,1X,I0,"\n&
                &  Maximum allowed: ",I0)') surface_up_, up_term%nterm
           call err_abort(trim(err_msg),fmtd=.true.)
@@ -1932,7 +1937,7 @@ contains
        !!-----------------------------------------------------------------------
        !! Defines height of upper slab from user-defined values
        !!-----------------------------------------------------------------------
-       call set_slab_height(supercell_up,t1up_map,up_term,surface_up_,&
+       call build_slab_supercell(supercell_up,t1up_map,up_term,surface_up_,&
             height_up,num_layers_up_, thickness_up_, num_cells_up,&
             term_up_start_idx,term_up_end_idx,term_up_step &
        )
@@ -1956,7 +1961,7 @@ contains
           !!--------------------------------------------------------------------
           !! Shifts lower material to specified termination
           !!--------------------------------------------------------------------
-          call build_slab(slab_lw,t2lw_map,lw_term,[iterm_lw,surface_lw_(2)],&
+          call cut_slab_to_height(slab_lw,t2lw_map,lw_term,[iterm_lw,surface_lw_(2)],&
                thickness_lw_, num_cells_lw, num_layers_lw_, height_lw,&
                "lw",lcycle, &
                vacuum = this%vacuum_gap &
@@ -1971,7 +1976,7 @@ contains
              call slab_up%copy(supercell_up)
              if(allocated(t2up_map)) deallocate(t2up_map)
              allocate(t2up_map,source=t1up_map)
-             call build_slab(slab_up,t2up_map,up_term,[iterm_up,surface_up_(2)],&
+             call cut_slab_to_height(slab_up,t2up_map,up_term,[iterm_up,surface_up_(2)],&
                   thickness_up_, num_cells_up, num_layers_up_, height_up,&
                   "up",lcycle, &
                   vacuum = this%vacuum_gap &
@@ -2166,10 +2171,9 @@ contains
     integer, intent(inout) :: exit_code
     integer, dimension(:,:,:), optional, intent(in) :: map
 
-    integer :: shift_unit
-    integer :: ounit,iaxis,k,l
+    integer :: iaxis,k,l
     integer :: ngen_swaps,nswaps_per_cell
-    real(real32) :: dtmp1
+    real(real32) :: rtmp1
     type(basis_type) :: tbas
     type(bond_type) :: min_bond
     type(struc_data_type) :: struc_data_shift
@@ -2177,7 +2181,7 @@ contains
     character(len=256) :: err_msg
     integer, dimension(3) :: abc
     real(real32), dimension(3) :: toffset
-    type(basis_type), allocatable, dimension(:) :: bas_arr
+    type(basis_type), allocatable, dimension(:) :: basis_arr
     real(real32), allocatable, dimension(:,:) :: output_shifts
 
 
@@ -2190,20 +2194,6 @@ contains
 
 
 !!!-----------------------------------------------------------------------------
-!!! Sets up and moves to appropriate directories
-!!!-----------------------------------------------------------------------------
-   !  call getcwd(pwd1)
-   !  if(this%shift_method.gt.0.or.this%num_shifts.gt.1)then
-   !     call system('mkdir -p '//trim(adjustl(shiftdir)))
-   !     call chdir(shiftdir)
-   !  end if
-   !  call getcwd(pwd2)
-   !  open(newunit=shift_unit,file="shift_vals.txt")
-   !  write(shift_unit,&
-   !       '("# interface_num    shift (a,b,c) units=(direct,direct,Å)")')
-
-
-!!!-----------------------------------------------------------------------------
 !!! Generates sets of shifts based on shift version
 !!!-----------------------------------------------------------------------------
     if(this%shift_method.eq.0.or.this%shift_method.eq.1) allocate(output_shifts(this%num_shifts,3))
@@ -2211,7 +2201,7 @@ contains
     case(1)
        output_shifts(1,:3)=0._real32
        do k=2,this%num_shifts
-          do iaxis=1,2
+          do iaxis = 1, 2
              call random_number(output_shifts(k,iaxis))
           end do
        end do
@@ -2302,15 +2292,15 @@ contains
                intf_loc(1),intf_loc(2),&
                shift_axis=iaxis,shift=toffset(iaxis),renorm=.true.)
        end do
-       dtmp1=modu(tbas%lat(this%axis,:))
+       rtmp1=modu(tbas%lat(this%axis,:))
        call set_vacuum(&
             basis=tbas,&
             axis=this%axis,loc=maxval(intf_loc(:)),&
             vac=toffset(this%axis))
-       dtmp1=minval(intf_loc(:))*dtmp1/modu(tbas%lat(this%axis,:))
+       rtmp1=minval(intf_loc(:))*rtmp1/modu(tbas%lat(this%axis,:))
        call set_vacuum(&
             basis=tbas,&
-            axis=this%axis,loc=dtmp1,&
+            axis=this%axis,loc=rtmp1,&
             vac=toffset(this%axis))
        min_bond = get_shortest_bond(tbas)
        if(min_bond%length.le.1.5_real32)then
@@ -2323,28 +2313,9 @@ contains
 
 
        !!-----------------------------------------------------------------------
-       !! prints shift vector to shift_vals.txt
-       !!-----------------------------------------------------------------------
-      !  write(shift_unit,'(2X,I0.2,15X,"(",2(" ",F9.6,", ")," ",F9.6," )")') &
-      !       k,toffset(:)
-
-
-       !!-----------------------------------------------------------------------
        !! Merges lower and upper materials
        !! Writes interfaces to output directories
        !!-----------------------------------------------------------------------
-      !  ounit=100+intf
-      !  if(this%shift_method.gt.0.or.this%num_shifts.gt.1)then
-      !     write(dirpath,'(A,I0.2)') trim(adjustl(subdir_prefix)),k
-      !     call system('mkdir -p '//trim(adjustl(dirpath)))
-      !     write(filename,'(A,"/",A)') trim(adjustl(dirpath)),trim(out_filename)
-      !  else
-      !     filename = trim(out_filename)
-      !  end if
-      !  write(*,'(2X,"Writing interface ",I0,"...")') intf
-      !  open(unit=ounit,file=trim(adjustl(filename)))
-      !  call geom_write(ounit,tbas)
-      !  close(ounit)
        struc_data_shift = struc_data
        struc_data_shift%shift_idx = k
        struc_data_shift%shift = toffset
@@ -2358,7 +2329,7 @@ contains
        !! Performs swaps within the shifted structures if requested
        !!-----------------------------------------------------------------------
        if_swap: if(this%swap_method.ne.0)then
-          bas_arr = rand_swapper(tbas%lat,tbas,this%axis,this%swap_depth,&
+          basis_arr = rand_swapper(tbas%lat,tbas,this%axis,this%swap_depth,&
                nswaps_per_cell,this%num_swaps,intf_loc,this%swap_method,&
                seed_arr, &
                tol_sym = this%tol_sym, &
@@ -2368,7 +2339,7 @@ contains
           )
           ngen_swaps = this%num_swaps
           LOOPswaps: do l=1,this%num_swaps
-             if (bas_arr(l)%nspec.eq.0) then
+             if (basis_arr(l)%nspec.eq.0) then
                 ngen_swaps = l - 1
                 exit LOOPswaps
              end if
@@ -2384,32 +2355,13 @@ contains
              struc_data_swaps(l)%swap_density = this%swap_density
              ! struc_data_swaps(l)%approx_eff_swap_conc = 
           end do
-         !  call chdir(dirpath)
-         !  call system('mkdir -p '//trim(adjustl(swapdir)))
-         !  call chdir(swapdir)
-         !  write(*,'(3X,"Number of unique swap structures: ",I0)') ngen_swaps
-          this%structures = [ this%structures, bas_arr(1:ngen_swaps) ]
+          this%structures = [ this%structures, basis_arr(1:ngen_swaps) ]
           this%structure_data = [ this%structure_data, struc_data_swaps ]
-         !  do l=1,ngen_swaps
-         !     write(dirpath,'(A,I0.2)') trim(adjustl(subdir_prefix)),l
-         !     call system('mkdir -p '//trim(adjustl(dirpath)))
-         !     write(filename,'(A,"/",A)') &
-         !          trim(adjustl(dirpath)),trim(out_filename)
-         !     ounit=100+l
-         !     write(*,'(3X,"Writing swap ",I0,"...")') l
-         !     open(unit=ounit,file=trim(adjustl(filename)))
-         !     call geom_write(ounit,bas_arr(l))
-         !     close(ounit)
-         !  end do
-          deallocate(bas_arr)
-         !  call chdir(pwd2)
+          deallocate(basis_arr)
        end if if_swap
 
 
     end do shift_loop
-   !  call chdir(pwd1)
-   !  close(unit=shift_unit)
-
 
   end subroutine generate_shifts_and_swaps
 !!!#############################################################################
@@ -2512,53 +2464,5 @@ contains
 
   end subroutine write_shift_data
 !###############################################################################
-
-
-! !!!#############################################################################
-! !!! write structure data in each structure directory
-! !!!#############################################################################
-!   subroutine output_intf_data(SAV, ifit, lw_term, term_lw_idx, up_term, term_up_idx, lw_pricel,up_pricel)
-!     implicit none
-!     integer :: unit
-
-!     integer, intent(in) :: ifit, term_lw_idx, term_up_idx
-!     logical, intent(in) :: lw_pricel,up_pricel
-!     type(term_arr_type), intent(in) :: lw_term, up_term
-!     type(latmatch_type), intent(in) :: SAV
-
-
-    
-!     unit=99
-!     open(unit=unit, file="struc_dat.txt")
-!     write(unit,'("Lower material primitive cell used: ",L1)') lw_pricel
-!     write(unit,'("Upper material primitive cell used: ",L1)') lw_pricel
-!     write(unit,*)
-!     write(unit,'("Lattice match: ",I0)') ifit
-!     write(unit,'((1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
-!          SAV%abc,SAV%abc,&
-!          SAV%tf1(ifit,1,1:3),SAV%tf2(ifit,1,1:3),&
-!          SAV%tf1(ifit,2,1:3),SAV%tf2(ifit,2,1:3),&
-!          SAV%tf1(ifit,3,1:3),SAV%tf2(ifit,3,1:3)
-!     write(unit,'(" vector mismatch (%) = ",F0.9)') SAV%tol(ifit,1)
-!     write(unit,'(" angle mismatch (°)  = ",F0.9)') SAV%tol(ifit,2)*180/pi
-!     write(unit,'(" area mismatch (%)   = ",F0.9)') SAV%tol(ifit,3)
-!     write(unit,*)
-!     write(unit,'(" Lower crystal Miller plane: ",3(I3," "))') SAV%tf1(ifit,3,1:3)
-!     write(unit,'(" Lower termination")')
-!     write(unit,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
-!     write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
-!             term_lw_idx,lw_term%arr(term_lw_idx)%hmin,lw_term%arr(term_lw_idx)%hmax,lw_term%arr(term_lw_idx)%natom
-!     write(unit,*)
-!     write(unit,'(" Upper crystal Miller plane: ",3(I3," "))') SAV%tf2(ifit,3,1:3)
-!     write(unit,'(" Upper termination")')
-!     write(unit,'(1X,"Term.",3X,"Min layer loc",3X,"Max layer loc",3X,"no. atoms")')
-!     write(unit,'(1X,I3,8X,F7.5,9X,F7.5,8X,I3)') &
-!             term_up_idx,up_term%arr(term_up_idx)%hmin,up_term%arr(term_up_idx)%hmax,up_term%arr(term_up_idx)%natom
-!     write(unit,*)
-!     close(unit)
-    
-!     return
-!   end subroutine output_intf_data
-! !!!#############################################################################
 
 end module artemis__generator
