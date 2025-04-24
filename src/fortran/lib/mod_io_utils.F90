@@ -42,10 +42,10 @@ module artemis__io_utils
   type, public :: tag_type
      character(25) :: name
      character(1)  :: type
-     character(40) :: summary
+     character(50) :: summary
      character(60) :: allowed
      character(60) :: default
-     character(300) :: description
+     character(1024) :: description
      logical :: is_deprecated = .false.
      logical :: to_be_deprecated = .false.
      character(25) :: deprecated_name = ''

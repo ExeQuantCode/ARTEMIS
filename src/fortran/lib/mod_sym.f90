@@ -203,6 +203,7 @@ contains
     if(allocated(grp%op)) deallocate(grp%op)
     allocate(grp%op(grp%nsym*minval(basis%spec(:)%num)))
     grp%op = 0
+
     if(present(lsave))then
        lsave_ = lsave
     else

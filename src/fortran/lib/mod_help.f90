@@ -515,7 +515,7 @@ contains
     tag(ilw_miller_tag)%allowed = 'Three integer numbers'
     tag(ilw_miller_tag)%default = '(empty)'
     tag(ilw_miller_tag)%description = &
-         'Confines the lower crystal to this Miller plane for lattice matching.\n\n&
+         &'Confines the lower crystal to this Miller plane for lattice matching.\n\n&
          &NOTE: Can only be used with IMATCH=0.\n\n&
          &NOTE: Miller indices used in ARTEMIS are defined for the cell in &
          &use. Experimental Miller indices are presented with respect to the &
@@ -527,7 +527,7 @@ contains
     tag(iup_miller_tag)%allowed = 'Three integer numbers'
     tag(iup_miller_tag)%default = '(empty)'
     tag(iup_miller_tag)%description = &
-         'Confines the upper crystal to this Miller plane for lattice matching.\n\n&
+         &'Confines the upper crystal to this Miller plane for lattice matching.\n\n&
          &NOTE: Can only be used with IMATCH=0.\n\n&
          &NOTE: Miller indices used in ARTEMIS are defined for the cell in &
          &use. Experimental Miller indices are presented with respect to the &

@@ -1602,8 +1602,6 @@ contains
     !! The number of species.
     integer, dimension(:,:), allocatable :: atoms_ordered
     !! The atoms to remove ordered by species and atom
-    real(real32), dimension(:,:), allocatable :: atom
-    !! Temporary array to store the atomic positions.
 
 
     !---------------------------------------------------------------------------
