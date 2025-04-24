@@ -1011,21 +1011,22 @@ contains
 !!! Reorientates lattice to the primitive lattice of its type
 !!!#############################################################################
 !!! NEED TO SET UP TO WORK FOR THE EXTRA SWAPPINGS OF A, B AND C
-  function primitive_lat(inlat) result(plat)
+  subroutine primitive_lat(basis)
     implicit none
+    type(basis_type), intent(inout) :: basis
     integer :: i,j
     real(real32) :: dtmp1
     real(real32), dimension(3) :: scal
     real(real32), dimension(3,3) :: lat,plat,tmat1,tmat2
-    real(real32), dimension(3,3), intent(in) :: inlat
-    real(real32), dimension(4,3,3) :: special
+    real(real32), dimension(3,3,4) :: special
 
 
     !!---------------------------------------------------------------
     !! makes all lattice vectors unity
     !!---------------------------------------------------------------
-    lat=inlat
-    plat=lat
+    call reducer(basis,ltmp = .true.)
+    lat  = basis%lat
+    plat = lat
     do i=1,3
        scal(i)=modu(lat(i,:))
        lat(i,:)=lat(i,:)/scal(i)
@@ -1035,46 +1036,47 @@ contains
     !!---------------------------------------------------------------
     !! sets up the special set of primitive lattices
     !!---------------------------------------------------------------
-    special(1,:,:) = transpose( reshape( (/&
+    special(:,:,1) = transpose( reshape( (/&
          1._real32, 0._real32, 0._real32,&
          0._real32, 1._real32, 0._real32,&
          0._real32, 0._real32, 1._real32/), shape(lat) ) )
-    special(2,:,:) = transpose( reshape( (/&
+    special(:,:,2) = transpose( reshape( (/&
          1._real32, 0._real32, 0._real32,&
          -0.5_real32, sqrt(3._real32)/2._real32, 0._real32,&
          0._real32, 0._real32, 1.0_real32/), shape(lat) ) )
-    special(3,:,:) = transpose( reshape( (/&
+    special(:,:,3) = transpose( reshape( (/&
          0.0_real32, 1._real32, 1._real32,&
          1._real32, 0._real32, 1._real32,&
          1._real32, 1._real32, 0.0_real32/), shape(lat) ) )
-    special(3,:,:) = special(3,:,:)/sqrt(2._real32)
-    special(4,:,:) = transpose( reshape( (/&
+    special(:,:,3) = special(:,:,3)/sqrt(2._real32)
+    special(:,:,4) = transpose( reshape( (/&
          -1._real32,  1._real32,  1._real32,&
          1._real32, -1._real32,  1._real32,&
          1._real32,  1._real32, -1._real32/), shape(lat) ) )
-    special(4,:,:) = special(4,:,:)/sqrt(3._real32)
+    special(:,:,4) = special(:,:,4)/sqrt(3._real32)
 
 
     !!---------------------------------------------------------------
     !! cycles special set to find primitive lattice of supplied lat
     !!---------------------------------------------------------------
-    tmat1=matmul(lat,transpose(lat))
+    tmat1 = matmul(lat,transpose(lat))
     checkloop: do i=1,4
-       !tfmat=matmul(lat,inverse_3x3(special(i,:,:)))
+       !tfmat=matmul(lat,inverse_3x3(special(:,:,i)))
        !tfmat=matmul(tfmat,transpose(tfmat))
-       tmat2=matmul(special(i,:,:),transpose(special(i,:,:)))
-       dtmp1=tmat2(1,1)/tmat1(1,1)
+       tmat2 = matmul(special(:,:,i),transpose(special(:,:,i)))
+       dtmp1 = tmat2(1,1)/tmat1(1,1)
        !if(all(abs(tfmat-nint(tfmat)).lt.1.E-8_real32))then
-       if(all(abs(tmat1*dtmp1-tmat2).lt.1.E-8_real32))then
+       if(all(abs(tmat1*dtmp1-tmat2).lt.1.E-6_real32))then
           do j=1,3
-             plat(j,:)=scal(j)*special(i,j,:)
+             plat(j,:)=scal(j)*special(j,:,i)
           end do
           exit checkloop
        end if
     end do checkloop
 
+    basis%lat = plat
 
-  end function primitive_lat
+  end subroutine primitive_lat
 !!!#############################################################################
 
 
@@ -1124,12 +1126,12 @@ contains
        lreduced=reduced_check(newlat,cell_type,S)
        if(lreduced) exit
        if(verb) then
-          write(67,*)
-          write(67,*) count
-          write(67,*) "###############"
-          write(67,*) (transmat(i,:),i=1,3)
-          write(67,*)
-          write(67,*) (newlat(i,:),i=1,3)
+          write(*,*)
+          write(*,*) count
+          write(*,*) "###############"
+          write(*,*) (transmat(i,:),i=1,3)
+          write(*,*)
+          write(*,*) (newlat(i,:),i=1,3)
        end if
        if(count.gt.limit) then
           write(0,'("FAILED to find the reduced cell within ",I0," steps")') count
@@ -1240,8 +1242,8 @@ contains
     call mkNiggli_lat(basis%lat,newlat,transmat,S)
     lreduced=reduced_check(newlat,cell_type,S,"n")
     if(verb) then
-       write(67,*) lreduced
-       write(67,*) (transmat(i,:),i=1,3)
+       write(*,*) lreduced
+       write(*,*) (transmat(i,:),i=1,3)
     end if
 
 

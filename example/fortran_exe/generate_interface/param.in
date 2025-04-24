@@ -3,7 +3,7 @@ SETTINGS
   RESTART     = 0
   STRUC1_FILE = POSCAR_Si  ! lower structure/interface structure
   STRUC2_FILE = POSCAR_Ge  ! upper structure (not used if IRESTART > 0)
-  IPRINT = -1
+  IPRINT = 0
   TOL_SYM = 1.D-4
   CLOCK = 0
 END SETTINGS
