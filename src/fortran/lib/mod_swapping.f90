@@ -4,7 +4,7 @@
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
 module swapping
-  use artemis__constants, only: real32, ierror
+  use artemis__constants, only: real32
   use artemis__misc, only: sort1D
   use misc_maths, only: gauss
   use misc_linalg, only: modu
@@ -29,7 +29,7 @@ contains
 !!! Main function to be called from ARTEMIS
 !!!#############################################################################
   function rand_swapper(lat,bas,axis,width,nswaps_per_cell,nswap,intf_loc,&
-       iswap,seed_arr,tol_sym,sigma,require_mirror) result(bas_arr)
+       iswap,seed_arr,tol_sym, verbose, sigma,require_mirror) result(bas_arr)
     implicit none
     integer :: i,j,is,iout,itmp,count1
     integer :: axis,nswap
@@ -58,6 +58,7 @@ contains
     type(basis_type), allocatable, dimension(:) :: bas_arr
     real(real32), dimension(3,3), intent(in) :: lat
     real(real32), intent(in) :: tol_sym
+    integer, intent(in) :: verbose
 
 
 !!!-----------------------------------------------------------------------------
@@ -122,8 +123,8 @@ contains
 !!! set up symmetries
 !!!-----------------------------------------------------------------------------
     call sym_setup(grp,lat, tol_sym = tol_sym)
-    call tmpbas%copy(bas)
-    call store_bas%copy(tmpbas)
+    call tmpbas%copy(bas, length = 4)
+    call store_bas%copy(tmpbas, length = 4)
 
 
 !!!-----------------------------------------------------------------------------
@@ -166,7 +167,7 @@ contains
                   &Exiting...",fmtd=.true.)
           end if
        end do
-       if(ierror.ge.1)then
+       if(verbose.ge.1)then
           write(*,*) "mirror found for swaps"
           write(*,'(4(2X,F9.4))') intf_sym(:,:)
           write(*,*)
@@ -227,7 +228,9 @@ contains
             lw_list,up_list,&
             lw_dist_list,up_dist_list,&
             lw_close_list,up_close_list,&
-            lw_weight_list,up_weight_list)
+            lw_weight_list,up_weight_list, &
+            verbose=verbose &
+       )
     end select
     bas_arr(1) = tmpbas
     iout = 1
@@ -249,7 +252,9 @@ contains
                lw_list,up_list,&
                lw_dist_list,up_dist_list,&
                lw_close_list,up_close_list,&
-               lw_weight_list,up_weight_list)
+               lw_weight_list,up_weight_list, &
+               verbose=verbose &
+          )
        end select
        !call check_sym(tmpbas,itmp,tol_sym=tol_sym)
        !call loadbar(iout,10)
@@ -578,7 +583,9 @@ end function rand_swapper
        lw_list,up_list,&
        lw_dist_list,up_dist_list,&
        lw_close_list,up_close_list,&
-       lw_weight_list,up_weight_list)
+       lw_weight_list,up_weight_list, &
+       verbose &
+  )
     implicit none
     integer :: i,loc1,loc2
     integer :: nbelow,nabove
@@ -598,6 +605,7 @@ end function rand_swapper
     type(basis_type), intent(inout) :: swap_bas
     integer, intent(in) :: nswaps_per_cell
     type(basis_type), intent(in) :: bas
+    integer, intent(in) :: verbose
 
 
 ! make a list of natoms long, with each location pointing to a specific atomic species and number
@@ -709,7 +717,7 @@ end function rand_swapper
             swap_list(:i,2),&
             sigma,small_sigma)
        
-       if(ierror.ge.1) &
+       if(verbose.ge.1) &
             write(0,'(&
             I0,"th swap is ",I0,&
             &" with ",I0," at distances ",F7.3," and ",F7.3)') &

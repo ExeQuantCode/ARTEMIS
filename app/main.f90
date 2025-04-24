@@ -10,7 +10,8 @@ program artemis_executable
   implicit none
 
 
-  integer :: i, unit
+  integer :: i, j, unit
+  integer, dimension(:), allocatable :: match_idx_list, idx_list(:)
   character(len=256) :: filepath, filename
   type(artemis_generator_type) :: generator
   type(basis_type), allocatable, dimension(:) :: structures
@@ -163,9 +164,6 @@ program artemis_executable
      !! interface generator
      !!-------------------------------------------------------------------------
      if(irestart.eq.0)then
-        !!! NEED TO BE ABLE TO SET MAX_NUM_STRUCTURES
-        !!! lortho, printing directories and directory space
-        !!! sort out match, term, shift, and swap data
         call generator%generate( &
              surface_lw = lw_surf, surface_up = up_surf, &
              thickness_lw = lw_thickness, thickness_up = up_thickness, &
@@ -180,24 +178,59 @@ program artemis_executable
              seed = clock, &
              verbose = verbose &
         )
-      !   call generator%write_structures(directory = "DINTERFACES", prefix= "")
-        do i = 1, generator%num_structures
-           write(filepath, '(A,"/",A,I0.2)') trim(dirname), trim(subdir_prefix), generator%structure_data(i)%match_idx
-           if(generator%structure_data(i)%shift_idx.gt.0)then
-               write(filepath, '(A,"/",A,"/",A,I0.2)') trim(filepath), trim(shiftdir), trim(subdir_prefix), generator%structure_data(i)%shift_idx
-           end if
-           if(generator%structure_data(i)%swap_idx.gt.0)then
-               write(filepath, '(A,"/",A,"/",A,I0.2)') trim(filepath), trim(swapdir), trim(subdir_prefix), generator%structure_data(i)%swap_idx
-           end if
-           call system("mkdir -p " // trim(filepath))
-           write(filename, '(A,"/",A)') trim(filepath), "POSCAR"
-           open(newunit=unit, status='replace', file=trim(filename))
-           call geom_write(unit, generator%structures(i))
-           close(unit)
-        end do
      else
         call generator%restart(struc1_bas)
      end if
+     allocate(match_idx_list(0))
+     do i = 1, generator%num_structures
+        write(filepath, '(A,"/",A,I0.2)') &
+             trim(adjustl(dirname)), &
+             trim(adjustl(subdir_prefix)), &
+             generator%structure_data(i)%match_idx
+        if(all(generator%structure_data(1:i-1:1)%match_idx.ne.generator%structure_data(i)%match_idx))then
+           call system("mkdir -p " // trim(filepath))
+           call generator%write_match_and_term_data(i, &
+                directory = trim(filepath), &
+                filename = "struc_data.txt" &
+           )
+        else
+           match_idx_list = [ match_idx_list, generator%structure_data(i)%match_idx ]
+        end if
+        if(generator%structure_data(i)%shift_idx.gt.0)then
+           write(filepath, '(A,"/",A,"/",A,I0.2)') &
+                trim(adjustl(filepath)), trim(adjustl(shiftdir)), &
+                trim(adjustl(subdir_prefix)), &
+                generator%structure_data(i)%shift_idx
+        end if
+        if(generator%structure_data(i)%swap_idx.gt.0)then
+           write(filepath, '(A,"/",A,"/",A,I0.2)') &
+                trim(adjustl(filepath)), &
+                trim(adjustl(swapdir)), &
+                trim(adjustl(subdir_prefix)), &
+                generator%structure_data(i)%swap_idx
+        end if
+        call system("mkdir -p " // trim(filepath))
+        write(filename, '(A,"/",A)') trim(filepath), "POSCAR"
+        open(newunit=unit, status='replace', file=trim(filename))
+        call geom_write(unit, generator%structures(i))
+        close(unit)
+     end do
+     ! get all indices with the same match_idx
+     ! write the shift data associated with all of them
+     do i = 1, size(match_idx_list)
+        idx_list = pack([(j, j=1, generator%num_structures)], &
+                          generator%structure_data(:)%match_idx .eq. match_idx_list(i) )
+        if(size(idx_list).eq.0) cycle
+        write(filepath, '(A,"/",A,I0.2,"/",A)') &
+             trim(dirname), &
+             trim(subdir_prefix), &
+             generator%structure_data(idx_list(1))%match_idx, &
+             trim(shiftdir)
+        call generator%write_shift_data(idx_list, &
+             directory = trim(filepath), &
+             filename = "shift_data.txt" &
+        )
+     end do
 
 
   case(2) ! defects/ARTIE
