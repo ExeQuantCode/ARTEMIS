@@ -1470,7 +1470,11 @@ contains
     !---------------------------------------------------------------------------
     ! determines whether user wants output basis extra translational dimension
     !---------------------------------------------------------------------------
-    length_input = size(basis%spec(1)%atom,dim=2)
+    if(.not.allocated(basis%spec))then
+       call stop_program("Basis not allocated")
+       return
+    end if
+    length_input = size(basis%spec(lbound(basis%spec,1))%atom,dim=2)
     if(present(length))then
        length_ = length
     else
