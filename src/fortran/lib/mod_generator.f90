@@ -1275,8 +1275,10 @@ contains
     character(len=256) :: err_msg
     !! Error message
 
-    integer :: j
-    !! Loop index
+    integer :: j, is, ia
+    !! Loop indices
+    integer :: unit
+    !! Unit number for file I/O
     integer :: ifit, intf_start, intf_end
     !! Interface loop indices
     integer :: iterm_lw, term_lw_start_idx, term_lw_end_idx, term_lw_step
@@ -1527,45 +1529,71 @@ contains
        bulk_DON(1)%spec=gen_DON(structure_lw%lat,structure_lw,&
             dist_max=this%bondlength_cutoff,&
             scale_dist=.false.,&
-            norm=.true.)
-       if(all(abs(bulk_DON(1)%spec(1)%atom(:,:)).lt.1._real32))then
-          open(unit=13,file="lw_DON.dat")
-          do j=1,1000
-             write(13,*) &
-                  (j-1)*this%bondlength_cutoff/1000,&
-                  bulk_DON(1)%spec(1)%atom(1,j)
-          end do
-          close(13)
-          write(err_msg,'(A,F0.3,A)') &
-               "The lower bulk DON identified no atoms within the bulk cutoff" //&
-               &" distance (MAX_BONDLENGTH = ", this%bondlength_cutoff, " Å)." // achar(10) //&
-               &" To proceed with the current shift method," //&
-               &" increase MAX_BONDLENGTH."
-          call stop_program(trim(err_msg))
-          return
-       end if
-       !call exit()
+            norm=.true. &
+       )
+       do is = 1, structure_lw%nspec
+          if(all(abs(bulk_DON(1)%spec(is)%atom(:,:)).lt.1._real32))then
+             bondlength = huge(0._real32)
+             do ia = 1, structure_lw%spec(is)%num
+                rtmp1 = modu(get_min_bond(structure_lw, is, ia))
+                if(rtmp1.lt.bondlength) bondlength = rtmp1
+                if(rtmp1.gt.this%bondlength_cutoff)then
+                   write(filename,'("lw_DON_",I0,"_",I0,".dat")') is,ia
+                   open(newunit=unit, file=filename)
+                   do j=1,1000
+                      write(unit,*) &
+                           (j-1)*this%bondlength_cutoff/1000,&
+                           bulk_DON(1)%spec(is)%atom(ia,j)
+                   end do
+                   close(unit)
+                  end if
+             end do
+             if(bondlength.gt.this%bondlength_cutoff)then
+                write(err_msg,'(A,F0.3,A)') &
+                     "The lower bulk DON identified no atoms within the bulk cutoff" //&
+                     &" distance (MAX_BONDLENGTH = ", this%bondlength_cutoff, " Å)." // achar(10) //&
+                     &" To proceed with the current shift method," //&
+                     &" increase MAX_BONDLENGTH."
+                call stop_program(trim(err_msg))
+             end if
+             exit_code_ = 1
+             return
+          end if
+       end do
        up_map=0
        bulk_DON(2)%spec=gen_DON(structure_up%lat,structure_up,&
             dist_max=this%bondlength_cutoff,&
             scale_dist=.false.,&
             norm=.true.)
-       if(all(abs(bulk_DON(2)%spec(1)%atom(:,:)).lt.1._real32))then
-          open(unit=13,file="up_DON.dat")
-          do j=1,1000
-             write(13,*) &
-                  (j-1)*this%bondlength_cutoff/1000,&
-                  bulk_DON(2)%spec(1)%atom(1,j)
-          end do
-          close(13)
-          write(err_msg,'(A,F0.3,A)') &
-               "The upper bulk DON identified no atoms within the bulk cutoff" //&
-               &" distance (MAX_BONDLENGTH = ", this%bondlength_cutoff, " Å)." // achar(10) //&
-               &" To proceed with the current shift method," //&
-               &" increase MAX_BONDLENGTH."
-          call stop_program(trim(err_msg))
-          return
-       end if
+       do is = 1, structure_up%nspec
+          if(all(abs(bulk_DON(2)%spec(is)%atom(:,:)).lt.1._real32))then
+             bondlength = huge(0._real32)
+             do ia = 1, structure_up%spec(is)%num
+                rtmp1 = modu(get_min_bond(structure_up, is, ia))
+                if(rtmp1.lt.bondlength) bondlength = rtmp1
+                if(rtmp1.gt.this%bondlength_cutoff)then
+                   write(filename,'("up_DON_",I0,"_",I0,".dat")') is,ia
+                   open(newunit=unit, file=filename)
+                   do j=1,1000
+                      write(unit,*) &
+                           (j-1)*this%bondlength_cutoff/1000,&
+                           bulk_DON(2)%spec(is)%atom(ia,j)
+                   end do
+                   close(unit)
+                  end if
+             end do
+             if(bondlength.gt.this%bondlength_cutoff)then
+                write(err_msg,'(A,F0.3,A)') &
+                     "The upper bulk DON identified no atoms within the bulk cutoff" //&
+                     &" distance (MAX_BONDLENGTH = ", this%bondlength_cutoff, " Å)." // achar(10) //&
+                     &" To proceed with the current shift method," //&
+                     &" increase MAX_BONDLENGTH."
+                call stop_program(trim(err_msg))
+             end if
+             exit_code_ = 1
+             return
+          end if
+       end do
     else
        lw_map=-1
        up_map=-1       
@@ -1624,7 +1652,20 @@ contains
     ! Finds and stores the best matches between the materials
     !---------------------------------------------------------------------------
     num_structures_old = -1
-    if(this%match_method.ne.0)then
+    if(this%match_method.ne.0.and.(any(miller_lw.ne.0).or.any(miller_up.ne.0)))then
+       call stop_program('Cannot use LW_MILLER or UP_MILLER with IMATCH>0')
+       exit_code_ = 1
+       return
+    elseif(this%match_method.ne.0)then
+       write(err_msg,'("&
+            &IMATCH /= 0 methods are experimental and may\n&
+            &not work as expected.\n&
+            &They are not intended to be thorough searches.\n&
+            &This method is not recommended unless you\n&
+            &are clear on its intended use and\n&
+            &limitations.&
+       &")')
+       call print_warning(trim(err_msg))
        tfmat = planecutter(structure_lw%lat,real(miller_lw,real32))
        call transformer(structure_lw,tfmat,lw_map)
     end if

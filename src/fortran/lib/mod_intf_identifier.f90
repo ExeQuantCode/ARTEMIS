@@ -307,16 +307,17 @@ contains
 !!!#############################################################################
   function gen_DONsim(DON,dist_max,cutoff,avg_mthd) result(intf_atoms)
     implicit none
+    type(den_of_neigh_type), dimension(:), intent(in) :: DON
+    real(real32), optional, intent(in) :: dist_max,cutoff
+    integer, optional, intent(in) :: avg_mthd
+
     integer :: i,is,ia,ja,cutloc,itmp1,udef_avg_mthd
     integer :: nspec,natom,nstep
     real(real32) :: avg,rdist_max,rcutoff,maxjump
-    real(real32), optional, intent(in) :: dist_max,cutoff
     integer, allocatable, dimension(:) :: intf_list,sumspec
     real(real32), allocatable, dimension(:) :: newf,simi,distance
     integer, allocatable, dimension(:,:) :: intf_atoms
-    integer, optional, intent(in) :: avg_mthd
 
-    type(den_of_neigh_type), dimension(:) :: DON
     type(den_of_neigh_type), allocatable, dimension(:) :: sim
     type(den_of_spec_type), allocatable, dimension(:) :: similarity
 

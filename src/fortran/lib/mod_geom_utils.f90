@@ -281,7 +281,7 @@ contains
 !!!#############################################################################
 !!! returns minimum bond for a specified atom
 !!!#############################################################################
-  function get_min_bond(lat,bas,is,ia,axis,labove,tol) result(vsave)
+  function get_min_bond(basis,is,ia,axis,labove,tol) result(vsave)
     implicit none
     integer :: js,ja
     integer :: iaxis
@@ -290,8 +290,7 @@ contains
     real(real32), dimension(3) :: vdtmp1, vsave
 
     integer, intent(in) :: is,ia
-    type(basis_type), intent(in) :: bas
-    real(real32), dimension(3,3), intent(in) :: lat
+    type(basis_type), intent(in) :: basis
 
     integer, intent(in), optional :: axis
     real(real32), intent(in), optional :: tol
@@ -317,10 +316,10 @@ contains
 
     min_bond=huge(0._real32)
     
-    do js=1,bas%nspec
-       atmloop: do ja=1,bas%spec(js)%num
+    do js=1,basis%nspec
+       atmloop: do ja=1,basis%spec(js)%num
           if(is.eq.js.and.ia.eq.ja) cycle atmloop
-          vdtmp1 = bas%spec(js)%atom(ja,:3) - bas%spec(is)%atom(ia,:3)
+          vdtmp1 = basis%spec(js)%atom(ja,:3) - basis%spec(is)%atom(ia,:3)
           if(iaxis.gt.0)then
              if(abs(vdtmp1(iaxis)).lt.dtol) cycle atmloop
              if(ludef_above)then
@@ -330,9 +329,9 @@ contains
              end if
           end if
           vdtmp1 = &
-               vdtmp1(1)*lat(1,:3) + &
-               vdtmp1(2)*lat(2,:3) + &
-               vdtmp1(3)*lat(3,:3)
+               vdtmp1(1)*basis%lat(1,:3) + &
+               vdtmp1(2)*basis%lat(2,:3) + &
+               vdtmp1(3)*basis%lat(3,:3)
           dtmp1 = modu(vdtmp1)
           if(dtmp1.lt.min_bond)then
              min_bond = dtmp1
