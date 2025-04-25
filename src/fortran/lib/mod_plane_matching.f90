@@ -738,6 +738,7 @@ contains
 !!!------------------------------------------------------------------------
      MAINLOOP2: do m=1,nvec1
         if(all(abs(unit_vec-uvec(real(numstore_1(m,:2), real32))).lt.1.E-6_real32)) cycle MAINLOOP2
+        if(all(abs(unit_vec+uvec(real(numstore_1(m,:2), real32))).lt.1.E-6_real32)) cycle MAINLOOP2
         tmpmat(2,:2) = numstore_1(m,:2)
         if(all(latstore_1(l,:).eq.latstore_1(m,:))) cycle MAINLOOP2
         if(get_area([latstore_1(l,:)],[latstore_1(m,:)]).gt.tol%maxarea) cycle MAINLOOP2
