@@ -1024,7 +1024,7 @@ contains
     !!---------------------------------------------------------------
     !! makes all lattice vectors unity
     !!---------------------------------------------------------------
-    call reducer(basis,ltmp = .true.)
+    call reducer(basis)
     lat  = basis%lat
     plat = lat
     do i=1,3
