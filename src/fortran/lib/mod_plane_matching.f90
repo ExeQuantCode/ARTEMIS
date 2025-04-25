@@ -6,7 +6,7 @@
 module plane_matching
   use artemis__constants, only: real32, INF, pi
   use misc_linalg, only: cross,modu,get_angle,get_area,find_tf,&
-       reduce_vec_gcd,gcd, inverse_2x2, find_tf_2x2
+       reduce_vec_gcd,gcd, inverse_2x2, find_tf_2x2, uvec
   use artemis__misc_types, only: tol_type
   implicit none
   !! importance of vector, angle, and area
@@ -567,7 +567,7 @@ contains
     real(real32) :: reference_mag,considered_mag
     real(real32) :: reference_angle,considered_angle
     type(tol_type) :: tol
-    real(real32), dimension(3) :: lat1_veca,lat1_vecb,lat2_veca,lat2_vecb
+    real(real32), dimension(3) :: lat1_veca,lat1_vecb,lat2_veca,lat2_vecb, unit_vec
     real(real32), dimension(tol%maxfit) :: MAIN_LOOP_LIST_TOLERANCES
     !real(real32), dimension(:) :: MAIN_LOOP_LIST_TOLERANCES
     integer, dimension(2,6) :: tmpmat
@@ -656,9 +656,9 @@ contains
            if (l.eq.0 .and. m.eq.0) cycle vecmakeloop2
            pmloop2: do j=1,-1,-2
               nvec1=nvec1+1
-              numstore_1(nvec1,:) = (/ i*l, j*m /)
+              numstore_1(nvec1,:) = [ i*l, j*m ]
               latstore_1(nvec1,:) = real(i*l,real32) * lat1_veca + real(j*m,real32) * lat1_vecb
-              if(abs(modu(latstore_1(nvec1,:))).gt.tol%maxlen)then
+              if(abs(modu([latstore_1(nvec1,:)])).gt.tol%maxlen)then
                  nvec1=nvec1-1
                  cycle pmloop1
               end if
@@ -710,6 +710,7 @@ contains
   total_list_count = 0
   MAINLOOP1: do l=1,nvec1
      tmpmat(1,:2) = numstore_1(l,:2)
+     unit_vec = uvec(real(numstore_1(l,:2), real32))
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -736,10 +737,11 @@ contains
 !!! lower lattice vector 2 loop
 !!!------------------------------------------------------------------------
      MAINLOOP2: do m=1,nvec1
+        if(all(abs(unit_vec-uvec(real(numstore_1(m,:2), real32))).lt.1.E-6_real32)) cycle MAINLOOP2
         tmpmat(2,:2) = numstore_1(m,:2)
         if(all(latstore_1(l,:).eq.latstore_1(m,:))) cycle MAINLOOP2
         if(get_area([latstore_1(l,:)],[latstore_1(m,:)]).gt.tol%maxarea) cycle MAINLOOP2
-        if(all(cross([latstore_1(l,:)],[latstore_1(m,:)]).eq.0._real32)) cycle MAINLOOP2
+        if(all(cross([latstore_1(l,:)],[latstore_1(m,:)]).lt.1.E-6_real32)) cycle MAINLOOP2
         reference_angle = get_angle([latstore_1(l,:)],[latstore_1(m,:)])
         if (abs(reference_angle) .lt. tiny) cycle MAINLOOP2 
         
