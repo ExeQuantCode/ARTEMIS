@@ -17,6 +17,7 @@ module artemis__misc_types
 
   type struc_data_type
      integer :: match_idx = 0
+     integer :: match_and_term_idx = 0
      integer :: shift_idx = 0
      integer :: swap_idx  = 0
      logical :: from_pricel_lw = .false.
@@ -42,6 +43,7 @@ module artemis__misc_types
   interface struc_data_type
      module function init_struc_data_type( &
           match_idx, &
+          match_and_term_idx, &
           from_pricel_lw, from_pricel_up, &
           term_lw_idx, term_up_idx, &
           term_lw_bounds, term_up_bounds, &
@@ -53,6 +55,7 @@ module artemis__misc_types
           swap_idx, swap_density, approx_eff_swap_conc &
      ) result(output)
        integer, intent(in) :: match_idx
+       integer, intent(in) :: match_and_term_idx
        logical, intent(in) :: from_pricel_lw, from_pricel_up
        integer, dimension(2), intent(in) :: term_lw_idx, term_up_idx
        real(real32), dimension(4), intent(in) :: term_lw_bounds, term_up_bounds
@@ -120,6 +123,7 @@ contains
 !###############################################################################
   module function init_struc_data_type( &
        match_idx, &
+       match_and_term_idx, &
        from_pricel_lw, from_pricel_up, &
        term_lw_idx, term_up_idx, &
        term_lw_bounds, term_up_bounds, &
@@ -132,6 +136,7 @@ contains
   ) result(output)
     implicit none
     integer, intent(in) :: match_idx
+    integer, intent(in) :: match_and_term_idx
     logical, intent(in) :: from_pricel_lw, from_pricel_up
     integer, dimension(2), intent(in) :: term_lw_idx, term_up_idx
     real(real32), dimension(4), intent(in) :: term_lw_bounds, term_up_bounds
@@ -148,6 +153,7 @@ contains
     type(struc_data_type) :: output
 
     output%match_idx = match_idx
+    output%match_and_term_idx = match_and_term_idx
     output%from_pricel_lw = from_pricel_lw
     output%from_pricel_up = from_pricel_up
     output%term_lw_idx = term_lw_idx

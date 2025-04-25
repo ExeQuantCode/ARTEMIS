@@ -2089,6 +2089,7 @@ contains
             !       this%use_pricel_lw, this%use_pricel_up)
              struc_data = struc_data_type( &
                   match_idx = ifit, &
+                  match_and_term_idx = iunique, &
                   from_pricel_lw = this%use_pricel_lw, &
                   from_pricel_up = this%use_pricel_up, &
                   term_lw_idx = [iterm_lw,max(surface_lw_(2),iterm_lw)], &
@@ -2388,6 +2389,7 @@ contains
        write(unit,'("Lower material primitive cell used: ",L1)') struc_data%from_pricel_lw
        write(unit,'("Upper material primitive cell used: ",L1)') struc_data%from_pricel_up
        write(unit,*)
+       write(unit,'("Match and termination identifier: ",I0)') struc_data%match_and_term_idx
        write(unit,'("Lattice match: ",I0)') struc_data%match_idx
        write(unit,'((1X,3(3X,A1),3X,3(3X,A1)),3(/,2X,3(I3," "),3X,3(I3," ")))') &
             "a", "b", "c", "a", "b", "c", &
@@ -2455,7 +2457,7 @@ contains
          '("# shift_num    shift (a,b,c) units=(direct,direct,Å)")')
     do i = 1, size(idx_list), 1
        write(unit,'(2X,I0.2,15X,"(",2(" ",F9.6,", ")," ",F9.6," )")') &
-            idx_list(i), this%structure_data(idx_list(i))%shift
+            i, this%structure_data(idx_list(i))%shift
     end do
     close(unit)
 
