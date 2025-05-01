@@ -125,11 +125,10 @@ contains
     write(unit,'(A)') " Artistic advisors:"
     write(unit,'(A)') " E. L. Martin"
     write(unit,*)
-    write(unit,'(A)') " LICENCE:"
+    write(unit,'(A)') " LICENSE:"
     write(unit,'(A)') " This work is licensed under a &
-         &Creative Commons Attribution-NonCommercial 3.0 &
-         &Unported (CC BY-NC 3.0) License."
-    write(unit,'(A)') " https://creativecommons.org/licenses/by-nc/3.0/"
+         &General Public License 3.0 (GPLv3)"
+    write(unit,'(A)') " https://www.gnu.org/licenses/gpl-3.0.en.html"
     write(unit,*)
     write(unit,'(A)') repeat("#",50)
 
