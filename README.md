@@ -81,10 +81,17 @@ The library is known to not currently work with the intel Fortran compilers.
 
 ## Installation
 
-The Python library is not yet directly available from PyPi (this will be made available with the first Python library full release).
-For now, local pip installation is required.
+For the Python library, the easiest method of installation is to install it directly from pip:
 
-First, use the following commands to download the ARTEMIS repository:
+```
+pip install artemis-materials
+```
+
+Once this is done, ARTEMIS is ready to be used.
+
+Alternatively, to download development versions or, if, for some reason, the pip method does not work, then ARTEMIS can be installed from the source.
+To do so, the source must be obtained from the git repository.
+Use the following commands to get started:
 ```
  git clone https://github.com/ExeQuantCode/artemis.git
  cd artemis

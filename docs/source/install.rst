@@ -4,10 +4,30 @@
 Installation
 ============
 
-The Python library is not yet directly available from PyPi (this will be made available with the first Python library full release).
-For now, local pip installation is required.
+For the Python library, the easiest method of installation is to install it directly from pip:
 
-First, use the following commands to download the ARTEMIS repository:
+.. code-block:: bash
+
+    pip install artemis-materials
+
+or
+
+.. code-block:: bash
+
+    pip install artemis-materials
+
+Once this is done, ARTEMIS is ready to be used.
+
+Alternatively, to install ARTEMIS from source, follow the instructions below.
+
+
+ARTEMIS can be installed in one of three ways; as a Python package, as a Fortran library, or as a standalone Fortran executable.
+All versions rely on the core Fortran code, with the Python package and standalone executable wrapping this code in a Python and Fortran interface, respectively.
+
+The code is hosted on `GitHub <https://github.com/ExeQuantCode/artemis>`_.
+
+This can be done by cloning the repository:
+
 .. code-block:: bash
     git clone https://github.com/ExeQuantCode/artemis.git
     cd artemis
@@ -43,8 +63,20 @@ Requirements
 Installation using pip
 -----------------------
 
+The easiest way to install ARTEMIS is via pip.
+The package is directly available via PyPI, so can be installed without downloading the repository. To do so, run:
 
-For Python, the easiest installation is through pip:
+.. code-block:: bash
+
+    pip install artemis-materials
+
+This will install the ARTEMIS package and all its dependencies in the default location.
+This is the recommended method of installation, as it is the easiest and most straightforward way to get started with RAFFLE.
+
+Another option is to install ARTEMIS from the source code, which is recommended if you want to use the latest version of ARTEMIS or if you want to contribute to its development.
+To do this, you will need to clone the repository from GitHub.
+
+Once the library is cloned, navigate to the root directory of the repository and run:
 
 .. code-block:: bash
 
