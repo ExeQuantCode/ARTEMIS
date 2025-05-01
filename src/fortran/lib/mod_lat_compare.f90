@@ -936,7 +936,7 @@ contains
     !!--------------------------------------------------------------------------
     ivtmp1=0
     itmp1=0
-    if(any(miller_lw.gt.0))then
+    if(any(miller_lw.ne.0))then
        allocate(miller1(1,size(miller_lw)))
        miller1(1,:3)=miller_lw(:3)
     else
@@ -974,7 +974,7 @@ contains
     !!--------------------------------------------------------------------------
     itmp1 = 0
     ivtmp1 = 0
-    if(any(miller_up.gt.0))then
+    if(any(miller_up.ne.0))then
        allocate(miller2(1,size(miller_up)))
        miller2(1,:3)=miller_up(:3)
     else

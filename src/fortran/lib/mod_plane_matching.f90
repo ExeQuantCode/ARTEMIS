@@ -273,10 +273,10 @@ contains
     end do signloop1
 
     symloop1: do i=1,size(sym,dim=3)
-       vec_out=matmul(vec_in,sym(:3,:3,i))
+       vec_out = matmul(vec_in,sym(:3,:3,i))
        if(all(abs(vec_out-vec_in).lt.tol)) cycle symloop1
-       vec_tmp1(:)=abs(vec_in(:))-abs(vec_out(:))
-       vec_tmp2(:)=vec_in(:)-vec_out(:)
+       vec_tmp1(:) = abs(vec_in(:))-abs(vec_out(:))
+       vec_tmp2(:) = vec_in(:)-vec_out(:)
        symloop2: do j=1,3
           if(vec_tmp1(j).gt.tol.or.&
                (abs(vec_tmp1(j)).lt.tol.and.vec_tmp2(j).lt.-tol))then
@@ -287,8 +287,6 @@ contains
           end if
        end do symloop2
     end do symloop1
-
-
 
   end function is_unique
 !!!#############################################################################
@@ -690,7 +688,7 @@ contains
               latstore_2(nvec2,:) = real(i*l,real32) * lat2_veca + real(j*m,real32) * lat2_vecb
               if(modu(latstore_2(nvec2,:)).gt.tol%maxlen)then
                  nvec2=nvec2-1
-                 cycle vecmakeloop3
+                 cycle pmloop3
               end if
            end do pmloop4
         end do vecmakeloop4

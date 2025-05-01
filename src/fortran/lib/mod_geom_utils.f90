@@ -1396,6 +1396,7 @@ contains
     lat_   = lat
     invlat = inverse(lat_)
     reclat = transpose(invlat)
+    if(all(plane_.le.0._real32)) plane_ = -plane_
     plane_ = reduce_vec_gcd(plane_)
     order  = [ 1, 2, 3 ]
 
