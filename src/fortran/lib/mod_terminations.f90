@@ -24,8 +24,8 @@ module artemis__terminations
      !! Structure to hold termination information
      real(real32) :: hmin
      real(real32) :: hmax
-     integer :: natom
-     integer :: nstep
+     integer :: natom = 0
+     integer :: nstep = 0
      real(real32), allocatable, dimension(:) :: ladder
   end type term_type
 
@@ -237,7 +237,7 @@ contains
     call sym_setup( &
          grp_store, &
          basis%lat, &
-         predefined=.false., new_start=.true., &
+         predefined=.true., new_start=.true., &
          tol_sym=tol_sym &
     )
 
@@ -329,7 +329,7 @@ contains
     call sym_setup( &
          grp_store_inv, &
          basis%lat, &
-         predefined=.false., new_start=.true., &
+         predefined=.true., new_start=.true., &
          tol_sym=tol_sym &
     )
     itmp1 = count(abs(grp_store_inv%sym(3,3,:)+1._real32).lt.tol_sym)

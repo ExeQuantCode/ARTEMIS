@@ -20,7 +20,7 @@
 module artemis__sym
   use artemis__constants,   only: real32, pi
   use artemis__misc,        only: sort2D
-  use misc_linalg,          only: modu,inverse_3x3,det,gcd,gen_group,cross
+  use misc_linalg,          only: modu,inverse_3x3,det,gcd,gen_group,cross,uvec
   use artemis__geom_rw,     only: basis_type
   use artemis__geom_utils,            only: reducer, primitive_lat
   implicit none
@@ -108,7 +108,6 @@ contains
     real(real32), optional, intent(in) :: tol_sym
 
 
-
     real(real32) :: tol_sym_
     logical :: predefined_, new_start_
 
@@ -122,7 +121,7 @@ contains
        end if
     end if
 
-    predefined_ = .false.
+    predefined_ = .true.
     if(present(predefined)) predefined_ = predefined
     if(predefined_)then
        call gen_fundam_sym_matrices(grp, lat, tol_sym_)
@@ -604,19 +603,25 @@ contains
 !!!#############################################################################
 
 
-!!!#############################################################################
-!!! builds an array of the symmetries that apply to the supplied lattice
-!!!#############################################################################
+!###############################################################################
   subroutine gen_fundam_sym_matrices(grp, lat, tol_sym)
+    !! Generate fundamental symmetry matrices for the 3D space groups
     implicit none
-    type(sym_type), intent(inout) :: grp
-    real(real32), dimension(3,3), intent(in) :: lat
-    real(real32), intent(in) :: tol_sym
 
-    integer :: i
+    ! Arguments
+    type(sym_type), intent(inout) :: grp
+    !! Instance of the symmetry container
+    real(real32), dimension(3,3), intent(in) :: lat
+    !! The lattice matrix
+    real(real32), intent(in) :: tol_sym
+    !! Tolerance for symmetry operations
+
+    ! Local variables
+    integer :: i, count, old_count, jsym
     real(real32) :: cosPi3,sinPi3,mcosPi3,msinPi3
     real(real32), dimension(3,3) :: inversion,invlat,tmat1
     real(real32), dimension(3,3,64) :: fundam_mat
+    real(real32), dimension(3,3,128) :: tmp_store
 
 
     cosPi3 = 0.5_real32
@@ -765,49 +770,61 @@ contains
 
     grp%nsym=0
     invlat=inverse_3x3(lat)
+    old_count = 0
+    count = 0
     do i = 1, 64, 1
-       tmat1=matmul(lat,fundam_mat(:3,:3,i))
-       tmat1=matmul(tmat1,(invlat))
-       !! ensure that the matrix preserves size of 1
-       !! this is likely redundant
-       if(abs(abs(det(tmat1))-1._real32).gt.tol_sym) cycle
-       if(all(abs(tmat1-nint(tmat1)).le.tol_sym))then
-          grp%nsym=grp%nsym+1
-          fundam_mat(:,:,grp%nsym)=fundam_mat(:,:,i)
+       call add_sym(grp, fundam_mat(:3,:3,i), lat, invlat, tol_sym, tmp_store, count)
+       if(old_count.ne.count) then
+          same_check1: do jsym = 1, count-1, 1
+             if(all(abs(tmp_store(:3,:3,count)-tmp_store(:3,:3,jsym)).lt.tol_sym))then
+               count = count - 1
+               exit same_check1
+             end if
+          end do same_check1
        end if
+       old_count = count
+       call add_sym_tf(grp, fundam_mat(:3,:3,i), lat, invlat, tol_sym, tmp_store, count)
+       if(old_count.ne.count) then
+          same_check2: do jsym = 1, count-1, 1
+             if(all(abs(tmp_store(:3,:3,count)-tmp_store(:3,:3,jsym)).lt.tol_sym))then
+               count = count - 1
+               exit same_check2
+             end if
+          end do same_check2
+       end if
+       old_count = count
     end do
 
 
-    allocate(grp%sym(4,4,grp%nsym))
-    grp%sym(:,:,:) = 0._real32
+    grp%nsym = count
+    allocate(grp%sym(4,4,grp%nsym), source = 0._real32)
     grp%sym(4,4,:) = 1._real32
-    grp%sym(:3,:3,:grp%nsym) = fundam_mat(:3,:3,:grp%nsym)
+    grp%sym(:3,:3,:grp%nsym) = tmp_store(:3,:3,:grp%nsym)
     grp%nlatsym=grp%nsym
 
-
-    !! REDUCE THIS SET BY DOING LTL^-1 AND JUST CHECK IF ANY BECOME NON-ZERO
-    !! IF ONE DOES, SCRAP IT
-    !! IF ONE DOESN'T, SAVE THE ORIGINAL (NOT THE NEWLY CREATED ONE)
-
-
   end subroutine gen_fundam_sym_matrices
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! builds an array of the symmetries that apply to the supplied lattice
-!!!#############################################################################
-  subroutine mksym(grp, inlat, tol_sym)
+!###############################################################################
+  subroutine mksym(grp, lat, tol_sym)
+    !! Generate the symmetry operations for a given lattice
     implicit none
-    type(sym_type), intent(inout) :: grp
-    real(real32), dimension(3,3), intent(in) :: inlat
-    real(real32), intent(in) :: tol_sym
 
+    ! Arguments
+    type(sym_type), intent(inout) :: grp
+    !! Instance of the symmetry container
+    real(real32), dimension(3,3), intent(in) :: lat
+    !! Lattice matrix
+    real(real32), intent(in) :: tol_sym
+    !! Tolerance for symmetry operations
+
+    ! Local variables
     integer :: amin,bmin,cmin
-    integer :: i,j,ia,ib,ic,n,count,irot,nrot,isym,jsym
+    integer :: i,j,ia,ib,ic,n,count,irot,nrot,isym,jsym, old_count
     real(real32) :: tht,a,b,c
-    real(real32), dimension(3,3) :: rotmat,refmat,lat,invlat,tmat1
-    real(real32), allocatable, dimension(:,:,:) :: tsym1,tsym2
+    real(real32), dimension(3,3) :: rotmat,refmat,invlat,tmat1
+    real(real32), allocatable, dimension(:,:,:) :: tsym1,tmp_store
     logical, dimension(3) :: laxis
 
 
@@ -815,18 +832,6 @@ contains
        laxis = grp%confine%laxis
     else
        laxis = .not.grp%confine%laxis
-    end if
-
-
-!!!-----------------------------------------------------------------------------
-!!! set up inverse lattice
-!!!-----------------------------------------------------------------------------
-    lat = inlat
-    if(grp%lmolec)then
-       invlat = 0._real32
-       lat    = 0._real32
-    else
-       invlat = inverse_3x3(lat)
     end if
 
 
@@ -948,69 +953,325 @@ contains
        grp%sym(:,:,:grp%nsym)=tsym1(:,:,:grp%nsym)
        deallocate(tsym1)
        return
+    else
+       invlat = inverse_3x3(lat)
     end if
-    !! best so far
-    !     sym(1:3,1:3,isym)=matmul(transpose(lat),sym(1:3,1:3,isym))
-    !     sym(1:3,1:3,isym)=matmul(sym(1:3,1:3,isym),(invlat))
 !!!-----------------------------------------------------------------------------
 !!! checks all made symmetries to see if they apply to the supplied lattice
 !!!-----------------------------------------------------------------------------
-    allocate(tsym2(4,4,grp%nsym))
-    tsym2 = 0._real32
-    tsym2(4,4,:) = 1._real32
+    allocate(tmp_store(3,3,grp%nsym))
     count = 0
-    samecheck: do isym = 1, grp%nsym
-       tmat1 = matmul((invlat),tsym1(:3,:3,isym))
-       tmat1 = matmul(tmat1,(lat))
-       do i = 1, 3
-          do j = 1, 3
-             if(abs(tmat1(i,j)).lt.tol_sym) tmat1(i,j) = 0._real32
-             if(abs(1._real32-abs(tmat1(i,j))).lt.tol_sym) &
-                  tmat1(i,j) = sign(1._real32,tmat1(i,j))
-          end do
-       end do
-       !!-----------------------------------------------------------------------
-       !! Precautionary measure
-       if(all(abs(tmat1).lt.tol_sym)) cycle samecheck
-       if(abs(abs(det(tmat1))-1._real32).gt.tol_sym) cycle samecheck
-       !!-----------------------------------------------------------------------
-       if(.not.all(abs(tmat1-nint(tmat1)).lt.tol_sym)) cycle samecheck
-       do jsym = 1, count, 1
-          if(all(abs(tmat1-tsym2(:3,:3,jsym)).lt.tol_sym)) cycle samecheck
-       end do
-       count = count + 1
-       tsym2(:3,:3,count) = tmat1
-    end do samecheck
+    do i = 1, grp%nsym, 1
+       call add_sym_tf(grp, tsym1(:3,:3,i), lat, invlat, tol_sym, tmp_store, count)
+       if(old_count.ne.count) then
+          same_check2: do jsym = 1, count-1, 1
+             if(all(abs(tmp_store(:3,:3,count)-tmp_store(:3,:3,jsym)).lt.tol_sym))then
+               count = count - 1
+               exit same_check2
+             end if
+          end do same_check2
+       end if
+       old_count = count
+    end do
+
     grp%nsym = count
     deallocate(tsym1)
-    allocate(grp%sym(4,4,grp%nsym))
-    grp%sym(:4,:4,:grp%nsym)=tsym2(:4,:4,:grp%nsym)
-    deallocate(tsym2)
+    allocate(grp%sym(4,4,grp%nsym), source = 0._real32)
+    grp%sym(4,4,:) = 1._real32
+    grp%sym(:3,:3,:grp%nsym)=tmp_store(:3,:3,:grp%nsym)
+    deallocate(tmp_store)
 
     grp%nlatsym = grp%nsym
-
-
-    return
+    
   end subroutine mksym
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! clone ingrp to outgrp
-!!!#############################################################################
-  subroutine clone_grp(from, to)
+!###############################################################################
+  subroutine generate_all_symmetries(grp, lat, tol_sym)
+    !! Generate all possible symmetry operations for a given lattice
     implicit none
+
+    ! Arguments
+    type(sym_type), intent(inout) :: grp
+    !! Instance of the symmetry container
+    real(real32), dimension(3,3), intent(in) :: lat
+    !! Lattice matrix
+    real(real32), intent(in) :: tol_sym
+    !! Tolerance for symmetry operations
+
+    ! Local variables
+    integer :: i, j, k, count, n
+    !! Counters
+    real(real32) :: tht, angle
+    !! Angle for rotation
+    real(real32), dimension(3,3) :: invlat
+    !! Inverse lattice matrix
+    real(real32), dimension(3,3) :: smat, mirror, ident
+    !! Symmetry matrices
+    real(real32), allocatable :: symm_matrices(:,:,:)
+    !! Symmetry matrices array
+    real(real32), dimension(3) :: axis
+    !! Axis of rotation
+
+
+    allocate(symm_matrices(3,3,20000))
+    count = 0
+
+    ident = 0._real32
+    ident(1,1) = 1._real32; ident(2,2) = 1._real32; ident(3,3) = 1._real32
+    invlat = inverse_3x3(lat)
+
+    ! Off-axis mirrors (diagonal planes)
+    smat = ident
+    smat(1,1) = 0._real32; smat(1,2) = 1._real32;
+    smat(2,1) = 1._real32; smat(2,2) = 0._real32
+    smat(3,3) = 1._real32
+    call add_sym(grp, smat, lat, invlat, tol_sym, symm_matrices, count)
+    smat = ident
+    smat(1,1) = 0._real32; smat(1,2) = -1._real32
+    smat(2,1) = -1._real32; smat(2,2) = 0._real32
+    smat(3,3) = 1._real32
+    call add_sym(grp, smat, lat, invlat, tol_sym, symm_matrices, count)
+
+    ! Rotations around x, y, z axes (common n-fold: 2, 3, 4, 6)
+    do j = 1, 8
+       mirror = ident
+       if(j.gt.5) then
+          mirror = -ident
+          mirror(j-5,j-5) = 1._real32
+       elseif(j.gt.2) then
+          mirror(j-2,j-2) = -1._real32
+       elseif(j.eq.2)then
+          mirror = -ident
+       end if
+
+      do i = 1, 3
+         do n = 1, 10
+            if(n.gt.6)then
+               angle = -2._real32*pi/real(n-4, real32) !=2*pi/(n-4)
+           else
+               angle = 2._real32*pi/real(n, real32) !=2*pi/n          
+           end if
+               smat = rotation_matrix(i, angle)
+               smat = matmul(smat, mirror)
+               call add_sym(grp, smat, lat, invlat, tol_sym, symm_matrices, count)
+         end do
+      end do
+
+      ! Rotations around body diagonals (e.g. [111], [110])
+      do i = 1, 11
+         axis = uvec([1._real32, 1._real32, 1._real32])
+         if(i.eq.11)then
+            axis = -axis
+         elseif(i.gt.7) then
+            axis = -axis
+            axis(i-7) = 1._real32
+         elseif(i.gt.4)then
+            axis(i-4) = -1._real32
+         elseif(i.gt.1) then
+            axis(i-1) = 0._real32
+         end if
+         do n = 1, 10
+            if(n.gt.6)then
+               angle = -2._real32*pi/real(n-4, real32) !=2*pi/(n-4)
+         else
+               angle = 2._real32*pi/real(n, real32) !=2*pi/n          
+         end if
+            smat = rotate_about_axis(axis, angle)
+            smat = matmul(smat, mirror)
+            call add_sym(grp, smat, lat, invlat, tol_sym, symm_matrices, count)
+         end do
+      end do
+   end do
+
+    ! Trim to valid
+    grp%nsym = count
+    allocate(grp%sym(4,4,grp%nsym), source=0._real32)
+    grp%sym(:3,:3,:) = symm_matrices(:3,:3,1:count)
+    count = 0
+    sym_check: do i = 1, grp%nsym
+       do j = 1, count, 1
+          if(all(abs(grp%sym(:3,:3,i)-symm_matrices(:3,:3,j)).lt.tol_sym)) then
+             cycle sym_check
+          end if
+       end do
+       count = count + 1
+       symm_matrices(1:3,1:3,count) = grp%sym(:3,:3,i)
+    end do sym_check
+    grp%nsym = count
+    deallocate(grp%sym)
+    allocate(grp%sym(4,4,grp%nsym), source=0._real32)
+    grp%sym(:3,:3,:) = symm_matrices(:3,:3,1:count)
+    grp%sym(4,4,:) = 1._real32
+    deallocate(symm_matrices)
+    grp%nlatsym = grp%nsym
+
+   contains
+
+    function rotation_matrix(axis, angle) result(output)
+      implicit none
+      integer, intent(in) :: axis
+      real(real32), intent(in) :: angle
+      real(real32) :: output(3,3), c, s
+      c = cos(angle); s = sin(angle)
+      if (axis == 1) then
+         output = reshape([1._real32,0._real32,0._real32, 0._real32,c,s, 0._real32,-s,c], [3,3])
+      elseif (axis == 2) then
+         output = reshape([c,0._real32,-s, 0._real32,1._real32,0._real32, s,0._real32,c], [3,3])
+      else
+         output = reshape([c,s,0._real32, -s,c,0._real32, 0._real32,0._real32,1._real32], [3,3])
+      end if
+    end function rotation_matrix
+
+    function rotate_about_axis(ax, angle) result(output)
+      implicit none
+      real(real32), intent(in) :: ax(3), angle
+      real(real32) :: output(3,3), c, s, v
+      real(real32) :: x, y, z
+      x = ax(1); y = ax(2); z = ax(3)
+      c = cos(angle); s = sin(angle); v = 1 - c
+      output(1,1) = x*x*v + c
+      output(1,2) = x*y*v - z*s
+      output(1,3) = x*z*v + y*s
+      output(2,1) = y*x*v + z*s
+      output(2,2) = y*y*v + c
+      output(2,3) = y*z*v - x*s
+      output(3,1) = z*x*v - y*s
+      output(3,2) = z*y*v + x*s
+      output(3,3) = z*z*v + c
+    end function rotate_about_axis
+
+  end subroutine generate_all_symmetries
+!###############################################################################
+
+
+!###############################################################################
+  subroutine add_sym(grp, mat, lat, invlat, tol_sym, store, count)
+    !! Add symmetry matrix to the store if valid
+    implicit none
+
+    ! Arguments
+    type(sym_type), intent(in) :: grp
+    !! Instance of symmetry container
+    real(real32), dimension(3,3), intent(in) :: mat
+    !! Symmetry matrix
+    real(real32), dimension(3,3), intent(in) :: lat, invlat
+    !! Lattice and inverse lattice matrices
+    real(real32), intent(in) :: tol_sym
+    !! Tolerance for symmetry check
+    real(real32), intent(inout) :: store(:,:,:)
+    !! Store for symmetry matrices
+    integer, intent(inout) :: count
+    !! Counter for number of valid symmetries
+
+    if (is_valid_symmetry(grp, mat, tol_sym))then
+       count = count + 1
+       store(:3,:3,count) = mat
+    end if
+  end subroutine add_sym
+!-------------------------------------------------------------------------------
+  subroutine add_sym_tf(grp, mat, lat, invlat, tol_sym, store, count)
+    !! Add the coordinate transformed symmetry matrix to the store if valid
+    implicit none
+
+    ! Arguments
+    type(sym_type), intent(in) :: grp
+    !! Instance of symmetry container
+    real(real32), dimension(3,3), intent(in) :: mat
+    !! Symmetry matrix
+    real(real32), dimension(3,3), intent(in) :: lat, invlat
+    !! Lattice and inverse lattice matrices
+    real(real32), intent(in) :: tol_sym
+    !! Tolerance for symmetry check
+    real(real32), intent(inout) :: store(:,:,:)
+    !! Store for symmetry matrices
+    integer, intent(inout) :: count
+    !! Counter for number of valid symmetries
+
+    ! Local variables
+    real(real32) :: t(3,3)
+    !! Transformed symmetry operation
+
+    ! t = matmul(invlat, matmul(mat, lat))
+    t = matmul(lat, matmul(mat, invlat))
+    if (is_valid_symmetry(grp, t, tol_sym))then
+       count = count + 1
+       store(:3,:3,count) = t
+    end if
+  end subroutine add_sym_tf
+!-------------------------------------------------------------------------------
+  function is_valid_symmetry(grp, mat, tol_sym) result(output)
+    !! Check if the symmetry matrix is valid
+    implicit none
+
+    ! Arguments
+    type(sym_type), intent(in) :: grp
+    !! Instance of symmetry container
+    real(real32), dimension(3,3), intent(in) :: mat
+    !! Symmetry matrix
+    real(real32), intent(in) :: tol_sym
+    !! Tolerance for symmetry check
+    logical :: output
+    !! Result of the symmetry check
+
+    ! Local variables
+    integer :: i
+    !! Loop index
+    real(real32), dimension(3) :: compare_vec, input_vec
+    !! Vectors for comparison
+
+    output = &
+         all(abs(mat - nint(mat)) .lt. tol_sym) .and. &
+         abs(abs(det(mat)) - 1._real32) .lt. tol_sym
+
+    if(grp%lmolec) then
+       output = output .and. all(abs(mat) .lt. 1._real32 + tol_sym)
+    end if
+    do i = 1, 3
+       if(grp%confine%lmirror)then
+          input_vec = mat(i,:)
+       else
+          input_vec = abs(mat(:,i))
+       end if
+       if( ( grp%confine%l .and. grp%confine%laxis(i) ) .or. &
+           ( &
+                .not.grp%confine%l .and. &
+                grp%confine%lmirror .and. &
+                grp%confine%laxis(i) &
+           ) &
+       ) then
+             compare_vec = 0._real32
+             compare_vec(i) = 1._real32
+             output = output .and. &
+                  all(abs(input_vec - compare_vec) .lt. tol_sym)
+       end if
+    end do
+
+  end function is_valid_symmetry
+!###############################################################################
+
+
+!###############################################################################
+  subroutine clone_grp(from, to)
+    !! Clone a symmetry group
+    implicit none
+
+    ! Arguments
     type(sym_type), intent(in) :: from
+    !! Source symmetry group
     type(sym_type), intent(out) :: to
+    !! Destination symmetry group
     
     
     if(allocated(from%op)) allocate(to%op(size(from%op)))
     if(allocated(from%sym)) allocate(to%sym(4,4,size(from%sym,dim=3)))
-    if(allocated(from%sym_save)) allocate(to%sym_save(4,4,size(from%sym_save,dim=3)))
+    if(allocated(from%sym_save)) &
+         allocate(to%sym_save(4,4,size(from%sym_save,dim=3)))
     to = from
 
   end subroutine clone_grp
-!!!#############################################################################
+!###############################################################################
  
 
 !!!#############################################################################
