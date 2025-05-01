@@ -262,14 +262,15 @@ contains
        end if
     end do
     if(itmp1.eq.0)then
-       call stop_program("No inversion symmetry found!")
-       exit_code = max(exit_code, 1)
-       return
+       ! call stop_program("No inversion symmetry found!")
+       ! exit_code = max(exit_code, 1)
+       ! return
+    else
+       do i = 1, grp_store%nsym
+          if(all(abs(grp_store%sym(:3,:3,i)-inv_mat).lt.tol_sym)) &
+               grp_store%sym(4,:3,itmp1) = grp_store%sym(4,:3,i)
+       end do
     end if
-    do i = 1, grp_store%nsym
-       if(all(abs(grp_store%sym(:3,:3,i)-inv_mat).lt.tol_sym)) &
-            grp_store%sym(4,:3,itmp1) = grp_store%sym(4,:3,i)
-    end do
 
 
 
