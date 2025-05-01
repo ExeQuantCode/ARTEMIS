@@ -959,8 +959,14 @@ contains
                    ladder_adjust = term%arr(term_top_idx)%ladder(j+1) - term%arr(term_btm_idx)%ladder(j)
                 end if
              end if
-             rtmp1 = ( icell / real(num_cells,real32) + layer_thickness ) * slab_thickness + &
-                  ( ladder_adjust + term%arr(term_top_idx)%ladder(j) - term%arr(term_btm_idx)%ladder(1) ) * slab_thickness / real(num_cells,real32)
+             rtmp1 = &
+                  ( &
+                       icell / real(num_cells,real32) + layer_thickness &
+                  ) * slab_thickness + &
+                  ( &
+                       ladder_adjust + term%arr(term_top_idx)%ladder(j) - &
+                       term%arr(term_btm_idx)%ladder(1) &
+                  ) * slab_thickness / real(num_cells,real32)
              if(rtmp1.ge.thickness)then
                 istep = j
                 num_cells_minus1 = icell

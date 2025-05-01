@@ -1778,7 +1778,9 @@ contains
        call transformer(supercell_lw,tfmat,t1lw_map)
        if(.not.compare_stoichiometry(structure_lw,supercell_lw))then
           write(0,'(1X,"ERROR: Internal error in generate_interfaces")')
-          write(0,'(2X,"The gldfnd subroutine could not reproduce a valid primitive cell for the lower material on match ",I0)') ifit
+          write(0,'(2X,"&
+               &The gldfnd subroutine could not reproduce a valid primitive &
+               &cell for the lower material on match ",I0)') ifit
           if(verbose_.gt.1)then
              call err_abort_print_struc(supercell_lw, "broken_primitive.vasp", &
               "Code exiting due to IPRINT = 1")
@@ -1871,7 +1873,9 @@ contains
        ! check the stoichiometry ratios are still maintained
        if(.not.compare_stoichiometry(structure_up,supercell_up))then
           write(0,'(1X,"ERROR: Internal error in generate_interfaces")')
-          write(0,'(2X,"The gldfnd subroutine could not reproduce a valid primitive cell for the upper material on match ",I0)') ifit
+          write(0,'(2X,"&
+               &The gldfnd subroutine could not reproduce a valid primitive &
+               &cell for the upper material on match ",I0)') ifit
           if(verbose_.gt.1)then
              call err_abort_print_struc(supercell_up, "broken_primitive.vasp", &
               "Code exiting due to IPRINT = 1")
