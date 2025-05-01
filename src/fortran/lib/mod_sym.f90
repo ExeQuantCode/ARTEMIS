@@ -5,34 +5,40 @@
 !!!#############################################################################
 !!!module contains symmetry-related functions and subroutines.
 !!!module includes the following functions and subroutines:
-!!! sym_setup         (calls mksym and allocates unallocated symmetry arrays)
 !!! check_sym         (checks supplied symmetries against supplied basis or ...
 !!!                    ... checks whether the two supplied bases match after ...
 !!!                    ... applying symmetries)
 !!! gldfnd            (output translations that maps two bases)
 !!! mksym             (makes array of symmetries that apply to supplied lattice
-!!! clone_grp         (clones ingrp to outgrp)
-!!! symwrite          (output human-readable supplied transformation matrix)
 !!! basis_map         (finds symmetry equivalent atoms in two bases based on ...
 !!!                    ... the supplied transformation matrix)
-!!! setup_ladder      (sets up rungs of the layer ladder)
 !!!#############################################################################
 module artemis__sym
   use artemis__constants,   only: real32, pi
-  use artemis__misc,        only: sort2D
-  use misc_linalg,          only: modu,inverse_3x3,det,gcd,gen_group,cross,uvec
+  use misc_linalg,          only: modu, inverse_3x3, det, uvec
   use artemis__geom_rw,     only: basis_type
-  use artemis__geom_utils,            only: reducer, primitive_lat
   implicit none
+
+
+  private
+
+
+  public :: tol_sym_default
+  public :: sym_type
+  public :: check_sym, gldfnd
+
+  public :: confine_type
+
+  public :: basis_map_type, basis_map
+
+
+
   real(real32) :: tol_sym_default = 1.E-6_real32
   integer, allocatable, dimension(:) :: symops_compare
 
   interface get_wyckoff_atoms
      procedure get_wyckoff_atoms_any,get_wyckoff_atoms_loc
   end interface get_wyckoff_atoms
-
-
-  private
 
 
   type spec_wyck_type
@@ -77,31 +83,23 @@ module artemis__sym
      real(real32), allocatable, dimension(:,:,:) :: sym
      type(confine_type) :: confine
      real(real32), allocatable, dimension(:,:,:) :: sym_save
+   contains
+     procedure, pass(this) :: init => initialise_sym_type
+     procedure, pass(this) :: copy => copy_sym_type
   end type sym_type
 
 
-  public :: sym_type
-  public :: clone_grp
-  public :: sym_setup,check_sym,gldfnd
-
-  public :: get_primitive_cell
-  
-  public :: confine_type
-
-  public :: basis_map_type, basis_map
-
-
-!!!updated 2023/02/14
 
 
 contains
 
-!!!#############################################################################
-!!! calls mksym and allocates symops and wyckoff arrays
-!!!#############################################################################
-  subroutine sym_setup(grp,lat,predefined,new_start,tol_sym)
+!###############################################################################
+  subroutine initialise_sym_type(this,lat,predefined,new_start,tol_sym)
+    !! Initialises the symmetry container
     implicit none
-    type(sym_type), intent(inout) :: grp
+
+    ! Arguments
+    class(sym_type), intent(inout) :: this
     real(real32), dimension(3,3), intent(in) :: lat
     logical, optional, intent(in) :: predefined
     logical, optional, intent(in) :: new_start
@@ -116,30 +114,67 @@ contains
     if(present(tol_sym)) tol_sym_ = tol_sym
     if(present(new_start))then
        if(new_start)then
-          if(allocated(grp%op)) deallocate(grp%op)
-          if(allocated(grp%sym)) deallocate(grp%sym)
+          if(allocated(this%op)) deallocate(this%op)
+          if(allocated(this%sym)) deallocate(this%sym)
        end if
     end if
 
     predefined_ = .true.
     if(present(predefined)) predefined_ = predefined
     if(predefined_)then
-       call gen_fundam_sym_matrices(grp, lat, tol_sym_)
+       call gen_fundam_sym_matrices(this, lat, tol_sym_)
     else
-       call mksym(grp, lat, tol_sym_)
+       call mksym(this, lat, tol_sym_)
     end if
 
     if(allocated(symops_compare)) deallocate(symops_compare)
-    grp%nsymop=0
+    this%nsymop=0
 
     new_start_ = .true.
     if(present(new_start)) new_start_ = new_start
-    if(new_start_.or.grp%end_idx.eq.0)then
-       grp%end_idx = grp%nsym
+    if(new_start_.or.this%end_idx.eq.0)then
+       this%end_idx = this%nsym
     end if
 
-  end subroutine sym_setup
-!!!#############################################################################
+  end subroutine initialise_sym_type
+!###############################################################################
+
+
+!###############################################################################
+  subroutine copy_sym_type(this, source)
+    !! Copy symmetry container
+    implicit none
+
+    ! Arguments
+    class(sym_type), intent(inout) :: this
+    !! Destination symmetry group
+    type(sym_type), intent(in) :: source
+    !! Source symmetry group
+   
+
+    if(allocated(this%op)) deallocate(this%op)
+    if(allocated(this%sym)) deallocate(this%sym)
+    if(allocated(this%sym_save)) deallocate(this%sym_save)
+
+    this%nsym = source%nsym
+    this%nlatsym = source%nlatsym
+    this%nsymop = source%nsymop
+    this%npntop = source%npntop
+    this%lspace = source%lspace
+    this%lmolec = source%lmolec
+    this%start_idx = source%start_idx
+    this%end_idx = source%end_idx
+    this%confine = source%confine
+
+    if(allocated(source%op)) &
+         allocate(this%op, source = source%op)
+    if(allocated(source%sym)) &
+         allocate(this%sym, source = source%sym)
+    if(allocated(source%sym_save)) &
+         allocate(this%sym_save, source = source%sym_save)
+
+  end subroutine copy_sym_type
+!###############################################################################
 
 
 !!!#############################################################################
@@ -1250,228 +1285,7 @@ contains
 
   end function is_valid_symmetry
 !###############################################################################
-
-
-!###############################################################################
-  subroutine clone_grp(from, to)
-    !! Clone a symmetry group
-    implicit none
-
-    ! Arguments
-    type(sym_type), intent(in) :: from
-    !! Source symmetry group
-    type(sym_type), intent(out) :: to
-    !! Destination symmetry group
-    
-    
-    if(allocated(from%op)) allocate(to%op(size(from%op)))
-    if(allocated(from%sym)) allocate(to%sym(4,4,size(from%sym,dim=3)))
-    if(allocated(from%sym_save)) &
-         allocate(to%sym_save(4,4,size(from%sym_save,dim=3)))
-    to = from
-
-  end subroutine clone_grp
-!###############################################################################
  
-
-!!!#############################################################################
-!!! returns the primitive cell from a supercell
-!!!#############################################################################
-  subroutine get_primitive_cell(basis, tol_sym)
-    implicit none
-    type(basis_type), intent(inout) :: basis
-    real(real32), intent(in), optional :: tol_sym
-
-    integer :: is,ia,ja,i,j,k,itmp1
-    integer :: ntrans,len
-    real(real32) :: scale,proj,dtmp1
-    real(real32) :: tol_sym_
-    type(confine_type) :: confine
-    real(real32), dimension(3,3) :: dmat1,invlat
-    real(real32), allocatable, dimension(:,:) :: trans,atom_store
-    
-
-    
-    !!-----------------------------------------------------------------------
-    !! Allocate and initialise
-    !!-----------------------------------------------------------------------
-    tol_sym_ = tol_sym_default
-    if(present(tol_sym)) tol_sym_ = tol_sym
-    ntrans = 0
-    dmat1=0._real32
-    allocate(trans(minval(basis%spec(:)%num+2),3)); trans=0._real32
-
-    
-    !!-----------------------------------------------------------------------
-    !! Find the translation vectors in the cell
-    !!-----------------------------------------------------------------------
-    call gldfnd(confine,basis,basis,trans,ntrans,tol_sym,.false.)
-    len=size(basis%spec(1)%atom,dim=2)
-
-    
-    !!-----------------------------------------------------------------------
-    !! For each translation, reduce the basis
-    !!-----------------------------------------------------------------------
-    if(ntrans.ge.1)then
-       do i=ntrans+1,ntrans+3
-          trans(i,:)=0._real32
-          trans(i,i-ntrans)=1._real32
-       end do
-       !  trans=matmul(trans(1:ntrans,1:3),basis%lat)
-       call sort2D( [ trans(1:ntrans+3,:) ] ,ntrans+3)
-       !! for each lattice vector, determine the shortest translation ...
-       !! ... vector that has a non-zero projection along that lattice vector.
-       do i=1,3
-          proj=1.D2
-          trans_loop: do j=1,ntrans+3
-             dtmp1 = dot_product(trans(j,:),trans(ntrans+i,:))
-             if(dtmp1.lt.tol_sym) cycle trans_loop
-
-             do k=1,i-1,1
-                if(modu(abs(cross( [ trans(j,:) ], [ dmat1(k,:) ]))).lt.1.E-8_real32) cycle trans_loop
-             end do
-
-             dtmp1 = modu( [ trans(j,:) ] )
-             if(dtmp1.lt.proj)then
-                proj=dtmp1
-                dmat1(i,:) = trans(j,:)
-                trans(j,:) = 0._real32
-             end if
-          end do trans_loop
-       end do
-       !dmat1=trans(1:3,1:3)
-       scale=det(dmat1)
-       dmat1=matmul(dmat1,basis%lat)
-       invlat=inverse_3x3(dmat1)
-       do is=1,basis%nspec
-          itmp1=0
-          allocate(atom_store(nint(scale*basis%spec(is)%num),len))
-          atcheck: do ia=1,basis%spec(is)%num
-             !!-----------------------------------------------------------------
-             !! Reduce the basis
-             !!-----------------------------------------------------------------
-             basis%spec(is)%atom(ia,1:3)=&
-                  matmul(basis%spec(is)%atom(ia,1:3),basis%lat(1:3,1:3))
-             basis%spec(is)%atom(ia,1:3)=&
-                  matmul(transpose(invlat(1:3,1:3)),basis%spec(is)%atom(ia,1:3))
-             do j=1,3
-                basis%spec(is)%atom(ia,j)=&
-                     basis%spec(is)%atom(ia,j)-floor(basis%spec(is)%atom(ia,j))
-                if(basis%spec(is)%atom(ia,j).gt.1._real32-tol_sym) &
-                     basis%spec(is)%atom(ia,j)=0._real32
-             end do
-             !!-----------------------------------------------------------------
-             !! Check for duplicates in the cell
-             !!-----------------------------------------------------------------
-             do ja=1, itmp1
-                if(all(abs(basis%spec(is)%atom(ia,1:3)-atom_store(ja,1:3)).lt.&
-                     [ tol_sym,tol_sym,tol_sym ])) cycle atcheck
-             end do
-             itmp1=itmp1+1
-             atom_store(itmp1,:)=basis%spec(is)%atom(ia,:)
-             !!-----------------------------------------------------------------
-             !! Check to ensure correct number of atoms remain after reduction
-             !!-----------------------------------------------------------------
-             if(itmp1.gt.size(atom_store,dim=1))then
-                write(0,*) "ERROR! Primitive cell subroutine retained too &
-                     &many atoms from supercell!", itmp1, size(atom_store,dim=1)
-                call exit()
-             end if
-             !!-----------------------------------------------------------------
-          end do atcheck
-          deallocate(basis%spec(is)%atom)
-          call move_alloc(atom_store,basis%spec(is)%atom)
-          basis%spec(is)%num=size(basis%spec(is)%atom,dim=1)
-          !deallocate(atom_store)
-       end do
-       !!-----------------------------------------------------------------------
-       !! Reduce the lattice
-       !!-----------------------------------------------------------------------
-       basis%natom=sum(basis%spec(:)%num)
-       basis%lat=dmat1
-    end if
-
-    
-    !!-----------------------------------------------------------------------
-    !! Reduce the lattice to symmetry definition
-    !!-----------------------------------------------------------------------
-    !! next line necessary as FCC and BCC do not conform to Niggli reduced ...
-    !! ... cell definitions.
-    call primitive_lat(basis)
-
-
-    
-  end subroutine get_primitive_cell
-!!!#############################################################################
-
-
-!!!#############################################################################
-!!! takes in transformation matrix and outputs its (x,y,z) definition
-!!!#############################################################################
-  subroutine symwrite (sym,symchar)
-    implicit none
-    integer :: i,j,nt,nr,div
-    real(real32), dimension(4,4) :: sym
-    character(1024) :: symchar
-    character(2) :: rm,c
-    character(1), dimension(3) :: xyz
-
-    xyz(1)="x";xyz(2)="y";xyz(3)="z"
-    symchar=""
-    do i=1,3
-       select case (nint(100*sym(4,i)))
-       case(0)
-       case default
-          div=abs(gcd(nint(100*sym(4,i)),100))
-          write(symchar,'(A,I0,"aa",I0)') trim(symchar),nint(100*sym(4,i))/div,100/div
-       end select
-
-       do j=1,3
-          select case (int(sym(j,i)))
-          case(0)
-             cycle
-          case(1)
-             c=""
-          case default
-             write(c,"(I2)") int(sym(j,i))
-          end select
-          symchar=trim(symchar) //"+"//trim(adjustl(c(1:1)))//xyz(j)
-       end do
-       if(i.ne.3) symchar=trim(symchar) //","
-    end do
-
-    rm="+-"
-    nt=len_trim(symchar) ; nr=len_trim(symchar)
-    remove: do
-       i=index(symchar,trim(adjustl(rm)))
-       if(i.eq.0) exit remove
-       symchar = symchar(:i-1) //symchar(i+1:nt)
-    end do remove
-
-    rm=",+"
-    nt=len_trim(symchar) ; nr=len_trim(symchar)
-    remove2: do
-       i=index(symchar,trim(adjustl(rm)))
-       if(i.eq.0) exit remove2
-       symchar = symchar(:i) //symchar(i+2:nt)
-    end do remove2
-    if(symchar(:1).eq."+") symchar=symchar(2:)
-
-    rm="aa"
-    nt=len_trim(symchar) ; nr=len_trim(symchar)
-    remove3: do
-       i=index(symchar,trim(adjustl(rm)))
-       if(i.eq.0) exit remove3
-       symchar = symchar(:i-1) //"/"//symchar(i+2:nt)
-    end do remove3
-
-
-    symchar = "("//trim(adjustl(symchar))//")"
-    write(77,*) trim(adjustl(symchar))
-
-  end subroutine symwrite
-!!!#############################################################################
-
 
 !!!#############################################################################
 !!! returns the wyckoff atoms of a basis (closest to a defined location)

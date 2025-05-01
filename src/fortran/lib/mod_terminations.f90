@@ -6,7 +6,7 @@ module artemis__terminations
   use artemis__io_utils,  only: err_abort, stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
   use misc_linalg,        only: modu, cross, uvec, det
-  use artemis__sym,       only: sym_type, check_sym, sym_setup, clone_grp
+  use artemis__sym,       only: sym_type, check_sym
   use artemis__geom_utils,          only: shifter, transformer, ortho_axis, set_vacuum
   implicit none
 
@@ -234,8 +234,7 @@ contains
     grp_store%lspace = .true.
     grp_store%confine%l = .true.
     grp_store%confine%laxis(axis) = .true.
-    call sym_setup( &
-         grp_store, &
+    call grp_store%init( &
          basis%lat, &
          predefined=.true., new_start=.true., &
          tol_sym=tol_sym &
@@ -293,7 +292,7 @@ contains
              if(abs(abs(term_arr(i)%hmax-term_arr(i)%hmin) - &
                   abs(term_arr_uniq(j)%hmax-term_arr_uniq(j)%hmin)).gt.tol_sym) &
                   cycle sym_loop1
-             call clone_grp(grp_store,grp1)
+             call grp1%copy(grp_store)
              call check_sym(grp1,basis=basis_arr(mterm),&
                   iperm=-1,tmpbas2=basis_arr(j),lsave=.true.,tol_sym=tol_sym)
              if(grp1%nsymop.ne.0)then
@@ -327,8 +326,7 @@ contains
     grp_store_inv%lspace = .true.
     grp_store_inv%confine%l = .true.
     grp_store_inv%confine%laxis(axis) = .true.
-    call sym_setup( &
-         grp_store_inv, &
+    call grp_store_inv%init( &
          basis%lat, &
          predefined=.true., new_start=.true., &
          tol_sym=tol_sym &
@@ -374,7 +372,7 @@ contains
           do j = 1, i-1, 1
              if(success(j).eq.itmp2)then
                 grp_store%end_idx = grp_store%nsym
-                call clone_grp(grp_store,grp1)
+                call grp1%copy(grp_store)
                 call check_sym(grp1,basis=basis_arr_reject(j),&
                      iperm=-1,tmpbas2=basis_arr_reject(i),lsave=.true., &
                      tol_sym=tol_sym &
@@ -396,7 +394,7 @@ contains
           lunique = .true.
           do k = 1, size(comparison_list)
              itmp2 = comparison_list(k)
-             call clone_grp(grp_store_inv,grp1)
+             call grp1%copy(grp_store_inv)
              call check_sym(grp1,basis_arr(itmp2),&
                   iperm=-1,lsave=.true.,check_all_sym=.true., &
                   tol_sym=tol_sym &
@@ -410,7 +408,7 @@ contains
              !! If they are not, then no point comparing. It is a new termination
              if(.not.ltmp1) cycle
 
-             call clone_grp(grp_store_inv,grp1)
+             call grp1%copy(grp_store_inv)
              call check_sym(grp1,basis_arr(itmp2),&
                   tmpbas2=basis_arr_reject(i), &
                   iperm=-1, &

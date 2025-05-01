@@ -38,7 +38,8 @@
 module artemis__geom_utils
   use artemis__constants, only: real32
   use artemis__geom_rw, only: basis_type,geom_write
-  use artemis__misc, only: swap
+  use artemis__sym, only: confine_type, gldfnd, tol_sym_default
+  use artemis__misc, only: swap, sort2D
   use misc_linalg, only: cross,outer_product,cross_matrix,uvec,modu,&
        get_vol,det,inverse,inverse_3x3,LUinv,reduce_vec_gcd,get_vec_multiple,&
        proj,GramSchmidt,LLL_reduce
@@ -1921,6 +1922,136 @@ contains
   end function split_bas
 !!!#############################################################################
 
+
+!!!#############################################################################
+!!! returns the primitive cell from a supercell
+!!!#############################################################################
+  subroutine get_primitive_cell(basis, tol_sym)
+    implicit none
+    type(basis_type), intent(inout) :: basis
+    real(real32), intent(in), optional :: tol_sym
+
+    integer :: is,ia,ja,i,j,k,itmp1
+    integer :: ntrans,len
+    real(real32) :: scale,projection,dtmp1
+    real(real32) :: tol_sym_
+    type(confine_type) :: confine
+    real(real32), dimension(3,3) :: dmat1,invlat
+    real(real32), allocatable, dimension(:,:) :: trans,atom_store
+    
+
+    
+    !!-----------------------------------------------------------------------
+    !! Allocate and initialise
+    !!-----------------------------------------------------------------------
+    tol_sym_ = tol_sym_default
+    if(present(tol_sym)) tol_sym_ = tol_sym
+    ntrans = 0
+    dmat1=0._real32
+    allocate(trans(minval(basis%spec(:)%num+2),3)); trans=0._real32
+
+    
+    !!-----------------------------------------------------------------------
+    !! Find the translation vectors in the cell
+    !!-----------------------------------------------------------------------
+    call gldfnd(confine,basis,basis,trans,ntrans,tol_sym,.false.)
+    len=size(basis%spec(1)%atom,dim=2)
+
+    
+    !!-----------------------------------------------------------------------
+    !! For each translation, reduce the basis
+    !!-----------------------------------------------------------------------
+    if(ntrans.ge.1)then
+       do i=ntrans+1,ntrans+3
+          trans(i,:)=0._real32
+          trans(i,i-ntrans)=1._real32
+       end do
+       !  trans=matmul(trans(1:ntrans,1:3),basis%lat)
+       call sort2D( [ trans(1:ntrans+3,:) ] ,ntrans+3)
+       !! for each lattice vector, determine the shortest translation ...
+       !! ... vector that has a non-zero projection along that lattice vector.
+       do i=1,3
+          projection=1.E2_real32
+          trans_loop: do j=1,ntrans+3
+             dtmp1 = dot_product(trans(j,:),trans(ntrans+i,:))
+             if(dtmp1.lt.tol_sym) cycle trans_loop
+
+             do k=1,i-1,1
+                if(modu(abs(cross( [ trans(j,:) ], [ dmat1(k,:) ]))).lt.1.E-8_real32) cycle trans_loop
+             end do
+
+             dtmp1 = modu( [ trans(j,:) ] )
+             if(dtmp1.lt.projection)then
+                projection=dtmp1
+                dmat1(i,:) = trans(j,:)
+                trans(j,:) = 0._real32
+             end if
+          end do trans_loop
+       end do
+       !dmat1=trans(1:3,1:3)
+       scale=det(dmat1)
+       dmat1=matmul(dmat1,basis%lat)
+       invlat=inverse_3x3(dmat1)
+       do is=1,basis%nspec
+          itmp1=0
+          allocate(atom_store(nint(scale*basis%spec(is)%num),len))
+          atcheck: do ia=1,basis%spec(is)%num
+             !!-----------------------------------------------------------------
+             !! Reduce the basis
+             !!-----------------------------------------------------------------
+             basis%spec(is)%atom(ia,1:3)=&
+                  matmul(basis%spec(is)%atom(ia,1:3),basis%lat(1:3,1:3))
+             basis%spec(is)%atom(ia,1:3)=&
+                  matmul(transpose(invlat(1:3,1:3)),basis%spec(is)%atom(ia,1:3))
+             do j=1,3
+                basis%spec(is)%atom(ia,j)=&
+                     basis%spec(is)%atom(ia,j)-floor(basis%spec(is)%atom(ia,j))
+                if(basis%spec(is)%atom(ia,j).gt.1._real32-tol_sym) &
+                     basis%spec(is)%atom(ia,j)=0._real32
+             end do
+             !!-----------------------------------------------------------------
+             !! Check for duplicates in the cell
+             !!-----------------------------------------------------------------
+             do ja=1, itmp1
+                if(all(abs(basis%spec(is)%atom(ia,1:3)-atom_store(ja,1:3)).lt.&
+                     [ tol_sym,tol_sym,tol_sym ])) cycle atcheck
+             end do
+             itmp1=itmp1+1
+             atom_store(itmp1,:)=basis%spec(is)%atom(ia,:)
+             !!-----------------------------------------------------------------
+             !! Check to ensure correct number of atoms remain after reduction
+             !!-----------------------------------------------------------------
+             if(itmp1.gt.size(atom_store,dim=1))then
+                write(0,*) "ERROR! Primitive cell subroutine retained too &
+                     &many atoms from supercell!", itmp1, size(atom_store,dim=1)
+                call exit()
+             end if
+             !!-----------------------------------------------------------------
+          end do atcheck
+          deallocate(basis%spec(is)%atom)
+          call move_alloc(atom_store,basis%spec(is)%atom)
+          basis%spec(is)%num=size(basis%spec(is)%atom,dim=1)
+          !deallocate(atom_store)
+       end do
+       !!-----------------------------------------------------------------------
+       !! Reduce the lattice
+       !!-----------------------------------------------------------------------
+       basis%natom=sum(basis%spec(:)%num)
+       basis%lat=dmat1
+    end if
+
+    
+    !!-----------------------------------------------------------------------
+    !! Reduce the lattice to symmetry definition
+    !!-----------------------------------------------------------------------
+    !! next line necessary as FCC and BCC do not conform to Niggli reduced ...
+    !! ... cell definitions.
+    call primitive_lat(basis)
+
+
+    
+  end subroutine get_primitive_cell
+!!!#############################################################################
 
 !!!#############################################################################
 !!! returns the bulk basis and lattice of 

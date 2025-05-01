@@ -19,9 +19,9 @@ module artemis__generator
   use artemis__geom_utils,    only: planecutter, primitive_lat, ortho_axis,&
        shift_region, set_vacuum, transformer, shifter, reducer, &
        get_min_bulk_bond, get_min_bond, get_shortest_bond, bond_type, &
-       share_strain, MATNORM, basis_stack, compare_stoichiometry
-  use artemis__sym,           only: confine_type, gldfnd,&
+       share_strain, MATNORM, basis_stack, compare_stoichiometry, &
        get_primitive_cell
+  use artemis__sym,           only: confine_type, gldfnd
   use artemis__terminations,  only: get_termination_info, term_arr_type, &
        set_layer_tol, build_slab_supercell, cut_slab_to_height
   use swapping,               only: rand_swapper
