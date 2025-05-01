@@ -7,11 +7,7 @@ set(CMAKE_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}
   CACHE STRING "Select where to build the library." )
 set(MODULE_DIR ${CMAKE_BUILD_DIR}/mod)
 
-if (DEFINED SKBUILD_PROJECT_NAME)
-	set(SKBUILD_PROJECT_NAME ${SKBUILD_PROJECT_NAME})
-else()
-	set(SKBUILD_PROJECT_NAME "artemis")
-endif()
+set(SKBUILD_PROJECT_NAME "artemis")
 
 
 # set compiler
@@ -23,7 +19,7 @@ set(CMAKE_Fortran_STANDARD 2018)
 
 # set the project version
 file(READ "fpm.toml" ver)
-string(REGEX MATCH "version = \"([0-9]+.[0-9]+.[0-9]+)\"" _ ${ver})
+string(REGEX MATCH "version = \"([0-9]+\\.[0-9]+\\.[0-9]+)(-dev[0-9]+)?\"" _ ${ver})
 set(PROJECT_VERSION ${CMAKE_MATCH_1})
 message(STATUS "Project version: ${PROJECT_VERSION}")
 

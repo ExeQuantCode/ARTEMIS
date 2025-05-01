@@ -8,3 +8,8 @@ tests/*/*.out
 tests/*/DINTERFACES
 tests/*/DTERMINATIONS
 build/
+dist/
+wheelhouse/
+*.egg-info/
+*.egg
+*.pyc

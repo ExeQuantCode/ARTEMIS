@@ -26,9 +26,10 @@ ninja.make-fallback = true
 sdist.reproducible = true
 # dev purposes only
 build.verbose = false
+wheel.packages = ["src/artemis"]
 
 [project]
-name = "artemis"
+name = "artemis-materials"
 dynamic = ["version"]
 dependencies = [
     "numpy>=1.26.4,<=2.2",
