@@ -29,7 +29,7 @@ module mod_help
 
 
   ! Cell_edits number of tags
-  integer, parameter :: ntags_cell_edits=14
+  integer, parameter :: ntags_cell_edits=15
   ! Cell_edits tags
   integer, parameter :: iout_file_tag=1
   integer, parameter :: ilsurf_gen_CE_tag=2
@@ -45,6 +45,7 @@ module mod_help
   integer, parameter :: ilnorm_lat_tag=12
   integer, parameter :: imin_thick_tag=13
   integer, parameter :: iuse_pricel_tag=14
+  integer, parameter :: irequire_stoich_tag=15
 
   integer, parameter :: ntags_depr_cell_edits=1
   ! Cell_edits deprecated tags
@@ -52,7 +53,7 @@ module mod_help
 
 
   ! Interface number of tags
-  integer, parameter :: ntags_interface=57
+  integer, parameter :: ntags_interface=59
   ! Interface tags
   integer, parameter :: inintf_tag=1
   integer, parameter :: iimatch_tag=2
@@ -111,6 +112,8 @@ module mod_help
   integer, parameter :: ilbreak_on_no_term_tag=55
   integer, parameter :: ilw_min_thick_tag=56
   integer, parameter :: iup_min_thick_tag=57
+  integer, parameter :: ilw_require_stoich_tag=58
+  integer, parameter :: iup_require_stoich_tag=59
 
   integer, parameter :: ntags_depr_interface=2
   ! Cell_edits deprecated tags
@@ -343,6 +346,17 @@ contains
     tag(iuse_pricel_tag)%description = &
          'Defines whether to generate and use the primitive unit cell &
          &for the crystal'
+
+    tag(irequire_stoich_tag)%name    = 'REQUIRE_STOICH'
+    tag(irequire_stoich_tag)%type    = 'L'
+    tag(irequire_stoich_tag)%summary = 'Maintain stoichiometry for terminations'
+    tag(irequire_stoich_tag)%allowed = 'TRUE or FALSE'
+    tag(irequire_stoich_tag)%default = 'FALSE'
+    tag(irequire_stoich_tag)%description = &
+         'Defines whether to maintain stoichiometry for the terminations.\n&
+         &If TRUE, ARTEMIS will only generate terminations that are consistent &
+         &with the stoichiometry of the bulk crystal.\n&
+         &If FALSE, ARTEMIS will generate all possible terminations.'
 
     tag(imiller_tag)%name    = 'MILLER_PLANE'
     tag(imiller_tag)%type    = 'U'
@@ -940,6 +954,28 @@ contains
          & can be fixed (strained) or changed (unstrained) to compensate for interfacial strains.\n&
          &  TRUE  = fix the c axis\n&
          &  FALSE = extend/compress c axis to compensate for strain.'
+
+    tag(ilw_require_stoich_tag)%name    = 'LW_REQUIRE_STOICH'
+    tag(ilw_require_stoich_tag)%type    = 'L'
+    tag(ilw_require_stoich_tag)%summary = 'Maintain stoichiometry for lower terminations'
+    tag(ilw_require_stoich_tag)%allowed = 'TRUE or FALSE'
+    tag(ilw_require_stoich_tag)%default = 'FALSE'
+    tag(ilw_require_stoich_tag)%description = &
+         'Defines whether to maintain stoichiometry for the terminations of the lower structure.\n&
+         &If TRUE, ARTEMIS will only generate terminations that are consistent &
+         &with the stoichiometry of the bulk crystal.\n&
+         &If FALSE, ARTEMIS will generate all possible terminations.'
+
+    tag(iup_require_stoich_tag)%name    = 'UP_REQUIRE_STOICH'
+    tag(iup_require_stoich_tag)%type    = 'L'
+    tag(iup_require_stoich_tag)%summary = 'Maintain stoichiometry for upper terminations'
+    tag(iup_require_stoich_tag)%allowed = 'TRUE or FALSE'
+    tag(iup_require_stoich_tag)%default = 'FALSE'
+    tag(iup_require_stoich_tag)%description = &
+         'Defines whether to maintain stoichiometry for the terminations of the upper structure.\n&
+         &If TRUE, ARTEMIS will only generate terminations that are consistent &
+         &with the stoichiometry of the bulk crystal.\n&
+         &If FALSE, ARTEMIS will generate all possible terminations.'
 
 
   end function setup_interface_tags

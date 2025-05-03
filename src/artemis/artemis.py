@@ -1394,7 +1394,9 @@ class Generator(f90wrap.runtime.FortranModule):
                 use_pricel_up=use_pricel_up)
         
         def set_surface_properties(self, miller_lw=None, miller_up=None, \
-            is_layered_lw=None, is_layered_up=None, layer_separation_cutoff_lw=None, \
+            is_layered_lw=None, is_layered_up=None, \
+            require_stoichiometry_lw=None, require_stoichiometry_up=None, \
+            layer_separation_cutoff_lw=None, \
             layer_separation_cutoff_up=None, layer_separation_cutoff=None, \
             vacuum_gap=None):
             """
@@ -1414,6 +1416,8 @@ class Generator(f90wrap.runtime.FortranModule):
             miller_up : int array
             is_layered_lw : bool
             is_layered_up : bool
+            require_stoichiometry_lw : bool
+            require_stoichiometry_up : bool
             layer_separation_cutoff_lw : float
             layer_separation_cutoff_up : float
             layer_separation_cutoff : float array
@@ -1423,6 +1427,8 @@ class Generator(f90wrap.runtime.FortranModule):
             _artemis.f90wrap_intf_gen__set_surface_properties__binding__agt(this=self._handle, \
                 miller_lw=miller_lw, miller_up=miller_up, is_layered_lw=is_layered_lw, \
                 is_layered_up=is_layered_up, \
+                require_stoichiometry_lw=require_stoichiometry_lw, \
+                require_stoichiometry_up=require_stoichiometry_up, \
                 layer_separation_cutoff_lw=layer_separation_cutoff_lw, \
                 layer_separation_cutoff_up=layer_separation_cutoff_up, \
                 layer_separation_cutoff=layer_separation_cutoff, vacuum_gap=vacuum_gap)

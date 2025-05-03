@@ -1285,6 +1285,7 @@ subroutine f90wrap_intf_gen__set_surface_properties__binding__agt( &
     this, &
     miller_lw, miller_up, &
     is_layered_lw, is_layered_up, &
+    require_stoichiometry_lw, require_stoichiometry_up, &
     layer_separation_cutoff_lw, layer_separation_cutoff_up, layer_separation_cutoff, &
     vacuum_gap, n0)
     use artemis__generator, only: artemis_generator_type
@@ -1299,6 +1300,8 @@ subroutine f90wrap_intf_gen__set_surface_properties__binding__agt( &
     integer, dimension(3), intent(in), optional :: miller_up
     logical, intent(in), optional :: is_layered_lw
     logical, intent(in), optional :: is_layered_up
+    logical, intent(in), optional :: require_stoichiometry_lw
+    logical, intent(in), optional :: require_stoichiometry_up
     real(4), intent(in), optional :: layer_separation_cutoff_lw
     real(4), intent(in), optional :: layer_separation_cutoff_up
     real(4), dimension(n0), intent(in), optional :: layer_separation_cutoff
@@ -1309,6 +1312,8 @@ subroutine f90wrap_intf_gen__set_surface_properties__binding__agt( &
     call this_ptr%p%set_surface_properties( &
         miller_lw=miller_lw, miller_up=miller_up, &
         is_layered_lw=is_layered_lw, is_layered_up=is_layered_up, &
+        require_stoichiometry_lw=require_stoichiometry_lw, &
+        require_stoichiometry_up=require_stoichiometry_up, &
         layer_separation_cutoff_lw=layer_separation_cutoff_lw, &
         layer_separation_cutoff_up=layer_separation_cutoff_up, &
         layer_separation_cutoff=layer_separation_cutoff, &

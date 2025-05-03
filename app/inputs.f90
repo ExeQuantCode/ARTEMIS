@@ -21,6 +21,8 @@ module inputs
   use infile_tools
   use infile_print
   implicit none
+
+
   integer :: max_num_matches, max_num_terms, max_num_planes
   !! Maximum number of matches, terminations and Miller planes for matching
   logical :: compensate_normal
@@ -63,6 +65,14 @@ module inputs
   type(tol_type) :: tolerance
   !! Tolerance settings for lattice matchings
 
+  logical :: lw_use_pricel, up_use_pricel
+  !! Boolean whether to use the primitive cell of the lower and upper
+  logical :: lw_layered, up_layered
+  !! Boolean whether the lower and upper structures are layered
+  logical :: lw_require_stoich, up_require_stoich
+  !! Boolean whether to require terminations of the lower and upper structures
+  !! to be stoichiometrically equivalent to their provided structure
+
   integer :: nout,task,task_defect
   integer :: irestart
   integer :: lw_num_layers,up_num_layers
@@ -73,8 +83,6 @@ module inputs
   character(200) :: struc1_file,struc2_file,out_filename
   character(100) :: dirname,shiftdir,swapdir,subdir_prefix
   logical :: lsurf_gen,lprint_matches,lprint_terms,lgen_interfaces,lprint_shifts
-  logical :: lw_use_pricel, up_use_pricel
-  logical :: lw_layered,up_layered
   logical :: lnorm_lat
   logical :: ludef_lw_layered,ludef_up_layered,ludef_axis
   logical :: lpresent_struc2
@@ -86,8 +94,6 @@ module inputs
   real(real32), dimension(2) :: udef_intf_loc
   real(real32), dimension(3,3) :: struc1_lat,struc2_lat
 
-
-!!!updated  2023/03/27
 
 
 contains
@@ -587,7 +593,7 @@ contains
     character(1024) :: buffer,tagname,store
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(14) :: readvar
+    integer, dimension(15) :: readvar
     logical, optional, intent(in) :: skip
     character(len=6), dimension(4) :: &
          tag_list = ["axis  ","loc   ","val   ","bounds"]
@@ -675,11 +681,13 @@ contains
              read(store,*) lw_surf
           end select
        case("LNORM_LAT")
-          call assign(buffer,lnorm_lat,        readvar(12))
+          call assign(buffer,lnorm_lat,         readvar(12))
        case("MIN_THICKNESS")
-          call assign(buffer,lw_thickness,     readvar(13))
+          call assign(buffer,lw_thickness,      readvar(13))
        case("USE_PRICEL")
-          call assign(buffer,lw_use_pricel,    readvar(14))
+          call assign(buffer,lw_use_pricel,     readvar(14))
+       case("REQUIRE_STOICH")
+          call assign(buffer,lw_require_stoich, readvar(15))
        case default
           write(*,'("NOTE: unable to assign variable on line ",I0)') count
        end select
@@ -713,7 +721,7 @@ contains
     logical :: ludef_shifts, ludef_lw_layer_sep, ludef_up_layer_sep
     integer, intent(in) :: unit
     integer, intent(inout) :: count
-    integer, dimension(57) :: readvar
+    integer, dimension(59) :: readvar
     logical, optional, intent(in) :: skip
 
 
@@ -902,6 +910,10 @@ contains
           call assign(buffer,lw_thickness,       readvar(56))
        case("UP_MIN_THICKNESS")
           call assign(buffer,up_thickness,       readvar(57))
+       case("LW_REQUIRE_STOICH")
+          call assign(buffer,lw_require_stoich,  readvar(58))
+       case("UP_REQUIRE_STOICH")
+          call assign(buffer,up_require_stoich,  readvar(59))
        case default
           write(0,'("NOTE: unable to assign variable on line ",I0)') count
        end select

@@ -48,6 +48,7 @@ program artemis_executable
         call generator%set_surface_properties( &
              miller_lw = lw_mplane, &
              is_layered_lw = lw_layered, &
+             require_stoichiometry_lw = lw_require_stoich, &
              vacuum_gap = vacuum_gap, &
              layer_separation_cutoff = layer_sep &
         )
@@ -115,6 +116,8 @@ program artemis_executable
      call generator%set_surface_properties( &
           miller_lw = lw_mplane, miller_up = up_mplane, &
           is_layered_lw = lw_layered, is_layered_up = up_layered, &
+          require_stoichiometry_lw = lw_require_stoich, &
+          require_stoichiometry_up = up_require_stoich, &
           layer_separation_cutoff = [ lw_layer_sep, up_layer_sep ], &
           vacuum_gap = vacuum_gap &
      )

@@ -42,6 +42,9 @@ module artemis__generator
     !! Elastic constants for the lower and upper bulk structures
     logical :: use_pricel_lw = .true., use_pricel_up = .true.
     !! Use primitive cell for lower and upper bulk structures
+    logical :: require_stoichiometry_lw = .false., &
+         require_stoichiometry_up = .false.
+    !! Boolean whether to require stoichiometry for the lower and upper bulk structures
     
     integer, dimension(3) :: miller_lw = [ 0, 0, 0 ], miller_up = [ 0, 0, 0 ]
     !! Miller indices for the lower and upper bulk structures
@@ -608,6 +611,7 @@ contains
        this, &
        miller_lw, miller_up, &
        is_layered_lw, is_layered_up, &
+       require_stoichiometry_lw, require_stoichiometry_up, &
        layer_separation_cutoff_lw, layer_separation_cutoff_up, &
        layer_separation_cutoff, &
        vacuum_gap &
@@ -627,6 +631,11 @@ contains
     !! Boolean whether the lower bulk structure is layered
     logical, intent(in), optional :: is_layered_up
     !! Boolean whether the upper bulk structure is layered
+
+    logical, intent(in), optional :: require_stoichiometry_lw
+    !! Boolean whether to require stoichiometry for the lower bulk structure
+    logical, intent(in), optional :: require_stoichiometry_up
+    !! Boolean whether to require stoichiometry for the upper bulk structure
 
     real(real32), intent(in), optional :: layer_separation_cutoff_lw
     !! Layer separation cutoff for the lower bulk structure
@@ -654,6 +663,11 @@ contains
        this%is_layered_up = is_layered_up
        this%ludef_is_layered_up = .true.
     end if
+
+    if(present(require_stoichiometry_lw)) &
+         this%require_stoichiometry_lw = require_stoichiometry_lw
+    if(present(require_stoichiometry_up)) &
+         this%require_stoichiometry_up = require_stoichiometry_up
 
     if(present(vacuum_gap)) this%vacuum_gap = vacuum_gap
 
@@ -1776,6 +1790,7 @@ contains
        end if
        if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
        call transformer(supercell_lw,tfmat,t1lw_map)
+       ! check the stoichiometry ratios are still maintained
        if(.not.compare_stoichiometry(structure_lw,supercell_lw))then
           write(0,'(1X,"ERROR: Internal error in generate_interfaces")')
           write(0,'(2X,"&
@@ -1998,6 +2013,9 @@ contains
                         &surfaces are required.")')
                    write(*,'(2X,"Skipping this termination...")')
                    cycle lw_term_loop
+                elseif(this%require_stoichiometry_lw)then
+                   write(*,'(2X,"Skipping this termination...")')
+                   cycle lw_term_loop
                 end if
              end if
              if(slab_up%nspec.ne.structure_up%nspec.or.any(&
@@ -2008,6 +2026,9 @@ contains
                 if(this%is_layered_up)then
                    write(*,'(2X,"As upper structure is layered, stoichiometric &
                         &surfaces are required.")')
+                   write(*,'(2X,"Skipping this termination...")')
+                   cycle up_term_loop
+                elseif(this%require_stoichiometry_up)then
                    write(*,'(2X,"Skipping this termination...")')
                    cycle up_term_loop
                 end if
