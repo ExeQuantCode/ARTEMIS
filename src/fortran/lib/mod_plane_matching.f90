@@ -567,7 +567,6 @@ contains
     type(tol_type) :: tol
     real(real32), dimension(3) :: lat1_veca,lat1_vecb,lat2_veca,lat2_vecb, unit_vec
     real(real32), dimension(tol%maxfit) :: MAIN_LOOP_LIST_TOLERANCES
-    !real(real32), dimension(:) :: MAIN_LOOP_LIST_TOLERANCES
     integer, dimension(2,6) :: tmpmat
     real(real32), dimension(2,2) :: tf,mat1,mat2
     real(real32), dimension(2,3) :: considered_vectors
@@ -797,9 +796,6 @@ contains
                  cycle loop110
               else
                  tmpmat(2,3:4) = nint(list_1b(j,:2))
-                 !write(0,'(A,4X,"[",I3,I3,",",I3,I3,"]",6X,"[",I3,I3,",",I3,I3,"]",4X,I2,2X,I2,2X,F0.3)') &
-                 !     "HERE",numstore_1(l,:2),numstore_1(m,:2),nint(list_1a(i,:2)),nint(list_1b(j,:2)),&
-                 !     total_list_count,len_list_final, considered_angle
                  if(total_list_count.ne.0)then
                     if(.not.is_unique_match( sym1, sym2, &
                          check_set = real(tmpmat,real32),&
@@ -812,7 +808,6 @@ contains
                          up_list = list_angle_fits(:len_list_final,:4)))&
                          cycle loop110
                  end if
-                 !write(0,*) "PAST HERE", list_angle_fits(len_list_final,:)
 
                  len_list_final = len_list_final + 1
                  list_angle_fits(len_list_final,1:2) = list_1a(i,1:2)

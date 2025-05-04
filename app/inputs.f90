@@ -6,7 +6,6 @@
 !!!    Isiah Edward Mikel Rudkin
 !!! Code part of the ARTEMIS group
 !!!#############################################################################
-!!! MAYBE HAVE FINDSYM IN HERE IN ORDER TO EDIT TOLSYM?
 module inputs
   use artemis__constants, only: real32, pi
   use artemis__misc, only: flagmaker,file_check
@@ -1096,6 +1095,5 @@ contains
     return
   end subroutine write_settings
 !!!############################################################################
-
 
 end module inputs
