@@ -53,6 +53,7 @@ An example
 
    about
    install
+   tutorials/index
 ..    tutorials/index
 ..    Python API <modules>
 
