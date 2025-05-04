@@ -33,4 +33,4 @@ The axis is an integer specifying the direction of the interface in the structur
 The `return_fractional` argument specifies whether to return the interface location in fractional coordinates (True) or in Cartesian coordinates (False).
 The default value is False.
 
-This can then be used in conjunction with RAFFLE to reconfigure atoms near to the interface to search for more stable configurations.
+This can then be used in conjunction with `RAFFLE <https://raffle-fortran.readthedocs.io/>`_ to reconfigure atoms near to the interface to search for more stable configurations.
