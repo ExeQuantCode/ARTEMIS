@@ -98,3 +98,36 @@ The above code sets the following additional parameters:
 - ``require_stoichiometry_lw`` and ``require_stoichiometry_up``: boolean values that indicate whether the generated lower and upper slabs should be stoichiometrically equivalent to their respective provided structures.
 - ``layer_separation_cutoff_lw`` and ``layer_separation_cutoff_up``: float values that define the cutoff distance for the minimally accepted layer separation (in Angstroms) with which to define distinct planes of atoms.
 
+
+The following are optional parameters that can be set for the generator.
+
+Tolerance parameters
+--------------------
+
+Tolerances constraining returned structures can be set using the ``set_tolerance`` method.
+These tolerances are mostly related to lattice matching.
+
+.. code-block:: python
+
+    # Set the tolerance parameters
+    generator.set_tolerance(
+        vector_mismatch=0.1,
+        angle_mismatch=0.1,
+        max_length=0.1,
+        max_area=0.1,
+        max_fit=0.1,
+        max_extension=0.1
+    )
+
+
+Lattice matching parameters
+---------------------------
+
+The generator object has a method called ``set_match_method`` to set the parameters for the lattice matching method.
+
+
+Interface alignment parameters
+------------------------------
+
+For interface alignment, the generator can be used to provide a single permutation, or a set of permutations for efficient searching.
+The generator object has a method called ``set_shift_method`` which takes the following parameters:
