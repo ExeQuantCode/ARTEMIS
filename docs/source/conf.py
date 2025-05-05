@@ -26,26 +26,18 @@ import os
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
+
 if on_rtd:
-    # These are set by RTD
-    rtd_version = os.environ.get('READTHEDOCS_VERSION')  # e.g. 'latest', 'stable', 'v1.0.2', 'feature-xyz'
-    rtd_repo = os.environ.get('READTHEDOCS_GIT_CLONE_URL')  # e.g. 'https://github.com/ExeQuantCode/ARTEMIS.git'
-
-    # Clean it up to a raw GitHub link with HEAD
-    repo_url = rtd_repo.replace('.git', '').replace('git@github.com:', 'https://github.com/')
-    branch = rtd_version  # usually fine for most use cases
-
-    # Add variables to the HTML context
-    html_context = {
-        'repo_url': repo_url,
-        'branch': branch,
-    }
+    git_branch = os.environ.get("READTHEDOCS_GIT_IDENTIFIER", "main")
 else:
-    branch = 'main'
-    html_context = {
-        'repo_url': 'https://github.com/ExeQuantCode/ARTEMIS',
-        'branch': branch,  # fallback default
-    }
+    git_branch = "main"  # or get from git directly with subprocess
+
+html_context = {
+    # for example, if your GitHub repo is fixed
+    "repo_url": "https://github.com/ExeQuantCode/ARTEMIS",
+}
+# print the branch name
+print(f"Branch name: {git_branch}")
 
 
 extensions = [
@@ -63,7 +55,7 @@ extensions = [
 
 extlinks = {
     'doi': ('https://doi.org/%s', 'doi: %s'),
-    'git': ('https://github.com/ExeQuantCode/ARTEMIS/blob/' + branch + '/%s', 'git: %s')
+    'git': ('https://github.com/ExeQuantCode/ARTEMIS/blob/' + git_branch + '/%s', 'git: %s')
 }
 
 intersphinx_mapping = {
@@ -108,7 +100,7 @@ html_context = {
     "display_github": True,
     "github_repo": "ARTEMIS",
     "github_user": "ExeQuantCode",
-    "github_version": "development",
+    "github_version": git_branch,
     "conf_py_path": "/docs/source/",
 }
 
