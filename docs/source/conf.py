@@ -20,25 +20,12 @@ copyright = f'{datetime.date.today().year}, ARTEMIS-developers'
 # -- General configuration
 master_doc = 'index'
 
-
-import os
-
-
+# Identify the branch of the documentation
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
-
-
 if on_rtd:
     git_branch = os.environ.get("READTHEDOCS_GIT_IDENTIFIER", "main")
 else:
     git_branch = "main"  # or get from git directly with subprocess
-
-html_context = {
-    # for example, if your GitHub repo is fixed
-    "repo_url": "https://github.com/ExeQuantCode/ARTEMIS",
-}
-# print the branch name
-print(f"Branch name: {git_branch}")
-
 
 extensions = [
     'sphinx.ext.duration',
@@ -54,7 +41,6 @@ extensions = [
 ]
 
 extlinks = {
-    'doi': ('https://doi.org/%s', 'doi: %s'),
     'git': ('https://github.com/ExeQuantCode/ARTEMIS/blob/' + git_branch + '/%s', 'git: %s')
 }
 

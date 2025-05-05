@@ -15,8 +15,6 @@ How to cite ARTEMIS?
 
 If you use ARTEMIS in your research, please cite the following paper:
 
-.. code-block:: bibtex
-
     | Ned Thaddeus Taylor, Francis Huw Davies,
     | Isiah Edward Mikel Rudkin, Conor Jason Price,
     | Tsz Hin Chan, Steven Paul Hepplestone,
