@@ -29,6 +29,7 @@ The code is hosted on `GitHub <https://github.com/ExeQuantCode/artemis>`_.
 This can be done by cloning the repository:
 
 .. code-block:: bash
+
     git clone https://github.com/ExeQuantCode/artemis.git
     cd artemis
 
@@ -96,6 +97,7 @@ Installation using cmake
 
 Another option is installing it through cmake, which involves:
 .. code-block:: bash
+
     mkdir build
     cd build
     cmake ..

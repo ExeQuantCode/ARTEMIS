@@ -35,7 +35,7 @@ extensions = [
 
 extlinks = {
     'doi': ('https://doi.org/%s', 'doi: %s'),
-    'git': ('https://github.com/ExeQuantCode/ARTEMIS/raw/HEAD/%s', 'git: %s'),
+    'git': ('https://github.com/ExeQuantCode/ARTEMIS/blob/HEAD/%s', 'git: %s'),
 }
 
 intersphinx_mapping = {
