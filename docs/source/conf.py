@@ -20,6 +20,34 @@ copyright = f'{datetime.date.today().year}, ARTEMIS-developers'
 # -- General configuration
 master_doc = 'index'
 
+
+import os
+
+
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+
+if on_rtd:
+    # These are set by RTD
+    rtd_version = os.environ.get('READTHEDOCS_VERSION')  # e.g. 'latest', 'stable', 'v1.0.2', 'feature-xyz'
+    rtd_repo = os.environ.get('READTHEDOCS_GIT_CLONE_URL')  # e.g. 'https://github.com/ExeQuantCode/ARTEMIS.git'
+
+    # Clean it up to a raw GitHub link with HEAD
+    repo_url = rtd_repo.replace('.git', '').replace('git@github.com:', 'https://github.com/')
+    branch = rtd_version  # usually fine for most use cases
+
+    # Add variables to the HTML context
+    html_context = {
+        'repo_url': repo_url,
+        'branch': branch,
+    }
+else:
+    branch = 'main'
+    html_context = {
+        'repo_url': 'https://github.com/ExeQuantCode/ARTEMIS',
+        'branch': branch,  # fallback default
+    }
+
+
 extensions = [
     'sphinx.ext.duration',
     'sphinx.ext.doctest',
@@ -35,7 +63,7 @@ extensions = [
 
 extlinks = {
     'doi': ('https://doi.org/%s', 'doi: %s'),
-    'git': ('https://github.com/ExeQuantCode/ARTEMIS/blob/HEAD/%s', 'git: %s'),
+    'git': ('https://github.com/ExeQuantCode/ARTEMIS/blob/' + branch + '/%s', 'git: %s')
 }
 
 intersphinx_mapping = {
