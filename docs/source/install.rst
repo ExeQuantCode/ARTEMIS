@@ -10,13 +10,7 @@ For the Python library, the easiest method of installation is to install it dire
 
     pip install artemis-materials
 
-or
-
-.. code-block:: bash
-
-    pip install artemis-materials
-
-Once this is done, ARTEMIS is ready to be used.
+Once this is done, ARTEMIS is ready to be used (both the Python library and the command line interface).
 
 Alternatively, to install ARTEMIS from source, follow the instructions below.
 
@@ -88,7 +82,7 @@ To find where this has been installed, you can run:
 
 .. code-block:: bash
 
-    pip show artemis
+    pip show artemis-materials
 
 This will show you the location of the installed package, in addition to other information about the package.
 
