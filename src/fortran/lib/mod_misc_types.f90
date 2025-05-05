@@ -296,7 +296,7 @@ contains
     implicit none
     ! Arguments
     class(abstract_artemis_generator_type), intent(in) :: this
-    !! Instance of the raffle generator.
+    !! Instance of the artemis generator.
     type(basis_type), dimension(:), allocatable :: structures
     !! Generated structures.
 
@@ -311,7 +311,7 @@ contains
     implicit none
     ! Arguments
     class(abstract_artemis_generator_type), intent(inout) :: this
-    !! Instance of the raffle generator.
+    !! Instance of the artemis generator.
     type(basis_type), dimension(:), allocatable :: structures
     !! Generated structures.
 

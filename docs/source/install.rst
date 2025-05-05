@@ -66,7 +66,7 @@ The package is directly available via PyPI, so can be installed without download
     pip install artemis-materials
 
 This will install the ARTEMIS package and all its dependencies in the default location.
-This is the recommended method of installation, as it is the easiest and most straightforward way to get started with RAFFLE.
+This is the recommended method of installation, as it is the easiest and most straightforward way to get started with ARTEMIS.
 
 Another option is to install ARTEMIS from the source code, which is recommended if you want to use the latest version of ARTEMIS or if you want to contribute to its development.
 To do this, you will need to clone the repository from GitHub.
@@ -130,7 +130,7 @@ This can also be set up as a dependency in your own fpm project by adding the fo
 .. code-block:: toml
 
     [dependencies]
-    raffle = { git = "https://github.com/ExeQuantCode/RAFFLE" }
+    artemis = { git = "https://github.com/ExeQuantCode/ARTEMIS" }
 
 
 Installation using cmake
@@ -164,8 +164,8 @@ This will build the Fortran library and install it in the default location (``~/
 Installing on MacOS (Homebrew)
 ==============================
 
-RAFFLE is developed on Linux and MacOS, and should work on both.
-However, there are likely some additional steps required to install RAFFLE on MacOS.
+ARTEMIS is developed on Linux and MacOS, and should work on both.
+However, there are likely some additional steps required to install ARTEMIS on MacOS.
 This is because **it is not recommended to rely on the Mac system Python, or Fortran and C compilers**.
 
 The recommended way to install Python, gfortran and gcc on MacOS is to use `Homebrew <https://brew.sh>`_.
