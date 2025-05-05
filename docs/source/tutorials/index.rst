@@ -10,7 +10,7 @@ They cover the parameters and options available in ARTEMIS, as well as the basic
 .. note::
 
     These tutorials are currently focused on the Python interface.
-    The command line interface is documented in the :git:`manual <docs/manual.pdf>`_, in addition to its help and search arguments.
+    The command line interface is documented in the :git:`manual <docs/manual.pdf>`, in addition to its help and search arguments.
 
 .. toctree::
    :maxdepth: 2
