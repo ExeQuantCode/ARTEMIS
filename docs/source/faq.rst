@@ -24,7 +24,7 @@ If you use ARTEMIS in your research, please cite the following paper:
     | Comput. Phys. Commun. Vol. 257 107515, 2020.
     | doi: 10.1016/j.cpc.2020.107515
 
-BibTex (:git:`docs/ARTEMIS.bib`):
+BibTex (:git:`bibliography <docs/ARTEMIS.bib>`):
 
 .. literalinclude:: ../ARTEMIS.bib
  
