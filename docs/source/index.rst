@@ -21,6 +21,7 @@ An example
     from ase.io import write
     from artemis.generator import artemis_generator
     from mace.calculators import mace_mp
+    from ase.calculators.singlepoint import SinglePointCalculator
 
     generator = artemis_generator()
 
@@ -54,6 +55,7 @@ An example
    about
    install
    tutorials/index
+   faq
 ..    tutorials/index
 ..    Python API <modules>
 

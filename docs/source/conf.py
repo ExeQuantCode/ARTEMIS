@@ -10,7 +10,6 @@ from unittest.mock import Mock
 MOCK_MODULES = ["artemis._artemis"]  # List any other modules if needed
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
-# sys.path.insert(0, os.path.abspath(os.path.join('..', '..', 'src', 'raffle')))  # Sets the base path to find your modules
 sys.path.insert(0, os.path.abspath(os.path.join('..', '..', 'src')))  # Sets the base path to find your modules
 
 project = 'ARTEMIS'
@@ -31,7 +30,13 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinx_rtd_theme',
+    'sphinx.ext.extlinks',
 ]
+
+extlinks = {
+    'doi': ('https://doi.org/%s', 'doi: %s'),
+    'git': ('https://github.com/ExeQuantCode/ARTEMIS/-/%s', 'git: %s'),
+}
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
@@ -75,9 +80,11 @@ html_context = {
     "display_github": True,
     "github_repo": "ARTEMIS",
     "github_user": "ExeQuantCode",
-    "github_version": "library",
+    "github_version": "development",
     "conf_py_path": "/docs/source/",
 }
+
+html_extra_path = ['/docs/']
 
 autoclass_content="both"
 

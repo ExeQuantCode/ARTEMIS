@@ -7,10 +7,10 @@ Tutorials
 The tutorials are designed to help you get started with ARTEMIS.
 They cover the parameters and options available in ARTEMIS, as well as the basic usage of the library.
 
-... note::
+.. note::
 
     These tutorials are currently focused on the Python interface.
-    The command line interface is documented in the :download:`manual <../../manual.pdf>`, in addition to its help and search arguments.
+    The command line interface is documented in the :git:`manual <docs/manual.pdf>`_, in addition to its help and search arguments.
 
 .. toctree::
    :maxdepth: 2

@@ -19,7 +19,7 @@ The object is the main interface for the user to interact with ARTEMIS.
 
     generator = artemis_generator()
     
-It is recommended to use the Atomic Simulation Environment (ASE)~\cite{ase-paper} for handling structure data.
+It is recommended to use the Atomic Simulation Environment (ASE) :footcite:t:`ase-paper` for handling structure data.
 Whilst ARTEMIS can handle its own atomic structure object, ASE is more widely used and has a more extensive feature set.
 
 
@@ -56,7 +56,7 @@ These can be accessed by the following parameters:
     )
 
 The elastic constants are currently isotropic bulks moduli.
-The elastic constants can be calculated using ASE or obtained from the literature, such as the Materials Project~\cite{materials-project}.
+The elastic constants can be calculated using ASE or obtained from the literature, such as the Materials Project :footcite:t:`Jain2013CommentaryMaterialsProject`.
 The primitive cell usage is a boolean value that indicates whether to use the primitive cell of the structure or not.
 
 
@@ -131,3 +131,5 @@ Interface alignment parameters
 
 For interface alignment, the generator can be used to provide a single permutation, or a set of permutations for efficient searching.
 The generator object has a method called ``set_shift_method`` which takes the following parameters:
+
+.. footbibliography::
