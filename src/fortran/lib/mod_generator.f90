@@ -104,6 +104,7 @@ module artemis__generator
     type(tol_type) :: tolerance
     !! Tolerance structure
     real(real32) :: tol_sym = 1.E-6_real32
+    !! Tolerance for symmetry operations
 
    contains
     procedure, pass(this) :: get_all_structures_data
@@ -1036,7 +1037,7 @@ contains
        ! Normalise lattice
        !------------------------------------------------------------------------
        if(normalise_)then
-          call reducer(output(i))
+          call reducer(output(i), verbose = verbose_)
           output(i)%lat = MATNORM(output(i)%lat)
        end if
     end do

@@ -36,7 +36,7 @@
 !!! get_shortest_bond
 !!!#############################################################################
 module artemis__geom_utils
-  use artemis__constants, only: real32
+  use artemis__constants, only: real32, pi
   use artemis__geom_rw, only: basis_type,geom_write
   use artemis__sym, only: confine_type, gldfnd, tol_sym_default
   use artemis__misc, only: swap, sort2D
@@ -1084,24 +1084,27 @@ contains
 !!!#############################################################################
 !!! Uses Buerger's algorithm to reduce cell.
 !!!#############################################################################
-  subroutine reducer(basis,tmptype,ltmp)
+  subroutine reducer(basis, tmptype, verbose)
     implicit none
     type(basis_type), intent(inout) :: basis
+    integer, intent(in), optional :: tmptype
+    integer, intent(in), optional :: verbose
+
     integer :: cell_type
     integer :: i,j,k,count,limit
     real(real32), dimension(3,3) :: newlat,transmat,S,tmp_mat
-    real(real32) :: tiny,pi,pi2
-    logical :: verb,lreduced
-    integer, optional :: tmptype
-    logical, optional :: ltmp
+
+    real(real32) :: tiny,pi2
+    integer :: verbose_
+    logical :: lreduced
 
 
 
 !!!-----------------------------------------------------------------------------
 !!! set up inital variable values
 !!!-----------------------------------------------------------------------------
-    verb=.false.
-    if(present(ltmp)) verb=ltmp
+    verbose_ = 0
+    if(present(verbose)) verbose_ = verbose
     cell_type=2
     if(present(tmptype)) cell_type=tmptype
     S=0._real32
@@ -1109,9 +1112,8 @@ contains
     limit=100
     lreduced=.false.
     tiny=1E-5*(get_vol(basis%lat))**(1.E0/3.E0)
-    pi=4._real32*atan(1._real32)
-    pi2=2._real32*atan(1._real32)
-    transmat=0._real32
+    pi2 = 2._real32*atan(1._real32)
+    transmat = 0._real32
     do i=1,3
        transmat(i,i)=1._real32
     end do
@@ -1124,9 +1126,9 @@ contains
     find_reduced: do while(.not.lreduced)
        count = count + 1
        call mkNiggli_lat(basis%lat,newlat,transmat,S)
-       lreduced=reduced_check(newlat,cell_type,S)
+       lreduced = reduced_check(newlat, cell_type, S, verbose_)
        if(lreduced) exit
-       if(verb) then
+       if(verbose.gt.1) then
           write(*,*)
           write(*,*) count
           write(*,*) "###############"
@@ -1241,8 +1243,8 @@ contains
        transmat=matmul(transpose(tmp_mat),transmat)
     end if
     call mkNiggli_lat(basis%lat,newlat,transmat,S)
-    lreduced=reduced_check(newlat,cell_type,S,"n")
-    if(verb) then
+    lreduced = reduced_check(newlat, cell_type, S, verbose)
+    if(verbose.gt.1) then
        write(*,*) lreduced
        write(*,*) (transmat(i,:),i=1,3)
     end if
@@ -1307,20 +1309,19 @@ contains
 !!! Type II = Sij (i!=j) are all negative or any zero (angles >=90)
 !!! Cell is reduced if, and only if, all conditions are ...
 !!! ... satisfied (Niggli 1928)
-  function reduced_check(lat,cell_type,S,tchar) result(check)
+  function reduced_check(lat, cell_type, S, verbose) result(check)
     implicit none
-    integer :: cell_type
+    real(real32), dimension(3,3), intent(in) :: lat
+    real(real32), dimension(3,3), intent(out) :: S
+    integer, intent(in) :: cell_type
+    integer :: verbose
+
     real(real32) :: tiny,alpha,beta,gamma,pi2
     real(real32), dimension(3) :: a,b,c
-    real(real32), dimension(3,3) :: lat,S
     character(1) :: quiet
-    character(1), optional :: tchar
     logical :: check
 
 
-    quiet="q"
-    if(present(tchar)) quiet=tchar
-    if(quiet.ne."y".and.quiet.ne."q") quiet="n"
 
     pi2 = 2._real32*atan(1._real32)
     check=.false.
@@ -1350,7 +1351,7 @@ contains
          S(1,3)-0.5_real32*S(1,1).lt.tiny.and.&
          S(2,3)-0.5_real32*S(2,2).lt.tiny) then !Type I
        check=.true.
-       if(quiet.eq."n") write(0,*) "Found Type I reduced Niggli cell"
+       if(verbose.gt.0) write(0,*) "Found Type I reduced Niggli cell"
     elseif(cell_type.eq.2.and.&
          alpha.ge.pi2-tiny.and.beta.ge.pi2-tiny.and.gamma.ge.pi2-tiny.and.&
          abs(S(1,2))-0.5_real32*S(1,1).lt.tiny.and.&
@@ -1363,12 +1364,11 @@ contains
        if((abs(S(2,3))+abs(S(1,3))+abs(S(1,2)))-0.5_real32*(S(1,1)+S(2,2)).gt.tiny.and.&
             S(1,1)-(2._real32*abs(S(1,3))+abs(S(1,2))).gt.tiny) return
        check=.true.
-       if(quiet.eq."n") write(0,*) "Found Type II reduced Niggli cell"
+       if(verbose.gt.1) write(0,*) "Found Type II reduced Niggli cell"
     else
        check=.false.
     end if
 
-    return
   end function reduced_check
 !!!#############################################################################
 
