@@ -1353,8 +1353,14 @@ class Generator(f90wrap.runtime.FortranModule):
                 method=method, max_num_matches=max_num_matches, max_num_terms=max_num_terms, \
                 max_num_planes=max_num_planes, compensate_normal=compensate_normal)
         
-        def set_materials(self, structure_lw, structure_up, elastic_constants_lw=None, \
-            elastic_constants_up=None, use_pricel_lw=None, use_pricel_up=None):
+        def set_materials(self,
+                          structure_lw: Atoms | Geom_Rw.basis = None,
+                          structure_up: Atoms | Geom_Rw.basis = None,
+                          elastic_constants_lw=None,
+                          elastic_constants_up=None,
+                          use_pricel_lw=None,
+                          use_pricel_up=None
+        ):
             """
             set_materials__binding__artemis_gen_type(self, structure_lw, \
                 structure_up[, elastic_constants_lw, elastic_constants_up, use_pricel_lw, \
@@ -1381,14 +1387,22 @@ class Generator(f90wrap.runtime.FortranModule):
             """
 
             # check if host is ase.Atoms object or a Fortran derived type basis_type
-            if isinstance(structure_lw, Atoms):
-                structure_lw = geom_rw.basis(atoms=structure_lw)
+            if structure_lw is None:
+                structure_lw_handle = None
+            else:
+                if isinstance(structure_lw, Atoms):
+                    structure_lw = geom_rw.basis(atoms=structure_lw)
+                structure_lw_handle = structure_lw._handle
 
-            if isinstance(structure_up, Atoms):
-                structure_up = geom_rw.basis(atoms=structure_up)
+            if structure_up is None:
+                structure_up_handle = None
+            else:
+                if isinstance(structure_up, Atoms):
+                    structure_up = geom_rw.basis(atoms=structure_up)
+                structure_up_handle = structure_up._handle
 
             _artemis.f90wrap_intf_gen__set_materials__binding__agt(this=self._handle, \
-                structure_lw=structure_lw._handle, structure_up=structure_up._handle, \
+                structure_lw=structure_lw_handle, structure_up=structure_up_handle, \
                 elastic_constants_lw=elastic_constants_lw, \
                 elastic_constants_up=elastic_constants_up, use_pricel_lw=use_pricel_lw, \
                 use_pricel_up=use_pricel_up)
@@ -1492,7 +1506,7 @@ class Generator(f90wrap.runtime.FortranModule):
             # allocate the structures
             structures = geom_rw.basis_array() #.allocate(n_structs)
             structures.allocate(n_structs)
-            _artemis.f90wrap_retrieve_last_generated_structures(n_structs, structures._handle)
+            _artemis.f90wrap_retrieve_last_generated_structures(structures._handle)
             structures = structures.toase()
 
             if return_exit_code:
@@ -1731,7 +1745,7 @@ class Generator(f90wrap.runtime.FortranModule):
             if tuple(structure_lw_handle) in self._objs:
                 structure_lw = self._objs[tuple(structure_lw_handle)]
             else:
-                structure_lw = geom_rw.basis_type.from_handle(structure_lw_handle)
+                structure_lw = geom_rw.basis.from_handle(structure_lw_handle)
                 self._objs[tuple(structure_lw_handle)] = structure_lw
             return structure_lw
         
@@ -1757,7 +1771,7 @@ class Generator(f90wrap.runtime.FortranModule):
             if tuple(structure_up_handle) in self._objs:
                 structure_up = self._objs[tuple(structure_up_handle)]
             else:
-                structure_up = geom_rw.basis_type.from_handle(structure_up_handle)
+                structure_up = geom_rw.basis.from_handle(structure_up_handle)
                 self._objs[tuple(structure_up_handle)] = structure_up
             return structure_up
         

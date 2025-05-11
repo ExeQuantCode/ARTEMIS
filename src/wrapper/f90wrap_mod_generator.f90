@@ -1274,8 +1274,10 @@ subroutine f90wrap_intf_gen__set_materials__binding__agt(this, structure_lw, str
     integer :: n1
     !f2py intent(hide), depend(elastic_constants_up) :: n1 = shape(elastic_constants_up,0)
     this_ptr = transfer(this, this_ptr)
-    structure_lw_ptr = transfer(structure_lw, structure_lw_ptr)
-    structure_up_ptr = transfer(structure_up, structure_up_ptr)
+    if(present(structure_lw)) &
+          structure_lw_ptr = transfer(structure_lw, structure_lw_ptr)
+    if(present(structure_up)) &
+          structure_lw_ptr = transfer(structure_up, structure_up_ptr)
     call this_ptr%p%set_materials(structure_lw=structure_lw_ptr%p, structure_up=structure_up_ptr%p, &
         elastic_constants_lw=elastic_constants_lw, elastic_constants_up=elastic_constants_up, use_pricel_lw=use_pricel_lw, &
         use_pricel_up=use_pricel_up)

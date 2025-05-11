@@ -889,11 +889,13 @@ contains
 
 
     ! set thickness if provided by user
-    thickness_ = 10._real32
+    thickness_ = -1._real32
     num_layers_ = 0
     if(present(num_layers)) num_layers_ = num_layers
     if(present(thickness)) thickness_ = thickness
-    if(num_layers_.le.0.and.thickness_.le.0._real32)then
+    if(num_layers_.eq.0.and.abs(thickness_+1._real32).lt.1.E-6_real32)then
+       thickness_ = 10._real32
+    elseif(num_layers_.le.0.and.thickness_.le.0._real32)then
        write(err_msg,'(A,I0,A)') &
             "The number of layers for the material is ", &
             num_layers_, " and the thickness is ", thickness_, &
@@ -1503,22 +1505,26 @@ contains
     if(all(surface_lw_.gt.0)) ludef_surface_lw = .true.
     if(all(surface_up_.gt.0)) ludef_surface_up = .true.
 
-    thickness_lw_ = 10._real32
-    thickness_up_ = 10._real32
+    thickness_lw_ = -1._real32
+    thickness_up_ = -1._real32
     num_layers_lw_ = 0
     num_layers_up_ = 0
     if(present(num_layers_lw)) num_layers_lw_ = num_layers_lw
     if(present(num_layers_up)) num_layers_up_ = num_layers_up
     if(present(thickness_lw)) thickness_lw_ = thickness_lw
     if(present(thickness_up)) thickness_up_ = thickness_up
-    if(num_layers_lw_.le.0.and.thickness_lw_.le.0._real32)then
+    if(num_layers_lw_.eq.0.and.abs(thickness_lw_+1._real32).lt.1.E-6_real32)then
+       thickness_lw_ = 10._real32
+    elseif(num_layers_lw_.le.0.and.thickness_lw_.le.0._real32)then
        write(err_msg,'(A,I0,A)') &
             "The number of layers for the lower material is ", &
             num_layers_lw_, " and the thickness is ", thickness_lw_, &
             " One of these must be greater than 0."
        call stop_program(trim(err_msg))
     end if
-    if(num_layers_up_.le.0.and.thickness_up_.le.0._real32)then
+    if(num_layers_up_.eq.0.and.abs(thickness_up_+1._real32).lt.1.E-6_real32)then
+       thickness_up_ = 10._real32
+    elseif(num_layers_up_.le.0.and.thickness_up_.le.0._real32)then
        write(err_msg,'(A,I0,A)') &
             "The number of layers for the upper material is ", &
             num_layers_up_, " and the thickness is ", thickness_up_, &
