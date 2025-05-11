@@ -57,7 +57,9 @@ program artemis_executable
              surface = lw_surf, &
              num_layers = lw_num_layers, &
              thickness = lw_thickness, &
-             orthogonalise = lortho &
+             orthogonalise = lortho, &
+             print_termination_info = lprint_terms, &
+             verbose = verbose &
         )
         filepath = "DTERMINATIONS"
         call system("mkdir -p " // trim(filepath))
@@ -134,9 +136,12 @@ program artemis_executable
         else
            write(*,'(1X,"Finding terminations for lower material.")')
            structures = generator%get_terminations(1, &
+                surface = lw_surf, &
                 num_layers = lw_num_layers, &
                 thickness = lw_thickness, &
-                orthogonalise = lortho &
+                orthogonalise = lortho, &
+                print_termination_info = lprint_terms, &
+                verbose = verbose &
            )
            filepath = "DTERMINATIONS/DLW_TERMS"
            call system("mkdir -p " // trim(filepath))
@@ -154,9 +159,12 @@ program artemis_executable
         else
            write(*,'(1X,"Finding terminations for upper material.")')
            structures = generator%get_terminations(2, &
+                surface = up_surf, &
                 num_layers = up_num_layers, &
                 thickness = up_thickness, &
-                orthogonalise = lortho &
+                orthogonalise = lortho, &
+                print_termination_info = lprint_terms, &
+                verbose = verbose &
            )
            filepath = "DTERMINATIONS/DUP_TERMS"
            call system("mkdir -p " // trim(filepath))

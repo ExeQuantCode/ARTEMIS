@@ -397,6 +397,7 @@ contains
           do k = 1, size(comparison_list)
              itmp2 = comparison_list(k)
              call grp1%copy(grp_store_inv)
+             grp1%confine%l = .false.
              call check_sym(grp1,basis_arr(itmp2),&
                   iperm=-1,lsave=.true.,check_all_sym=.true., &
                   tol_sym=tol_sym &
