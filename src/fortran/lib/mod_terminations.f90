@@ -69,6 +69,8 @@ contains
     integer, intent(inout) :: exit_code
 
     ! Local variables
+    integer :: unit
+    !! File unit number
     integer :: i, j, k, is, nterm, mterm, dim, ireject
     !! Loop indices and dimensions
     integer :: itmp1, itmp2, init, min_loc
@@ -155,9 +157,9 @@ contains
        write(0,'(2X,"get_terminations subroutine unable to find a separation &
             &in the material that is greater than LAYER_SEP")')
        write(0,'(2X,"Writing material to ''unlayerable.vasp''")')
-       open(13,file="unlayerable.vasp")
-       call geom_write(13,basis)
-       close(13)
+       open(newunit=unit, file="unlayerable.vasp")
+       call geom_write(unit, basis)
+       close(unit)
        write(0,'(2X,"We suggest reducing LAYER_SEP to less than ",F6.4)') &
             max_sep
        write(0,'(2X,"NOTE: If LAYER_SEP < 0.7, the material likely does not &

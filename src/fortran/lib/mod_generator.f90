@@ -756,7 +756,7 @@ contains
   function get_terminations( &
        this, identifier, miller, surface, num_layers, thickness, &
        orthogonalise, normalise, break_on_fail, &
-       verbose, exit_code &
+       print_termination_info, verbose, exit_code &
   ) result(output)
     !! Generate and prints terminations parallel to the supplied miller plane
     implicit none
@@ -780,6 +780,8 @@ contains
     !! Boolean whether to normalise the lattice and basis
     logical, intent(in), optional :: break_on_fail
     !! Boolean whether to break on failure
+    logical, intent(in), optional :: print_termination_info
+    !! Boolean whether to print termination information
     integer, intent(in), optional :: verbose
     !! Boolean whether to print verbose output
     integer, intent(out), optional :: exit_code
@@ -819,6 +821,8 @@ contains
     !! Boolean whether to normalise the lattice
     logical :: break_on_fail_
     !! Boolean whether to break on failure
+    logical :: print_termination_info_
+    !! Boolean whether to print termination information
 
 
     real(real32) :: layer_sep
@@ -838,7 +842,10 @@ contains
     !---------------------------------------------------------------------------
     exit_code_ = 0
     verbose_ = 0
+    print_termination_info_ = .true.
     if(present(verbose)) verbose_ = verbose
+    if(present(print_termination_info)) &
+         print_termination_info_ = print_termination_info
 
 
     !---------------------------------------------------------------------------
@@ -979,7 +986,8 @@ contains
     ! get the terminations
     term = get_termination_info( &
          structure, this%axis, &
-         verbose = verbose_, tol_sym = this%tol_sym, &
+         verbose = merge(1,verbose_,print_termination_info_), &
+         tol_sym = this%tol_sym, &
          layer_sep = layer_sep, &
          exit_code = exit_code_ &
     )
@@ -1007,15 +1015,6 @@ contains
          height, num_layers_, thickness_, num_cells,&
          term_start, term_end, term_step &
     )
-
-
-    !---------------------------------------------------------------------------
-    ! Normalise lattice
-    !---------------------------------------------------------------------------
-    if(normalise_)then
-       call reducer(structure)
-       structure%lat = MATNORM(structure%lat)
-    end if
     
 
     !---------------------------------------------------------------------------
@@ -1032,6 +1031,12 @@ contains
             thickness_, num_cells, num_layers_, height,&
             prefix, lcycle, orthogonalise_, this%vacuum_gap &
        )
+       ! Normalise lattice
+       !------------------------------------------------------------------------
+       if(normalise_)then
+          call reducer(output(i))
+          output(i)%lat = MATNORM(output(i)%lat)
+       end if
     end do
 
    end function get_terminations
