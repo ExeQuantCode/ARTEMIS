@@ -1358,14 +1358,14 @@ class Generator(f90wrap.runtime.FortranModule):
         def set_materials(self,
                           structure_lw: Atoms | Geom_Rw.basis = None,
                           structure_up: Atoms | Geom_Rw.basis = None,
-                          elastic_constants_lw=None,
-                          elastic_constants_up=None,
+                          elastic_lw=None,
+                          elastic_up=None,
                           use_pricel_lw=None,
                           use_pricel_up=None
         ):
             """
             set_materials__binding__artemis_gen_type(self, structure_lw, \
-                structure_up[, elastic_constants_lw, elastic_constants_up, use_pricel_lw, \
+                structure_up[, elastic_tensor_lw, elastic_tensor_up, use_pricel_lw, \
                 use_pricel_up])
             
             
@@ -1378,8 +1378,8 @@ class Generator(f90wrap.runtime.FortranModule):
             this : Artemis_generator_Type
             structure_lw : Basis_Type
             structure_up : Basis_Type
-            elastic_constants_lw : float array
-            elastic_constants_up : float array
+            elastic_lw : float array
+            elastic_up : float array
             use_pricel_lw : bool
             use_pricel_up : bool
             
@@ -1403,10 +1403,38 @@ class Generator(f90wrap.runtime.FortranModule):
                     structure_up = geom_rw.basis(atoms=structure_up)
                 structure_up_handle = structure_up._handle
 
+            # check if length of elastic is either 1 or 36 or None, else break
+            if elastic_lw is not None:
+                if isinstance(elastic_lw, float) or isinstance(elastic_lw, int):
+                    elastic_lw = numpy.array([elastic_lw])
+                elif isinstance(elastic_lw, list) or isinstance(elastic_lw, tuple):
+                    elastic_lw = numpy.array(elastic_lw)
+                if elastic_lw.size != 1 and elastic_lw.size != 36:
+                    raise ValueError("elastic_lw must be either 1 or 36 elements long")
+                # convert to a 2D array of shape (1,1) or (6,6)
+                if elastic_lw.size == 1:
+                    elastic_lw = numpy.array([[elastic_lw[0]]], order='F')
+                else:
+                    elastic_lw = numpy.array(elastic_lw, order='F')
+                    elastic_lw = numpy.reshape(elastic_lw, (6, 6), order='F')
+            if elastic_up is not None:
+                if isinstance(elastic_up, float) or isinstance(elastic_up, int):
+                    elastic_up = numpy.array([elastic_up])
+                elif isinstance(elastic_up, list) or isinstance(elastic_up, tuple):
+                    elastic_up = numpy.array(elastic_up)
+                if elastic_up.size != 1 and elastic_up.size != 36:
+                    raise ValueError("elastic_up must be either 1 or 36 elements long")
+                # convert to a 2D array of shape (1,1) or (6,6)
+                if elastic_up.size == 1:
+                    elastic_up = numpy.array([[elastic_up[0]]], order='F')
+                else:
+                    elastic_up = numpy.array(elastic_up, order='F')
+                    elastic_up = numpy.reshape(elastic_up, (6, 6), order='F')
+
             _artemis.f90wrap_intf_gen__set_materials__binding__agt(this=self._handle, \
                 structure_lw=structure_lw_handle, structure_up=structure_up_handle, \
-                elastic_constants_lw=elastic_constants_lw, \
-                elastic_constants_up=elastic_constants_up, use_pricel_lw=use_pricel_lw, \
+                elastic_lw=elastic_lw, \
+                elastic_up=elastic_up, use_pricel_lw=use_pricel_lw, \
                 use_pricel_up=use_pricel_up)
         
         def set_surface_properties(self, miller_lw=None, miller_up=None, \
@@ -1793,9 +1821,9 @@ class Generator(f90wrap.runtime.FortranModule):
                 structure_up)
         
         @property
-        def elastic_constants_lw(self):
+        def elastic_tensor_lw(self):
             """
-            Element elastic_constants_lw ftype=real(real32) pytype=float
+            Element elastic_tensor_lw ftype=real(real32) pytype=float
             
             
             Defined at \
@@ -1810,23 +1838,23 @@ class Generator(f90wrap.runtime.FortranModule):
                 return None
 
             if array_handle in self._arrays:
-                elastic_constants_lw = self._arrays[array_handle]
+                elastic_tensor_lw = self._arrays[array_handle]
             else:
-                elastic_constants_lw = \
+                elastic_tensor_lw = \
                     f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
                                         self._handle,
                                         _artemis.f90wrap_artemis_gen_type__array__elastic_co4c3f)
-                self._arrays[array_handle] = elastic_constants_lw
-            return elastic_constants_lw
+                self._arrays[array_handle] = elastic_tensor_lw
+            return elastic_tensor_lw
         
-        @elastic_constants_lw.setter
-        def elastic_constants_lw(self, elastic_constants_lw):
-            self.elastic_constants_lw[...] = elastic_constants_lw
+        @elastic_tensor_lw.setter
+        def elastic_tensor_lw(self, elastic_tensor_lw):
+            self.elastic_tensor_lw[...] = elastic_tensor_lw
         
         @property
-        def elastic_constants_up(self):
+        def elastic_tensor_up(self):
             """
-            Element elastic_constants_up ftype=real(real32) pytype=float
+            Element elastic_tensor_up ftype=real(real32) pytype=float
             
             
             Defined at \
@@ -1841,18 +1869,18 @@ class Generator(f90wrap.runtime.FortranModule):
                 return None
 
             if array_handle in self._arrays:
-                elastic_constants_up = self._arrays[array_handle]
+                elastic_tensor_up = self._arrays[array_handle]
             else:
-                elastic_constants_up = \
+                elastic_tensor_up = \
                     f90wrap.runtime.get_array(f90wrap.runtime.sizeof_fortran_t,
                                         self._handle,
                                         _artemis.f90wrap_artemis_gen_type__array__elastic_coedb6)
-                self._arrays[array_handle] = elastic_constants_up
-            return elastic_constants_up
+                self._arrays[array_handle] = elastic_tensor_up
+            return elastic_tensor_up
         
-        @elastic_constants_up.setter
-        def elastic_constants_up(self, elastic_constants_up):
-            self.elastic_constants_up[...] = elastic_constants_up
+        @elastic_tensor_up.setter
+        def elastic_tensor_up(self, elastic_tensor_up):
+            self.elastic_tensor_up[...] = elastic_tensor_up
         
         @property
         def use_pricel_lw(self):
@@ -2446,10 +2474,10 @@ class Generator(f90wrap.runtime.FortranModule):
             ret.append(repr(self.structure_lw))
             ret.append(',\n    structure_up : ')
             ret.append(repr(self.structure_up))
-            ret.append(',\n    elastic_constants_lw : ')
-            ret.append(repr(self.elastic_constants_lw))
-            ret.append(',\n    elastic_constants_up : ')
-            ret.append(repr(self.elastic_constants_up))
+            ret.append(',\n    elastic_tensor_lw : ')
+            ret.append(repr(self.elastic_tensor_lw))
+            ret.append(',\n    elastic_tensor_up : ')
+            ret.append(repr(self.elastic_tensor_up))
             ret.append(',\n    use_pricel_lw : ')
             ret.append(repr(self.use_pricel_lw))
             ret.append(',\n    use_pricel_up : ')

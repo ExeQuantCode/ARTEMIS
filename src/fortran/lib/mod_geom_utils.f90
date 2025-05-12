@@ -884,8 +884,6 @@ contains
        call move_alloc(new_map,map)
     end if
 
-
-
   end subroutine transformer
 !!!#############################################################################
 
@@ -2595,49 +2593,171 @@ contains
 !!!#############################################################################
 
   
-!!!#############################################################################
-!!! shares strain between two lattices
-!!!#############################################################################
-  subroutine share_strain(lat1,lat2,bulk_mod1,bulk_mod2,axis,lcompensate)
+!###############################################################################
+  subroutine share_strain_scalar( &
+       basis1, basis2, &
+       bulk_mod1, bulk_mod2, &
+       axis, lcompensate &
+  )
+    !! Share strain between two lattices
     implicit none
-    integer :: i
-    integer :: iaxis
-    real(real32) :: area1,area2,delta1,delta2
-    integer, dimension(3) :: abc=(/1,2,3/)
-    real(real32), dimension(3) :: strain
 
-    real(real32), intent(in) :: bulk_mod1,bulk_mod2
-    real(real32), dimension(3,3), intent(inout) :: lat1,lat2
-
+    ! Arguments
+    type(basis_type), intent(inout) :: basis1, basis2
+    !! Structures
+    real(real32), intent(in) :: bulk_mod1, bulk_mod2
+    !! Bulk modulus of the two structures
     integer, optional, intent(in) :: axis
+    !! Axis along which to share strain
     logical, optional, intent(in) :: lcompensate
+    !! Boolean whether to compensate for the strain in the axis direction
 
-    iaxis=3
-    if(present(axis)) iaxis=axis
+    ! Local variables
+    integer :: i
+    !! Loop index
+    integer :: axis_
+    !! Axis index
+    real(real32) :: area1, area2, delta1, delta2
+    !! Area of the two lattices
+    integer, dimension(3) :: abc = [ 1, 2, 3 ]
+    !! Array to hold the axis indices
+    real(real32), dimension(3) :: strain
+    !! Strain vector
+
+
+    axis_ = 3
+    if(present(axis)) axis_ = axis
  
-    abc=cshift(abc,3-iaxis)
-    area1 = modu(cross(lat1(abc(1),:),lat1(abc(2),:)))
-    area2 = modu(cross(lat2(abc(1),:),lat2(abc(2),:)))
+    abc=cshift(abc,3-axis_)
+    area1 = modu(cross(basis1%lat(abc(1),:),basis1%lat(abc(2),:)))
+    area2 = modu(cross(basis2%lat(abc(1),:),basis2%lat(abc(2),:)))
     delta1 = - (1._real32 - area2/area1)/(1._real32 + (area2/area1)*(bulk_mod1/bulk_mod2))
     delta2 = - (1._real32 - area1/area2)/(1._real32 + (area1/area2)*(bulk_mod2/bulk_mod1))
     write(0,*) "areas", area1,area2
     write(0,*) "deltas", delta1,delta2
     write(0,*) "modulus", bulk_mod1,bulk_mod2
     do i=1,3
-       if(i.eq.iaxis) cycle
-       strain(:) = lat1(i,:)-lat2(i,:)
-       lat1(i,:) = lat1(i,:) * (1._real32 + delta1)
-       lat2(i,:) = lat1(i,:)
+       if(i.eq.axis_) cycle
+       strain(:) = basis1%lat(i,:)-basis2%lat(i,:)
+       basis1%lat(i,:) = basis1%lat(i,:) * (1._real32 + delta1)
+       basis2%lat(i,:) = basis1%lat(i,:)
     end do
     
     if(present(lcompensate))then
        if(lcompensate)then
-          lat1(abc(3),:) =  lat1(abc(3),:) * (1._real32 - delta1/(1._real32 + delta1))  
-          lat2(abc(3),:) =  lat2(abc(3),:) * (1._real32 - delta2/(1._real32 + delta2))
+          basis1%lat(abc(3),:) =  basis1%lat(abc(3),:) * (1._real32 - delta1/(1._real32 + delta1))  
+          basis2%lat(abc(3),:) =  basis2%lat(abc(3),:) * (1._real32 - delta2/(1._real32 + delta2))
        end if
     end if
 
-  end subroutine share_strain
-!!!#############################################################################
+  end subroutine share_strain_scalar
+!###############################################################################
+
+
+!###############################################################################
+  subroutine share_strain_tensor( &
+       basis1, basis2, &
+       elastic_tensor1, elastic_tensor2, &
+       axis, lcompensate &
+  )
+    !! Share strain between two lattices
+    implicit none
+
+    ! Arguments
+    type(basis_type), intent(inout) :: basis1, basis2
+    !! Structures
+    real(real32), dimension(6,6), intent(in) :: elastic_tensor1, elastic_tensor2
+    !! Elastic tensors of the two structures
+    integer, optional, intent(in) :: axis
+    !! Axis along which to compensate strain
+    logical, optional, intent(in) :: lcompensate
+    !! Boolean whether to compensate for the strain in the axis direction
+
+    ! Local variables
+    integer :: i, j, a1, a2, a3, axis_
+    real(real32) :: s, s_opt, e_total, e_total_min
+    logical :: lcompensate_
+    integer, dimension(3) :: abc = [1, 2, 3]
+    real(real32), dimension(3,3) :: def_mat, F
+    real(real32), dimension(2,2) :: A, B, Finv
+    real(real32), dimension(3,3) :: strain_tensor, ident
+    real(real32), dimension(6)   :: strain1_voigt, strain2_voigt
+    real(real32) :: e1, e2, total_area
+
+    ! Initialise optional arguments
+    axis_ = 3
+    lcompensate_ = .false.
+    if (present(axis)) axis_ = axis
+    if (present(lcompensate)) lcompensate_ = lcompensate
+
+    ! Align axes so interface is in a1-a2 plane
+    abc = cshift(abc, 3 - axis_)
+    a1 = abc(1); a2 = abc(2); a3 = abc(3)
+
+    ! Get in-plane lattice vectors
+    A = basis1%lat([a1,a2], [a1,a2])
+    B = basis2%lat([a1,a2], [a1,a2])
+
+    ! Compute deformation gradient from basis1 to basis2
+    Finv = inverse(A)
+    F = 0._real32
+    F(1:2,1:2) = matmul(B, Finv)
+    F(3,3) = 1._real32
+
+    ! Compute symmetric strain tensor: ε = 0.5 * (FᵀF - I)
+    def_mat = matmul(transpose(F), F)
+    ident = 0._real32
+    ident(1,1) = 1._real32; ident(2,2) = 1._real32; ident(3,3) = 1._real32
+    strain_tensor = 0.5_real32 * (def_mat - ident)
+
+    ! Total interface strain (applied to both): convert to Voigt
+    strain1_voigt = 0._real32
+    strain2_voigt = 0._real32
+    strain1_voigt(1) = strain_tensor(a1,a1)
+    strain1_voigt(2) = strain_tensor(a2,a2)
+    strain1_voigt(6) = 2._real32 * strain_tensor(a1,a2)
+    strain2_voigt = strain1_voigt  ! same total strain
+
+    ! Optimise strain split between materials
+    e_total_min = huge(0._real32)
+    do i = 0, 100
+       s = real(i,real32) / 100._real32
+       strain1_voigt = s * strain1_voigt
+       strain2_voigt = (1._real32 - s) * strain2_voigt
+       e1 = 0.5_real32 * dot_product(strain1_voigt, matmul(elastic_tensor1, strain1_voigt))
+       e2 = 0.5_real32 * dot_product(strain2_voigt, matmul(elastic_tensor2, strain2_voigt))
+       e_total = e1 + e2
+       if (e_total .lt. e_total_min) then
+          e_total_min = e_total
+          s_opt = s
+       end if
+    end do
+
+    ! Apply optimal strain split
+    strain1_voigt = s_opt * strain1_voigt
+    strain2_voigt = (1._real32 - s_opt) * strain2_voigt
+
+    ! Apply to lattices
+    do i = 1, 2
+       basis1%lat(abc(i),:) = basis1%lat(abc(i),:) * (1._real32 + strain1_voigt(i))
+       basis2%lat(abc(i),:) = basis2%lat(abc(i),:) * (1._real32 + strain2_voigt(i))
+    end do
+    ! Apply shear via angle (if any)
+    basis1%lat(a1,:) = basis1%lat(a1,:) + 0.5_real32 * strain1_voigt(6) * basis1%lat(a2,:)
+    basis2%lat(a2,:) = basis2%lat(a2,:) + 0.5_real32 * strain2_voigt(6) * basis2%lat(a1,:)
+
+    ! Out-of-plane compensation
+    if (lcompensate_) then
+       basis1%lat(a3,:) = basis1%lat(a3,:) * (1._real32 - strain1_voigt(1) - strain1_voigt(2))
+       basis2%lat(a3,:) = basis2%lat(a3,:) * (1._real32 - strain2_voigt(1) - strain2_voigt(2))
+    end if
+
+    ! Print
+    write(*,'(A,F6.2,A,F6.2,A)') "  Strain % shared: ", s_opt*100._real32, "% / ", (1._real32 - s_opt)*100._real32, "%"
+    write(*,'(A,F10.6)') "  Total strain energy: ", e_total_min
+
+
+  end subroutine share_strain_tensor
+!###############################################################################
 
 end module artemis__geom_utils

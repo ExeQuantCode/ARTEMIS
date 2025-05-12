@@ -19,8 +19,8 @@ module artemis__generator
   use artemis__geom_utils,    only: planecutter, primitive_lat, ortho_axis,&
        shift_region, set_vacuum, transformer, shifter, reducer, &
        get_min_bulk_bond, get_min_bond, get_shortest_bond, bond_type, &
-       share_strain, MATNORM, basis_stack, compare_stoichiometry, &
-       get_primitive_cell
+       share_strain_scalar, share_strain_tensor, MATNORM, &
+       basis_stack, compare_stoichiometry, get_primitive_cell
   use artemis__sym,           only: confine_type, gldfnd
   use artemis__terminations,  only: get_termination_info, term_arr_type, &
        set_layer_tol, build_slab_supercell, cut_slab_to_height
@@ -38,7 +38,7 @@ module artemis__generator
     !! Interface generator type
     type(basis_type) :: structure_lw, structure_up
     !! Lower and upper bulk structures
-    real(real32), dimension(:), allocatable :: elastic_constants_lw, elastic_constants_up
+    real(real32), dimension(:,:), allocatable :: elastic_tensor_lw, elastic_tensor_up
     !! Elastic constants for the lower and upper bulk structures
     logical :: use_pricel_lw = .true., use_pricel_up = .true.
     !! Use primitive cell for lower and upper bulk structures
@@ -321,39 +321,39 @@ contains
 
 
 !###############################################################################
-   function get_structure_shift(this, idx) result(output)
-      !! Get the shifts for a specific structure
-      implicit none
+  function get_structure_shift(this, idx) result(output)
+    !! Get the shifts for a specific structure
+    implicit none
    
-      ! Arguments
-      class(artemis_generator_type), intent(in) :: this
-      !! Instance of artemis generator type
-      integer, intent(in) :: idx
-      !! Index of the structure
+    ! Arguments
+    class(artemis_generator_type), intent(in) :: this
+    !! Instance of artemis generator type
+    integer, intent(in) :: idx
+    !! Index of the structure
    
-      real(real32), dimension(3) :: output
-      !! Shift data
+    real(real32), dimension(3) :: output
+    !! Shift data
    
-      output = this%structure_data(idx)%shift
+    output = this%structure_data(idx)%shift
    
-   end function get_structure_shift
+  end function get_structure_shift
 !###############################################################################
 
 
 !###############################################################################
-   subroutine clear_structures(this)
-      !! Clear the structures
-      implicit none
+  subroutine clear_structures(this)
+    !! Clear the structures
+    implicit none
 
-      ! Arguments
-      class(artemis_generator_type), intent(inout) :: this
-      !! Instance of artemis generator type
+    ! Arguments
+    class(artemis_generator_type), intent(inout) :: this
+    !! Instance of artemis generator type
 
-      if(allocated(this%structure_data)) deallocate(this%structure_data)
-      if(allocated(this%structures)) deallocate(this%structures)
-      this%num_structures = 0
+    if(allocated(this%structure_data)) deallocate(this%structure_data)
+    if(allocated(this%structures)) deallocate(this%structures)
+    this%num_structures = 0
 
-   end subroutine clear_structures
+  end subroutine clear_structures
 !###############################################################################
 
 
@@ -576,7 +576,7 @@ contains
 !###############################################################################
   subroutine set_materials( &
        this, structure_lw, structure_up, &
-       elastic_constants_lw, elastic_constants_up, &
+       elastic_lw, elastic_up, &
        use_pricel_lw, use_pricel_up &
   )
     !! Set the materials for the interface generator
@@ -589,13 +589,17 @@ contains
     !! Lower bulk structure
     type(basis_type), intent(in), optional :: structure_up
     !! Upper bulk structure
-    real(real32), dimension(:), intent(in), optional :: elastic_constants_lw
+    real(real32), dimension(:,:), intent(in), optional :: elastic_lw
     !! Elastic constants for the lower bulk structure
-    real(real32), dimension(:), intent(in), optional :: elastic_constants_up
+    real(real32), dimension(:,:), intent(in), optional :: elastic_up
     !! Elastic constants for the upper bulk structure
     logical, intent(in), optional :: use_pricel_lw
     !! Use primitive cell for lower bulk structure
     logical, intent(in), optional :: use_pricel_up
+
+    ! Local variables
+    character(len=256) :: err_msg
+    !! Error message
 
 
     if(present(structure_lw))then
@@ -608,15 +612,39 @@ contains
     !---------------------------------------------------------------------------
     ! Handle the elastic constants
     !---------------------------------------------------------------------------
-    if(present(elastic_constants_lw))then
-       if(allocated(this%elastic_constants_lw)) deallocate(this%elastic_constants_lw)
-       allocate(this%elastic_constants_lw(size(elastic_constants_lw)))
-       this%elastic_constants_lw = elastic_constants_lw
+    if(present(elastic_lw))then
+       if(allocated(this%elastic_tensor_lw)) deallocate(this%elastic_tensor_lw)
+       select case(size(elastic_lw,dim=1))
+       case(1)
+          allocate(this%elastic_tensor_lw(1,1))
+          this%elastic_tensor_lw(1,1) = elastic_lw(1,1)
+       case(6)
+          allocate(this%elastic_tensor_lw(6,6))
+          this%elastic_tensor_lw(:,:) = elastic_lw
+       case default
+          write(err_msg,'(A)') &
+               "The elastic tensor for the lower bulk structure has incorrect &
+               &shape. It should have shape (1,1) or (6,6)."
+          call stop_program(trim(err_msg))
+          return
+       end select
     end if
-    if(present(elastic_constants_up))then
-       if(allocated(this%elastic_constants_up)) deallocate(this%elastic_constants_up)
-       allocate(this%elastic_constants_up(size(elastic_constants_up)))
-       this%elastic_constants_up = elastic_constants_up
+    if(present(elastic_up))then
+       if(allocated(this%elastic_tensor_up)) deallocate(this%elastic_tensor_up)
+       select case(size(elastic_up,dim=1))
+       case(1)
+          allocate(this%elastic_tensor_up(1,1))
+          this%elastic_tensor_up(1,1) = elastic_up(1,1)
+       case(6)
+          allocate(this%elastic_tensor_up(6,6))
+          this%elastic_tensor_up(:,:) = elastic_up
+       case default
+          write(err_msg,'(A)') &
+               "The elastic tensor for the upper bulk structure has incorrect &
+               &shape. It should have shape (1,1) or (6,6)."
+          call stop_program(trim(err_msg))
+          return
+       end select
     end if
 
     if(present(use_pricel_lw)) this%use_pricel_lw = use_pricel_lw
@@ -2096,19 +2124,32 @@ contains
              !------------------------------------------------------------------
              ! Use the bulk moduli to determine the strain sharing
              !------------------------------------------------------------------
-             if(allocated(this%elastic_constants_lw).and. &
-                allocated(this%elastic_constants_up))then
-                select case(size(this%elastic_constants_lw))
+             if(allocated(this%elastic_tensor_lw).and. &
+                allocated(this%elastic_tensor_up))then
+                if( all(shape(this%elastic_tensor_lw) .ne. &
+                     shape(this%elastic_tensor_up)) )then
+                   write(err_msg,'(A)') &
+                        "Inconsistent representation of elastic constants."
+                   call stop_program(trim(err_msg))
+                   return
+                end if
+                select case(size(this%elastic_tensor_lw))
                 case(1)
-                   if( abs(this%elastic_constants_lw(1)).gt.0.E0 .and. &
-                         abs(this%elastic_constants_up(1)).gt.0.E0 &
+                   if( abs(this%elastic_tensor_lw(1,1)).gt.0.E0 .and. &
+                         abs(this%elastic_tensor_up(1,1)).gt.0.E0 &
                    )then
-                      call share_strain(slab_lw%lat,slab_up%lat,&
-                            this%elastic_constants_lw(1), &
-                            this%elastic_constants_up(1), &
+                      call share_strain_scalar(slab_lw,slab_up,&
+                            this%elastic_tensor_lw(1,1), &
+                            this%elastic_tensor_up(1,1), &
                             lcompensate = this%compensate_normal &
                       )
                    end if
+                case(6)
+                      call share_strain_tensor(slab_lw,slab_up,&
+                      this%elastic_tensor_lw, &
+                      this%elastic_tensor_up, &
+                      lcompensate = this%compensate_normal &
+                )
                 case default
                    write(err_msg,'("Elastic constants not yet set up to handle &
                         &the full tensor.")')
@@ -2116,8 +2157,8 @@ contains
                    exit_code_ = 1
                    return
                 end select
-             elseif(allocated(this%elastic_constants_lw).neqv. &
-                   allocated(this%elastic_constants_up))then
+             elseif(allocated(this%elastic_tensor_lw).neqv. &
+                   allocated(this%elastic_tensor_up))then
                 write(err_msg,'(A)') &
                      "Elastic constants not set up for both materials."
                 call stop_program(trim(err_msg))

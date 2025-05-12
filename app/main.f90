@@ -112,8 +112,8 @@ program artemis_executable
      call generator%set_materials( &
           structure_lw = struc1_bas, structure_up = struc2_bas, &
           use_pricel_lw = lw_use_pricel, use_pricel_up = up_use_pricel, &
-          elastic_constants_lw = [ lw_bulk_modulus ], &
-          elastic_constants_up = [ up_bulk_modulus ] &
+          elastic_lw = reshape([ lw_bulk_modulus ], shape=[1,1]), &
+          elastic_up = reshape([ up_bulk_modulus ], shape=[1,1]) &
      )
      call generator%set_surface_properties( &
           miller_lw = lw_mplane, miller_up = up_mplane, &

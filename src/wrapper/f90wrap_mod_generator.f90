@@ -140,7 +140,7 @@ subroutine f90wrap_artemis_gen_type__set__structure_up(this, f90wrap_structure_u
     this_ptr%p%structure_up = structure_up_ptr%p
 end subroutine f90wrap_artemis_gen_type__set__structure_up
 
-subroutine f90wrap_artemis_gen_type__array__elastic_co4c3f(this, nd, dtype, dshape, dloc)
+subroutine f90wrap_artemis_gen_type__array__elastic_tensor_lw(this, nd, dtype, dshape, dloc)
     use artemis__generator, only: artemis_generator_type
     use, intrinsic :: iso_c_binding, only : c_int
     implicit none
@@ -157,15 +157,15 @@ subroutine f90wrap_artemis_gen_type__array__elastic_co4c3f(this, nd, dtype, dsha
     nd = 1
     dtype = 11
     this_ptr = transfer(this, this_ptr)
-    if (allocated(this_ptr%p%elastic_constants_lw)) then
-        dshape(1:1) = shape(this_ptr%p%elastic_constants_lw)
-        dloc = loc(this_ptr%p%elastic_constants_lw)
+    if (allocated(this_ptr%p%elastic_tensor_lw)) then
+        dshape(1:2) = shape(this_ptr%p%elastic_tensor_lw)
+        dloc = loc(this_ptr%p%elastic_tensor_lw)
     else
         dloc = 0
     end if
-end subroutine f90wrap_artemis_gen_type__array__elastic_co4c3f
+end subroutine f90wrap_artemis_gen_type__array__elastic_tensor_lw
 
-subroutine f90wrap_artemis_gen_type__array__elastic_coedb6(this, nd, dtype, dshape, dloc)
+subroutine f90wrap_artemis_gen_type__array__elastic_tensor_up(this, nd, dtype, dshape, dloc)
     use artemis__generator, only: artemis_generator_type
     use, intrinsic :: iso_c_binding, only : c_int
     implicit none
@@ -182,13 +182,13 @@ subroutine f90wrap_artemis_gen_type__array__elastic_coedb6(this, nd, dtype, dsha
     nd = 1
     dtype = 11
     this_ptr = transfer(this, this_ptr)
-    if (allocated(this_ptr%p%elastic_constants_up)) then
-        dshape(1:1) = shape(this_ptr%p%elastic_constants_up)
-        dloc = loc(this_ptr%p%elastic_constants_up)
+    if (allocated(this_ptr%p%elastic_tensor_up)) then
+        dshape(1:2) = shape(this_ptr%p%elastic_tensor_up)
+        dloc = loc(this_ptr%p%elastic_tensor_up)
     else
         dloc = 0
     end if
-end subroutine f90wrap_artemis_gen_type__array__elastic_coedb6
+end subroutine f90wrap_artemis_gen_type__array__elastic_tensor_up
 
 subroutine f90wrap_artemis_gen_type__get__use_pricel_lw(this, f90wrap_use_pricel_lw)
     use artemis__generator, only: artemis_generator_type
@@ -1286,7 +1286,7 @@ end subroutine f90wrap_intf_gen__set_match_method__binding__agt
 ! Material and surface property procedures
 !###############################################################################
 subroutine f90wrap_intf_gen__set_materials__binding__agt(this, structure_lw, structure_up, &
-    elastic_constants_lw, elastic_constants_up, use_pricel_lw, use_pricel_up, n0, n1)
+    elastic_lw, elastic_up, use_pricel_lw, use_pricel_up, n0, n1, n2, n3)
     use artemis__generator, only: artemis_generator_type
     use artemis__geom_rw, only: basis_type
     implicit none
@@ -1303,21 +1303,25 @@ subroutine f90wrap_intf_gen__set_materials__binding__agt(this, structure_lw, str
     integer, intent(in), optional, dimension(2) :: structure_lw
     type(basis_type_ptr_type) :: structure_up_ptr
     integer, intent(in), optional, dimension(2) :: structure_up
-    real(4), intent(in), optional, dimension(n0) :: elastic_constants_lw
-    real(4), intent(in), optional, dimension(n1) :: elastic_constants_up
+    real(4), intent(in), optional, dimension(n0,n1) :: elastic_lw
+    real(4), intent(in), optional, dimension(n2,n3) :: elastic_up
     logical, intent(in), optional :: use_pricel_lw
     logical, intent(in), optional :: use_pricel_up
     integer :: n0
-    !f2py intent(hide), depend(elastic_constants_lw) :: n0 = shape(elastic_constants_lw,0)
+    !f2py intent(hide), depend(elastic_lw) :: n0 = shape(elastic_lw,0)
     integer :: n1
-    !f2py intent(hide), depend(elastic_constants_up) :: n1 = shape(elastic_constants_up,0)
+    !f2py intent(hide), depend(elastic_lw) :: n1 = shape(elastic_lw,1)
+    integer :: n2
+    !f2py intent(hide), depend(elastic_up) :: n2 = shape(elastic_up,0)
+    integer :: n3
+    !f2py intent(hide), depend(elastic_up) :: n3 = shape(elastic_up,1)
     this_ptr = transfer(this, this_ptr)
     if(present(structure_lw)) &
           structure_lw_ptr = transfer(structure_lw, structure_lw_ptr)
     if(present(structure_up)) &
           structure_up_ptr = transfer(structure_up, structure_up_ptr)
     call this_ptr%p%set_materials(structure_lw=structure_lw_ptr%p, structure_up=structure_up_ptr%p, &
-        elastic_constants_lw=elastic_constants_lw, elastic_constants_up=elastic_constants_up, use_pricel_lw=use_pricel_lw, &
+        elastic_lw=elastic_lw, elastic_up=elastic_up, use_pricel_lw=use_pricel_lw, &
         use_pricel_up=use_pricel_up)
 end subroutine f90wrap_intf_gen__set_materials__binding__agt
 
