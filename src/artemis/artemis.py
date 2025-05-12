@@ -1794,6 +1794,10 @@ class Generator(f90wrap.runtime.FortranModule):
             """
             array_ndim, array_type, array_shape, array_handle = \
                 _artemis.f90wrap_artemis_gen_type__array__elastic_co4c3f(self._handle)
+
+            if array_handle == 0:
+                return None
+
             if array_handle in self._arrays:
                 elastic_constants_lw = self._arrays[array_handle]
             else:
@@ -1821,6 +1825,10 @@ class Generator(f90wrap.runtime.FortranModule):
             """
             array_ndim, array_type, array_shape, array_handle = \
                 _artemis.f90wrap_artemis_gen_type__array__elastic_coedb6(self._handle)
+
+            if array_handle == 0:
+                return None
+
             if array_handle in self._arrays:
                 elastic_constants_up = self._arrays[array_handle]
             else:
@@ -2052,6 +2060,10 @@ class Generator(f90wrap.runtime.FortranModule):
             """
             array_ndim, array_type, array_shape, array_handle = \
                 _artemis.f90wrap_artemis_gen_type__array__shifts(self._handle)
+
+            if array_handle == 0:
+                return None
+
             if array_handle in self._arrays:
                 shifts = self._arrays[array_handle]
             else:
@@ -2245,7 +2257,7 @@ class Generator(f90wrap.runtime.FortranModule):
             
             """
             return \
-                _artemis.f90wrap_artemis_gen_type__get__require_mirr41cf(self._handle)
+                _artemis.f90wrap_artemis_gen_type__get__require_mirror_swaps(self._handle)
         
         @require_mirror_swaps.setter
         def require_mirror_swaps(self, require_mirror_swaps):
@@ -2378,7 +2390,7 @@ class Generator(f90wrap.runtime.FortranModule):
             
             """
             array_ndim, array_type, array_shape, array_handle = \
-                _artemis.f90wrap_artemis_gen_type__array__layer_sepa90a5(self._handle)
+                _artemis.f90wrap_artemis_gen_type__array__layer_separation_cutoff(self._handle)
             if array_handle in self._arrays:
                 layer_separation_cutoff = self._arrays[array_handle]
             else:
@@ -2455,8 +2467,6 @@ class Generator(f90wrap.runtime.FortranModule):
             ret.append(repr(self.separation_scale))
             ret.append(',\n    depth_method : ')
             ret.append(repr(self.depth_method))
-            ret.append(',\n    shift_data : ')
-            ret.append(repr(self.shift_data))
             ret.append(',\n    swap_method : ')
             ret.append(repr(self.swap_method))
             ret.append(',\n    num_swaps : ')

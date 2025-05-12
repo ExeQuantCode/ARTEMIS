@@ -264,6 +264,27 @@ subroutine f90wrap_artemis_gen_type__array__miller_lw(this, nd, dtype, dshape, d
     dloc = loc(this_ptr%p%miller_lw)
 end subroutine f90wrap_artemis_gen_type__array__miller_lw
 
+subroutine f90wrap_artemis_gen_type__array__miller_up(this, nd, dtype, dshape, dloc)
+    use artemis__generator, only: artemis_generator_type
+    use, intrinsic :: iso_c_binding, only : c_int
+    implicit none
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    integer(c_int), intent(in) :: this(2)
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    integer(c_int), intent(out) :: nd
+    integer(c_int), intent(out) :: dtype
+    integer(c_int), dimension(10), intent(out) :: dshape
+    integer*8, intent(out) :: dloc
+    
+    nd = 1
+    dtype = 5
+    this_ptr = transfer(this, this_ptr)
+    dshape(1:1) = shape(this_ptr%p%miller_up)
+    dloc = loc(this_ptr%p%miller_up)
+end subroutine f90wrap_artemis_gen_type__array__miller_up
+
 subroutine f90wrap_artemis_gen_type__get__is_layered_lw(this, f90wrap_is_layered_lw)
     use artemis__generator, only: artemis_generator_type
     implicit none
