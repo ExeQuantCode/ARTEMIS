@@ -1035,7 +1035,7 @@ subroutine f90wrap_intf_gen__artemis_gen_type_finalise(this)
     deallocate(this_ptr%p)
 end subroutine f90wrap_intf_gen__artemis_gen_type_finalise
 
-subroutine f90wrap_intf_gen__get_all_structures_data__binding_agt(ret_output, this, n0)
+subroutine f90wrap_intf_gen__get_all_structures_data__binding_agt(ret_output, this)
     use artemis__generator, only: artemis_generator_type
     use artemis__misc_types, only: struc_data_type
     implicit none
@@ -1054,7 +1054,6 @@ subroutine f90wrap_intf_gen__get_all_structures_data__binding_agt(ret_output, th
     integer, intent(out), dimension(2) :: ret_output
     type(artemis_generator_type_ptr_type) :: this_ptr
     integer, intent(in), dimension(2) :: this
-    integer :: n0
     this_ptr = transfer(this, this_ptr)
     allocate(ret_output_ptr%p)
     ret_output_ptr%p%items = this_ptr%p%get_all_structures_data()
@@ -1298,7 +1297,7 @@ subroutine f90wrap_intf_gen__set_materials__binding__agt(this, structure_lw, str
     if(present(structure_lw)) &
           structure_lw_ptr = transfer(structure_lw, structure_lw_ptr)
     if(present(structure_up)) &
-          structure_lw_ptr = transfer(structure_up, structure_up_ptr)
+          structure_up_ptr = transfer(structure_up, structure_up_ptr)
     call this_ptr%p%set_materials(structure_lw=structure_lw_ptr%p, structure_up=structure_up_ptr%p, &
         elastic_constants_lw=elastic_constants_lw, elastic_constants_up=elastic_constants_up, use_pricel_lw=use_pricel_lw, &
         use_pricel_up=use_pricel_up)

@@ -937,8 +937,12 @@ contains
           write(err_msg,'(A,I0,A)') &
                "The surface termination indices have ", size(surface,dim=1), &
                " components. It should have 1 or 2."
-          call stop_program(trim(err_msg))
           exit_code_ = 1
+          call stop_program( &
+               trim(err_msg), &
+               exit_code=exit_code_, &
+               block_stop = present(exit_code) &
+          )
           return
        end select
     end if
@@ -980,8 +984,12 @@ contains
        write(err_msg,'(A,I0,A)') &
             "The transformed structure stoichiometry does not match the &
             &original structure."
-       call stop_program(trim(err_msg))
        exit_code_ = 1
+       call stop_program( &
+            trim(err_msg), &
+            exit_code=exit_code_, &
+            block_stop = present(exit_code) &
+       )
        return
     end if
 
@@ -1429,16 +1437,26 @@ contains
     ! check if the structures have anything (i.e. atoms) in them
     if(this%structure_lw%natom.eq.0)then
        write(err_msg,'(A,I0,A)') &
-            "ERROR: The lower structure has ", this%structure_lw%natom, &
+            "The lower structure has ", this%structure_lw%natom, &
             " atoms. It should have at least 1."
-       call err_abort(trim(err_msg),fmtd=.true.)
+       exit_code_ = 1
+       call stop_program( &
+            trim(err_msg), &
+            exit_code=exit_code_, &
+            block_stop = present(exit_code) &
+       )
        return
     end if
     if(this%structure_up%natom.eq.0)then
        write(err_msg,'(A,I0,A)') &
-            "ERROR: The upper structure has ", this%structure_lw%natom, &
+            "The upper structure has ", this%structure_lw%natom, &
             " atoms. It should have at least 1."
-       call err_abort(trim(err_msg),fmtd=.true.)
+       exit_code_ = 1
+       call stop_program( &
+            trim(err_msg), &
+            exit_code=exit_code_, &
+            block_stop = present(exit_code) &
+       )
        return
     end if
     call structure_lw%copy(this%structure_lw, length=4)
@@ -1498,6 +1516,7 @@ contains
                "The surface vector for the upper material has ", &
                size(surface_up, dim=1), " components. It should have 1 or 2."
           call stop_program(trim(err_msg))
+          return
        end select
     end if
 
@@ -1522,6 +1541,7 @@ contains
             num_layers_lw_, " and the thickness is ", thickness_lw_, &
             " One of these must be greater than 0."
        call stop_program(trim(err_msg))
+       return
     end if
     if(num_layers_up_.eq.0.and.abs(thickness_up_+1._real32).lt.1.E-6_real32)then
        thickness_up_ = 10._real32
@@ -1531,6 +1551,7 @@ contains
             num_layers_up_, " and the thickness is ", thickness_up_, &
             " One of these must be greater than 0."
        call stop_program(trim(err_msg))
+       return
     end if
 
 

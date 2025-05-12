@@ -1008,18 +1008,30 @@ contains
 !!!#############################################################################
 
 
-!!!#############################################################################
-!!! Reorientates lattice to the primitive lattice of its type
-!!!#############################################################################
-!!! NEED TO SET UP TO WORK FOR THE EXTRA SWAPPINGS OF A, B AND C
+!###############################################################################
   subroutine primitive_lat(basis)
+    !! Reorientate lattice to the primitive lattice of its type
+    !!
+    !! NEED TO SET UP TO WORK FOR THE EXTRA SWAPPINGS OF A, B AND C
     implicit none
+
+    ! Arguments
     type(basis_type), intent(inout) :: basis
+    !! Structure data
+
+    ! Local variables
     integer :: i,j
-    real(real32) :: dtmp1
+    !! Loop indices
+    real(real32) :: rtmp1
+    !! Temporary variable
     real(real32), dimension(3) :: scal
-    real(real32), dimension(3,3) :: lat,plat,tmat1,tmat2
+    !! Scaling factors
+    real(real32), dimension(3,3) :: lat, plat
+    !! Lattice matrices
+    real(real32), dimension(3,3) :: tmat1, tmat2
+    !! Temporary matrices
     real(real32), dimension(3,3,4) :: special
+    !! Special lattice matrices
 
 
     !!---------------------------------------------------------------
@@ -1028,9 +1040,9 @@ contains
     call reducer(basis)
     lat  = basis%lat
     plat = lat
-    do i=1,3
-       scal(i)=modu(lat(i,:))
-       lat(i,:)=lat(i,:)/scal(i)
+    do i = 1, 3
+       scal(i) = modu(lat(i,:))
+       lat(i,:) = lat(i,:) / scal(i)
     end do
 
 
@@ -1049,27 +1061,27 @@ contains
          0.0_real32, 1._real32, 1._real32,&
          1._real32, 0._real32, 1._real32,&
          1._real32, 1._real32, 0.0_real32/), shape(lat) ) )
-    special(:,:,3) = special(:,:,3)/sqrt(2._real32)
+    special(:,:,3) = special(:,:,3) / sqrt(2._real32)
     special(:,:,4) = transpose( reshape( (/&
          -1._real32,  1._real32,  1._real32,&
          1._real32, -1._real32,  1._real32,&
          1._real32,  1._real32, -1._real32/), shape(lat) ) )
-    special(:,:,4) = special(:,:,4)/sqrt(3._real32)
+    special(:,:,4) = special(:,:,4) / sqrt(3._real32)
 
 
     !!---------------------------------------------------------------
     !! cycles special set to find primitive lattice of supplied lat
     !!---------------------------------------------------------------
     tmat1 = matmul(lat,transpose(lat))
-    checkloop: do i=1,4
+    checkloop: do i = 1, 4
        !tfmat=matmul(lat,inverse_3x3(special(:,:,i)))
        !tfmat=matmul(tfmat,transpose(tfmat))
        tmat2 = matmul(special(:,:,i),transpose(special(:,:,i)))
-       dtmp1 = tmat2(1,1)/tmat1(1,1)
+       rtmp1 = tmat2(1,1) / tmat1(1,1)
        !if(all(abs(tfmat-nint(tfmat)).lt.1.E-8_real32))then
-       if(all(abs(tmat1*dtmp1-tmat2).lt.1.E-6_real32))then
-          do j=1,3
-             plat(j,:)=scal(j)*special(j,:,i)
+       if(all(abs(tmat1*rtmp1-tmat2).lt.1.E-6_real32))then
+          do j = 1, 3
+             plat(j,:) = scal(j) * special(j,:,i)
           end do
           exit checkloop
        end if
@@ -1078,31 +1090,40 @@ contains
     basis%lat = plat
 
   end subroutine primitive_lat
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Uses Buerger's algorithm to reduce cell.
-!!!#############################################################################
+!###############################################################################
   subroutine reducer(basis, tmptype, verbose)
+    !! Reduce the cell using Buerger's algorithm
     implicit none
+
+    ! Arguments
     type(basis_type), intent(inout) :: basis
+    !! Structure data
     integer, intent(in), optional :: tmptype
+    !! Cell type
     integer, intent(in), optional :: verbose
+    !! Verbosity level
 
+    ! Local variables
     integer :: cell_type
+    !! Cell type
     integer :: i,j,k,count,limit
+    !! Loop indices
     real(real32), dimension(3,3) :: newlat,transmat,S,tmp_mat
-
+    !! Lattice matrices
     real(real32) :: tiny,pi2
+    !! Constants
     integer :: verbose_
+    !! Verbosity level
     logical :: lreduced
+    !! Boolean whether cell is reduced
 
 
-
-!!!-----------------------------------------------------------------------------
-!!! set up inital variable values
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! set up inital variable values
+    !---------------------------------------------------------------------------
     verbose_ = 0
     if(present(verbose)) verbose_ = verbose
     cell_type=2
@@ -1111,24 +1132,24 @@ contains
     count=0
     limit=100
     lreduced=.false.
-    tiny=1E-5*(get_vol(basis%lat))**(1.E0/3.E0)
+    tiny = 1.E-5_real32 * (get_vol(basis%lat))**(1._real32/3._real32)
     pi2 = 2._real32*atan(1._real32)
     transmat = 0._real32
-    do i=1,3
-       transmat(i,i)=1._real32
+    do i = 1, 3
+       transmat(i,i) = 1._real32
     end do
     newlat = basis%lat
 
 
-!!!-----------------------------------------------------------------------------
-!!! performs checks on the other main conditions defined by Niggli
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! perform checks on the other main conditions defined by Niggli
+    !---------------------------------------------------------------------------
     find_reduced: do while(.not.lreduced)
        count = count + 1
        call mkNiggli_lat(basis%lat,newlat,transmat,S)
        lreduced = reduced_check(newlat, cell_type, S, verbose_)
        if(lreduced) exit
-       if(verbose.gt.1) then
+       if(verbose_.gt.1) then
           write(*,*)
           write(*,*) count
           write(*,*) "###############"
@@ -1243,16 +1264,16 @@ contains
        transmat=matmul(transpose(tmp_mat),transmat)
     end if
     call mkNiggli_lat(basis%lat,newlat,transmat,S)
-    lreduced = reduced_check(newlat, cell_type, S, verbose)
-    if(verbose.gt.1) then
+    lreduced = reduced_check(newlat, cell_type, S, verbose_)
+    if(verbose_.gt.1) then
        write(*,*) lreduced
        write(*,*) (transmat(i,:),i=1,3)
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! Renormalises the lattice and basis into the new lattice
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Renormalise the lattice and basis into the new lattice
+    !---------------------------------------------------------------------------
     basis%lat = newlat
     do i = 1, basis%nspec
        do j = 1, basis%spec(i)%num
@@ -1263,10 +1284,8 @@ contains
        end do
     end do
 
-
-    return
   end subroutine reducer
-!!!#############################################################################
+!###############################################################################
 
 
 !!!#############################################################################

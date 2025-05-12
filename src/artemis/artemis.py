@@ -1260,7 +1260,7 @@ class Generator(f90wrap.runtime.FortranModule):
                 max_fit=max_fit, max_extension=max_extension, angle_weight=angle_weight, \
                 area_weight=area_weight)
         
-        def set_shift_method(self, method=None, num_shifts=None, shifts=None, \
+        def set_shift_method(self, method: int =None, num_shifts: int =None, shifts=None, \
             interface_depth=None, separation_scale=None, depth_method=None, \
             bondlength_cutoff=None):
             """
@@ -1290,6 +1290,8 @@ class Generator(f90wrap.runtime.FortranModule):
                 if isinstance(shifts, float) or isinstance(shifts, int):
                     shifts = numpy.array([[shifts]], order='F')
                 # if shifts is a 1D array, convert it to a 2D array, fortran order
+                elif isinstance(shifts, list):
+                    shifts = numpy.array([shifts], order='F')
                 elif len(shifts.shape) == 1:
                     shifts = numpy.array([shifts], order='F')
                 # if shifts is a 2D array, convert it to a 2D array, fortran order
