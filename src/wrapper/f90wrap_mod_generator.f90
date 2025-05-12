@@ -1,5 +1,8 @@
 ! Module artemis__generator defined in file ../fortran/lib/mod_intf_generator.f90
 
+!###############################################################################
+! Members of type artemis_generator_type
+!###############################################################################
 subroutine f90wrap_artemis_gen_type__get__num_structures(this, f90wrap_num_structures)
     use artemis__generator, only: artemis_generator_type
     implicit none
@@ -396,11 +399,6 @@ subroutine f90wrap_artemis_gen_type__set__ludef_is_laye6e4(this, f90wrap_ludef_i
     this_ptr = transfer(this, this_ptr)
     this_ptr%p%ludef_is_layered_up = f90wrap_ludef_is_layered_up
 end subroutine f90wrap_artemis_gen_type__set__ludef_is_laye6e4
-
-
-
-
-
 
 subroutine f90wrap_artemis_gen_type__get__shift_method(this, f90wrap_shift_method)
     use artemis__generator, only: artemis_generator_type
@@ -1008,7 +1006,12 @@ subroutine f90wrap_artemis_gen_type__array__layer_separation_cutoff(this, nd, dt
     dshape(1:1) = shape(this_ptr%p%layer_separation_cutoff)
     dloc = loc(this_ptr%p%layer_separation_cutoff)
 end subroutine f90wrap_artemis_gen_type__array__layer_separation_cutoff
+!###############################################################################
 
+
+!###############################################################################
+! Interface for the generator type
+!###############################################################################
 subroutine f90wrap_intf_gen__artemis_gen_type_initialise(this)
     use artemis__generator, only: artemis_generator_type
     implicit none
@@ -1034,7 +1037,12 @@ subroutine f90wrap_intf_gen__artemis_gen_type_finalise(this)
     this_ptr = transfer(this, this_ptr)
     deallocate(this_ptr%p)
 end subroutine f90wrap_intf_gen__artemis_gen_type_finalise
+!###############################################################################
 
+
+!###############################################################################
+! Structure data accessors
+!###############################################################################
 subroutine f90wrap_intf_gen__get_all_structures_data__binding_agt(ret_output, this)
     use artemis__generator, only: artemis_generator_type
     use artemis__misc_types, only: struc_data_type
@@ -1171,7 +1179,12 @@ subroutine f90wrap_intf_gen__get_structure_shift__binding_agt(this, ret_output, 
     this_ptr = transfer(this, this_ptr)
     ret_output = this_ptr%p%get_structure_shift(idx=idx)
 end subroutine f90wrap_intf_gen__get_structure_shift__binding_agt
+!###############################################################################
 
+
+!###############################################################################
+! Generation methods and tolerance handlers
+!###############################################################################
 subroutine f90wrap_intf_gen__set_tolerance__bindind_agt(this, vector_mismatch, angle_mismatch, &
     area_mismatch, max_length, max_area, max_fit, max_extension, angle_weight, area_weight)
     use artemis__generator, only: artemis_generator_type
@@ -1266,7 +1279,12 @@ subroutine f90wrap_intf_gen__set_match_method__binding__agt(this, method, max_nu
     call this_ptr%p%set_match_method(method=method, max_num_matches=max_num_matches, max_num_terms=max_num_terms, &
         max_num_planes=max_num_planes, compensate_normal=compensate_normal)
 end subroutine f90wrap_intf_gen__set_match_method__binding__agt
+!###############################################################################
 
+
+!###############################################################################
+! Material and surface property procedures
+!###############################################################################
 subroutine f90wrap_intf_gen__set_materials__binding__agt(this, structure_lw, structure_up, &
     elastic_constants_lw, elastic_constants_up, use_pricel_lw, use_pricel_up, n0, n1)
     use artemis__generator, only: artemis_generator_type
@@ -1367,17 +1385,12 @@ subroutine f90wrap_intf_gen__reset_is_layered_up__binding__agt(this)
     this_ptr = transfer(this, this_ptr)
     call this_ptr%p%reset_is_layered_up()
 end subroutine f90wrap_intf_gen__reset_is_layered_up__binding__agt
+!###############################################################################
 
 
-
-
-
-
-
-
-
-
-
+!###############################################################################
+! Structural feature identifiers
+!###############################################################################
 subroutine f90wrap_intf_gen__get_terminations__binding__agt( &
     this, identifier, miller, surface, num_layers, thickness, &
     orthogonalise, normalise, break_on_fail, &
@@ -1464,33 +1477,12 @@ subroutine f90wrap_intf_gen__get_interface_location__binding__agt( &
     ret_location = intf_info%loc
     ret_axis = intf_info%axis
 end subroutine f90wrap_intf_gen__get_interface_location__binding__agt
+!###############################################################################
 
 
-
-subroutine f90wrap_retrieve_last_generated_structures(structures)
-    use artemis__geom_rw, only: basis_type
-    use artemis__structure_cache, only: retrieve_last_generated_structures
-    implicit none
-
-    type basis_type_xnum_array
-        type(basis_type), dimension(:), allocatable :: items
-    end type basis_type_xnum_array
-
-    type basis_type_xnum_array_ptr_type
-        type(basis_type_xnum_array), pointer :: p => NULL()
-    end type basis_type_xnum_array_ptr_type
-    integer, intent(inout), dimension(2) :: structures
-    type(basis_type_xnum_array_ptr_type) :: structures_ptr
-
-    structures_ptr = transfer(structures, structures_ptr)
-    structures_ptr%p%items = retrieve_last_generated_structures()
-    structures = transfer(structures_ptr, structures)
-end subroutine f90wrap_retrieve_last_generated_structures
-
-
-
-
-
+!###############################################################################
+! Interface generate procedures
+!###############################################################################
 subroutine f90wrap_intf_gen__generate__binding__agt( &
     this, surface_lw, surface_up, &
     thickness_lw, thickness_up, &
@@ -1568,6 +1560,10 @@ subroutine f90wrap_intf_gen__regenerate__binding__agt(this, structure, interface
 end subroutine f90wrap_intf_gen__regenerate__binding__agt
 !###############################################################################
 
+
+!###############################################################################
+! Handle the structures array
+!###############################################################################
 subroutine f90wrap_intf_gen__get_structures__binding__agt(this, ret_structures)
     use artemis__generator, only: artemis_generator_type
     use artemis__geom_rw, only: basis_type
@@ -1593,6 +1589,40 @@ subroutine f90wrap_intf_gen__get_structures__binding__agt(this, ret_structures)
     ret_structures_ptr%p%items = this_ptr%p%get_structures()
     ret_structures = transfer(ret_structures_ptr,ret_structures)
 end subroutine f90wrap_intf_gen__get_structures__binding__agt
+
+subroutine f90wrap_intf_gen__clear_structures__binding__agt(this)
+    use artemis__generator, only: artemis_generator_type
+    implicit none
+    
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    integer, intent(in), dimension(2) :: this
+    this_ptr = transfer(this, this_ptr)
+    call this_ptr%p%clear_structures()
+end subroutine f90wrap_intf_gen__clear_structures__binding__agt
+
+subroutine f90wrap_retrieve_last_generated_structures(structures)
+    use artemis__geom_rw, only: basis_type
+    use artemis__structure_cache, only: retrieve_last_generated_structures
+    implicit none
+
+    type basis_type_xnum_array
+        type(basis_type), dimension(:), allocatable :: items
+    end type basis_type_xnum_array
+
+    type basis_type_xnum_array_ptr_type
+        type(basis_type_xnum_array), pointer :: p => NULL()
+    end type basis_type_xnum_array_ptr_type
+    integer, intent(inout), dimension(2) :: structures
+    type(basis_type_xnum_array_ptr_type) :: structures_ptr
+
+    structures_ptr = transfer(structures, structures_ptr)
+    structures_ptr%p%items = retrieve_last_generated_structures()
+    structures = transfer(structures_ptr, structures)
+end subroutine f90wrap_retrieve_last_generated_structures
+!###############################################################################
 
 
 !###############################################################################

@@ -158,6 +158,9 @@ module artemis__generator
     !! Generate interfaces from existing bulk structures
     procedure, pass(this) :: generate_perturbations => generate_shifts_and_swaps
     !! Generate perturbations for the given basis
+
+    procedure, pass(this) :: clear_structures
+    !! Clear the structures
   end type artemis_generator_type
 
 contains
@@ -334,6 +337,23 @@ contains
       output = this%structure_data(idx)%shift
    
    end function get_structure_shift
+!###############################################################################
+
+
+!###############################################################################
+   subroutine clear_structures(this)
+      !! Clear the structures
+      implicit none
+
+      ! Arguments
+      class(artemis_generator_type), intent(inout) :: this
+      !! Instance of artemis generator type
+
+      if(allocated(this%structure_data)) deallocate(this%structure_data)
+      if(allocated(this%structures)) deallocate(this%structures)
+      this%num_structures = 0
+
+   end subroutine clear_structures
 !###############################################################################
 
 

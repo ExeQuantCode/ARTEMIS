@@ -1677,6 +1677,7 @@ class Generator(f90wrap.runtime.FortranModule):
             """
             exit_code = 0
             structures = None
+            num_structures_old = self.num_structures
 
             # check if host is ase.Atoms object or a Fortran derived type basis_type
             if isinstance(structure, Atoms):
@@ -1689,10 +1690,18 @@ class Generator(f90wrap.runtime.FortranModule):
             if ( exit_code != 0 and exit_code != None ) and not return_exit_code:
                 raise RuntimeError(f"Interface generation failed (exit code {exit_code})")
 
-            structures = self.get_structures(calc)
+            num_structures_generated = self.num_structures - num_structures_old
+            structures = self.get_structures(calc)[-num_structures_generated:]
             if return_exit_code:
                 return structures, exit_code
             return structures
+        
+        def clear_structures(self):
+            """
+            Clear the generated structures from the generator.
+            
+            """
+            _artemis.f90wrap_intf_gen__clear_structures__binding__agt(this=self._handle)
         
         def get_structures(self, calculator=None):
             """
