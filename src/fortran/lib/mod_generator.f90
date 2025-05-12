@@ -154,7 +154,7 @@ module artemis__generator
 
     procedure, pass(this) :: generate => generate_interfaces
     !! Generate interfaces from two bulk structures
-    procedure, pass(this) :: restart => generate_interfaces_from_existing
+    procedure, pass(this) :: regenerate => generate_interfaces_from_existing
     !! Generate interfaces from existing bulk structures
     procedure, pass(this) :: generate_perturbations => generate_shifts_and_swaps
     !! Generate perturbations for the given basis

@@ -200,7 +200,7 @@ program artemis_executable
              verbose = verbose &
         )
      else
-        call generator%restart(struc1_bas)
+        call generator%regenerate(struc1_bas)
      end if
      allocate(match_and_term_idx_list(0))
      do i = 1, generator%num_structures

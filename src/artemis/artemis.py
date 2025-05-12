@@ -1652,7 +1652,7 @@ class Generator(f90wrap.runtime.FortranModule):
                 return structures, exit_code
             return structures
 
-        def restart(self, structure, interface_location=None, print_shift_info=None, \
+        def regenerate(self, structure, interface_location=None, print_shift_info=None, \
             seed=None, verbose=None, return_exit_code=False, calc=None):
             """
             restart__binding__artemis_gen_type(self, basis[, \
@@ -1682,7 +1682,7 @@ class Generator(f90wrap.runtime.FortranModule):
             if isinstance(structure, Atoms):
                 structure = geom_rw.basis(atoms=structure)
 
-            exit_code = _artemis.f90wrap_intf_gen__restart__binding__agt(this=self._handle, \
+            exit_code = _artemis.f90wrap_intf_gen__regenerate__binding__agt(this=self._handle, \
                 structure=structure._handle, interface_location=interface_location, \
                 print_shift_info=print_shift_info, seed=seed, verbose=verbose)
             

@@ -1540,7 +1540,7 @@ subroutine f90wrap_intf_gen__generate__binding__agt( &
         exit_code=exit_code)
 end subroutine f90wrap_intf_gen__generate__binding__agt
 
-subroutine f90wrap_intf_gen__restart__binding__agt(this, structure, interface_location, &
+subroutine f90wrap_intf_gen__regenerate__binding__agt(this, structure, interface_location, &
     print_shift_info, seed, verbose, exit_code)
     use artemis__generator, only: artemis_generator_type
     use artemis__geom_rw, only: basis_type
@@ -1563,9 +1563,10 @@ subroutine f90wrap_intf_gen__restart__binding__agt(this, structure, interface_lo
     integer, optional, intent(inout) :: exit_code
     this_ptr = transfer(this, this_ptr)
     structure_ptr = transfer(structure, structure_ptr)
-    call this_ptr%p%restart(structure=structure_ptr%p, interface_location=interface_location, print_shift_info=print_shift_info, &
+    call this_ptr%p%regenerate(structure=structure_ptr%p, interface_location=interface_location, print_shift_info=print_shift_info, &
         seed=seed, verbose=verbose, exit_code=exit_code)
-end subroutine f90wrap_intf_gen__restart__binding__agt
+end subroutine f90wrap_intf_gen__regenerate__binding__agt
+!###############################################################################
 
 subroutine f90wrap_intf_gen__get_structures__binding__agt(this, ret_structures)
     use artemis__generator, only: artemis_generator_type
