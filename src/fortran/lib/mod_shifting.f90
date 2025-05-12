@@ -307,6 +307,7 @@ contains
     end if
     shiftloop: do i=1,num_best_shifts 
 
+       placeholder = -1
        min_difference = huge(0._real32)
        LOOP5A: do ia=0,num_steps-1 !loop through shifts in a
           LOOP5B: do ib=0,num_steps-1 !loop through shifts in b
@@ -321,11 +322,14 @@ contains
                    placeholder(1) = ia
                    placeholder(2) = ib
                    placeholder(3) = ic
-
                 end if
              end do LOOP5C
           end do LOOP5B
        end do LOOP5A
+       if(any(placeholder.eq.-1)) then
+          write(0,*) "ERROR: No shifts found for the given interface"
+          stop
+       end if
        avg_min_sep(placeholder(1)+1,placeholder(2)+1,placeholder(3)-c_shift_low+1) = huge(0._real32)
     end do shiftloop
 

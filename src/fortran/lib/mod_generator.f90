@@ -1083,8 +1083,11 @@ contains
     !! Axis for the interface
     logical :: return_fractional_
     !! Return fractional coordinates
+    integer :: exit_code_
+    !! Exit code for the program
 
     axis_ = 0
+    exit_code_ = 0
     return_fractional_ = .false.
     if(present(axis)) axis_ = axis
     if(present(return_fractional)) return_fractional_ = return_fractional
@@ -1092,8 +1095,10 @@ contains
     output = get_interface(structure, axis_)
 
     if(return_fractional_)then
-       output%loc = output%loc/modu(structure%lat(output%axis,:))
+       output%loc = output%loc / modu(structure%lat(output%axis,:))
     end if
+
+    if(present(exit_code)) exit_code = exit_code_
 
    end function get_interface_location
 !###############################################################################

@@ -1337,22 +1337,21 @@ contains
 
     real(real32) :: tiny,alpha,beta,gamma,pi2
     real(real32), dimension(3) :: a,b,c
-    character(1) :: quiet
     logical :: check
 
 
 
     pi2 = 2._real32*atan(1._real32)
-    check=.false.
-    tiny=1E-3
+    check = .false.
+    tiny = 1.E-3_real32
 
-    a=lat(1,:);b=lat(2,:);c=lat(3,:)
-    S(1,1)=dot_product(a,a)
-    S(2,2)=dot_product(b,b)
-    S(3,3)=dot_product(c,c)
-    S(2,3)=dot_product(b,c)
-    S(1,3)=dot_product(a,c)
-    S(1,2)=dot_product(a,b)
+    a = lat(1,:); b = lat(2,:); c = lat(3,:)
+    S(1,1) = dot_product(a,a)
+    S(2,2) = dot_product(b,b)
+    S(3,3) = dot_product(c,c)
+    S(2,3) = dot_product(b,c)
+    S(1,3) = dot_product(a,c)
+    S(1,2) = dot_product(a,b)
 
     alpha=acos(S(2,3)/sqrt(S(2,2)*S(3,3)))
     beta=acos(S(1,3)/sqrt(S(1,1)*S(3,3)))

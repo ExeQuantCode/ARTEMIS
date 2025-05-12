@@ -39,45 +39,67 @@ module misc_maths
 
 
 contains
-!!!#####################################################
-!!! times all elements
-!!!#####################################################
-  function times(in_array)
-    implicit none
-    integer :: i
-    real(real32) :: times
-    real(real32), dimension(:),intent(in) :: in_array
 
-    times=1.0
-    do i=1,size(in_array)
-       times=times*in_array(i)
+!###############################################################################
+  function times(input)
+    !! Multiply an array by a scalar value
+    implicit none
+
+    ! Arguments
+    real(real32), dimension(:),intent(in) :: input
+    !! Array to be multiplied
+
+    ! Local variables
+    integer :: i
+    !! Loop index
+    real(real32) :: times
+    !! Result of multiplication
+
+    times = 1._real32
+    do i = 1, size( input, dim = 1 )
+       times=times*input(i)
     end do
 
   end function times
-!!!#####################################################=
+!###############################################################################
 
 
-!!!#####################################################
-!!! evaluates a gausssian at a point
-!!!#####################################################
+!###############################################################################
   function gauss(pos,centre,sigma,tol) result(output)
-    real(real32) :: output,x
-    real(real32) :: pos,centre,sigma
-    real(real32) :: udef_tol
-    real(real32), optional :: tol
-    if(present(tol))then
-       udef_tol=tol
+    !! Evaluate a Gaussian at a point
+    implicit none
+
+    ! Arguments
+    real(real32) :: pos
+    !! Position to evaluate the Gaussian at
+    real(real32) :: centre
+    !! Centre of the Gaussian
+    real(real32) :: sigma
+    !! Width of the Gaussian
+    real(real32), intent(in), optional :: tol
+    !! Tolerance for the Gaussian
+
+    real(real32) :: output
+    !! Output value of the Gaussian
+
+    ! Local variables
+    real(real32) :: x
+    !! Squared distance from the centre
+    real(real32) :: tol_
+    !! Tolerance for the Gaussian
+
+    tol_ = 38._real32
+    if(present(tol)) tol_ = tol
+
+    x = ( pos - centre ) ** 2._real32 / ( 2._real32 * sigma )
+    if( abs(x) .lt. tol_ ) then
+       output = exp( -x )
     else
-       udef_tol=38._real32
+       output = 0._real32
     end if
-    x=(pos-centre)**2._real32/(2._real32*sigma)
-    if(abs(x).lt.udef_tol) then
-       output=exp(-(x))
-    else
-       output=0._real32
-    end if
+
   end function gauss
-!!!#####################################################
+!###############################################################################
 
 
 !!!#####################################################
@@ -658,7 +680,7 @@ contains
        result(gauss_func)
     implicit none
     integer :: i,n,init_step
-    real(real32) :: x,sigma,udef_tol,mult
+    real(real32) :: x,sigma,tol_,mult
     real(real32), optional :: tol
     logical, optional :: norm
     real(real32), dimension(:), intent(in) :: in_array,distance
@@ -668,8 +690,8 @@ contains
     logical, dimension(size(distance)), optional, intent(in) :: mask
 
 
-    udef_tol=38._real32
-    if(present(tol)) udef_tol=tol
+    tol_ = 38._real32
+    if(present(tol)) tol_ = tol
     mult=(1._real32/(sqrt(pi*2._real32)*sigma))
     if(present(norm))then
        if(.not.norm) mult=1._real32
@@ -683,13 +705,13 @@ contains
        init_step=minloc(abs( distance(:) - in_array(n) ),dim=1)
        forward: do i=init_step,size(distance),1
           x=0.5_real32*(( distance(i) - in_array(n) )/sigma)**2._real32
-          if(x.gt.udef_tol) exit forward
+          if(x.gt.tol_) exit forward
           gauss_func(i) = gauss_func(i) + exp(-x) * mult
        end do forward
 
        backward: do i=init_step-1,1,-1
           x=0.5_real32*(( distance(i) - in_array(n) )/sigma)**2._real32
-          if(x.gt.udef_tol) exit backward
+          if(x.gt.tol_) exit backward
           gauss_func(i) = gauss_func(i) + exp(-x) * mult
        end do backward
     end do
@@ -706,7 +728,7 @@ contains
   function cauchy_array(distance,in_array,gamma,tol,norm) result(c_func)
     implicit none
     integer :: i,n,init_step
-    real(real32) :: x,gamma,udef_tol,mult
+    real(real32) :: x,gamma,tol_,mult
     real(real32), optional :: tol
     logical, optional :: norm
     real(real32), dimension(:), intent(in) :: in_array,distance
@@ -714,8 +736,8 @@ contains
     real(real32) :: pi = 4._real32*atan(1._real32)
 
 
-    udef_tol=1.D16
-    if(present(tol)) udef_tol=tol
+    tol_ = 1.E16_real32
+    if(present(tol)) tol_=tol
     mult=(1._real32/(pi*gamma))
     if(present(norm))then
        if(.not.norm) mult=1._real32
@@ -726,13 +748,13 @@ contains
        init_step=minloc(abs( distance(:) - in_array(n) ),dim=1)
        forward: do i=init_step,size(distance),1
           x = 1._real32 + (( distance(i) - in_array(n) )/gamma)**2._real32
-          if(x.gt.udef_tol) exit forward
+          if(x.gt.tol_) exit forward
           c_func(i) = c_func(i) + 1._real32/(x) * mult
        end do forward
 
        backward: do i=init_step-1,1,-1
           x = 1._real32 + (( distance(i) - in_array(n) )/gamma)**2._real32
-          if(x.gt.udef_tol) exit backward
+          if(x.gt.tol_) exit backward
           c_func(i) = c_func(i) + 1._real32/x * mult
        end do backward
     end do
@@ -749,7 +771,7 @@ contains
   function slater_array(distance,in_array,zeta,tol,norm) result(s_func)
     implicit none
     integer :: i,n,init_step
-    real(real32) :: x,zeta,udef_tol,mult
+    real(real32) :: x,zeta,tol_,mult
     real(real32), optional :: tol
     logical, optional :: norm
     real(real32), dimension(:), intent(in) :: in_array,distance
@@ -757,8 +779,8 @@ contains
     real(real32) :: pi = 4._real32*atan(1._real32)
 
 
-    udef_tol=38._real32
-    if(present(tol)) udef_tol=tol
+    tol_ = 38._real32
+    if(present(tol)) tol_=tol
     mult=((zeta**3._real32)/pi)**(0.5_real32)
     if(present(norm))then
        if(.not.norm) mult=1._real32
@@ -769,13 +791,13 @@ contains
        init_step=minloc(abs( distance(:) - in_array(n) ),dim=1)
        forward: do i=init_step,size(distance),1
           x = zeta*abs( distance(i) - in_array(n) )
-          if(x.gt.udef_tol) exit forward
+          if(x.gt.tol_) exit forward
           s_func(i) = s_func(i) + exp(-x) * mult
        end do forward
 
        backward: do i=init_step-1,1,-1
           x = zeta*abs( distance(i) - in_array(n) )
-          if(x.gt.udef_tol) exit backward
+          if(x.gt.tol_) exit backward
           s_func(i) = s_func(i) + exp(-x) * mult
        end do backward
     end do

@@ -1036,9 +1036,9 @@ contains
     !! Tolerance for symmetry operations
 
     ! Local variables
-    integer :: i, j, k, count, n
+    integer :: i, j, count, n
     !! Counters
-    real(real32) :: tht, angle
+    real(real32) :: angle
     !! Angle for rotation
     real(real32), dimension(3,3) :: invlat
     !! Inverse lattice matrix

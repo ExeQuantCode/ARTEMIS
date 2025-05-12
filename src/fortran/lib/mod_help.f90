@@ -485,7 +485,7 @@ contains
     tag(iaxis_tag)%default = '3'
     tag(iaxis_tag)%description = &
          'NOT YET FULLY IMPLEMENTED! Defines the axis along which to print &
-         interfaces along.\n&
+         &interfaces along.\n&
          &NOTE: this does not change the interfaces generated, simply whether &
          &a generated interface will lie along a, b or c in the generated &
          &output structure file'
@@ -891,9 +891,9 @@ contains
          &directory.\n&
          &Prints surfaces for crystals that have had their Miller planes supplied using the "LW_MILLER" and "UP_MILLER" tags\n&
          &Inside DTERMINATIONS, populates directory DLW_TERMS with lower &
-         parent structure surfaces.\n&
+         &parent structure surfaces.\n&
          &Inside DTERMINATIONS, populates directory DUP_TERMS with upper &
-         parent structure surfaces.'
+         &parent structure surfaces.'
 
     tag(ilortho_tag)%name    = 'LORTHO'
     tag(ilortho_tag)%type    = 'L'

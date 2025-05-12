@@ -719,7 +719,7 @@ end function rand_swapper
        
        if(verbose.ge.1) &
             write(0,'(&
-            I0,"th swap is ",I0,&
+            &I0,"th swap is ",I0,&
             &" with ",I0," at distances ",F7.3," and ",F7.3)') &
             i,swap_list(i,:),&
             lw_dist_list(swap_list(i,1)),up_dist_list(swap_list(i,2))
