@@ -2443,7 +2443,11 @@ contains
        struc_data_shift%shift = toffset
        this%structures = [ this%structures, tbas ]
        this%num_structures = size(this%structures, dim = 1)
-       this%structure_data = [ this%structure_data, struc_data_shift ]
+       if(.not.allocated(this%structure_data))then
+          this%structure_data = [ struc_data_shift ]
+       else
+          this%structure_data = [ this%structure_data, struc_data_shift ]
+       end if
        if(this%num_structures.ge.this%max_num_structures) return
 
 
