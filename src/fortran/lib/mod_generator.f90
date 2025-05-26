@@ -1231,22 +1231,22 @@ contains
     if(.not.allocated(this%structures)) allocate(this%structures(0))
 
 
-    min_bond1=huge(0._real32)
-    min_bond2=huge(0._real32)
+    min_bond1 = huge(0._real32)
+    min_bond2 = huge(0._real32)
     if(present(interface_location))then
       intf%axis = this%axis
       intf%loc = interface_location
     else
-       intf=get_interface(structure,this%axis)
-       intf%loc=intf%loc/modu(structure%lat(intf%axis,:))
+       intf = get_interface(structure,this%axis)
+       intf%loc = intf%loc/modu(structure%lat(intf%axis,:))
        if(verbose_.gt.0) write(*,*) "interface axis:",intf%axis
        if(verbose_.gt.0) write(*,*) "interface loc:",intf%loc
     end if
-    specloop1: do is=1,structure%nspec
-       atomloop1: do ia=1,structure%spec(is)%num
+    specloop1: do is = 1, structure%nspec
+       atomloop1: do ia = 1, structure%spec(is)%num
 
-          specloop2: do js=1,structure%nspec
-             atomloop2: do ja=1,structure%spec(js)%num
+          specloop2: do js = 1, structure%nspec
+             atomloop2: do ja = 1, structure%spec(js)%num
                 if(is.eq.js.and.ia.eq.ja) cycle atomloop2
                 if( &
                      ( structure%spec(is)%atom(ia,intf%axis).gt.intf%loc(1).and.&

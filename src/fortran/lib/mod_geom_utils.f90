@@ -1866,6 +1866,7 @@ contains
     regionloop1: do i=1,nregions
        bas_arr(i)%natom = 0
        bas_arr(i)%nspec = inbas%nspec
+       bas_arr(i)%lat = inbas%lat
        write(bas_arr(i)%sysname,'(A,"_region_",I0)') trim(inbas%sysname),i
        allocate(bas_arr(i)%spec(inbas%nspec))
        if(lmap) allocate(map(i)%spec(bas_arr(i)%nspec,maxval(inbas%spec(:)%num),2))
@@ -2324,6 +2325,7 @@ contains
     type(wyck_spec_type) :: wyckoff
     integer, intent(in) :: axis
     type(basis_type), intent(in) :: bas
+    real(real32), dimension(3) :: tol
 
     type l_bulk_type
        logical, allocatable, dimension(:) :: atom
@@ -2337,6 +2339,11 @@ contains
 !!! Finds upper and lower locations for "slab" and finds atom nearest to the ...
 !!! ... centre of that region
 !!!-----------------------------------------------------------------------------
+    tol = 1.E-1_real32
+    do ia = 1, 3
+       tol(ia) = tol(ia) / norm2(bas%lat(ia,:))
+    end do
+
     minspecloc = minloc(bas%spec(:)%num,mask=bas%spec(:)%num.ne.0,dim=1)
     minatomloc = minloc(bas%spec(minspecloc)%atom(:,axis),dim=1)
     nxtatomloc = maxloc(bas%spec(minspecloc)%atom(:,axis),dim=1)
@@ -2432,9 +2439,7 @@ contains
                 tmp_vec2 = tmp_vec2 - ceiling( tmp_vec2 - 0.5_real32 )
 
 
-                if( all( abs(tmp_vec2).lt.1.E-5_real32 ) )then
-                   cycle atom_loop1
-                end if
+                if( all( abs(tmp_vec2).lt.tol ) ) cycle atom_loop1
 
              end do atom_loop2
              itmp1 = nxtatomloc
@@ -2459,11 +2464,11 @@ contains
              if(bas%spec(is)%atom(ia,axis).lt.lw_loc2.or.&
                   bas%spec(is)%atom(ia,axis).ge.up_loc2) cycle atom_loop3
              tmp_vec1 = bas%spec(is)%atom(ia,:3) + transvec
-             if( all(bas%spec(is)%atom(:,axis).lt.tmp_vec1(axis)-1.E-5_real32) ) cycle atom_loop3
+             if( all(bas%spec(is)%atom(:,axis).lt.tmp_vec1(axis)-tol(axis)) ) cycle atom_loop3
              atom_loop4: do ja=1,bas%spec(is)%num
                 tmp_vec2 = tmp_vec1 - bas%spec(is)%atom(ja,:3)
                 tmp_vec2 = tmp_vec2 - ceiling( tmp_vec2 - 0.5_real32 )
-                if( all( abs(tmp_vec2).lt.1.E-5_real32 ) )then
+                if( all( abs(tmp_vec2).lt.tol ) )then
                    cycle atom_loop3
                 end if
              end do atom_loop4
@@ -2482,9 +2487,20 @@ contains
        !!-----------------------------------------------------------------------
        exit region_loop1
 
-
     end do region_loop1
 
+
+    !---------------------------------------------------------------------------
+    ! Apply tolerances to the bulk cell
+    !---------------------------------------------------------------------------
+    do is = 1, bas%nspec
+       do ia = 1, bas%spec(is)%num
+          if(bas%spec(is)%atom(ia,axis) + tol(axis).ge.lw_loc.and.&
+             bas%spec(is)%atom(ia,axis) - tol(axis).lt.up_loc)then
+             l_bulk_atoms(is)%atom(ia)=.true.
+          end if
+       end do
+    end do
 
 
 !!!-----------------------------------------------------------------------------
@@ -2499,6 +2515,7 @@ contains
        atom_loop5: do ia=1,bas%spec(is)%num
           if(l_bulk_atoms(is)%atom(ia))then
              wyckoff%spec(is)%atom(ia) = ia
+             cycle atom_loop5
           end if
           !write(0,*) is,ia,l_bulk_atoms(is)%atom(ia)
           tmp_vec2 = bas%spec(is)%atom(ia,:3)
@@ -2517,7 +2534,7 @@ contains
              tmp_vec3 = tmp_vec3 - ceiling(tmp_vec3 - 0.5_real32)
              !THIS IS WHERE WE NEED TO MAKE IT RIGHT
              !! FIND THE GCD AND DIVIDE
-             if(all(abs(tmp_vec3).lt.1.E-5_real32))then
+             if(all(abs(tmp_vec3).lt.tol))then
                 if(wyckoff%spec(is)%atom(ja).ne.0)then
                    wyckoff%spec(is)%atom(ia) = wyckoff%spec(is)%atom(ja)
                 else

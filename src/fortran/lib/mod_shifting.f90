@@ -936,14 +936,14 @@ contains
              iatom = get_centre_atom(&
                   splitbas(i),is,axis,lw=regions(i,1),up=regions(i,2))
              if(iatom.eq.0)&
-                  call err_abort("ERROR: Internal error in get_shifts_DON\n&
+                  call err_abort("Internal error in get_shifts_DON\n&
                   &  No centre atom found in get_shifts_DON.",.true.)
           end if
           if(lbulk)then
              if(any(map(i)%spec(is,:splitbas(i)%spec(is)%num,:).le.0))then
                 write(0,'("parent  species  atom")')
                 write(0,'(2X,I2,6X,I2,4X,I4)') i,is,ia
-                call err_abort("ERROR: Internal error in get_shifts_DON\n&
+                call err_abort("Internal error in get_shifts_DON\n&
                      &  Mapping of bulk missing",.true.)
              end if
           end if
@@ -1079,7 +1079,7 @@ contains
 !!!-----------------------------------------------------------------------------
     lpresent=.false.
     if(present(offset))then
-       if(offset(axis).ge.0._real32)then
+       if(offset(axis).ge.1.E-6_real32)then
           max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(bas%lat(axis,:))
           lpresent=.true.
        end if
@@ -1108,21 +1108,23 @@ contains
        nstep(3) = nstep(3) + 1
     end do
     if(present(offset))then
-       if(verbose_.ge.1) write(*,'(1X,"user-defined offset:",3(3X,F7.3))') offset
-       add = -1.0
-       do i=1,3
-          if(offset(i).ge.0._real32)then
-             nstep(i) = 1
-             add(i) = offset(i)
-          end if
-       end do
+       if(offset(axis).ge.1.E-6_real32)then
+          if(verbose_.ge.1) write(*,'(1X,"user-defined offset:",3(3X,F7.3))') offset
+          add = -1.0
+          do i=1,3
+             if(offset(i).ge.0._real32)then
+                nstep(i) = 1
+                add(i) = offset(i)
+             end if
+          end do
 
-       do i=1,3
-          if(add(i).lt.0.0)then
-             add(i) = 0.0
-          end if
-       end do
-       add(axis) = add(axis)/modu(bas%lat(axis,:))
+          do i=1,3
+             if(add(i).lt.0.0)then
+                add(i) = 0.0
+             end if
+          end do
+          add(axis) = add(axis)/modu(bas%lat(axis,:))
+       end if
     end if
 
     !nthreads=8
@@ -1142,7 +1144,6 @@ contains
     end if
 
     if(any(nstep(:).le.0))then
-       write(0,*) "ERROR: Internal error in get_shifts_DON"
        write(0,*) "nstep:",nstep
        write(0,*) "ngrid:",ngrid
        call err_abort_print_struc(splitbas(1),"lw_term.vasp",&
@@ -1281,7 +1282,7 @@ contains
 !!! Checks whether any shifts have been identified
 !!!-----------------------------------------------------------------------------
     if(all(shift_store.eq.0))then
-       call err_abort("ERROR: Internal error in get_shifts_DON\n&
+       call err_abort("Internal error in get_shifts_DON\n&
                &  No shifts found.",.true.)
     end if
 
