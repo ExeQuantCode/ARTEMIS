@@ -1185,7 +1185,7 @@ end subroutine f90wrap_intf_gen__get_structure_shift__binding_agt
 !###############################################################################
 ! Generation methods and tolerance handlers
 !###############################################################################
-subroutine f90wrap_intf_gen__set_tolerance__bindind_agt(this, vector_mismatch, angle_mismatch, &
+subroutine f90wrap_intf_gen__set_tolerance__binding_agt(this, vector_mismatch, angle_mismatch, &
     area_mismatch, max_length, max_area, max_fit, max_extension, angle_weight, area_weight)
     use artemis__generator, only: artemis_generator_type
     implicit none
@@ -1211,7 +1211,7 @@ subroutine f90wrap_intf_gen__set_tolerance__bindind_agt(this, vector_mismatch, a
         area_mismatch=area_mismatch, max_length=max_length, &
         max_area=max_area, max_fit=max_fit, max_extension=max_extension, &
         angle_weight=angle_weight, area_weight=area_weight)
-end subroutine f90wrap_intf_gen__set_tolerance__bindind_agt
+end subroutine f90wrap_intf_gen__set_tolerance__binding_agt
 
 subroutine f90wrap_intf_gen__set_shift_method__binding__agt(this, method, num_shifts, shifts, &
     interface_depth, separation_scale, depth_method, bondlength_cutoff, n0, n1)

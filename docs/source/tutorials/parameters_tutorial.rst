@@ -49,8 +49,8 @@ These can be accessed by the following parameters:
     generator.set_materials(
         structure_lw=Si,
         structure_up=Ge,
-        elastic_constants_lw=6,
-        elastic_constants_up=12,
+        elastic_lw=6,
+        elastic_up=12,
         use_pricel_lw=True,
         use_pricel_up=True
     )
@@ -115,8 +115,8 @@ These tolerances are mostly related to lattice matching.
         angle_mismatch=0.1,
         max_length=0.1,
         max_area=0.1,
-        max_fit=0.1,
-        max_extension=0.1
+        max_fit=2,
+        max_extension=2
     )
 
 

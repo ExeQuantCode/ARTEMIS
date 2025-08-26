@@ -4,6 +4,7 @@ import f90wrap.runtime
 import logging
 import numpy
 from ase import Atoms
+from typing import Tuple
 
 class Geom_Rw(f90wrap.runtime.FortranModule):
     """
@@ -1043,7 +1044,7 @@ class Generator(f90wrap.runtime.FortranModule):
             #     alloc=True)
             return output
         
-        def get_structure_data(self, idx):
+        def get_structure_data(self, idx: int):
             """
             output = get_structure_data__binding__artemis_generator_type(self, idx)
             
@@ -1111,7 +1112,7 @@ class Generator(f90wrap.runtime.FortranModule):
                 _artemis.f90wrap_intf_gen__get_all_structures_mismatch__binding_agt(this=self._handle)
             return output
         
-        def get_structure_mismatch(self, idx):
+        def get_structure_mismatch(self, idx: int):
             """
             output = get_structure_mismatch__binding__artemis_generator_type(self, idx)
             
@@ -1157,7 +1158,7 @@ class Generator(f90wrap.runtime.FortranModule):
                 _artemis.f90wrap_intf_gen__get_all_structures_transform__binding_agt(this=self._handle)
             return output
         
-        def get_structure_transform(self, idx):
+        def get_structure_transform(self, idx: int):
             """
             output = get_structure_transform__binding__artemis_generator_type(self, idx)
             
@@ -1199,11 +1200,13 @@ class Generator(f90wrap.runtime.FortranModule):
             output : float array
             
             """
+            # get number of structures
+            num_structures = self.num_structures
             output = \
-                _artemis.f90wrap_intf_gen__get_all_structures_shift__binding_agt(this=self._handle)
+                _artemis.f90wrap_intf_gen__get_all_structures_shift__binding_agt(this=self._handle, n0=num_structures)
             return output
         
-        def get_structure_shift(self, idx):
+        def get_structure_shift(self, idx: int):
             """
             output = get_structure_shifts__binding__artemis_generator_type(self, idx)
             
@@ -1227,9 +1230,18 @@ class Generator(f90wrap.runtime.FortranModule):
                 idx=idx)
             return output
         
-        def set_tolerance(self, vector_mismatch=None, angle_mismatch=None, \
-            area_mismatch=None, max_length=None, max_area=None, max_fit=None, \
-            max_extension=None, angle_weight=None, area_weight=None):
+        def set_tolerance(
+                self,
+                vector_mismatch: float = None,
+                angle_mismatch: float = None,
+                area_mismatch: float = None,
+                max_length: float = None,
+                max_area: float = None,
+                max_fit: int = None,
+                max_extension: int = None,
+                angle_weight: float = None,
+                area_weight: float = None
+        ):
             """
             set_tolerance__binding__artemis_gen_type(self[, vector_mismatch, \
                 angle_mismatch, area_mismatch, max_length, max_area, max_fit, max_extension, \
@@ -1252,17 +1264,29 @@ class Generator(f90wrap.runtime.FortranModule):
             max_extension : int
             angle_weight : float
             area_weight : float
-            
+
             """
-            _artemis.f90wrap_intf_gen__set_tolerance__bindind_agt(this=self._handle, \
+            if max_extension is not None and not isinstance(max_extension, int):
+                raise TypeError("max_extension must be an int")
+            if max_fit is not None and not isinstance(max_fit, int):
+                raise TypeError("max_fit must be an int")
+
+            _artemis.f90wrap_intf_gen__set_tolerance__binding_agt(this=self._handle, \
                 vector_mismatch=vector_mismatch, angle_mismatch=angle_mismatch, \
                 area_mismatch=area_mismatch, max_length=max_length, max_area=max_area, \
                 max_fit=max_fit, max_extension=max_extension, angle_weight=angle_weight, \
                 area_weight=area_weight)
         
-        def set_shift_method(self, method: int =None, num_shifts: int =None, shifts=None, \
-            interface_depth=None, separation_scale=None, depth_method=None, \
-            bondlength_cutoff=None):
+        def set_shift_method(
+                self,
+                method: int = None,
+                num_shifts: int = None,
+                shifts: list[float] | numpy.ndarray = None,
+                interface_depth: float = None,
+                separation_scale: float = None,
+                depth_method: int = None,
+                bondlength_cutoff: float = None
+        ):
             """
             set_shift_method__binding__artemis_generator_type(self[, method, num_shifts, \
                 shifts, interface_depth, separation_scale, depth_method, bondlength_cutoff])
@@ -1303,8 +1327,15 @@ class Generator(f90wrap.runtime.FortranModule):
                 interface_depth=interface_depth, separation_scale=separation_scale, \
                 depth_method=depth_method, bondlength_cutoff=bondlength_cutoff)
         
-        def set_swap_method(self, method=None, num_swaps=None, swap_density=None, \
-            swap_depth=None, swap_sigma=None, require_mirror_swaps=None):
+        def set_swap_method(
+                self,
+                method: int = None,
+                num_swaps: int = None,
+                swap_density: float = None,
+                swap_depth: float = None,
+                swap_sigma: float = None,
+                require_mirror_swaps: bool = None
+        ):
             """
             set_swap_method__binding__artemis_generator_type(self[, method, num_swaps, \
                 swap_density, swap_depth, swap_sigma, require_mirror_swaps])
@@ -1330,8 +1361,14 @@ class Generator(f90wrap.runtime.FortranModule):
                 swap_depth=swap_depth, swap_sigma=swap_sigma, \
                 require_mirror_swaps=require_mirror_swaps)
         
-        def set_match_method(self, method=None, max_num_matches=None, \
-            max_num_terms=None, max_num_planes=None, compensate_normal=None):
+        def set_match_method(
+                self,
+                method: int = None,
+                max_num_matches: int = None,
+                max_num_terms: int = None,
+                max_num_planes: int = None,
+                compensate_normal: bool = None
+        ):
             """
             set_match_method__binding__artemis_generator_type(self[, method, \
                 max_num_matches, max_num_terms, max_num_planes, compensate_normal])
@@ -1355,13 +1392,14 @@ class Generator(f90wrap.runtime.FortranModule):
                 method=method, max_num_matches=max_num_matches, max_num_terms=max_num_terms, \
                 max_num_planes=max_num_planes, compensate_normal=compensate_normal)
         
-        def set_materials(self,
-                          structure_lw: Atoms | Geom_Rw.basis = None,
-                          structure_up: Atoms | Geom_Rw.basis = None,
-                          elastic_lw=None,
-                          elastic_up=None,
-                          use_pricel_lw=None,
-                          use_pricel_up=None
+        def set_materials(
+                self,
+                structure_lw: Atoms | Geom_Rw.basis = None,
+                structure_up: Atoms | Geom_Rw.basis = None,
+                elastic_lw: float | list[float] | numpy.ndarray = None,
+                elastic_up: float | list[float] | numpy.ndarray = None,
+                use_pricel_lw: bool = None,
+                use_pricel_up: bool = None
         ):
             """
             set_materials__binding__artemis_gen_type(self, structure_lw, \
@@ -1437,12 +1475,19 @@ class Generator(f90wrap.runtime.FortranModule):
                 elastic_up=elastic_up, use_pricel_lw=use_pricel_lw, \
                 use_pricel_up=use_pricel_up)
         
-        def set_surface_properties(self, miller_lw=None, miller_up=None, \
-            is_layered_lw=None, is_layered_up=None, \
-            require_stoichiometry_lw=None, require_stoichiometry_up=None, \
-            layer_separation_cutoff_lw=None, \
-            layer_separation_cutoff_up=None, layer_separation_cutoff=None, \
-            vacuum_gap=None):
+        def set_surface_properties(
+                self,
+                miller_lw: list[int] | Tuple[float, float, float] = None,
+                miller_up: list[int] | Tuple[float, float, float] = None,
+                is_layered_lw: bool = None,
+                is_layered_up: bool = None,
+                require_stoichiometry_lw: bool = None,
+                require_stoichiometry_up: bool = None,
+                layer_separation_cutoff_lw: float = None,
+                layer_separation_cutoff_up: float = None,
+                layer_separation_cutoff: float = None,
+                vacuum_gap: float = None
+        ):
             """
             set_surface_properties__binding__artemis_generator_type(self[, miller_lw, \
                 miller_up, is_layered_lw, is_layered_up, layer_separation_cutoff_lw, \
@@ -1468,6 +1513,13 @@ class Generator(f90wrap.runtime.FortranModule):
             vacuum_gap : float
             
             """
+
+            if miller_lw is not None and len(miller_lw) != 3:
+                raise ValueError("miller_lw must have exactly three elements")
+
+            if miller_up is not None and len(miller_up) != 3:
+                raise ValueError("miller_up must have exactly three elements")
+
             _artemis.f90wrap_intf_gen__set_surface_properties__binding__agt(this=self._handle, \
                 miller_lw=miller_lw, miller_up=miller_up, is_layered_lw=is_layered_lw, \
                 is_layered_up=is_layered_up, \
@@ -1509,9 +1561,19 @@ class Generator(f90wrap.runtime.FortranModule):
             """
             _artemis.f90wrap_intf_gen__reset_is_layered_up__binding__agt(this=self._handle)
         
-        def get_terminations_lw(self, miller=None, surface=None, num_layers=None, \
-            thickness=None, orthogonalise=None, normalise=None, break_on_fail=None, 
-            verbose=None, return_exit_code=False, calc=None):
+        def get_terminations_lw(
+                self,
+                miller: list[int] | Tuple[float, float, float] = None,
+                surface: int = None,
+                num_layers: int = None,
+                thickness: float = None,
+                orthogonalise: bool = None,
+                normalise: bool = None,
+                break_on_fail: bool = None,
+                verbose: int = None,
+                return_exit_code: bool = False,
+                calc = None
+        ):
             """
             
             Defined at \
@@ -1522,6 +1584,9 @@ class Generator(f90wrap.runtime.FortranModule):
             """
             exit_code = 0
             structures = None
+
+            if len(miller) != 3:
+                raise ValueError("miller must have exactly three elements")
 
             exit_code, n_structs = _artemis.f90wrap_intf_gen__get_terminations__binding__agt(this=self._handle,
                 identifier=1,
@@ -1537,15 +1602,25 @@ class Generator(f90wrap.runtime.FortranModule):
             structures = geom_rw.basis_array() #.allocate(n_structs)
             structures.allocate(n_structs)
             _artemis.f90wrap_retrieve_last_generated_structures(structures._handle)
-            structures = structures.toase()
+            structures = structures.toase(calculator=calc)
 
             if return_exit_code:
                 return structures, exit_code
             return structures
         
-        def get_terminations_up(self, miller=None, surface=None, num_layers=None, \
-            thickness=None, orthogonalise=None, normalise=None, break_on_fail=None, 
-            verbose=None, return_exit_code=False, calc=None):
+        def get_terminations_up(
+                self,
+                miller: list[int] | Tuple[float, float, float] = None,
+                surface: int = None,
+                num_layers: int = None,
+                thickness: float = None,
+                orthogonalise: bool = None,
+                normalise: bool = None,
+                break_on_fail: bool = None,
+                verbose: int = None,
+                return_exit_code: bool = False,
+                calc = None
+        ):
             """
             
             Defined at \
@@ -1556,6 +1631,9 @@ class Generator(f90wrap.runtime.FortranModule):
             """
             exit_code = 0
             structures = None
+
+            if len(miller) != 3:
+                raise ValueError("miller must have exactly three elements")
 
             exit_code, n_structs = _artemis.f90wrap_intf_gen__get_terminations__binding__agt(this=self._handle,
                 identifier=2,
@@ -1571,13 +1649,18 @@ class Generator(f90wrap.runtime.FortranModule):
             structures = geom_rw.basis_array() #.allocate(n_structs)
             structures.allocate(n_structs)
             _artemis.f90wrap_retrieve_last_generated_structures(structures._handle)
-            structures = structures.toase()
+            structures = structures.toase(calculator=calc)
 
             if return_exit_code:
                 return structures, exit_code
             return structures
 
-        def get_interface_location(self, structure=None, axis=None, return_fractional=False):
+        def get_interface_location(
+                self,
+                structure: Atoms | Geom_Rw.basis,
+                axis: int = None,
+                return_fractional: bool = False
+        ):
 
             """
             get_interface_location__binding__artemis_gen_type(self, structure, axis)
@@ -1617,13 +1700,28 @@ class Generator(f90wrap.runtime.FortranModule):
             return ret_location, ret_axis
                 
 
-        def generate(self, surface_lw=None, surface_up=None, thickness_lw=None, \
-            thickness_up=None, num_layers_lw=None, num_layers_up=None, \
-            reduce_matches=None, \
-            print_lattice_match_info=None, print_termination_info=None, \
-            print_shift_info=None, break_on_fail=None, icheck_term_pair=None, \
-            interface_idx=None, generate_structures=None, seed=None, verbose=None, \
-            return_exit_code=False, calc=None):
+        def generate(
+                self,
+                surface_lw: int = None,
+                surface_up: int = None,
+                thickness_lw: float = None,
+                thickness_up: float = None,
+                num_layers_lw: int = None,
+                num_layers_up: int = None,
+                reduce_matches: bool = None,
+                print_lattice_match_info: bool = None,
+                print_termination_info: bool = None,
+                print_shift_info: bool = None,
+                break_on_fail: bool = None,
+                icheck_term_pair: int = None,
+                interface_idx: int = None,
+                generate_structures: bool = None,
+                seed: int = None,
+                verbose: int = None,
+                exit_code: int = None,
+                return_exit_code: bool = False,
+                calc = None
+        ):
             """
             generate__binding__artemis_gen_type(self[, surface_lw, \
                 surface_up, thickness_lw, thickness_up, num_layers_lw, num_layers_up, \
@@ -1639,8 +1737,8 @@ class Generator(f90wrap.runtime.FortranModule):
             Parameters
             ----------
             this : Artemis_generator_Type
-            surface_lw : int array
-            surface_up : int array
+            surface_lw : int
+            surface_up : int
             thickness_lw : float
             thickness_up : float
             num_layers_lw : int
@@ -1680,8 +1778,16 @@ class Generator(f90wrap.runtime.FortranModule):
                 return structures, exit_code
             return structures
 
-        def regenerate(self, structure, interface_location=None, print_shift_info=None, \
-            seed=None, verbose=None, return_exit_code=False, calc=None):
+        def regenerate(
+                self,
+                structure: Atoms | Geom_Rw.basis,
+                interface_location: float | None = None,
+                print_shift_info: bool = None,
+                seed: int = None,
+                verbose: int = None,
+                return_exit_code: bool = False,
+                calc = None
+        ):
             """
             restart__binding__artemis_gen_type(self, basis[, \
                 interface_location, print_shift_info, seed])
