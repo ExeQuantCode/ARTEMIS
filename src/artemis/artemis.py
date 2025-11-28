@@ -2660,9 +2660,30 @@ class Artemis(f90wrap.runtime.FortranModule):
         1-4
     
     """
-    pass
+    @staticmethod
+    def get_suppress_warnings():
+        """
+        get_suppress_warnings() -> bool
+        
+        Returns
+        -------
+        bool
+        """
+        return bool(_artemis.f90wrap_get_suppress_warnings())
+
+    @staticmethod
+    def set_suppress_warnings(suppress_warnings):
+        """
+        set_suppress_warnings(suppress_warnings)
+        
+        Parameters
+        ----------
+        suppress_warnings : bool
+        """
+        _artemis.f90wrap_set_suppress_warnings(suppress_warnings)
+
     _dt_array_initialisers = []
-    
+
 
 artemis = Artemis()
 

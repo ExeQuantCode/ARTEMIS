@@ -2426,11 +2426,13 @@ contains
             vac=toffset(this%axis))
        min_bond = get_shortest_bond(tbas)
        if(min_bond%length.le.1.5_real32)then
-          write(err_msg,'("Smallest bond in the interface structure is\nless than 1.5 Å.")')
+          write(err_msg,'("Smallest bond in the interface structure is",/, &
+               &"less than 1.5 Å.",/, &
+               &2X,"bond length: ",F9.6,/, &
+               &2X,"atom 1:",I4,2X,I4,/, &
+               &2X,"atom 2:",I4,2X,I4)') &
+               min_bond%length, min_bond%atoms(1,:), min_bond%atoms(2,:)
           call print_warning(trim(err_msg))
-          write(*,'(2X,"bond length: ",F9.6)') min_bond%length
-          write(*,'(2X,"atom 1:",I4,2X,I4)') min_bond%atoms(1,:)
-          write(*,'(2X,"atom 2:",I4,2X,I4)') min_bond%atoms(2,:)
        end if
 
 
