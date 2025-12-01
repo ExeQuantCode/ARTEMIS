@@ -59,6 +59,34 @@ subroutine f90wrap_artemis_gen_type__set__max_num_structures(this, f90wrap_max_n
     this_ptr%p%max_num_structures = f90wrap_max_num_structures
 end subroutine f90wrap_artemis_gen_type__set__max_num_structures
 
+subroutine f90wrap_artemis_gen_type__get__warning_min_bond(this, f90wrap_warning_min_bond)
+    use artemis__generator, only: artemis_generator_type
+    implicit none
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    real(4), intent(out) :: f90wrap_warning_min_bond
+    
+    this_ptr = transfer(this, this_ptr)
+    f90wrap_warning_min_bond = this_ptr%p%warning_min_bond
+end subroutine f90wrap_artemis_gen_type__get__warning_min_bond
+
+subroutine f90wrap_artemis_gen_type__set__warning_min_bond(this, f90wrap_warning_min_bond)
+    use artemis__generator, only: artemis_generator_type
+    implicit none
+    type artemis_generator_type_ptr_type
+        type(artemis_generator_type), pointer :: p => NULL()
+    end type artemis_generator_type_ptr_type
+    integer, intent(in)   :: this(2)
+    type(artemis_generator_type_ptr_type) :: this_ptr
+    real(4), intent(in) :: f90wrap_warning_min_bond
+    
+    this_ptr = transfer(this, this_ptr)
+    this_ptr%p%warning_min_bond = f90wrap_warning_min_bond
+end subroutine f90wrap_artemis_gen_type__set__warning_min_bond
+
 
 subroutine f90wrap_artemis_gen_type__get__structure_lw(this, f90wrap_structure_lw)
     use artemis__generator, only: artemis_generator_type

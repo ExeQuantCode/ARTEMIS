@@ -13,14 +13,15 @@ module artemis__io_utils
   private
 
   public :: write_fmtd
-  public :: err_abort,print_warning, stop_program
+  public :: err_abort, print_warning, stop_program
+  public :: artemis__suppress_warnings
   public :: io_print_help
   public :: print_header
   public :: artemis__version__
 
 
   logical :: test_error_handling = .false.
-  logical :: suppress_warnings = .false.
+  logical :: artemis__suppress_warnings = .false.
   character(len=*), parameter :: artemis__version__ = "2.0.0"
   !character(30), public, parameter :: &
   !     author(3) = [&
@@ -171,7 +172,7 @@ contains
 !!!#############################################################################
   subroutine print_warning(message,width,fmtd)
     implicit none
-    integer :: unit=6
+    integer :: unit=0
     integer :: ipos,iend,inewline
     integer :: whitespacel,whitespacer,length,nwidth
     character(len=13) :: warning
@@ -182,6 +183,8 @@ contains
     integer, optional, intent(in) :: width
     logical, optional, intent(in) :: fmtd
 
+
+    if(artemis__suppress_warnings) return
 
 !!!-----------------------------------------------------------------------------
 !!! Initialise variables and allocate line length

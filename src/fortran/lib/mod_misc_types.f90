@@ -110,6 +110,9 @@ module artemis__misc_types
      real(real32) :: vacuum_gap = 14._real32
      !! Vacuum thickness in Å
 
+     real(real32) :: warning_min_bond = 1.5_real32
+     !! Minimum bond length to trigger a warning in Å 
+
      type(basis_type), dimension(:), allocatable :: structures
    contains
      procedure, pass(this) :: write_structures

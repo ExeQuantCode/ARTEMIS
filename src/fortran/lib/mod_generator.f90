@@ -2425,7 +2425,7 @@ contains
             axis=this%axis,loc=rtmp1,&
             vac=toffset(this%axis))
        min_bond = get_shortest_bond(tbas)
-       if(min_bond%length.le.1.5_real32)then
+       if(min_bond%length.le.this%warning_min_bond)then
           write(err_msg,'("Smallest bond in the interface structure is",/, &
                &"less than 1.5 Å.",/, &
                &2X,"bond length: ",F9.6,/, &

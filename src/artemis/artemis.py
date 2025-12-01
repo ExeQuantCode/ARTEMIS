@@ -1875,6 +1875,21 @@ class Generator(f90wrap.runtime.FortranModule):
                 max_num_structures)
 
         @property
+        def warning_min_bond(self):
+            """
+            The minimum bond length (in Angstroms) that will trigger a warning.
+            
+            If any bond in the generated interface structure is shorter than this value,
+            a warning will be printed. Default is 1.5 Angstroms.
+            """
+            return _artemis.f90wrap_artemis_gen_type__get__warning_min_bond(self._handle)
+
+        @warning_min_bond.setter
+        def warning_min_bond(self, warning_min_bond):
+            _artemis.f90wrap_artemis_gen_type__set__warning_min_bond(self._handle, \
+                warning_min_bond)
+
+        @property
         def structure_lw(self):
             """
             Element structure_lw ftype=type(basis_type) pytype=Basis_Type
