@@ -1,0 +1,46 @@
+SETTINGS
+  TASK        = 1
+  RESTART     = 0
+  STRUC1_FILE = POSCAR_Si  ! lower structure/interface structure
+  STRUC2_FILE = POSCAR_Ge  ! upper structure (not used if IRESTART > 0)
+  IPRINT = 0
+  TOL_SYM = 1.D-4
+  CLOCK = 0
+END SETTINGS
+
+
+INTERFACES
+  LGEN_INTERFACES = T   ! generate interfaces
+  IMATCH =  0           ! interface matching method
+  NINTF = 100           ! max number of interfaces
+  NMATCH = 1            ! max number of lattice matches
+  TOL_VEC = 5.D0        ! max vector tolerance (in percent %)
+  TOL_ANG = 1.D0        ! max angle tolerance (in degrees (°))
+  TOL_AREA = 10.D0      ! max area tolerance (in percent %)
+  TOL_MAXFIND = 100     ! max number of good fits to find per plane
+  TOL_MAXSIZE = 10      ! max increase of any lattice vector
+  NMILLER = 10          ! number of Miller planes to consider
+
+  LW_USE_PRICEL = F
+  UP_USE_PRICEL = F
+  LW_MILLER = 3 1 0
+  UP_MILLER = 1 1 0
+  LW_LAYER_SEP = 0.45
+  LW_SLAB_THICKNESS = 6 ! thickness of lower material
+  UP_SLAB_THICKNESS = 6 ! thickness of upper material
+  NTERM = 5             ! max number of terminations per material per match
+
+  SHIFTDIR =  DSHIFT    ! shift directory name
+  ISHIFT = 4            ! shifting method
+  NSHIFT = 5            ! number of shifts to apply
+  C_SCALE = 1.D0        ! interface-separation scaling factor
+
+  SWAPDIR =  DSWAP      ! swap directory name
+  ISWAP = 2             ! swapping method
+  NSWAP = 5             ! number of swap structures generated per interface
+  SWAP_DENSITY = 5.D-2  ! intermixing area density
+
+  LSURF_GEN      = F      ! generate surfaces of a plane
+  LPRINT_TERMS   = F      ! prints all found terminations
+  LPRINT_MATCHES = T    ! prints all found lattice matches
+END INTERFACES

@@ -1,0 +1,18 @@
+SETTINGS
+  TASK        = 0
+  RESTART     = 0
+  STRUC1_FILE = POSCAR  ! lower structure/interface structure
+!  STRUC2_FILE =   ! upper structure (not used if RESTART > 0)
+  MASTER_DIR  = DINTERFACES
+  SUBDIR_PREFIX = D
+  IPRINT = 0
+  CLOCK =               ! taken from the time clock by default
+END SETTINGS
+
+
+CELL_EDITS
+  LSURF_GEN   = T
+  MILLER_PLANE  = 1 0 0
+  NUM_LAYERS = 5
+  LAYER_SEP = 0.1
+END CELL_EDITS

@@ -1,0 +1,350 @@
+cmake_minimum_required(VERSION 3.17.5)
+
+# define build environments
+set( CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local/"
+  CACHE STRING "Select where to install the library." )
+set(CMAKE_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}
+  CACHE STRING "Select where to build the library." )
+set(MODULE_DIR ${CMAKE_BUILD_DIR}/mod)
+
+set(SKBUILD_PROJECT_NAME "artemis")
+
+
+# set compiler
+set(CMAKE_Fortran_COMPILER gfortran
+  CACHE STRING "Select Fortran compiler." )  # Change this to your desired compiler
+set(CMAKE_C_COMPILER gcc
+  CACHE STRING "Select C compiler." )  # Change this to your desired compiler
+set(CMAKE_Fortran_STANDARD 2018)
+
+# set the project version
+file(READ "fpm.toml" ver)
+string(REGEX MATCH "version = \"([0-9]+\\.[0-9]+\\.[0-9]+)(-dev[0-9]+)?\"" _ ${ver})
+set(PROJECT_VERSION ${CMAKE_MATCH_1})
+message(STATUS "Project version: ${PROJECT_VERSION}")
+
+# set the project name
+project(artemis
+    VERSION ${PROJECT_VERSION}
+    LANGUAGES C Fortran
+)
+
+# set the library name
+set( LIB_NAME ${PROJECT_NAME} )
+set( PROJECT_DESCRIPTION
+  "Fortran materials lattice matcher" )
+set( PROJECT_URL "https://github.com/ExeQuantCode/artemis" )
+set( CMAKE_CONFIGURATION_TYPES "Release" "Dev" "Debug"
+  CACHE STRING "List of configurations types." )
+set( CMAKE_BUILD_TYPE "Release"
+  CACHE STRING "Select which configuration to build." )
+
+# set options
+option(BUILD_PYTHON "Build the python library" Off)
+option(BUILD_EXECUTABLE "Build the Fortran executable" On)
+option(REMAKE_F90WRAP "Remake the f90wrap signature file" Off)
+
+# Define the sources
+set(SRC_DIR src)
+set(FORTRAN_SRC_DIR ${SRC_DIR}/fortran)
+set(LIB_DIR ${FORTRAN_SRC_DIR}/lib)
+
+# Library source files
+set(LIB_FILES
+    mod_constants.f90
+    mod_misc.f90
+    mod_io_utils.F90
+    mod_help.f90
+    mod_misc_maths.f90
+    mod_misc_linalg.f90
+    mod_geom_utils.f90
+    mod_io_utils_extd.F90
+    mod_sym.f90
+    mod_terminations.f90
+    mod_intf_identifier.f90
+    mod_plane_matching.f90
+    mod_lat_compare.f90
+    mod_swapping.f90
+    mod_shifting.f90
+    mod_cache.f90
+)
+
+# Main source files
+set(SPECIAL_LIB_FILES
+    mod_misc_types.f90
+    mod_geom_rw.f90
+    mod_generator.f90
+)
+
+
+foreach(lib ${LIB_FILES})
+    list(APPEND PREPENDED_LIB_FILES ${LIB_DIR}/${lib})
+endforeach()
+foreach(lib ${SPECIAL_LIB_FILES})
+    list(APPEND PREPENDED_LIB_FILES ${LIB_DIR}/${lib})
+endforeach()
+message(STATUS "Modified LIB_FILES: ${PREPENDED_LIB_FILES}")
+
+
+
+set(SRC_FILES
+    artemis.f90
+)
+foreach(lib ${SPECIAL_LIB_FILES})
+    list(APPEND F90WRAP_FORTRAN_SRC_FILES ${CMAKE_CURRENT_LIST_DIR}/${LIB_DIR}/${lib})
+endforeach()
+foreach(src ${SRC_FILES})
+    list(APPEND F90WRAP_FORTRAN_SRC_FILES ${CMAKE_CURRENT_LIST_DIR}/${FORTRAN_SRC_DIR}/${src})
+    list(APPEND PREPENDED_SRC_FILES ${FORTRAN_SRC_DIR}/${src})
+endforeach()
+
+
+set(EXECUTABLE_FILES
+    mod_tools_infile.f90
+    default_infile.f90
+    inputs.f90
+    aspect.f90
+    main.f90
+)
+set(APP_DIR app)
+foreach(src ${EXECUTABLE_FILES})
+    list(APPEND PREPENDED_EXECUTABLE_FILES ${APP_DIR}/${src})
+endforeach()
+
+
+# initialise flags
+set(CPPFLAGS "")
+set(CFLAGS "")
+set(MODULEFLAGS "")
+set(MPFLAGS "")
+set(WARNFLAGS "")
+set(DEVFLAGS "")
+set(DEBUGFLAGS "")
+set(MEMFLAGS "")
+set(OPTIMFLAGS "")
+set(FASTFLAGS "")
+
+# set flags based on compiler
+if (CMAKE_Fortran_COMPILER MATCHES ".*gfortran.*" OR CMAKE_Fortran_COMPILER MATCHES ".*gcc.*")
+    message(STATUS "Using gfortran compiler")
+    set(PPFLAGS -cpp)
+    set(MPFLAGS -fopenmp -lgomp -floop-parallelize-all -ftree-parallelize-loops=32)
+    set(WARNFLAGS -Wall)
+    set(DEVFLAGS -g -fbacktrace -fcheck=all -fbounds-check -Og)
+    set(DEBUGFLAGS -fbounds-check)
+    set(MEMFLAGS -mcmodel=large)
+    set(OPTIMFLAGS -O3 -march=native)
+    set(FASTFLAGS -Ofast -march=native)
+    set(PYTHONFLAGS -c -O3 -fPIC)
+elseif (CMAKE_Fortran_COMPILER MATCHES ".*nag.*")
+    message(STATUS "Using nag compiler")
+    set(PPFLAGS -f2018 -fpp)
+    set(MPFLAGS -openmp)
+    set(WARNFLAGS -Wall)
+    set(DEVFLAGS -g -mtrace -C=all -colour -O0)
+    set(DEBUGFLAGS -C=array)
+    set(MEMFLAGS -mcmodel=large)
+    set(OPTIMFLAGS -O3)
+    set(FASTFLAGS -Ofast)
+elseif (CMAKE_Fortran_COMPILER MATCHES ".*ifort.*" OR CMAKE_Fortran_COMPILER MATCHES ".*ifx.*")
+    message(STATUS "Using intel compiler")
+    set(PPFLAGS -fpp)
+    set(MPFLAGS -qopenmp)
+    set(WARNFLAGS -warn all)
+    set(DEVFLAGS -check all -warn)
+    set(DEBUGFLAGS -check all -fpe0 -warn -tracekback -debug extended)
+    set(MEMFLAGS -mcmodel=large)
+    set(OPTIMFLAGS -O3)
+    set(FASTFLAGS -Ofast)
+else()
+    # Code for other Fortran compilers
+    message(STATUS "Using a different Fortran compiler")
+endif()
+
+
+
+set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${PPFLAGS}")
+
+
+# create the library
+add_library(${PROJECT_NAME} STATIC ${PREPENDED_LIB_FILES} ${PREPENDED_SRC_FILES})
+set_target_properties(${PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_DIR})
+target_link_libraries(${PROJECT_NAME} PUBLIC)
+
+# replace ".f90" with ".mod"
+string(REGEX REPLACE "\\.[^.]*$" ".mod" MODULE_FILES "${SRC_FILES}")
+
+set(ETC_MODULE_FILES "")
+# Loop through each Fortran file
+foreach(FILE ${PREPENDED_LIB_FILES})
+    # Read the content of the Fortran file
+    file(READ "${FILE}" FILE_CONTENTS)
+
+    # Use a regular expression to extract the module name
+    string(REGEX MATCH "^module[ \t]+([a-zA-Z0-9_]+)" MATCH "${FILE_CONTENTS}")
+
+    # If a match is found, extract the module name (the first capture group)
+    if(MATCH)
+        string(REGEX REPLACE "module[ \t]+([a-zA-Z0-9_]+)" "\\1" MODULE_NAME "${MATCH}")
+
+        # Append the module name with .mod to the list
+        list(APPEND ETC_MODULE_FILES "${MODULE_DIR}/${MODULE_NAME}.mod")
+    endif()
+endforeach()
+
+# installation
+install(FILES ${MODULE_DIR}/${MODULE_FILES} DESTINATION ${SKBUILD_PROJECT_NAME}/include)
+install(FILES ${ETC_MODULE_FILES} DESTINATION ${SKBUILD_PROJECT_NAME}/etc)
+install(TARGETS ${PROJECT_NAME} DESTINATION ${SKBUILD_PROJECT_NAME}/lib)
+set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
+
+# set compile options based on different build configurations
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${OPTIMFLAGS}>")
+# target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${MPFLAGS}>")
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
+
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Dev>:${DEVFLAGS}>")
+
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${DEBUGFLAGS}>")
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${WARNFLAGS}>")
+# target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${MPFLAGS}>")
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${PYTHONFLAGS}>")
+
+if (BUILD_EXECUTABLE)
+    add_executable(${PROJECT_NAME}_executable ${PREPENDED_EXECUTABLE_FILES})
+    target_link_libraries(${PROJECT_NAME}_executable PRIVATE ${PROJECT_NAME})
+    install(TARGETS ${PROJECT_NAME}_executable DESTINATION ${SKBUILD_PROJECT_NAME}/bin)
+    set_target_properties(${PROJECT_NAME}_executable PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_DIR})
+
+    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${OPTIMFLAGS}>")
+    # target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${MPFLAGS}>")
+    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Release>:${PYTHONFLAGS}>")
+
+    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Dev>:${DEVFLAGS}>")
+
+    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Debug>:${DEBUGFLAGS}>")
+    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Debug>:${WARNFLAGS}>")
+    # target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Debug>:${MPFLAGS}>")
+    target_compile_options(${PROJECT_NAME}_executable PUBLIC "$<$<CONFIG:Debug>:${PYTHONFLAGS}>")
+
+    set_target_properties(${PROJECT_NAME}_executable PROPERTIES VERSION ${PROJECT_VERSION})
+endif()
+
+
+
+if (BUILD_PYTHON)
+
+    # # Get the directory where object files are generated
+    get_target_property(OBJECTS ${PROJECT_NAME} EXTERNAL_OBJECT)
+    # Print the object files directory
+    set(OBJECTS_DIR ${CMAKE_BUILD_DIR}/CMakeFiles/${PROJECT_NAME}.dir)
+    message(STATUS "Object files directory for ${PROJECT_NAME}: ${OBJECTS_DIR}")
+
+    # Include f90wrap
+    find_package(Python COMPONENTS Interpreter Development.Module NumPy REQUIRED)
+    if(NOT DEFINED PYTHON_EXECUTABLE)
+        set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
+    endif()
+
+    # Grab the variables from a local Python installation F2PY headers
+    execute_process(
+        COMMAND "${Python_EXECUTABLE}" -c
+                "import numpy.f2py; print(numpy.f2py.get_include())"
+        OUTPUT_VARIABLE F2PY_INCLUDE_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    add_library(fortranobject OBJECT "${F2PY_INCLUDE_DIR}/fortranobject.c")
+    target_link_libraries(fortranobject PUBLIC Python::NumPy)
+    target_include_directories(fortranobject PUBLIC "${F2PY_INCLUDE_DIR}")
+    set_property(TARGET fortranobject PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+    set (F90WRAP_EXECUTABLE ${PYTHON_EXECUTABLE} -m f90wrap)
+    set (F2PY_EXECUTABLE ${PYTHON_EXECUTABLE} -m f90wrap --f2py-f90wrap)
+
+    # Run Python command to get the extension suffix
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))"
+        RESULT_VARIABLE result
+        OUTPUT_VARIABLE PYTHON_EXTENSION_MODULE_SUFFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    # Check if the suffix was retrieved successfully
+    if (result EQUAL 0)
+        message(STATUS "Python extension module suffix: ${PYTHON_EXTENSION_MODULE_SUFFIX}")
+    else()
+        message(FATAL_ERROR "Failed to retrieve Python extension module suffix")
+    endif()
+    set(F2PY_OUTPUT_FILE ${CMAKE_BUILD_DIR}/artemis/_${PROJECT_NAME}${PYTHON_EXTENSION_MODULE_SUFFIX})
+
+    # Generate f90wrap signature file
+    set(F90WRAP_FILE
+        ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_mod_generator.f90
+        ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_mod_misc_types.f90
+        ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_mod_geom_rw.f90
+        ${CMAKE_CURRENT_LIST_DIR}/src/wrapper/f90wrap_artemis.f90
+    )
+    if (REMAKE_F90WRAP)
+        set(KIND_MAP ${CMAKE_SOURCE_DIR}/kind_map)
+        set(F90WRAP_REMAKE_FILE ${CMAKE_BUILD_DIR}/f90wrap_${PROJECT_NAME}.f90)
+        add_custom_command(
+            OUTPUT ${F90WRAP_REMAKE_FILE}
+            COMMAND ${F90WRAP_EXECUTABLE}
+            --default-to-inout
+            -m ${PROJECT_NAME}
+            -k ${KIND_MAP}
+            ${F90WRAP_FORTRAN_SRC_FILES}
+            --only artemis_generator_type basis_type struc_data_type:
+            DEPENDS ${F90WRAP_FORTRAN_SRC_FILES}
+            WORKING_DIRECTORY ${CMAKE_BUILD_DIR}
+            COMMENT "Generating f90wrap signature file"
+            VERBATIM
+        )
+    endif()
+
+    # Copy f90wrap edited files from edited_autogen_files to ${CMAKE_BUILD_DIR}
+    add_custom_command(
+        OUTPUT ${CMAKE_BUILD_DIR}/artemis/python_copied
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/${SRC_DIR}/artemis ${CMAKE_BUILD_DIR}/artemis
+        COMMENT "Copying artemis python files"
+    )
+
+    # If parallel build, need to add the parallel flag
+    if (CMAKE_BUILD_TYPE MATCHES "Release*" OR CMAKE_BUILD_TYPE MATCHES "Parallel*" OR CMAKE_BUILD_TYPE MATCHES "Debug")
+        set(GOMPFLAGS "-lgomp")
+    else()
+        set(GOMPFLAGS "")
+    endif()
+
+    # Create a Python module using f2py
+    add_custom_command(
+        OUTPUT ${F2PY_OUTPUT_FILE}
+        COMMAND CC="${CMAKE_C_COMPILER}" LDFLAGS="-L${CMAKE_BUILD_DIR}" LIBS="-lartemis" ${F2PY_EXECUTABLE}
+        -c
+        -m _${PROJECT_NAME}
+        -I${MODULE_DIR}
+        --f90flags="${PPFLAGS}"
+        ${GOMPFLAGS}
+        --backend meson
+        ${F90WRAP_FILE}
+        -L${CMAKE_BUILD_DIR}
+        -lartemis
+        # --build-dir ${CMAKE_BUILD_DIR}/Dmeson
+        DEPENDS ${F90WRAP_FILE} ${CMAKE_BUILD_DIR}/artemis/python_copied ${PROJECT_NAME}
+        WORKING_DIRECTORY ${CMAKE_BUILD_DIR}/artemis
+        COMMENT "Creating Python module using f2py"
+    )
+
+    # Define output files
+	set(PY_MODULE ${CMAKE_BUILD_DIR}/artemis/${PROJECT_NAME}.py ${CMAKE_BUILD_DIR}/artemis/__init__.py)
+
+    # Create a custom target for the Python module
+    add_custom_target(python_module ALL
+        DEPENDS ${F90WRAP_REMAKE_FILE} ${F2PY_OUTPUT_FILE}
+    )
+
+    # Installation instructions
+    install(FILES ${PY_MODULE} DESTINATION ${SKBUILD_PROJECT_NAME})
+    install(FILES ${F2PY_OUTPUT_FILE} DESTINATION ${SKBUILD_PROJECT_NAME})
+
+endif()
