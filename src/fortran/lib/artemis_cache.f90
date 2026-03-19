@@ -3,7 +3,7 @@ module artemis__structure_cache
   !!
   !! Provides save/retrieve operations for the most recently generated
   !! interface structures, enabling retrieval after generation.
-  use artemis__geom_rw, only: basis_type
+  use atomstruc, only: basis_type
   implicit none
 
   private

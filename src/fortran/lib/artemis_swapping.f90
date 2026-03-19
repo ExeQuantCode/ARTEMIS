@@ -7,7 +7,7 @@ module artemis__swapping
   use artemis__constants, only: real32
   use coreutils__array, only: sort1D
   use artemis__misc_maths, only: gauss
-  use artemis__geom_rw, only: basis_type
+  use atomstruc, only: basis_type
   use artemis__sym, only: check_sym,sym_type,basis_map_type,basis_map
   use artemis__io_utils, only: err_abort
   implicit none

@@ -3,7 +3,7 @@ module artemis
   !!
   !! Re-exports the main types and procedures used by consumers of the
   !! ARTEMIS interface-generation library.
-  use artemis__geom_rw, only: basis_type, &
+  use atomstruc, only: basis_type, &
        geom_write, geom_read
   use artemis__structure_cache, only: &
        store_last_generated_structures, &

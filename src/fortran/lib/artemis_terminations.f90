@@ -6,7 +6,7 @@ module artemis__terminations
   !! build slab supercells with a chosen termination and to trim a slab to
   !! a target thickness.
   use artemis__constants, only: real32
-  use artemis__geom_rw,   only: basis_type, geom_write
+  use atomstruc, only: basis_type, geom_write
   use artemis__misc,      only: sort_col
   use coreutils__string,  only: to_lower, to_upper
   use artemis__io_utils,  only: err_abort, stop_program

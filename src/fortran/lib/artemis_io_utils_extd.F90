@@ -18,7 +18,7 @@ contains
 !###############################################################################
   subroutine err_abort_print_struc(basis,filename,msg,lstop)
     !! Print structure to file and stops
-    use artemis__geom_rw, only: basis_type, geom_write
+    use atomstruc, only: basis_type, geom_write
     implicit none
 
     ! Arguments
@@ -53,7 +53,7 @@ contains
 !###############################################################################
   subroutine setup_input_fmt(fmt)
     !! Set the structure file input format for the program
-    use artemis__geom_rw, only : igeom_input
+    use atomstruc, only : igeom_input
     implicit none
 
     ! Arguments
@@ -93,7 +93,7 @@ contains
 !###############################################################################
   subroutine setup_output_fmt(fmt,out_filename)
     !! Set the structure file input format for the program
-    use artemis__geom_rw, only : igeom_output
+    use atomstruc, only : igeom_output
     implicit none
 
     ! Arguments

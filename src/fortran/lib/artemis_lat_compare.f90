@@ -8,7 +8,7 @@ module artemis__lat_compare
   use artemis__misc_types, only: latmatch_type, tol_type
   use artemis__misc_linalg, only: cross,uvec,get_area,find_tf,det,reduce_vec_gcd,&
        inverse_3x3,get_vec_multiple,get_frac_denom
-  use artemis__geom_rw, only: basis_type
+  use atomstruc, only: basis_type
   use artemis__geom_utils, only: MATNORM,planecutter
   implicit none
   integer :: ierr_compare = 0

@@ -8,7 +8,7 @@ module artemis__generator
   use coreutils__string,      only: to_lower, to_upper
   use artemis__misc_types,    only: abstract_artemis_generator_type, &
        latmatch_type, tol_type, struc_data_type
-  use artemis__geom_rw,       only: basis_type
+  use atomstruc,              only: basis_type
   use artemis__lat_compare,            only: lattice_matching, cyc_lat1
   use artemis__io_utils,      only: err_abort, print_warning, stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc

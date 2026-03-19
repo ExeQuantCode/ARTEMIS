@@ -14,6 +14,7 @@ source-dir="src/fortran"
 [dependencies]
 openmp = "*"
 coreutils = { git = "https://github.com/nedtaylor/coreutils", tag = "v0.1.0" }
+atomstruc = { path = "../atomstruc" }
 
 [fortran]
 implicit-typing = false

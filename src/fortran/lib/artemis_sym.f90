@@ -6,7 +6,7 @@ module artemis__sym
   !! for a lattice, and mapping symmetry-equivalent atoms.
   use artemis__constants,   only: real32, pi
   use artemis__misc_linalg,          only: inverse_3x3, det, uvec
-  use artemis__geom_rw,     only: basis_type
+  use atomstruc, only: basis_type
   implicit none
 
 

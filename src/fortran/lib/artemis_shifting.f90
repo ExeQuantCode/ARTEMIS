@@ -6,7 +6,7 @@ module artemis__shifting
   !! returning the highest-quality offsets for use by the generator.
   use artemis__constants, only: real32, pi, INF
   use artemis__misc_maths, only: get_nth_plane
-  use artemis__geom_rw, only: basis_type,geom_write
+  use atomstruc, only: basis_type,geom_write
   use artemis__geom_utils, only: split_bas,get_centre_atom,set_vacuum,shifter
   use artemis__io_utils
   use artemis__io_utils_extd, only: err_abort_print_struc

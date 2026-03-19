@@ -6,7 +6,7 @@ module artemis__geom_utils
   !! primitive cell reduction, Niggli reduction, surface plane generation,
   !! and Wyckoff position identification.
   use artemis__constants, only: real32, pi
-  use artemis__geom_rw, only: basis_type,geom_write
+  use atomstruc, only: basis_type, geom_write
   use artemis__sym, only: confine_type, gldfnd, tol_sym_default
   use coreutils__array, only: swap
   use artemis__misc, only: sort2D
