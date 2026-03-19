@@ -15,7 +15,7 @@
 !!!#############################################################################
 module artemis__sym
   use artemis__constants,   only: real32, pi
-  use misc_linalg,          only: modu, inverse_3x3, det, uvec
+  use artemis__misc_linalg,          only: inverse_3x3, det, uvec
   use artemis__geom_rw,     only: basis_type
   implicit none
 
@@ -1374,7 +1374,7 @@ contains
        do ia=1,bas%spec(is)%num
           diff = loc - bas%spec(is)%atom(ia,:3)
           diff = diff - ceiling(diff - 0.5_real32)
-          dists(ia) = modu(matmul(diff,lat))
+          dists(ia) = norm2(matmul(diff,lat))
        end do
 
        wyckoff_loop1: do ia=1,size(wyckoff(1)%spec(is)%atom)

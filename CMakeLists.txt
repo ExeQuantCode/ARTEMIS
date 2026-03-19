@@ -51,29 +51,29 @@ set(LIB_DIR ${FORTRAN_SRC_DIR}/lib)
 
 # Library source files
 set(LIB_FILES
-    mod_constants.f90
-    mod_misc.f90
-    mod_io_utils.F90
-    mod_help.f90
-    mod_misc_maths.f90
-    mod_misc_linalg.f90
-    mod_geom_utils.f90
-    mod_io_utils_extd.F90
-    mod_sym.f90
-    mod_terminations.f90
-    mod_intf_identifier.f90
-    mod_plane_matching.f90
-    mod_lat_compare.f90
-    mod_swapping.f90
-    mod_shifting.f90
-    mod_cache.f90
+    artemis_constants.f90
+    artemis_misc.f90
+    artemis_io_utils.F90
+    artemis_help.f90
+    artemis_misc_maths.f90
+    artemis_misc_linalg.f90
+    artemis_geom_utils.f90
+    artemis_io_utils_extd.F90
+    artemis_sym.f90
+    artemis_terminations.f90
+    artemis_intf_identifier.f90
+    artemis_plane_matching.f90
+    artemis_lat_compare.f90
+    artemis_swapping.f90
+    artemis_shifting.f90
+    artemis_cache.f90
 )
 
 # Main source files
 set(SPECIAL_LIB_FILES
-    mod_misc_types.f90
-    mod_geom_rw.f90
-    mod_generator.f90
+    artemis_misc_types.f90
+    artemis_geom_rw.f90
+    artemis_generator.f90
 )
 
 

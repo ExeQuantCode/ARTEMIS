@@ -3,11 +3,10 @@
 !!! Code part of the ARTEMIS group (Hepplestone research group).
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
-module swapping
+module artemis__swapping
   use artemis__constants, only: real32
-  use artemis__misc, only: sort1D
-  use misc_maths, only: gauss
-  use misc_linalg, only: modu
+  use coreutils__array, only: sort1D
+  use artemis__misc_maths, only: gauss
   use artemis__geom_rw, only: basis_type
   use artemis__sym, only: check_sym,sym_type,basis_map_type,basis_map
   use artemis__io_utils, only: err_abort
@@ -75,8 +74,8 @@ contains
     else
        udef_sigma = 0.05
     end if
-    udef_sigma = udef_sigma/modu(lat(axis,:))
-    small_sigma = 0.01/modu(lat(axis,:))
+    udef_sigma = udef_sigma/norm2(lat(axis,:))
+    small_sigma = 0.01/norm2(lat(axis,:))
     call random_seed(put=seed_arr)
 
 
@@ -100,7 +99,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! find number of atoms within range of interface
 !!!-----------------------------------------------------------------------------
-    dist=width/modu(lat(axis,:))
+    dist=width/norm2(lat(axis,:))
 
 
 !!!!-----------------------------------------------------------------------------
@@ -301,7 +300,7 @@ end function rand_swapper
     nbelow=count(dintf-bas_list(:,axis).le.width.and.dintf-bas_list(:,axis).ge.0)
     nabove=count(bas_list(:,axis)-dintf.le.width.and.bas_list(:,axis)-dintf.gt.0)
     if(min(nabove,nbelow).eq.0)then
-       write(*,'(1X,"No atoms found within ",F0.2," Å of the interface.")') width*modu(lat(axis,:))
+       write(*,'(1X,"No atoms found within ",F0.2," Å of the interface.")') width*norm2(lat(axis,:))
        write(*,'(1X,"Exiting code...")')
        call exit()
     end if
@@ -459,7 +458,7 @@ end function rand_swapper
 !!!-----------------------------------------------------------------------------
 !!! Initialise tolerances and set up midpoints
 !!!-----------------------------------------------------------------------------
-    rtol = 0.1/modu(lat(axis,:))
+    rtol = 0.1/norm2(lat(axis,:))
 
     midpoint(1) = (intf_loc(1) + intf_loc(2))/2
     midpoint(2) = (1._real32 + intf_loc(1) + intf_loc(2))/2
@@ -812,4 +811,4 @@ end function rand_swapper
 
 
 
-end module swapping
+end module artemis__swapping

@@ -6,7 +6,6 @@
 !!! module contains various linear algebra functions and subroutines.
 !!! module includes the following functions and subroutines:
 !!! uvec             (unit vector of vector of any size)
-!!! modu             (magnitude of vector of any size)
 !!! proj             (projection operator of one vector on another)
 !!! GramSchmidt      (evaluates Gram-Schmidt orthogonal vectors)
 !!! cross            (cross product of two vectors)
@@ -39,7 +38,7 @@
 !!!##################
 !!! gen_group        (generate group from a subset of elements)
 !!!#############################################################################
-module misc_linalg
+module artemis__misc_linalg
   use artemis__constants, only: real32
   implicit none
   integer, parameter, private :: QuadInt_K = selected_int_kind (16)
@@ -70,20 +69,8 @@ contains
     real(real32),dimension(:)::vec
     real(real32),allocatable,dimension(:) :: output
     allocate(output(size(vec)))
-    output = vec/modu(vec)
+    output = vec/norm2(vec)
   end function uvec
-!!!#####################################################
-
-
-!!!#####################################################
-!!! finds modulus of an arbitrary length vector
-!!!#####################################################
-  function modu(vec) result(output)
-    implicit none
-    real(real32),dimension(:)::vec
-    real(real32)::output
-    output = abs(sqrt(sum(vec(:)**2)))
-  end function modu
 !!!#####################################################
 
 
@@ -153,7 +140,7 @@ contains
     if(present(normalise))then
        if(normalise)then
           do i=1,num
-             u(i,:) = u(i,:)/modu(u(i,:))
+             u(i,:) = u(i,:)/norm2(u(i,:))
           end do
        end if
     end if
@@ -312,7 +299,7 @@ contains
     real(real32), dimension(3) :: vec1,vec2
 
     angle = acos( dot_product(vec1,vec2)/&
-         ( modu(vec1) * modu(vec2) ))
+         ( norm2(vec1) * norm2(vec2) ))
     if (isnan(angle)) angle = 0._real32
 
     return
@@ -766,7 +753,7 @@ end function inverse_3x3
     !! reduce the gcd of the vectors
     do i=1,num
        obas(i,:) = reduce_vec_gcd(obas(i,:))
-       mag_bas(i) = modu(obas(i,:))
+       mag_bas(i) = norm2(obas(i,:))
     end do
     
     !! sort basis such that b1 is smallest
@@ -1229,4 +1216,4 @@ end function inverse_3x3
 !!!#####################################################
   
 
-end module misc_linalg
+end module artemis__misc_linalg

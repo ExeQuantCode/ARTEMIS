@@ -30,7 +30,7 @@
 !!! cauchy_array     (apply cauchy distribution to a set of points in array)
 !!! slater_array     (apply slater distribution to a set of points in array)
 !!!#############################################################################
-module misc_maths
+module artemis__misc_maths
   use artemis__constants, only: real32
   implicit none
   integer, parameter :: QuadInt_K = selected_int_kind (16)
@@ -806,4 +806,4 @@ contains
   end function slater_array
 !!!#####################################################
 
-end module misc_maths
+end module artemis__misc_maths

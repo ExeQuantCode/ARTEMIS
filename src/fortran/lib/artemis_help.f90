@@ -1,4 +1,4 @@
-module mod_help
+module artemis__help
   use artemis__io_utils, only: err_abort, tag_type, io_print_help
   implicit none
 
@@ -1111,4 +1111,4 @@ contains
   end subroutine interface_help
 !!!#############################################################################
 
-end module mod_help
+end module artemis__help

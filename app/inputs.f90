@@ -8,7 +8,8 @@
 !!!#############################################################################
 module inputs
   use artemis__constants, only: real32, pi
-  use artemis__misc, only: flagmaker,file_check
+  use coreutils__string, only: flagmaker
+  use coreutils__file, only: file_check
   use artemis__geom_rw, only: basis_type,geom_read
   use artemis__io_utils, only: &
        artemis__version__, &
@@ -16,7 +17,7 @@ module inputs
        err_abort
   use artemis__io_utils_extd, only: setup_input_fmt, setup_output_fmt
   use aspect, only: aspect_type, edit_structure
-  use lat_compare, only: tol_type
+  use artemis__lat_compare, only: tol_type
   use infile_tools
   use infile_print
   implicit none
@@ -98,7 +99,7 @@ module inputs
 contains
 !!!#############################################################################
   subroutine set_global_vars()
-    use mod_help, only: settings_help,cell_edits_help,interface_help
+    use artemis__help, only: settings_help,cell_edits_help,interface_help
     implicit none
     integer :: GEOMunit,Reason
     integer :: i,j,n

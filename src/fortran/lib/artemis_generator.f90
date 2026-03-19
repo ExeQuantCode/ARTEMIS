@@ -6,14 +6,14 @@
 !!!#############################################################################
 module artemis__generator
   use artemis__constants,     only: real32, pi
-  use artemis__misc,          only: to_lower, to_upper
+  use coreutils__string,      only: to_lower, to_upper
   use artemis__misc_types,    only: abstract_artemis_generator_type, &
        latmatch_type, tol_type, struc_data_type
   use artemis__geom_rw,       only: basis_type
-  use lat_compare,            only: lattice_matching, cyc_lat1
+  use artemis__lat_compare,            only: lattice_matching, cyc_lat1
   use artemis__io_utils,      only: err_abort, print_warning, stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
-  use misc_linalg,            only: uvec,modu,get_area,inverse,cross
+  use artemis__misc_linalg,            only: uvec,get_area,inverse,cross
   use artemis__interface_identifier,   only: intf_info_type,&
        get_interface,get_layered_axis,gen_DON
   use artemis__geom_utils,    only: planecutter, primitive_lat, ortho_axis,&
@@ -24,8 +24,8 @@ module artemis__generator
   use artemis__sym,           only: confine_type, gldfnd
   use artemis__terminations,  only: get_termination_info, term_arr_type, &
        set_layer_tol, build_slab_supercell, cut_slab_to_height
-  use swapping,               only: rand_swapper
-  use shifting !!! CHANGE TO SHIFTER?
+  use artemis__swapping,               only: rand_swapper
+  use artemis__shifting !!! CHANGE TO SHIFTER?
   implicit none
 
 
@@ -1023,7 +1023,7 @@ contains
        tfmat(3,3) = 1._real32
     else
        itmp1=minloc(abs(trans(:ntrans,this%axis)),dim=1,&
-            mask=abs(trans(:ntrans,this%axis)).gt.1.D-3/modu(structure%lat(this%axis,:)))
+            mask=abs(trans(:ntrans,this%axis)).gt.1.D-3/norm2(structure%lat(this%axis,:)))
        tfmat(3,:) = trans(itmp1,:)
     end if
     if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
@@ -1143,7 +1143,7 @@ contains
     output = get_interface(structure, axis_)
 
     if(return_fractional_)then
-       output%loc = output%loc / modu(structure%lat(output%axis,:))
+       output%loc = output%loc / norm2(structure%lat(output%axis,:))
     end if
 
     if(present(exit_code)) exit_code = exit_code_
@@ -1238,7 +1238,7 @@ contains
       intf%loc = interface_location
     else
        intf = get_interface(structure,this%axis)
-       intf%loc = intf%loc/modu(structure%lat(intf%axis,:))
+       intf%loc = intf%loc/norm2(structure%lat(intf%axis,:))
        if(verbose_.gt.0) write(*,*) "interface axis:",intf%axis
        if(verbose_.gt.0) write(*,*) "interface loc:",intf%loc
     end if
@@ -1255,7 +1255,7 @@ contains
                      structure%spec(js)%atom(ja,intf%axis).lt.intf%loc(2) ) )then
                    vtmp1 = (structure%spec(is)%atom(ia,:3)-structure%spec(js)%atom(ja,:3))
                    vtmp1 = matmul(vtmp1,structure%lat)
-                   rtmp1 = modu(vtmp1)
+                   rtmp1 = norm2(vtmp1)
                    if(rtmp1.lt.min_bond1) min_bond1 = rtmp1
                 elseif( &
                      ( structure%spec(is)%atom(ia,intf%axis).lt.intf%loc(1).or.&
@@ -1264,7 +1264,7 @@ contains
                      structure%spec(js)%atom(ja,intf%axis).gt.intf%loc(2) ) )then
                    vtmp1 = (structure%spec(is)%atom(ia,:3)-structure%spec(js)%atom(ja,:3))
                    vtmp1 = matmul(vtmp1,structure%lat)
-                   rtmp1 = modu(vtmp1)
+                   rtmp1 = norm2(vtmp1)
                    if(rtmp1.lt.min_bond2) min_bond2 = rtmp1
                 end if
 
@@ -1638,7 +1638,7 @@ contains
           if(all(abs(bulk_DON(1)%spec(is)%atom(:,:)).lt.1._real32))then
              bondlength = huge(0._real32)
              do ia = 1, structure_lw%spec(is)%num
-                rtmp1 = modu(get_min_bond(structure_lw, is, ia))
+                rtmp1 = norm2(get_min_bond(structure_lw, is, ia))
                 if(rtmp1.lt.bondlength) bondlength = rtmp1
                 if(rtmp1.gt.this%bondlength_cutoff)then
                    write(filename,'("lw_DON_",I0,"_",I0,".dat")') is,ia
@@ -1672,7 +1672,7 @@ contains
           if(all(abs(bulk_DON(2)%spec(is)%atom(:,:)).lt.1._real32))then
              bondlength = huge(0._real32)
              do ia = 1, structure_up%spec(is)%num
-                rtmp1 = modu(get_min_bond(structure_up, is, ia))
+                rtmp1 = norm2(get_min_bond(structure_up, is, ia))
                 if(rtmp1.lt.bondlength) bondlength = rtmp1
                 if(rtmp1.gt.this%bondlength_cutoff)then
                    write(filename,'("up_DON_",I0,"_",I0,".dat")') is,ia
@@ -1871,7 +1871,7 @@ contains
           tfmat(3,3)=1._real32
        else
           itmp1=minloc(abs(trans(:ntrans,this%axis)),dim=1,&
-               mask=abs(trans(:ntrans,this%axis)).gt.1.D-3/modu(supercell_lw%lat(this%axis,:)))
+               mask=abs(trans(:ntrans,this%axis)).gt.1.D-3/norm2(supercell_lw%lat(this%axis,:)))
           tfmat(3,:)=trans(itmp1,:)
        end if
        if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
@@ -1966,7 +1966,7 @@ contains
           tfmat(3,3)=1._real32
        else
           itmp1=minloc(abs(trans(:ntrans,this%axis)),dim=1,&
-               mask=abs(trans(:ntrans,this%axis)).gt.1.D-3/modu(supercell_lw%lat(this%axis,:)))
+               mask=abs(trans(:ntrans,this%axis)).gt.1.D-3/norm2(supercell_lw%lat(this%axis,:)))
           tfmat(3,:)=trans(itmp1,:)
        end if
        if(all(abs(tfmat(3,:)).lt.1.E-5_real32)) tfmat(3,3) = 1._real32
@@ -2176,10 +2176,10 @@ contains
                   axis = this%axis, offset = init_offset(:), &
                   map1 = t2lw_map, map2 = t2up_map &
              )
-             intf_loc(1) = ( modu(slab_lw%lat(this%axis,:)) + 0.5_real32*init_offset(this%axis) - &
-                  this%vacuum_gap)/modu(intf_basis%lat(this%axis,:))
-             intf_loc(2) = ( modu(slab_lw%lat(this%axis,:)) + modu(slab_up%lat(this%axis,:)) + &
-                  1.5_real32*init_offset(this%axis) - 2._real32*this%vacuum_gap )/modu(intf_basis%lat(this%axis,:))
+             intf_loc(1) = ( norm2(slab_lw%lat(this%axis,:)) + 0.5_real32*init_offset(this%axis) - &
+                  this%vacuum_gap)/norm2(intf_basis%lat(this%axis,:))
+             intf_loc(2) = ( norm2(slab_lw%lat(this%axis,:)) + norm2(slab_up%lat(this%axis,:)) + &
+                  1.5_real32*init_offset(this%axis) - 2._real32*this%vacuum_gap )/norm2(intf_basis%lat(this%axis,:))
              if(verbose_.ge.1)then
                 write(0,*) "interface:",intf_loc
                 if(verbose_.eq.1.and.iunique.eq.icheck_term_pair_-1)then
@@ -2379,11 +2379,11 @@ contains
        if(.not.allocated(output_shifts)) allocate(output_shifts(1,3))
        output_shifts(:,:) = this%shifts
        do iaxis = 1, 2
-          output_shifts(1,iaxis) = output_shifts(1,iaxis)!/modu(lat(iaxis,:))
+          output_shifts(1,iaxis) = output_shifts(1,iaxis)!/norm2(lat(iaxis,:))
        end do
     end select
     if(this%shift_method.gt.0)then
-       output_shifts(:,this%axis) = output_shifts(:,this%axis) * modu(basis%lat(this%axis,:))
+       output_shifts(:,this%axis) = output_shifts(:,this%axis) * norm2(basis%lat(this%axis,:))
     end if
 
 
@@ -2414,12 +2414,12 @@ contains
                intf_loc(1),intf_loc(2),&
                shift_axis=iaxis,shift=toffset(iaxis),renorm=.true.)
        end do
-       rtmp1=modu(tbas%lat(this%axis,:))
+       rtmp1=norm2(tbas%lat(this%axis,:))
        call set_vacuum(&
             basis=tbas,&
             axis=this%axis,loc=maxval(intf_loc(:)),&
             vac=toffset(this%axis))
-       rtmp1=minval(intf_loc(:))*rtmp1/modu(tbas%lat(this%axis,:))
+       rtmp1=minval(intf_loc(:))*rtmp1/norm2(tbas%lat(this%axis,:))
        call set_vacuum(&
             basis=tbas,&
             axis=this%axis,loc=rtmp1,&

@@ -39,8 +39,9 @@ module artemis__geom_utils
   use artemis__constants, only: real32, pi
   use artemis__geom_rw, only: basis_type,geom_write
   use artemis__sym, only: confine_type, gldfnd, tol_sym_default
-  use artemis__misc, only: swap, sort2D
-  use misc_linalg, only: cross,outer_product,cross_matrix,uvec,modu,&
+  use coreutils__array, only: swap
+  use artemis__misc, only: sort2D
+  use artemis__misc_linalg, only: cross,outer_product,cross_matrix,uvec,&
        get_vol,det,inverse,inverse_3x3,LUinv,reduce_vec_gcd,get_vec_multiple,&
        proj,GramSchmidt,LLL_reduce
   implicit none
@@ -249,9 +250,9 @@ contains
     min_bond=huge(0._real32)
     if(basis%natom.eq.1)then
        min_bond = min( &
-            modu(basis%lat(1,:3)), &
-            modu(basis%lat(2,:3)), &
-            modu(basis%lat(3,:3)) &
+            norm2(basis%lat(1,:3)), &
+            norm2(basis%lat(2,:3)), &
+            norm2(basis%lat(3,:3)) &
        )
        return
     end if
@@ -267,7 +268,7 @@ contains
                      vdtmp1(1)*basis%lat(1,:3) + &
                      vdtmp1(2)*basis%lat(2,:3) + &
                      vdtmp1(3)*basis%lat(3,:3)
-                dtmp1 = modu(vdtmp1)
+                dtmp1 = norm2(vdtmp1)
                 if(dtmp1.lt.min_bond) min_bond = dtmp1
              end do atmloop
           end do
@@ -333,7 +334,7 @@ contains
                vdtmp1(1)*basis%lat(1,:3) + &
                vdtmp1(2)*basis%lat(2,:3) + &
                vdtmp1(3)*basis%lat(3,:3)
-          dtmp1 = modu(vdtmp1)
+          dtmp1 = norm2(vdtmp1)
           if(dtmp1.lt.min_bond)then
              min_bond = dtmp1
              vsave = vdtmp1
@@ -397,7 +398,7 @@ contains
     do js=1,bas%nspec
        atmloop: do ja=1,bas%spec(js)%num
           vdtmp1 = bas%spec(js)%atom(ja,:3) - loc
-          if(lignore_close.and.modu(vdtmp1).lt.dtol) cycle atmloop
+          if(lignore_close.and.norm2(vdtmp1).lt.dtol) cycle atmloop
           if(iaxis.gt.0)then
              if(abs(vdtmp1(iaxis)).lt.dtol) cycle atmloop
              if(ludef_above)then
@@ -410,7 +411,7 @@ contains
                vdtmp1(1)*lat(1,:3) + &
                vdtmp1(2)*lat(2,:3) + &
                vdtmp1(3)*lat(3,:3)
-          dtmp1 = modu(vdtmp2)
+          dtmp1 = norm2(vdtmp2)
           if(dtmp1.lt.min_bond)then
              min_bond = dtmp1
              if(ludef_real)then
@@ -499,7 +500,7 @@ contains
 
     order = cshift(order,3-axis)
     normal = cross([lat(order(1),:)],[lat(order(2),:)])
-    component = dot_product(lat(3,:),normal) / modu(normal)**2._real32
+    component = dot_product(lat(3,:),normal) / norm2(normal)**2._real32
     normal = normal * component
 
     return
@@ -528,23 +529,23 @@ contains
 
     !! get surface normal vector
     normal = get_surface_normal(lat,axis)
-    ortho_scale = modu(lat(axis,:))/modu(normal)
+    ortho_scale = norm2(lat(axis,:))/norm2(normal)
 
 
     rtol = 1.E-5_real32
     inc = add
     if(present(tol)) rtol = tol
     cur_vac = min_dist(bas,axis,loc,.true.) - min_dist(bas,axis,loc,.false.)
-    cur_vac = cur_vac * modu(lat(axis,:))
+    cur_vac = cur_vac * norm2(lat(axis,:))
     diff = cur_vac + inc
     if(diff.lt.0._real32)then
        write(0,*) "WARNING! Removing vacuum entirely"
     end if
 
-    mag_old = modu(lat(axis,:))
+    mag_old = norm2(lat(axis,:))
     mag_new = ( mag_old + inc ) / mag_old
     lat(axis,:) = lat(axis,:) * mag_new
-    inc = inc / modu(lat(axis,:)) * ortho_scale
+    inc = inc / norm2(lat(axis,:)) * ortho_scale
     rtol = rtol / mag_old
     rloc = loc / mag_new + rtol
 
@@ -583,7 +584,7 @@ contains
 
     !! get surface normal vector
     normal = get_surface_normal(basis%lat,axis)
-    ortho_scale = modu(basis%lat(axis,:))/modu(normal)
+    ortho_scale = norm2(basis%lat(axis,:))/norm2(normal)
 
 
     rtol = 0._real32
@@ -592,13 +593,13 @@ contains
        write(0,*) "WARNING! Removing vacuum entirely"
     end if
     cur_vac = min_dist(basis,axis,loc,.true.) - min_dist(basis,axis,loc,.false.)
-    cur_vac = cur_vac * modu(normal)
+    cur_vac = cur_vac * norm2(normal)
     diff = ( vac - cur_vac ) * ortho_scale
 
-    mag_old = modu(basis%lat(axis,:))
+    mag_old = norm2(basis%lat(axis,:))
     mag_new = ( mag_old + diff ) / mag_old
     basis%lat(axis,:) = basis%lat(axis,:) * mag_new
-    diff = diff / modu(basis%lat(axis,:))
+    diff = diff / norm2(basis%lat(axis,:))
     rtol = rtol / mag_old
     rloc = loc / mag_new + rtol
 
@@ -637,7 +638,7 @@ contains
     lat = basis%lat
 
     ortho_vec=cross( [ lat(order(1),:) ] , [ lat(order(2),:) ] )
-    ortho_comp=dot_product([ lat(3,:) ],ortho_vec)/modu(ortho_vec)**2._real32
+    ortho_comp=dot_product([ lat(3,:) ],ortho_vec)/norm2(ortho_vec)**2._real32
     ortho_vec=ortho_vec*ortho_comp
 
     lat(3,:)=ortho_vec
@@ -715,7 +716,7 @@ contains
     !!--------------------------------------------------------------------------
     tol = 1.E-3_real32 !! in Å
     do i=1,3
-       tolvec(i)=tol/modu(sbas%lat(i,:))
+       tolvec(i)=tol/norm2(sbas%lat(i,:))
     end do
     if(vol_inc.lt.minval(tolvec))then
        write(0,'(1X,"ERROR: Internal error in transformer function")')
@@ -1039,7 +1040,7 @@ contains
     lat  = basis%lat
     plat = lat
     do i = 1, 3
-       scal(i) = modu(lat(i,:))
+       scal(i) = norm2(lat(i,:))
        lat(i,:) = lat(i,:) / scal(i)
     end do
 
@@ -1770,7 +1771,7 @@ contains
     order = [ 1, 2, 3 ]
     order = cshift(order,3-axis)
     do k = 1, 2
-       offset_(order(k)) = offset(order(k)) / modu(basis1_%lat(order(k),:))
+       offset_(order(k)) = offset(order(k)) / norm2(basis1_%lat(order(k),:))
     end do
     unit_vec = uvec(basis1_%lat(order(3),:))
     zgap = offset_(order(3)) / unit_vec(order(3))
@@ -1783,9 +1784,9 @@ contains
     output_lat(order(1),:) = basis1_%lat(order(1),:)
     output_lat(order(2),:) = basis1_%lat(order(2),:)
     unit_vec = uvec(basis1_%lat(axis,:))
-    output_lat(axis,:) = basis1_%lat(axis,:) + modu(basis2_%lat(axis,:)) * unit_vec
-    c1_ratio = modu(basis1_%lat(axis,:)) / modu(output_lat(axis,:))
-    c2_ratio = modu(basis2_%lat(axis,:)) / modu(output_lat(axis,:))
+    output_lat(axis,:) = basis1_%lat(axis,:) + norm2(basis2_%lat(axis,:)) * unit_vec
+    c1_ratio = norm2(basis1_%lat(axis,:)) / norm2(output_lat(axis,:))
+    c2_ratio = norm2(basis2_%lat(axis,:)) / norm2(output_lat(axis,:))
 
 
 !!!-----------------------------------------------------------------------------
@@ -1994,10 +1995,10 @@ contains
              if(dtmp1.lt.tol_sym) cycle trans_loop
 
              do k=1,i-1,1
-                if(modu(abs(cross( [ trans(j,:) ], [ dmat1(k,:) ]))).lt.1.E-8_real32) cycle trans_loop
+                if(norm2(abs(cross( [ trans(j,:) ], [ dmat1(k,:) ]))).lt.1.E-8_real32) cycle trans_loop
              end do
 
-             dtmp1 = modu( [ trans(j,:) ] )
+             dtmp1 = norm2( [ trans(j,:) ] )
              if(dtmp1.lt.projection)then
                 projection=dtmp1
                 dmat1(i,:) = trans(j,:)
@@ -2299,7 +2300,7 @@ contains
           vtmp1 = bas%spec(is)%atom(ia,:) - loc
           vtmp1 = vtmp1 - ceiling(vtmp1 - 0.5_real32)
           vtmp1 = matmul(vtmp1,lat)
-          dtmp2 = modu(vtmp1)
+          dtmp2 = norm2(vtmp1)
           if(dtmp2.lt.dtmp1)then
              dtmp1=dtmp2
              atom=[is,ia]
@@ -2593,7 +2594,7 @@ contains
                 vec = basis%spec(is)%atom(ia,:3) - basis%spec(js)%atom(ja,:3)
                 vec = vec - ceiling(vec - 0.5_real32)
                 vec = matmul(vec,basis%lat)
-                dist = modu(vec)
+                dist = norm2(vec)
                 if(dist.lt.min_bond)then
                    min_bond = dist
                    atoms(1,:) = [ is, ia ]
@@ -2646,8 +2647,8 @@ contains
     if(present(axis)) axis_ = axis
  
     abc=cshift(abc,3-axis_)
-    area1 = modu(cross(basis1%lat(abc(1),:),basis1%lat(abc(2),:)))
-    area2 = modu(cross(basis2%lat(abc(1),:),basis2%lat(abc(2),:)))
+    area1 = norm2(cross(basis1%lat(abc(1),:),basis1%lat(abc(2),:)))
+    area2 = norm2(cross(basis2%lat(abc(1),:),basis2%lat(abc(2),:)))
     delta1 = - (1._real32 - area2/area1)/(1._real32 + (area2/area1)*(bulk_mod1/bulk_mod2))
     delta2 = - (1._real32 - area1/area2)/(1._real32 + (area1/area2)*(bulk_mod2/bulk_mod1))
     write(0,*) "areas", area1,area2

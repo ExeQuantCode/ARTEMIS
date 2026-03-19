@@ -20,7 +20,8 @@
 !!!#############################################################################
 module infile_tools
   use artemis__constants, only: real32
-  use artemis__misc, only: grep,icount
+  use coreutils__string, only: icount
+  use coreutils__file, only: grep
   implicit none
 
   interface assign

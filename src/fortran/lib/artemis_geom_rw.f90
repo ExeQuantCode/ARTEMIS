@@ -12,9 +12,10 @@
 !!!#############################################################################
 module artemis__geom_rw
   use artemis__constants, only: real32, pi
-  use artemis__misc, only: to_upper, to_lower, jump, icount, strip_null
+  use coreutils__string, only: to_upper, to_lower, icount, strip_null
+  use coreutils__file, only: jump
   use artemis__io_utils, only: print_warning, stop_program
-  use misc_linalg, only: modu, inverse_3x3
+  use artemis__misc_linalg, only: inverse_3x3
   implicit none
 
   private
@@ -1400,7 +1401,7 @@ contains
 
 
     do i = 1, 3
-       abc_angle(1,i)=modu(lattice(i,:))
+       abc_angle(1,i)=norm2(lattice(i,:))
     end do
     do i = 1, 3
     end do
@@ -1585,7 +1586,7 @@ contains
 !###############################################################################
   subroutine remove_atoms(this, atoms)
     !! Remove atoms from the basis.
-    use artemis__misc, only: swap
+    use coreutils__array, only: swap
     implicit none
 
     ! Arguments

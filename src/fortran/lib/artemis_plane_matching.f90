@@ -3,9 +3,9 @@
 !!! Code part of the ARTEMIS group (Hepplestone research group).
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
-module plane_matching
+module artemis__plane_matching
   use artemis__constants, only: real32, INF, pi
-  use misc_linalg, only: cross,modu,get_angle,get_area,find_tf,&
+  use artemis__misc_linalg, only: cross,get_angle,get_area,find_tf,&
        reduce_vec_gcd,gcd, inverse_2x2, find_tf_2x2, uvec
   use artemis__misc_types, only: tol_type
   implicit none
@@ -655,7 +655,7 @@ contains
               nvec1=nvec1+1
               numstore_1(nvec1,:) = [ i*l, j*m ]
               latstore_1(nvec1,:) = real(i*l,real32) * lat1_veca + real(j*m,real32) * lat1_vecb
-              if(abs(modu([latstore_1(nvec1,:)])).gt.tol%maxlen)then
+              if(abs(norm2([latstore_1(nvec1,:)])).gt.tol%maxlen)then
                  nvec1=nvec1-1
                  cycle pmloop1
               end if
@@ -685,7 +685,7 @@ contains
               nvec2=nvec2+1
               numstore_2(nvec2,:) = (/ i*l, j*m /)
               latstore_2(nvec2,:) = real(i*l,real32) * lat2_veca + real(j*m,real32) * lat2_vecb
-              if(modu(latstore_2(nvec2,:)).gt.tol%maxlen)then
+              if(norm2(latstore_2(nvec2,:)).gt.tol%maxlen)then
                  nvec2=nvec2-1
                  cycle pmloop3
               end if
@@ -714,12 +714,12 @@ contains
 !!! Finding the best fit options for the first lattice vector. !!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
      len_list_1a = 0
-     reference_mag = modu(latstore_1(l,:)) !! mag of lattice vector to fit to
+     reference_mag = norm2(latstore_1(l,:)) !! mag of lattice vector to fit to
      loop102: do j=1,nvec2                      !! matcing to 1st lattice vector
         if(len_list_1a.ge.1000) exit loop102
         if(gcd( [ numstore_1(l,1),numstore_1(l,2),&
              numstore_2(j,1),numstore_2(j,2) ]).ne.1) cycle loop102
-        considered_mag = modu(latstore_2(j,:))  !! Get magnitude of the vector
+        considered_mag = norm2(latstore_2(j,:))  !! Get magnitude of the vector
         !! Checking the fit (if too big or too small)
         if ( ( considered_mag .ge. (tol_dw_vec * reference_mag) ) .and. &
              ( considered_mag .le. (tol_up_vec * reference_mag) ) ) then
@@ -744,7 +744,7 @@ contains
         if (abs(reference_angle) .lt. tiny) cycle MAINLOOP2 
         
         !!! CHANGE IT TO TAKE IN A 2x2 MATRIX LATER !!!
-        if(modu(latstore_1(l,:)).gt.modu(latstore_1(m,:))) cycle MAINLOOP2
+        if(norm2(latstore_1(l,:)).gt.norm2(latstore_1(m,:))) cycle MAINLOOP2
         if(dot_product(latstore_1(l,:),latstore_1(m,:)).gt.&
              (0.5_real32*dot_product(latstore_1(l,:),latstore_1(l,:))))&
              cycle MAINLOOP2
@@ -757,12 +757,12 @@ contains
 !!! Finding the best fit options for the second lattice vector. !!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         len_list_1b = 0
-        reference_mag = modu(latstore_1(m,:))
+        reference_mag = norm2(latstore_1(m,:))
         loop103: do j=1,nvec2
            if(len_list_1b.ge.1000) exit loop103
            if(gcd( [ numstore_1(m,1),numstore_1(m,2),&
                 numstore_2(j,1),numstore_2(j,2) ]).ne.1) cycle loop103
-           considered_mag = modu(latstore_2(j,:))
+           considered_mag = norm2(latstore_2(j,:))
            if ( ( considered_mag .ge. (tol_dw_vec * reference_mag) ) .and. &
                 ( considered_mag .le. (tol_up_vec * reference_mag) ) ) then
               len_list_1b = len_list_1b + 1
@@ -900,4 +900,4 @@ end subroutine cell_match
 !!!#############################################################################
   
  
-end module plane_matching
+end module artemis__plane_matching

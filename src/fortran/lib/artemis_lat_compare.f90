@@ -13,10 +13,10 @@
 !!! lat_check
 !!! convert_n_tf1!!! endcode
 !!!#############################################################################
-module lat_compare
+module artemis__lat_compare
   use artemis__constants, only: real32, pi, INF
   use artemis__misc_types, only: latmatch_type, tol_type
-  use misc_linalg, only: cross,uvec,modu,get_area,find_tf,det,reduce_vec_gcd,&
+  use artemis__misc_linalg, only: cross,uvec,get_area,find_tf,det,reduce_vec_gcd,&
        inverse_3x3,get_vec_multiple,get_frac_denom
   use artemis__geom_rw, only: basis_type
   use artemis__geom_utils, only: MATNORM,planecutter
@@ -341,7 +341,7 @@ contains
 !!! NEED TO FIX THE LAST STATEMENT TO ONLY APPLY IT TO THE FACES UP TO MAXAXIS
 !!!-----------------------------------------------------------------------------
     ang1=acos(dot_product(tlat1(1,:),tlat1(2,:))/&
-         (modu(tlat1(1,:)*modu(tlat1(2,:)))))
+         (norm2(tlat1(1,:)*norm2(tlat1(2,:)))))
     t_area=1000._real32
     t_ang=5._real32
     kmax=1
@@ -369,7 +369,7 @@ contains
 
        tlat2=matmul(real(it_mat,real32),t_lat)
        ang2=acos(dot_product(tlat2(1,:),tlat2(2,:))/&
-            (modu(tlat2(1,:))*modu(tlat2(2,:))))
+            (norm2(tlat2(1,:))*norm2(tlat2(2,:))))
        t_mat=tlat1-tlat2
        dtmp=get_area(t_mat(1,:),t_mat(2,:))
        t_area=1000._real32
@@ -542,10 +542,10 @@ contains
 !!!-----------------------------------------------------------------------------
     t_area1=get_area(tlat1(1,:),tlat1(2,:))
     t_area2=get_area(tlat2(1,:),tlat2(2,:))
-    mag_mat1(1)=modu(tlat1(1,:))
-    mag_mat1(2)=modu(tlat1(2,:))
-    mag_mat2(1)=modu(tlat2(1,:))
-    mag_mat2(2)=modu(tlat2(2,:))
+    mag_mat1(1)=norm2(tlat1(1,:))
+    mag_mat1(2)=norm2(tlat1(2,:))
+    mag_mat2(1)=norm2(tlat2(1,:))
+    mag_mat2(2)=norm2(tlat2(2,:))
 
 
     if(ierr_compare.gt.1) write(0,*) "area:",t_area1,t_area2
@@ -782,10 +782,10 @@ contains
 
     match=0._real32
     tiny=1.E-8_real32
-    mS1=modu(S1)
-    mS1p=modu(S1p)
-    mS2p=modu(S2p)
-    md=modu(delta)
+    mS1=norm2(S1)
+    mS1p=norm2(S1p)
+    mS2p=norm2(S2p)
+    md=norm2(delta)
 
     ct=dot_product(S1p,S2p)/(mS1p*mS2p)
     cp=dot_product(S1,S1p) /(mS1* mS1p)
@@ -837,7 +837,7 @@ contains
        verbose, tol_sym &
   )
     use artemis__sym
-    use plane_matching
+    use artemis__plane_matching
     implicit none
 
     type(latmatch_type), intent(inout) :: SAV
@@ -1400,4 +1400,4 @@ contains
 !!!!#############################################################################
 
   
-end module lat_compare
+end module artemis__lat_compare

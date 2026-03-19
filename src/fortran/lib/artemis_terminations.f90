@@ -5,7 +5,7 @@ module artemis__terminations
   use artemis__misc,      only: sort_col, to_lower, to_upper
   use artemis__io_utils,  only: err_abort, stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
-  use misc_linalg,        only: modu, cross, uvec, det
+  use artemis__misc_linalg,        only: cross, uvec, det
   use artemis__sym,       only: sym_type, check_sym
   use artemis__geom_utils,          only: shifter, transformer, ortho_axis, set_vacuum
   implicit none
@@ -1045,7 +1045,7 @@ contains
     ! ... i.e. account for the tolerance that has been added to layer ...
     ! ... hmin and hmax
     !---------------------------------------------------------------------------
-    shift_val = term%tol * slab_thickness / modu(basis%lat(term%axis,:))
+    shift_val = term%tol * slab_thickness / norm2(basis%lat(term%axis,:))
     call transformer(basis,tfmat,map)
     call shifter(basis,term%axis,-shift_val/tfmat(term%axis,term%axis),.true.)
 

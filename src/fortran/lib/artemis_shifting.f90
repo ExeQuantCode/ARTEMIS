@@ -3,10 +3,9 @@
 !!! Code part of the ARTEMIS group (Hepplestone research group).
 !!! Think Hepplestone, think HRG.
 !!!#############################################################################
-module shifting
+module artemis__shifting
   use artemis__constants, only: real32, pi, INF
-  use misc_maths, only: get_nth_plane
-  use misc_linalg, only: modu
+  use artemis__misc_maths, only: get_nth_plane
   use artemis__geom_rw, only: basis_type,geom_write
   use artemis__geom_utils, only: split_bas,get_centre_atom,set_vacuum,shifter
   use artemis__io_utils
@@ -66,7 +65,7 @@ contains
 
     if(present(depth))then
        centre=intf_loc(1)
-       dist=depth/modu(lat(axis,:))
+       dist=depth/norm2(lat(axis,:))
 !!!-----------------------------------------------------------------------------
 !!! Loop to find the number of each species in each plane
 !!!-----------------------------------------------------------------------------
@@ -115,7 +114,7 @@ contains
           end do LOOP104
        end do LOOP103
     else
-       dist_max=4._real32/modu(lat(axis,:))
+       dist_max=4._real32/norm2(lat(axis,:))
        allocate(vtmp1(bas%nspec))
        allocate(regions(size(intf_loc,dim=1),2))
        regions(1,1:2)=intf_loc(1:2)
@@ -425,7 +424,7 @@ contains
                      + dvtmp1(2) * lat(2,:) &
                      + dvtmp1(3) * lat(3,:)
 
-                cur_sep = modu( dvtmp1 )
+                cur_sep = norm2( dvtmp1 )
 
 
                 if (cur_sep.lt.min_sep) min_sep = cur_sep
@@ -497,7 +496,7 @@ contains
           specval_top(is)=minval(bas_top%spec(is)%atom(:,axis))
        end if
     end do
-    cur_vac=(minval(specval_top)-maxval(specval_bot))*modu(lat(axis,:))
+    cur_vac=(minval(specval_top)-maxval(specval_bot))*norm2(lat(axis,:))
 
 
 !!!-----------------------------------------------------------------------------
@@ -505,7 +504,7 @@ contains
 !!!-----------------------------------------------------------------------------
     do is=1,bas_top%nspec
        bas_top%spec(is)%atom(:,axis) = &
-            bas_top%spec(is)%atom(:,axis) + (bond - cur_vac)/modu(lat(axis,:))
+            bas_top%spec(is)%atom(:,axis) + (bond - cur_vac)/norm2(lat(axis,:))
     end do
     c_shift = get_c_shift(lat,bas_top,bas_bot,bond,axis,num_steps)
     do is=1,bas_top%nspec
@@ -516,8 +515,8 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! finds descriptive set of shifts parallel to interface for supplied c shift
 !!!-----------------------------------------------------------------------------
-    !res_shifts(:,3) = c_shift + (bond - cur_vac)/modu(lat(axis,:))
-    res_shifts(:,3) = c_shift + bond/modu(lat(axis,:))
+    !res_shifts(:,3) = c_shift + (bond - cur_vac)/norm2(lat(axis,:))
+    res_shifts(:,3) = c_shift + bond/norm2(lat(axis,:))
     res_shifts(:,1:2) = get_descriptive_ab_shifts(lat,bas_top,bas_bot,bond,axis,nstore,num_steps)
     if(present(c_scale)) res_shifts(:,3) = res_shifts(:,3) * c_scale
 
@@ -527,7 +526,7 @@ contains
           write(*,'(1X,"Shifts to be applied (Å)")')
           do is=1,nstore
              write(*,*) res_shifts(is,1),res_shifts(is,2), &
-                  res_shifts(is,3)*modu(lat(axis,:))
+                  res_shifts(is,3)*norm2(lat(axis,:))
           end do
        end if
     end if
@@ -568,7 +567,7 @@ contains
 !!!-----------------------------------------------------------------------------
 !!! Initialise variables
 !!!-----------------------------------------------------------------------------
-    tol=1.E-2_real32/modu(lat(axis,:))
+    tol=1.E-2_real32/norm2(lat(axis,:))
     count1=0
     prev_min_bond=0._real32
     prev_c_shift=0._real32
@@ -623,7 +622,7 @@ contains
                   (prev_c_shift - c_shift)*( prev_min_bond - bond )/( prev_min_bond - min_bond )
           end if
        else
-          new_c_shift = 0.5_real32/modu(lat(axis,:))
+          new_c_shift = 0.5_real32/norm2(lat(axis,:))
        end if
        !!-----------------------------------------------------------------------
        !! Breaks afer 50 failed steps
@@ -1080,24 +1079,24 @@ contains
     lpresent=.false.
     if(present(offset))then
        if(offset(axis).ge.1.E-6_real32)then
-          max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(bas%lat(axis,:))
+          max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*norm2(bas%lat(axis,:))
           lpresent=.true.
        end if
     end if
     if(.not.lpresent)then
-       max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*modu(bas%lat(axis,:)) + 6._real32
+       max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*norm2(bas%lat(axis,:)) + 6._real32
        add = 0._real32
     end if
 
     stepsize=0.1
-    ngrid(1)=nint(modu(bas%lat(1,:))/stepsize)
-    ngrid(2)=nint(modu(bas%lat(2,:))/stepsize)
+    ngrid(1)=nint(norm2(bas%lat(1,:))/stepsize)
+    ngrid(2)=nint(norm2(bas%lat(2,:))/stepsize)
     ngrid(3)=ceiling(max_sep/stepsize)+1
     allocate(course_grid(2,ngrid(1),ngrid(2),ngrid(3)))
     allocate(tmp_neigh(max(size(intf(1)%neigh),size(intf(2)%neigh))*9))
-    gridsize(1) = stepsize/modu(bas%lat(1,:))
-    gridsize(2) = stepsize/modu(bas%lat(2,:))
-    gridsize(3) = stepsize/modu(bas%lat(3,:))
+    gridsize(1) = stepsize/norm2(bas%lat(1,:))
+    gridsize(2) = stepsize/norm2(bas%lat(2,:))
+    gridsize(3) = stepsize/norm2(bas%lat(3,:))
 
     nstep(:2) = nint( min_trans(:2) * ngrid(:2) )
     nstep(3) = 0
@@ -1123,7 +1122,7 @@ contains
                 add(i) = 0.0
              end if
           end do
-          add(axis) = add(axis)/modu(bas%lat(axis,:))
+          add(axis) = add(axis)/norm2(bas%lat(axis,:))
        end if
     end if
 
@@ -1135,7 +1134,7 @@ contains
 !!!-----------------------------------------------------------------------------
     if(abs(verbose_).ge.1)then
        write(*,'(1X,A,3(2X,F8.4))') &
-            "lat:",modu(bas%lat(1,:)),modu(bas%lat(2,:)),modu(bas%lat(3,:))
+            "lat:",norm2(bas%lat(1,:)),norm2(bas%lat(2,:)),norm2(bas%lat(3,:))
        write(*,'(1X,A,3(2X,F8.4))') "gridsize:",gridsize
        write(*,*) "add:",add
        write(*,*) "nstep:",nstep
@@ -1179,9 +1178,9 @@ contains
                       b_extend_loop: do j=-1,1,1
                          vtmp2(2) = vtmp1(2) + real(j,real32)
                          vtmp3 = matmul(vtmp2,bas%lat)
-                         if(modu(vtmp3).gt.dist_max) cycle b_extend_loop
+                         if(norm2(vtmp3).gt.dist_max) cycle b_extend_loop
                          count1 = count1 + 1
-                         tmp_neigh(count1) = modu(vtmp3)
+                         tmp_neigh(count1) = norm2(vtmp3)
 
                       end do b_extend_loop
                    end do a_extend_loop
@@ -1300,7 +1299,7 @@ contains
        if(verbose_.gt.0) &
             write(*,'(1X,I3,":",2X,F6.2,3(2X,I3))') i,fit_store(i),shift_store(i,:)
     end do
-    res_shifts(:,axis) = (res_shifts(:,axis)*max_sep)/modu(bas%lat(axis,:)) + &
+    res_shifts(:,axis) = (res_shifts(:,axis)*max_sep)/norm2(bas%lat(axis,:)) + &
          add(axis)
     if(present(c_scale)) res_shifts(:,axis) = res_shifts(:,axis) * c_scale
 
@@ -1309,7 +1308,7 @@ contains
        write(*,'(1X,"Shifts to be applied (Å)")')
        do i = 1, nstore, 1
           write(*,'(I3,":",2X,3(2X,F7.4))') &
-               i,res_shifts(i,:2),res_shifts(i,3)*modu(bas%lat(axis,:))
+               i,res_shifts(i,:2),res_shifts(i,3)*norm2(bas%lat(axis,:))
        end do
     end if
        
@@ -1346,5 +1345,5 @@ contains
   end subroutine sort_shifts
 !!!#############################################################################
 
-end module shifting
+end module artemis__shifting
 

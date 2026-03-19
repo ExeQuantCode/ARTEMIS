@@ -6,8 +6,8 @@
 module artemis__interface_identifier
   use artemis__constants, only: real32
   use artemis__misc, only: swap,sort1D
-  use misc_linalg, only: modu,simeq,get_area,uvec
-  use misc_maths, only: gauss_array,get_turn_points,overlap_indiv_points,&
+  use artemis__misc_linalg, only: simeq,get_area,uvec
+  use artemis__misc_maths, only: gauss_array,get_turn_points,overlap_indiv_points,&
        running_avg,mean,median,mode
   use artemis__geom_rw
   implicit none
@@ -136,7 +136,7 @@ contains
     !      ncell_loop3: do while ( k < 10 )
     !         k = k + 1
     !         if(i.eq.0.and.j.eq.0.and.k.eq.0) cycle ncell_loop3
-    !         rtmp1 = modu(i*lat(1,:) + j*lat(2,:) + k*lat(3,:))
+    !         rtmp1 = norm2(i*lat(1,:) + j*lat(2,:) + k*lat(3,:))
     !         if(rtmp1.gt.rtmp1_old)then
     !            rtmp1_old = 1E6
     !            exit ncell_loop3
@@ -153,8 +153,8 @@ contains
 
     ncell = 0
     ncell_loop1: do i=1,3
-       rtmp1 = modu(lat(i,:))
-       ncell(i) = max(ncell(i),ceiling(rdist_max/modu(lat(i,:))))!maxval(ceiling( rdist_max/abs(lat(i,:)) ))
+       rtmp1 = norm2(lat(i,:))
+       ncell(i) = max(ncell(i),ceiling(rdist_max/norm2(lat(i,:))))!maxval(ceiling( rdist_max/abs(lat(i,:)) ))
        do j=1,3
           if(i.eq.j) cycle
           rtmp2 = dot_product(lat(i,:),lat(j,:))
@@ -162,16 +162,16 @@ contains
           !vrtmp1 = uvec(lat(i,:)) * dot_product(uvec(lat(i,:)),lat(j,:))
           !vrtmp1 = uvec(lat(i,:)) * lat(j,:)
           vrtmp1 = merge(lat(j,:), (/0._real32, 0._real32, 0._real32/), mask = abs(lat(i,:)).gt.1.E-5_real32)
-          rtmp1 = modu(vrtmp1)
+          rtmp1 = norm2(vrtmp1)
           if(abs(rtmp1).lt.1.E-5_real32) cycle
           k = 0
           vrtmp2 = lat(i,:)
-          rtmp2 = modu(vrtmp2)
+          rtmp2 = norm2(vrtmp2)
           do while ( rtmp2 .le. rtmp1)
              k = k + 1
              rtmp1 = rtmp2
              vrtmp2 = lat(i,:) + real(k,real32)*vrtmp1
-             rtmp2 = modu(vrtmp2)
+             rtmp2 = norm2(vrtmp2)
           end do
           if(abs(rtmp1).lt.1.E-5_real32) cycle
           ncell(i) = max(ncell(i), ceiling(rdist_max/rtmp1))
@@ -179,7 +179,7 @@ contains
        end do
     end do ncell_loop1
     !iloop1: do i=1,3
-    !   ncell(i) = ceiling( rdist_max/modu(lat(i,:)) )
+    !   ncell(i) = ceiling( rdist_max/norm2(lat(i,:)) )
     !   jloop1: do j=i+1,3
     !      if(i.eq.j) cycle
     !      itmp1 = ceiling(rdist_max/dot_product(lat(i,:),lat(j,:)))
@@ -221,7 +221,7 @@ contains
                          !end if
                          vtmp2(3) = vtmp1(3) + real(k,real32)
                          vtmp3 = matmul(vtmp2,lat)
-                         dist_list(count1) = modu(vtmp3)
+                         dist_list(count1) = norm2(vtmp3)
 
 
                       end do kloop1
@@ -535,7 +535,7 @@ contains
                          vtmp3 = matmul(vtmp2,lat)
                          !rtmp1=table_func(vtmp3(i),0.8_real32)
                          !rtmp1=exp(-abs(vtmp3(i))*power)
-                         rtmp1=exp(-modu(vtmp3)*power)
+                         rtmp1=exp(-norm2(vtmp3)*power)
                          if(rtmp1.lt.1.D-3) cycle nloop3
                          itmp1=itmp1+1
 
@@ -552,7 +552,7 @@ contains
              !!-----------------------------------------------------------------
              !! saves similarity up to the cutoff for each atom and its location
              !!-----------------------------------------------------------------
-             intf_func(i,is)%atom(ia,1)=bas%spec(is)%atom(ia,i)*modu(lat(i,:))
+             intf_func(i,is)%atom(ia,1)=bas%spec(is)%atom(ia,i)*norm2(lat(i,:))
              intf_func(i,is)%atom(ia,2)=sum(sim_dist(:cutloc))!/bas%spec(is)%num!/itmp1
 
 
@@ -639,7 +639,7 @@ contains
 !!!-----------------------------------------------------------------------------
     do iaxis=1,3
        do i=1,nstep
-          dist(i)=(i-1)*modu(lat(iaxis,:))/nstep
+          dist(i)=(i-1)*norm2(lat(iaxis,:))/nstep
        end do
        abc = cshift(abc,1,1)
        area = get_area(lat(abc(1),:),lat(abc(2),:))
@@ -655,7 +655,7 @@ contains
           do j=-1,1,1
              CAD(is,:) = CAD(is,:) + gauss_array(&
                   dist(:),&
-                  (bas%spec(is)%atom(:,iaxis)+real(j,real32))*modu(lat(iaxis,:)),&
+                  (bas%spec(is)%atom(:,iaxis)+real(j,real32))*norm2(lat(iaxis,:)),&
                   sigma,gauss_tol,.false.)
           end do
           !!-----------------------------------------------------------------------
@@ -671,7 +671,7 @@ contains
              pntl=i-1
              pntr=i+1
              do j=-1,1,1
-                vtmp1(j+2)=real(i+j-1,real32)*modu(lat(iaxis,:))/nstep
+                vtmp1(j+2)=real(i+j-1,real32)*norm2(lat(iaxis,:))/nstep
              end do
              vtmp2=0._real32
              vtmp2(2)=CAD(is,i)
@@ -751,7 +751,7 @@ contains
     allocate(dist(nstep))
     dist=0._real32
     do i=1,nstep
-       dist(i)=(i-1)*modu(lat(axis,:))/nstep
+       dist(i)=(i-1)*norm2(lat(axis,:))/nstep
     end do
 
     sigma=2._real32
@@ -774,7 +774,7 @@ contains
        do j=-1,1,1
           CAD(is,:) = CAD(is,:) + gauss_array(&
                dist(:),&
-               (bas%spec(is)%atom(:,axis)+real(j,real32))*modu(lat(axis,:)),&
+               (bas%spec(is)%atom(:,axis)+real(j,real32))*norm2(lat(axis,:)),&
                sigma,gauss_tol,.false.)
        end do
        !!-----------------------------------------------------------------------
@@ -790,7 +790,7 @@ contains
           pntl=i-1
           pntr=i+1
           do j=-1,1,1
-             vtmp1(j+2)=real(i+j-1,real32)*modu(lat(axis,:))/nstep
+             vtmp1(j+2)=real(i+j-1,real32)*norm2(lat(axis,:))/nstep
           end do
           vtmp2=0._real32
           vtmp2(2)=CAD(is,i)
@@ -859,8 +859,8 @@ contains
     do i = size(ivec1) - 1, 1, -1
        diff = abs(intf_loc(1)-dist(ivec1(i)))
        ! map back into the original space if greater than the size of the cell
-       if(abs(diff).gt.0.5*modu(lat(axis,:)))then
-          diff = diff - sign(1._real32,diff) * modu(lat(axis,:))
+       if(abs(diff).gt.0.5*norm2(lat(axis,:)))then
+          diff = diff - sign(1._real32,diff) * norm2(lat(axis,:))
        end if
        if(abs(diff).gt.2._real32)then
           intf_loc(2)=dist(ivec1(i))
@@ -908,11 +908,11 @@ contains
 !!!-----------------------------------------------------------------------------
     axis_loop1: do i=1,3
        if(allocated(dist)) deallocate(dist)
-       nstep=nint(modu(lat(i,:))/0.001_real32)
+       nstep=nint(norm2(lat(i,:))/0.001_real32)
        allocate(dist(nstep))
        dist=0._real32
        do j=1,nstep
-          dist(j)=(j-1)*modu(lat(i,:))/nstep
+          dist(j)=(j-1)*norm2(lat(i,:))/nstep
        end do
        
        if(allocated(AD)) deallocate(AD)       
@@ -922,7 +922,7 @@ contains
           do j=-1,1,1
              AD(:) = AD(:) + gauss_array(&
                   dist(:),&
-                  (bas%spec(is)%atom(:,i)+real(j,real32))*modu(lat(i,:)),&
+                  (bas%spec(is)%atom(:,i)+real(j,real32))*norm2(lat(i,:)),&
                   sigma,gauss_tol,.false.)
           end do
        end do
@@ -1071,10 +1071,10 @@ contains
                    end if
                    vtmp2(3) = vtmp1(3) + real(k,real32)
                    vtmp3 = matmul(vtmp2,lat)
-                   rtmp1=modu(vtmp3)
+                   rtmp1=norm2(vtmp3)
                    if(rtmp1.gt.dist_cutoff) cycle kloop1
                    count1=count1+1
-                   dist_list(count1) = modu(vtmp3)
+                   dist_list(count1) = norm2(vtmp3)
 
                 end do kloop1
              end do
