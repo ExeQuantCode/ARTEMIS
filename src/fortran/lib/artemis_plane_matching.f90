@@ -285,14 +285,14 @@ contains
 
 
 !###############################################################################
-!! Checks whether vec1 is a unique vector after symmetry transformation
-!! This is used to check that the following match is caught if lat2's a=b
-!! lat1:
-!!   1 0
-!!   0 1
-!! lat2:
-!!   1 0     or    0 1
-!!   0 1           1 0
+! Checks whether vec1 is a unique vector after symmetry transformation
+! This is used to check that the following match is caught if lat2's a=b
+! lat1:
+!   1 0
+!   0 1
+! lat2:
+!   1 0     or    0 1
+!   0 1           1 0
 !###############################################################################
   !! @deprecated Not currently used; retained for reference.
   function is_unique_set(vec1,vec2,sym) result(outval)
@@ -396,8 +396,8 @@ contains
 
 
 !-------------------------------------------------------------------------------
-!! checks for whether input matrices or vectors.
-!! converts either into inmat
+! checks for whether input matrices or vectors.
+! converts either into inmat
 !-------------------------------------------------------------------------------
     if(present(check_set))then
        inmat = check_set
@@ -410,8 +410,8 @@ contains
 
 
 !-------------------------------------------------------------------------------
-!! checks for whether input list contains lw_tfmat also.
-!! if not, uses inmat(:2,:2) for it
+! checks for whether input list contains lw_tfmat also.
+! if not, uses inmat(:2,:2) for it
 !-------------------------------------------------------------------------------
     if(present(test_list))then
        nlist=size(test_list(:,1,1))
@@ -440,8 +440,8 @@ contains
 
 
 !-------------------------------------------------------------------------------
-!! loop to apply symmetries to determine whether input set is unique ...
-!! ... when compared against the list
+! loop to apply symmetries to determine whether input set is unique ...
+! ... when compared against the list
 !-------------------------------------------------------------------------------
     matched_loc = 0
     sym_loop1: do isym = 1, size(sym1,dim=3), 1
@@ -533,7 +533,7 @@ contains
 
 !###############################################################################
 !###############################################################################
-!!                        M A I N   S E C T I O N
+!                        M A I N   S E C T I O N
 !###############################################################################
 !###############################################################################
 
@@ -576,13 +576,13 @@ contains
     real(real32), dimension(:,:,:), intent(in), optional :: sym1,sym2
   
 
-!! Layout of each of the 1000 cells:
-!!
-!! (int num of latvec1a, int no. of latvec1b), (int num of latvec2a, int num of latvec2b)
-!! (int num of latvec1a, int no. of latvec1b), (int num of latvec2a, int num of latvec2b)
-!!                                        =
-!! (Vector in the first plane) that matches in magnitude to (Vector in the second plane)
-!! (Vector in the first plane) that matches in magnitude to (Vector in the second plane)
+! Layout of each of the 1000 cells:
+!
+! (int num of latvec1a, int no. of latvec1b), (int num of latvec2a, int num of latvec2b)
+! (int num of latvec1a, int no. of latvec1b), (int num of latvec2a, int num of latvec2b)
+!                                        =
+! (Vector in the first plane) that matches in magnitude to (Vector in the second plane)
+! (Vector in the first plane) that matches in magnitude to (Vector in the second plane)
 
 
   !! Number of entries in each of the lists.

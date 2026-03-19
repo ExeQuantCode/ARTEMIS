@@ -889,7 +889,7 @@ contains
        ident(i,i)=1._real32
     end do
 
-!! DEFINE ROTMAT BEFORE THIS
+! DEFINE ROTMAT BEFORE THIS
     u=0._real32
     u(axis)=-1._real32
     rotmat=&
@@ -898,13 +898,13 @@ contains
          (1-cos(angle))*outer_product(u,u)
 
 
-!! Transform the rotation matrix into direct space
+! Transform the rotation matrix into direct space
     invlat=LUinv(lat)
     rotmat=matmul(lat,rotmat)
     rotmat=matmul(rotmat,invlat)
 
 
-!! Rotate the basis within the bounds
+! Rotate the basis within the bounds
     do i=1,bas%nspec
        do j=1,bas%spec(i)%num
           if(bas%spec(i)%atom(j,axis).lt.bound1.or.&
@@ -1252,11 +1252,11 @@ contains
 
 
 !###############################################################################
-!! Subroutine to set up the required dot products of the lattice
+! Subroutine to set up the required dot products of the lattice
 !###############################################################################
-!! a = lat(:,1),  b=lat(:,2),  c=lat(:,3)
-!! S(1,1) = a.a,   S(2,2) = b.b,   S(3,3) = c.c
-!! S(1,2) = a.b,   S(1,3) = a.c,   S(2,3) = b.c
+! a = lat(:,1),  b=lat(:,2),  c=lat(:,3)
+! S(1,1) = a.a,   S(2,2) = b.b,   S(3,3) = c.c
+! S(1,2) = a.b,   S(1,3) = a.c,   S(2,3) = b.c
   subroutine mkNiggli_lat(lat,newlat,transmat,S)
     implicit none
     real(real32), dimension(3,3) :: lat,newlat,transmat,S
@@ -1279,18 +1279,18 @@ contains
 
 
 !###############################################################################
-!! Function to check whether cell satisfies all the main ...
+! Function to check whether cell satisfies all the main ...
   ! ... Niggli conditions (1928)
 !###############################################################################
-!! tiny = tolerance to satisfy conditions
-!! lat = lattice being checked
-!! a = lat(:,1),  b=lat(:,2),  c=lat(:,3)
-!! S(1,1) = a.a,   S(2,2) = b.b,   S(3,3) = c.c
-!! S(1,2) = a.b,   S(1,3) = a.c,   S(2,3) = b.c
-!! Type I  = Sij (i!=j) are all positive (angles <90)
-!! Type II = Sij (i!=j) are all negative or any zero (angles >=90)
-!! Cell is reduced if, and only if, all conditions are ...
-!! ... satisfied (Niggli 1928)
+! tiny = tolerance to satisfy conditions
+! lat = lattice being checked
+! a = lat(:,1),  b=lat(:,2),  c=lat(:,3)
+! S(1,1) = a.a,   S(2,2) = b.b,   S(3,3) = c.c
+! S(1,2) = a.b,   S(1,3) = a.c,   S(2,3) = b.c
+! Type I  = Sij (i!=j) are all positive (angles <90)
+! Type II = Sij (i!=j) are all negative or any zero (angles >=90)
+! Cell is reduced if, and only if, all conditions are ...
+! ... satisfied (Niggli 1928)
   function reduced_check(lat, cell_type, S, verbose) result(check)
     implicit none
     real(real32), dimension(3,3), intent(in) :: lat
@@ -1411,8 +1411,8 @@ contains
 
 
 !-------------------------------------------------------------------------------
-!! Checking whether b1 and b2 are still perpendicular to b3 and have size ...
-!! ... greater than zero
+! Checking whether b1 and b2 are still perpendicular to b3 and have size ...
+! ... greater than zero
 !-------------------------------------------------------------------------------
     if(dot_product(b(1,:),b(3,:)).gt.tol)then
        write(0,'("ERROR: Internatl error in planecutter")')
@@ -1468,8 +1468,8 @@ contains
 
 
 !-------------------------------------------------------------------------------
-!! Convert the new lattice to direct coordinates
-!! Make it such that it is a fully integerised transformation matrix
+! Convert the new lattice to direct coordinates
+! Make it such that it is a fully integerised transformation matrix
 !-------------------------------------------------------------------------------
     !b=matmul(b,invlat)
     where(abs(b(:,:)).lt.tol)
@@ -2293,9 +2293,9 @@ contains
     
     
 !-------------------------------------------------------------------------------
-!! Finds the species with the minimum number of atoms
-!! Finds upper and lower locations for "slab" and finds atom nearest to the ...
-!! ... centre of that region
+! Finds the species with the minimum number of atoms
+! Finds upper and lower locations for "slab" and finds atom nearest to the ...
+! ... centre of that region
 !-------------------------------------------------------------------------------
     tol = 1.E-1_real32
     do ia = 1, 3
@@ -2315,8 +2315,8 @@ contains
 
 
 
-!! INSTEAD OF STARTING FROM BOTTOM, START FROM CLOSEST BELOW MIDDLE AND CLOSEST ABOVE MIDDLE
-!! THEN WORK YOUR WAY OUT FROM THAT GOING 1 BELOW, THEN 1 ABOVE, etc.
+! INSTEAD OF STARTING FROM BOTTOM, START FROM CLOSEST BELOW MIDDLE AND CLOSEST ABOVE MIDDLE
+! THEN WORK YOUR WAY OUT FROM THAT GOING 1 BELOW, THEN 1 ABOVE, etc.
 
 
 !-------------------------------------------------------------------------------
@@ -2333,8 +2333,8 @@ contains
 
     
 !-------------------------------------------------------------------------------
-!! Loops over atoms in cell until it finds a reproducible set to define ...
-!! ... as the bulk
+! Loops over atoms in cell until it finds a reproducible set to define ...
+! ... as the bulk
 !-------------------------------------------------------------------------------
     region_loop1: do
        !!-----------------------------------------------------------------------
@@ -2462,9 +2462,9 @@ contains
 
 
 !-------------------------------------------------------------------------------
-!! Using the bulk definition, loop runs through checking which atom maps ...
-!! ... onto which through the bulk translation.
-!! Defines each atom's cell centre wyckoff atom
+! Using the bulk definition, loop runs through checking which atom maps ...
+! ... onto which through the bulk translation.
+! Defines each atom's cell centre wyckoff atom
 !-------------------------------------------------------------------------------
     allocate(wyckoff%spec(bas%nspec))
     do is=1,bas%nspec

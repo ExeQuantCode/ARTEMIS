@@ -433,7 +433,7 @@ contains
 
 !###############################################################################
 !###############################################################################
-!! M E T H O D   2
+! M E T H O D   2
 !###############################################################################
 !###############################################################################
 
@@ -519,8 +519,8 @@ contains
        end if
     end if
 
-!! 1st, get it to find best c axis shift to find the best shift.
-!! start off by having the shift reduce the gap to the size of the bond and search from there by step sizes depending on the difference
+! 1st, get it to find best c axis shift to find the best shift.
+! start off by having the shift reduce the gap to the size of the bond and search from there by step sizes depending on the difference
 
 
 
@@ -720,7 +720,7 @@ contains
 
 !###############################################################################
 !###############################################################################
-!! M E T H O D   4
+! M E T H O D   4
 !###############################################################################
 !###############################################################################
 
@@ -867,8 +867,8 @@ contains
 
 
 !-------------------------------------------------------------------------------
-!! If given bulk, then use the DOS' given
-!! Else, work out atom in slab that is the same
+! If given bulk, then use the DOS' given
+! Else, work out atom in slab that is the same
 !-------------------------------------------------------------------------------
     if(.not.lbulk)then
        lwyckoff=.true.
@@ -887,10 +887,10 @@ contains
 
 
 !-------------------------------------------------------------------------------
-!! Evaluates DON for each atom.
-!! Determines whether it is an atom to consider by calculating its ...
-!! ... dissimilarity to that of a same-species atom in the centre of the slab.
-!! For dissimilar atoms, number of nearest "missing" bonds is stored.
+! Evaluates DON for each atom.
+! Determines whether it is an atom to consider by calculating its ...
+! ... dissimilarity to that of a same-species atom in the centre of the slab.
+! For dissimilar atoms, number of nearest "missing" bonds is stored.
 !-------------------------------------------------------------------------------
     allocate(neighbour(2,bas%natom))
     if(present(max_bondlength))then
