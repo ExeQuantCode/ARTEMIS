@@ -1,5 +1,10 @@
 module artemis__terminations
-  !! Module for handling termination identification and generation
+  !! Module for surface termination identification and slab construction.
+  !!
+  !! Identifies chemically distinct surface terminations for a given Miller
+  !! plane by analysing atomic layer positions. Also provides routines to
+  !! build slab supercells with a chosen termination and to trim a slab to
+  !! a target thickness.
   use artemis__constants, only: real32
   use artemis__geom_rw,   only: basis_type, geom_write
   use artemis__misc,      only: sort_col

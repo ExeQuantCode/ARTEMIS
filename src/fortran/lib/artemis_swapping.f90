@@ -1,9 +1,9 @@
-!!!#############################################################################
-!!! Code written by Ned Thaddeus Taylor and Isiah Edward Mikel Rudkin 
-!!! Code part of the ARTEMIS group (Hepplestone research group).
-!!! Think Hepplestone, think HRG.
-!!!#############################################################################
 module artemis__swapping
+  !! Module for chemically constrained atomic swaps near the interface.
+  !!
+  !! Generates randomised swap configurations for atoms close to an interface
+  !! region. Swaps respect symmetry constraints and are weighted by proximity
+  !! to the interface plane using a Gaussian distribution.
   use artemis__constants, only: real32
   use coreutils__array, only: sort1D
   use artemis__misc_maths, only: gauss
@@ -12,22 +12,21 @@ module artemis__swapping
   use artemis__io_utils, only: err_abort
   implicit none
   real(real32) :: tiny=5.E-5_real32
+  !! Minimum fractional distance used as a floor when evaluating swap viability.
   logical :: lmirror
+  !! Whether mirror symmetry is enforced during swap generation.
   type(basis_map_type) :: bas_map
+  !! Atom mapping data used by symmetry checks during swapping.
 
   private
-  
+
   public :: rand_swapper
 
 
-!!!updated 2020/02/07
-
-
 contains
-!!!#############################################################################
-!!! Main function to be called from ARTEMIS
-!!!#############################################################################
+!###############################################################################
   function rand_swapper(lat,bas,axis,width,nswaps_per_cell,nswap,intf_loc,&
+    !! Main function to be called from ARTEMIS
        iswap,seed_arr,tol_sym, verbose, sigma,require_mirror) result(bas_arr)
     implicit none
     integer :: i,j,is,iout,itmp,count1
@@ -60,9 +59,9 @@ contains
     integer, intent(in) :: verbose
 
 
-!!!-----------------------------------------------------------------------------
-!!! initialises variables
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! initialises variables
+!-------------------------------------------------------------------------------
     grp%nsymop = 1
     nfail=50
     if(present(sigma))then
@@ -79,9 +78,9 @@ contains
     call random_seed(put=seed_arr)
 
 
-!!!-----------------------------------------------------------------------------
-!!! set up basis and positions list
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! set up basis and positions list
+!-------------------------------------------------------------------------------
     allocate(bas_list(bas%natom,3))
     allocate(pos_list(bas%natom,2))
     itmp=1
@@ -96,15 +95,15 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! find number of atoms within range of interface
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! find number of atoms within range of interface
+!-------------------------------------------------------------------------------
     dist=width/norm2(lat(axis,:))
 
 
-!!!!-----------------------------------------------------------------------------
-!!!! set number of permutations
-!!!!-----------------------------------------------------------------------------
+!!-----------------------------------------------------------------------------
+!! set number of permutations
+!!-----------------------------------------------------------------------------
     !    dtmp=lnsum(min(nabove,nbelow))
     !    dtmp=dtmp-lnsum(min(nabove,nbelow)-nswaps_per_cell)-lnsum(nswaps_per_cell)
     !    nperm=nint(exp(dtmp))
@@ -115,20 +114,20 @@ contains
     !       write(*,'(1X,A,I0)') "Resetting number of output structures to ",nperm
     !       nswap=nperm
     !    end if
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
     
     
-!!!-----------------------------------------------------------------------------
-!!! set up symmetries
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! set up symmetries
+!-------------------------------------------------------------------------------
     call grp%init(lat, tol_sym = tol_sym)
     call tmpbas%copy(bas, length = 4)
     call store_bas%copy(tmpbas, length = 4)
 
 
-!!!-----------------------------------------------------------------------------
-!!! set up array of bases
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! set up array of bases
+!-------------------------------------------------------------------------------
     allocate(bas_arr(nswap))
     do i=1,nswap
        allocate(bas_arr(i)%spec(bas%nspec))
@@ -139,11 +138,11 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! find symmetry that maps top interface onto bottom interface
-!!!-----------------------------------------------------------------------------
-!!! NOT NEEDED?
-!!! To Replace with
+!-------------------------------------------------------------------------------
+! find symmetry that maps top interface onto bottom interface
+!-------------------------------------------------------------------------------
+!! NOT NEEDED?
+!! To Replace with
     lmirror = .false.
     call check_sym(grp,tmpbas,lsave=.true., tol_sym=tol_sym)
     intf_sym_loop: do i = 1, grp%nsymop
@@ -190,9 +189,9 @@ contains
     
     
     dintf=intf_loc(1)
-!!!-----------------------------------------------------------------------------
-!!! finds number of atoms below and above the interface and records them
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! finds number of atoms below and above the interface and records them
+!-------------------------------------------------------------------------------
     select case(iswap)
     case(1)
        call check_intf(lat,bas,dintf,dist,lw_list,up_list,nbelow,nabove,bas_list,pos_list,axis) 
@@ -213,9 +212,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! swap atoms
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! swap atoms
+!-------------------------------------------------------------------------------
     !randomly swaps atoms from below to above the interface (and vice versa)
     select case(iswap)
     case(1)
@@ -272,21 +271,20 @@ contains
 
 
 end function rand_swapper
-!!!#############################################################################
+!###############################################################################
 
 
 
-!!!#############################################################################
-!!!#############################################################################
-!!! M E T H O D   1
-!!!#############################################################################
-!!!#############################################################################
+!###############################################################################
+!###############################################################################
+!! M E T H O D   1
+!###############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! finds number of atoms below and above the interface and records them
-!!!#############################################################################
+!###############################################################################
   subroutine check_intf(lat,bas,dintf,width,lw_list,up_list,nbelow,nabove,bas_list,pos_list,axis)
+    !! finds number of atoms below and above the interface and records them
     implicit none
     integer :: i,itmp1,itmp2
     integer :: nbelow,nabove,axis
@@ -324,14 +322,13 @@ end function rand_swapper
 
 
   end subroutine check_intf
-!!!#############################################################################
+!###############################################################################
 
 
 
-!!!#############################################################################
-!!! randomly swaps atoms from below to above the interface (and vice versa)
-!!!#############################################################################
+!###############################################################################
   subroutine rand_swap(bas,swap_bas,nabove,nbelow,nswaps_per_cell,up_list,lw_list)
+    !! randomly swaps atoms from below to above the interface (and vice versa)
     implicit none
     integer :: i,nfail
     integer :: itmp1,itmp2,old_itmp1
@@ -341,9 +338,9 @@ end function rand_swapper
     integer, allocatable, dimension(:,:) :: swap_list,up_list,lw_list
     type(basis_type) :: bas,swap_bas
 
-!!!-----------------------------------------------------------------------------
-!!! randomly select atoms above and below the interface
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! randomly select atoms above and below the interface
+!-------------------------------------------------------------------------------
     allocate(swap_list(nswaps_per_cell,2))
     swap_list=0
     itmp1 = 1
@@ -391,9 +388,9 @@ end function rand_swapper
     end do swap_loop
 
 
-!!!-----------------------------------------------------------------------------
-!!! swap chosen atoms with each other
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! swap chosen atoms with each other
+!-------------------------------------------------------------------------------
     do i=1,nswaps_per_cell
        swap_bas%spec(lw_list(swap_list(i,1),1))%atom(lw_list(swap_list(i,1),2),:)=&
             bas%spec(up_list(swap_list(i,2),1))%atom(up_list(swap_list(i,2),2),:)
@@ -413,22 +410,21 @@ end function rand_swapper
 
 
   end subroutine rand_swap
-!!!#############################################################################
+!###############################################################################
 
 
 
-!!!#############################################################################
-!!!#############################################################################
-!!! M E T H O D   2
-!!!#############################################################################
-!!!#############################################################################
+!###############################################################################
+!###############################################################################
+!! M E T H O D   2
+!###############################################################################
+!###############################################################################
 
 
 
-!!!#############################################################################
-!!! 
-!!!#############################################################################
+!###############################################################################
   subroutine check_intf_depth(lat,bas,axis,intf_loc,sigma,&
+    !! 
        spec_list,&
        lw_list,up_list,&
        lw_dist_list,up_dist_list,&
@@ -455,9 +451,9 @@ end function rand_swapper
     integer, allocatable, dimension(:,:), intent(out) :: lw_list,up_list
 
 
-!!!-----------------------------------------------------------------------------
-!!! Initialise tolerances and set up midpoints
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Initialise tolerances and set up midpoints
+!-------------------------------------------------------------------------------
     rtol = 0.1/norm2(lat(axis,:))
 
     midpoint(1) = (intf_loc(1) + intf_loc(2))/2
@@ -469,9 +465,9 @@ end function rand_swapper
          midpoint(2) = midpoint(2) - 1._real32
 
 
-!!!-----------------------------------------------------------------------------
-!!! Set up the list of atoms either side of the interface
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Set up the list of atoms either side of the interface
+!-------------------------------------------------------------------------------
     allocate(tmp_list1(bas%natom))
     allocate(tmp_list2(bas%natom))
     allocate(tmp_dist_list1(bas%natom))
@@ -504,9 +500,9 @@ end function rand_swapper
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! Move from temp to permanent arrays and sort
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Move from temp to permanent arrays and sort
+!-------------------------------------------------------------------------------
     allocate(lw_dist_list(nbelow))
     lw_dist_list(:nbelow) = tmp_dist_list1(:nbelow)
     call sort1D(lw_dist_list,tmp_list1(:nbelow))
@@ -516,9 +512,9 @@ end function rand_swapper
     call sort1D(up_dist_list,tmp_list2(:nabove))
 
 
-!!!-----------------------------------------------------------------------------
-!!! Set up lower and upper atom lists for later reference
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Set up lower and upper atom lists for later reference
+!-------------------------------------------------------------------------------
     allocate(lw_list(nbelow,2))
     do i=1,nbelow
        lw_list(i,1) = minloc(tmp_list1(i) - spec_list(:), dim = 1,&
@@ -535,14 +531,9 @@ end function rand_swapper
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! SET UP AN ATOM MAPPING HERE!!!!!
-!!!-----------------------------------------------------------------------------
-    
-
-!!!-----------------------------------------------------------------------------
-!!! Set up the weightings and closeness lists 
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Set up the weightings and closeness lists
+    !---------------------------------------------------------------------------
     allocate(lw_weight_list(nbelow))
     allocate(lw_close_list(nbelow))
     lw_weight_list(1) = gauss(pos=lw_dist_list(1),centre=0._real32,sigma=sigma)
@@ -570,13 +561,12 @@ end function rand_swapper
 
 
   end subroutine check_intf_depth
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! 
-!!!#############################################################################
+!###############################################################################
   subroutine rand_swap_depth(bas,swap_bas,&
+    !! 
        nswaps_per_cell,sigma,small_sigma,&
        spec_list,&
        lw_list,up_list,&
@@ -616,23 +606,23 @@ end function rand_swapper
 ! exp(distance
 
 
-!!!-----------------------------------------------------------------------------
-!!! Identifies nbelow and above
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Identifies nbelow and above
+!-------------------------------------------------------------------------------
     nbelow = size(lw_close_list)
     nabove = size(up_close_list)
 
 
-!!!-----------------------------------------------------------------------------
-!!! Allocates and initialises arrays
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Allocates and initialises arrays
+!-------------------------------------------------------------------------------
     allocate(tlw_weight_list, source=lw_weight_list)
     allocate(tup_weight_list, source=up_weight_list)
 
 
-!!!-----------------------------------------------------------------------------
-!!! Set up the converter lists between the unswapped and swapped system
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Set up the converter lists between the unswapped and swapped system
+!-------------------------------------------------------------------------------
     allocate(lw_convert(nbelow))
     do i=1,nbelow
        lw_convert(i) = i
@@ -644,9 +634,9 @@ end function rand_swapper
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! Choose swapping sets
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Choose swapping sets
+!-------------------------------------------------------------------------------
     !allocate(swap_list(nswaps_per_cell,2))
     allocate(swap_list(min(nswaps_per_cell,nabove,nbelow),2))
     i = 1
@@ -764,9 +754,9 @@ end function rand_swapper
        ! have a lw_convert list between the two.
 
   contains
-!!!-----------------------------------------------------------------------------
-!!! Internal functions
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Internal functions
+!-------------------------------------------------------------------------------
     function recalc_rand_distrib(dist_list,conversion,close_list,swap_list,sigma,small_sigma) result(new_list)
       implicit none
       integer :: i,j
@@ -804,10 +794,10 @@ end function rand_swapper
 
 
     end function recalc_rand_distrib
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 
   end subroutine rand_swap_depth
-!!!#############################################################################
+!###############################################################################
 
 
 

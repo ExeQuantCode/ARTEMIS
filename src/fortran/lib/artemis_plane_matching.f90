@@ -1,27 +1,24 @@
-!!!#############################################################################
-!!! Code written by Isiah Edward Mikel Rudkin and Ned Thaddeus Taylor
-!!! Code part of the ARTEMIS group (Hepplestone research group).
-!!! Think Hepplestone, think HRG.
-!!!#############################################################################
 module artemis__plane_matching
+  !! Module for ranking and sorting lattice match candidates.
+  !!
+  !! Provides sort procedures to rank interface candidates by vector length,
+  !! angle, and area mismatches. Both tolerance-weighted and absolute versions
+  !! are supplied for the main sort and the combined match-and-tolerance sort.
   use artemis__constants, only: real32, INF, pi
   use artemis__misc_linalg, only: cross,get_angle,get_area,find_tf,&
        reduce_vec_gcd,gcd, inverse_2x2, find_tf_2x2, uvec
   use artemis__misc_types, only: tol_type
   implicit none
-  !! importance of vector, angle, and area
   real(real32), dimension(3) :: vaa_weighting=(/1._real32,5._real32,2.5_real32/)
-
-
-!!!updated 2021/11/11
+  !! Relative importance weights for vector length, angle, and area mismatch
+  !! in the overall match score. Default: (1.0, 5.0, 2.5).
 
 
 contains
-!!!#############################################################################
-!!! Subroutine that sorts mainlooplist into ascending order based on ...
-!!! ... total tolerance size.              
-!!!#############################################################################
+!###############################################################################
   subroutine datasort(list_in,tol_in)
+    !! Subroutine that sorts mainlooplist into ascending order based on ...
+    !! ... total tolerance size.              
     implicit none
     real(real32), dimension(:,:,:) :: list_in
     real(real32), allocatable, dimension(:,:,:) :: list_out
@@ -43,14 +40,13 @@ contains
     list_in = list_out
 
   end subroutine datasort
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Subroutine that sorts saved_tolerances into ascending order based on ...
-!!! ... total tolerance size  
-!!!#############################################################################
+!###############################################################################
   subroutine datasortmain(list_in,mat1_in,mat2_in,trans1_in,trans2_in)
+    !! Subroutine that sorts saved_tolerances into ascending order based on ...
+    !! ... total tolerance size  
     implicit none
     integer :: len
     integer :: a,dummylocation
@@ -85,14 +81,13 @@ contains
     trans2_in = trans2_out
 
   end subroutine datasortmain
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Subroutine that sorts list into ascending order based on ...
-!!! ... individual tolerance size.              
-!!!#############################################################################
+!###############################################################################
   subroutine datasort_tols(list_in,tol_in)
+    !! Subroutine that sorts list into ascending order based on ...
+    !! ... individual tolerance size.              
     implicit none
     integer :: i,j,len,ntol_features
     real(real32), allocatable,dimension(:) :: vtmp1
@@ -129,14 +124,13 @@ contains
     list_in = list_out
 
   end subroutine datasort_tols
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Subroutine that sorts saved_tolerances into ascending order based on ...
-!!! ... total tolerance size  
-!!!#############################################################################
+!###############################################################################
   subroutine datasortmain_tols(tol,mat1,mat2,trans1,trans2)
+    !! Subroutine that sorts saved_tolerances into ascending order based on ...
+    !! ... total tolerance size  
     implicit none
     integer :: i,j,len
     real(real32), dimension(3) :: vtmp1
@@ -179,14 +173,13 @@ contains
 
 
   end subroutine datasortmain_tols
-!!!#############################################################################
+!###############################################################################
 
     
-!!!#############################################################################
-!!! Function that checks if the matching planes we have found are a ...
-!!! ...duplicate of any others already saved to the list
-!!!#############################################################################
+!###############################################################################
   function is_duplicate(list1,list2,lat1,lat2,sym1,sym2) result(outval)
+    !! Function that checks if the matching planes we have found are a ...
+    !! ...duplicate of any others already saved to the list
     implicit none
     integer :: i,len
     logical :: outval
@@ -226,14 +219,13 @@ contains
     
 
   end function is_duplicate
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Function that checks for duplicates of the miller vector.
-!!! Outputs the boolean logic .true. if the vector can be reduced.
-!!!#############################################################################
+!###############################################################################
   function is_unique(miller,sym) result(outval)
+    !! Function that checks for duplicates of the miller vector.
+    !! Outputs the boolean logic .true. if the vector can be reduced.
     implicit none
     integer :: i,j
     real(real32) :: tol
@@ -289,20 +281,20 @@ contains
     end do symloop1
 
   end function is_unique
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Checks whether vec1 is a unique vector after symmetry transformation
-!!! This is used to check that the following match is caught if lat2's a=b
-!!! lat1:
-!!!   1 0
-!!!   0 1
-!!! lat2:
-!!!   1 0     or    0 1
-!!!   0 1           1 0
-!!!#############################################################################
-!!! WARNING!!! NOT CURRENTLY USED, CHECK USE OF IT
+!###############################################################################
+!! Checks whether vec1 is a unique vector after symmetry transformation
+!! This is used to check that the following match is caught if lat2's a=b
+!! lat1:
+!!   1 0
+!!   0 1
+!! lat2:
+!!   1 0     or    0 1
+!!   0 1           1 0
+!###############################################################################
+  !! @deprecated Not currently used; retained for reference.
   function is_unique_set(vec1,vec2,sym) result(outval)
     implicit none
     integer :: i,j
@@ -359,14 +351,13 @@ contains
 
 
   end function is_unique_set
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! This function needs to compare previous lattice matches by performing ...
-!!! ... symmetry operations on them to see if they are identical matches
-!!!#############################################################################
+!###############################################################################
   function is_unique_match(sym1,sym2,check_set,test_list,lw_check,up_check,up_list) result(lunique)
+    !! This function needs to compare previous lattice matches by performing ...
+    !! ... symmetry operations on them to see if they are identical matches
     implicit none
     integer :: i,isym,jsym
     integer :: nlist,matched_loc
@@ -397,17 +388,17 @@ contains
     !test2(2,:) = [ 0, -2 ]
 
 
-!!!------------------------------------------------------------------------
-!!! initialises tolerance and output
-!!!------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! initialises tolerance and output
+!-------------------------------------------------------------------------------
     tol=1.E-5_real32
     lunique = .true.
 
 
-!!!------------------------------------------------------------------------
-!!! checks for whether input matrices or vectors.
-!!! converts either into inmat
-!!!------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!! checks for whether input matrices or vectors.
+!! converts either into inmat
+!-------------------------------------------------------------------------------
     if(present(check_set))then
        inmat = check_set
     else
@@ -418,10 +409,10 @@ contains
     end if
 
 
-!!!------------------------------------------------------------------------
-!!! checks for whether input list contains lw_tfmat also.
-!!! if not, uses inmat(:2,:2) for it
-!!!------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!! checks for whether input list contains lw_tfmat also.
+!! if not, uses inmat(:2,:2) for it
+!-------------------------------------------------------------------------------
     if(present(test_list))then
        nlist=size(test_list(:,1,1))
        allocate(mat_testlist, source=test_list)
@@ -437,9 +428,9 @@ contains
     end if
 
 
-!!!------------------------------------------------------------------------
-!!! finds tfmat between the list of stored matches
-!!!------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! finds tfmat between the list of stored matches
+!-------------------------------------------------------------------------------
     allocate(tf_testlist(nlist,2,2))
     do i=1,nlist
        tf_testlist(i,:2,:2) = find_tf_2x2(&
@@ -448,10 +439,10 @@ contains
     end do
 
 
-!!!------------------------------------------------------------------------
-!!! loop to apply symmetries to determine whether input set is unique ...
-!!! ... when compared against the list
-!!!------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!! loop to apply symmetries to determine whether input set is unique ...
+!! ... when compared against the list
+!-------------------------------------------------------------------------------
     matched_loc = 0
     sym_loop1: do isym = 1, size(sym1,dim=3), 1
        !mat1 = matmul(inmat(:2,:2),transpose(sym1(:2,:2,isym)))
@@ -511,9 +502,9 @@ contains
     end do sym_loop1
 
 
-!!!------------------------------------------------------------------------
-!!! saves the smallest match if successful
-!!!------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! saves the smallest match if successful
+!-------------------------------------------------------------------------------
     if(.not.lunique)then
        if(abs(get_area([ inmat(:2,:2) ], [ inmat(:2,3:4) ])).lt.&
             abs(&
@@ -534,27 +525,26 @@ contains
     !     all(abs(inmat(:2,3:4)-test2).lt.tol)) stop
 
   end function is_unique_match
-!!!#############################################################################
+!###############################################################################
 
 
 
 
 
-!!!#############################################################################
-!!!#############################################################################
-!!!                        M A I N   S E C T I O N
-!!!#############################################################################
-!!!#############################################################################
+!###############################################################################
+!###############################################################################
+!!                        M A I N   S E C T I O N
+!###############################################################################
+!###############################################################################
 
 
 
 
   
-!!!#############################################################################
-!!! Function to match lattices of two input planes.
-!!! Matching plane (ab) from each lattice.
-!!!#############################################################################
+!###############################################################################
   subroutine cell_match(&
+    !! Function to match lattices of two input planes.
+    !! Matching plane (ab) from each lattice.
        tol,lat1,lat2,&
        transforms1,transforms2,&
        ntransforms,matched_tols,sym1,sym2)
@@ -586,13 +576,13 @@ contains
     real(real32), dimension(:,:,:), intent(in), optional :: sym1,sym2
   
 
-!!! Layout of each of the 1000 cells:
-!!!
-!!! (int num of latvec1a, int no. of latvec1b), (int num of latvec2a, int num of latvec2b)
-!!! (int num of latvec1a, int no. of latvec1b), (int num of latvec2a, int num of latvec2b)
-!!!                                        =
-!!! (Vector in the first plane) that matches in magnitude to (Vector in the second plane)
-!!! (Vector in the first plane) that matches in magnitude to (Vector in the second plane)
+!! Layout of each of the 1000 cells:
+!!
+!! (int num of latvec1a, int no. of latvec1b), (int num of latvec2a, int num of latvec2b)
+!! (int num of latvec1a, int no. of latvec1b), (int num of latvec2a, int num of latvec2b)
+!!                                        =
+!! (Vector in the first plane) that matches in magnitude to (Vector in the second plane)
+!! (Vector in the first plane) that matches in magnitude to (Vector in the second plane)
 
 
   !! Number of entries in each of the lists.
@@ -613,9 +603,9 @@ contains
   ! Last Component (5); Total weighted tolerance on everything
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Setting up tolerances !!! 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !---------------------------------------------------------------------------
+  ! Set up tolerances
+  !---------------------------------------------------------------------------
   tiny = 1.E-5_real32
   tol_up_ang = 1._real32 + tol%ang/(2._real32*pi)
   tol_dw_ang = 1._real32 - tol%ang/(2._real32*pi)
@@ -629,21 +619,19 @@ contains
   matched_tols(:,:) = INF
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Assign the vectors a and b for the first and second lattice,  !!!
-!!! -   1a and 1b refer to the a and b lattice vectors for lattice 1
-!!!       These vectors form the planes we want to match.         !!!
-!!! -   2a and 2b refer to the a and b lattice vectors for lattice 2
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !---------------------------------------------------------------------------
+  ! Assign lattice vectors for the first and second lattice.
+  ! 1a/1b and 2a/2b are the a and b lattice vectors forming the planes to match.
+  !---------------------------------------------------------------------------
   lat1_veca = lat1(1,:)
   lat1_vecb = lat1(2,:)
   lat2_veca = lat2(1,:)
   lat2_vecb = lat2(2,:)
 
  
-!!!------------------------------------------------------------------------
-!!! set up the vectors on lower plane
-!!!------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! set up the vectors on lower plane
+!-------------------------------------------------------------------------------
   nvec1=0
   allocate(numstore_1((2*(tol%maxsize+1))**2,2))
   allocate(latstore_1((2*(tol%maxsize+1))**2,3))
@@ -671,9 +659,9 @@ contains
   call move_alloc(darrtmp1,latstore_1)
   
 
-!!!------------------------------------------------------------------------
-!!! set up the vectors on upper plane
-!!!------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! set up the vectors on upper plane
+!-------------------------------------------------------------------------------
   nvec2=0
   allocate(numstore_2((2*(tol%maxsize+1))**2,2))
   allocate(latstore_2((2*(tol%maxsize+1))**2,3))
@@ -701,18 +689,19 @@ contains
   call move_alloc(darrtmp1,latstore_2)
 
 
-!!!------------------------------------------------------------------------
-!!! lower lattice vector 1 loop
-!!!------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! lower lattice vector 1 loop
+!-------------------------------------------------------------------------------
   total_list_count = 0
   MAINLOOP1: do l=1,nvec1
      tmpmat(1,:2) = numstore_1(l,:2)
      unit_vec = uvec(real(numstore_1(l,:2), real32))
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Finding the best fit options for the first lattice vector. !!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+     !---------------------------------------------------------------------------
+     ! Find best-fit options for the first lattice vector
+     !---------------------------------------------------------------------------
      len_list_1a = 0
      reference_mag = norm2(latstore_1(l,:)) !! mag of lattice vector to fit to
      loop102: do j=1,nvec2                      !! matcing to 1st lattice vector
@@ -730,9 +719,9 @@ contains
      end do loop102
 
 
-!!!------------------------------------------------------------------------
-!!! lower lattice vector 2 loop
-!!!------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! lower lattice vector 2 loop
+!-------------------------------------------------------------------------------
      MAINLOOP2: do m=1,nvec1
         if(all(abs(unit_vec-uvec(real(numstore_1(m,:2), real32))).lt.1.E-6_real32)) cycle MAINLOOP2
         if(all(abs(unit_vec+uvec(real(numstore_1(m,:2), real32))).lt.1.E-6_real32)) cycle MAINLOOP2
@@ -743,7 +732,7 @@ contains
         reference_angle = get_angle([latstore_1(l,:)],[latstore_1(m,:)])
         if (abs(reference_angle) .lt. tiny) cycle MAINLOOP2 
         
-        !!! CHANGE IT TO TAKE IN A 2x2 MATRIX LATER !!!
+        !! CHANGE IT TO TAKE IN A 2x2 MATRIX LATER
         if(norm2(latstore_1(l,:)).gt.norm2(latstore_1(m,:))) cycle MAINLOOP2
         if(dot_product(latstore_1(l,:),latstore_1(m,:)).gt.&
              (0.5_real32*dot_product(latstore_1(l,:),latstore_1(l,:))))&
@@ -753,9 +742,10 @@ contains
         !     cycle MAINLOOP2
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Finding the best fit options for the second lattice vector. !!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        !---------------------------------------------------------------------------
+        ! Find best-fit options for the second lattice vector
+        !---------------------------------------------------------------------------
         len_list_1b = 0
         reference_mag = norm2(latstore_1(m,:))
         loop103: do j=1,nvec2
@@ -772,9 +762,10 @@ contains
         end do loop103
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Checking the angle between all possible sets of vectors.   !!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
+
+        !---------------------------------------------------------------------------
+        ! Check the angle between all possible vector pairs
+        !---------------------------------------------------------------------------
         len_list_final = 0
         loop109: do i=1, len_list_1a
            tmpmat(1,3:4) = nint(list_1a(i,:2))
@@ -828,10 +819,10 @@ contains
         end do loop109
     
         
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Searching for the best (max_matches) fits and forcing the !!!
-!!! output list down to that size                             !!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        !---------------------------------------------------------------------------
+        ! Search for the best (max_matches) fits; trim the list to that size
+        !---------------------------------------------------------------------------
         loop112: do i=1, len_list_final
            mat1(1,:2)=real(numstore_1(l,:2),real32)
            mat1(2,:2)=real(numstore_1(m,:2),real32)
@@ -881,10 +872,11 @@ contains
   ntransforms = total_list_count
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Sorts the data from main loop list into transformation matrices for output !!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  if (allocated(transforms1)) deallocate(transforms1) !! From previous iterations
+
+  !---------------------------------------------------------------------------
+  ! Sort the main loop list into transformation matrices for output
+  !---------------------------------------------------------------------------
+  if (allocated(transforms1)) deallocate(transforms1) ! From previous iterations
   if (allocated(transforms2)) deallocate(transforms2) !! ""
 
   allocate(transforms1(ntransforms,2,2))
@@ -897,7 +889,7 @@ contains
 
 
 end subroutine cell_match
-!!!#############################################################################
+!###############################################################################
   
  
 end module artemis__plane_matching

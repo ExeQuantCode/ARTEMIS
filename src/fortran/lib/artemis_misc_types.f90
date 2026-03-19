@@ -53,7 +53,6 @@ module artemis__misc_types
      !! Lattice mismatch vector.
      real(real32), dimension(3) :: shift = 0._real32
      !! Interface shift vector.
-     ! real(real32), dimension(:,:) :: swaps !!! UNSURE HOW TO DO THIS
      real(real32) :: swap_density = 0._real32
      !! Atomic swap density.
      real(real32), dimension(2) :: approx_eff_swap_conc = 0._real32

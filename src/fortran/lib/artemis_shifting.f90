@@ -1,9 +1,9 @@
-!!!#############################################################################
-!!! Code written by Isiah Edward Mikel Rudkin and Ned Thaddeus Taylor
-!!! Code part of the ARTEMIS group (Hepplestone research group).
-!!! Think Hepplestone, think HRG.
-!!!#############################################################################
 module artemis__shifting
+  !! Module for generating lateral shift configurations between slab surfaces.
+  !!
+  !! Provides routines to identify the interfacial atoms from each slab and
+  !! evaluate pairwise atom separations across a grid of in-plane shifts,
+  !! returning the highest-quality offsets for use by the generator.
   use artemis__constants, only: real32, pi, INF
   use artemis__misc_maths, only: get_nth_plane
   use artemis__geom_rw, only: basis_type,geom_write
@@ -14,30 +14,32 @@ module artemis__shifting
   implicit none
 
   real(real32) :: f_scale = 0.5_real32
+  !! Fractional scale factor for the interface depth search.
   real(real32) :: g_scale = 8._real32/3._real32
+  !! Gaussian scale factor used in DON-based shift scoring.
 
   private
 
   type bulk_DON_type
+     !! Container for per-species density-of-neighbours data for a bulk region.
      type(den_of_neigh_type), allocatable, dimension(:) :: spec
+     !! DON data for each species.
   end type bulk_DON_type
 
-  type map_type   
-     integer, allocatable, dimension(:,:,:) :: spec       
+  type map_type
+     !! Integer map of atoms distributed across a 3-D grid of shift steps.
+     integer, allocatable, dimension(:,:,:) :: spec
+     !! Species assignment at each grid point.
   end type map_type
 
 
   public :: get_fit_shifts,get_descriptive_shifts,get_shifts_DON,bulk_DON_type
 
-
-!!!updated  2020/02/25
-
   
 contains 
-!!!#############################################################################
-!!! generates the top and bot bases near the interface
-!!!#############################################################################
+!###############################################################################
   subroutine get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc,depth)
+    !! generates the top and bot bases near the interface
     implicit none
     integer :: i,is,ia,itop,ibot,axis,count1
     real(real32) :: centre,dist,dist_max
@@ -51,9 +53,9 @@ contains
     type(basis_type), allocatable, dimension(:) :: splitbas
 
 
-!!!-----------------------------------------------------------------------------
-!!! allocating basis top and bottom
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! allocating basis top and bottom
+!-------------------------------------------------------------------------------
     allocate(bas_top%spec(bas%nspec))
     allocate(bas_bot%spec(bas%nspec))
     bas_top%nspec = bas%nspec
@@ -66,9 +68,9 @@ contains
     if(present(depth))then
        centre=intf_loc(1)
        dist=depth/norm2(lat(axis,:))
-!!!-----------------------------------------------------------------------------
-!!! Loop to find the number of each species in each plane
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Loop to find the number of each species in each plane
+!-------------------------------------------------------------------------------
        LOOP101: do is=1,bas%nspec ! Looping over the species
           LOOP102: do ia=1,bas%spec(is)%num ! Looping over the atom
              IF101: if ( ( bas%spec(is)%atom(ia,axis).gt.centre ) .and. &
@@ -84,9 +86,9 @@ contains
        bas_bot%natom = sum(bas_bot%spec(:)%num)
 
 
-!!!-----------------------------------------------------------------------------
-!!! Allocate the required space in each bas and species.
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Allocate the required space in each bas and species.
+!-------------------------------------------------------------------------------
        LOOP105: do is=1,bas%nspec
           allocate(bas_top%spec(is)%atom(bas_top%spec(is)%num,3))
           allocate(bas_bot%spec(is)%atom(bas_bot%spec(is)%num,3))
@@ -95,9 +97,9 @@ contains
        end do LOOP105
 
 
-!!!-----------------------------------------------------------------------------
-!!! Loop to add all the info from bas into bas_top and bas_bot
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Loop to add all the info from bas into bas_top and bas_bot
+!-------------------------------------------------------------------------------
        LOOP103: do is=1,bas%nspec ! Looping over the species
           itop = 0
           ibot = 0
@@ -207,14 +209,13 @@ contains
 
     return
   end subroutine get_top_bot_basis
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Function that figures out the best shift for the planes given the ...
-!!! ... required minimum bulk bond length.            
-!!!#############################################################################
+!###############################################################################
   function get_fit_shifts(lat,bas,bond,axis,intf_loc,depth,nstore,itmp1,itmp2) result(best_shifts)
+    !! Function that figures out the best shift for the planes given the ...
+    !! ... required minimum bulk bond length.            
     real(real32) :: depth,bond ! the depth into the material we are interested (physical size in the c direction).
     integer :: i
     type(basis_type) :: bas_bot,bas_top
@@ -234,9 +235,6 @@ contains
     real(real32), dimension(3,3) :: lat !The lattice input by interfaces.f90
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Setting up variables from interfaces.f90 !!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     num_steps = 100
     num_c_shifts = 10
     if(present(itmp1)) num_steps=itmp1
@@ -251,25 +249,19 @@ contains
        call get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc,depth)
     end if
 
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Looping through different plane allignments (shifts) and finding the best one !!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !---------------------------------------------------------------------------
+    ! Loop through in-plane shift grid and evaluate average min separation
+    !---------------------------------------------------------------------------
     allocate(avg_min_atom_sep(num_steps,num_steps,num_c_shifts))
     avg_min_atom_sep = avgminsep(lat,bas_top,bas_bot,num_steps,num_c_shifts,depth_bascoord)
 
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Finding the best match from our shifts.   !!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !---------------------------------------------------------------------------
+    ! Find the highest-scoring shifts from the grid
+    !---------------------------------------------------------------------------
     best_shifts = findbestfits(bond,avg_min_atom_sep,num_steps,num_c_shifts,nstore,depth_bascoord)
     best_shifts(:,axis)=best_shifts(:,axis)
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!       - Output-        !!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! do j=1,num_c_shifts !output to text files
     !    unit=100+j
     !    open(unit=unit,file="output1.txt")
@@ -280,14 +272,13 @@ contains
     write(*,'(4(F0.5,2X))') (best_shifts(i,:),i=1,nstore)
 
   end function get_fit_shifts
-!!!#########################################################################
+!###############################################################################
 
 
-!!!#########################################################################
-!!! Function that finds the best match between the average interface ...
-!!! ... minimum bond length and the bulk minimum bond length            
-!!!#########################################################################
+!###############################################################################
   function findbestfits(bulkbond,avg_min_sep,num_steps,num_c_shifts,num_best_shifts,depth) result(best_shifts)
+    !! Function that finds the best match between the average interface ...
+    !! ... minimum bond length and the bulk minimum bond length            
     implicit none
     real(real32), dimension(:,:,:) :: avg_min_sep
     real(real32) :: bulkbond,current_difference,min_difference,depth
@@ -333,14 +324,13 @@ contains
     end do shiftloop
 
   end function findbestfits
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Subroutine that finds the average minimum atomic seperation ...
-!!! ... between any atoms in the top and bottom planes
-!!!#############################################################################
+!###############################################################################
   function avgminsep(lat,plane_up,plane_dw,num_steps,num_c_shifts,depth) result(avg_min_sep)
+    !! Subroutine that finds the average minimum atomic seperation ...
+    !! ... between any atoms in the top and bottom planes
     implicit none
     type(basis_type) :: plane_up,plane_dw,tplane_up,tplane_dw
     real(real32) :: avg_sep_up,avg_sep_dw,depth
@@ -390,13 +380,12 @@ contains
 
 
   end function avgminsep
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! finds average minimum separation between two planes
-!!!#############################################################################
+!###############################################################################
   function find_avg_min_sep(lat,plane_1,plane_2) result(avg_min_sep)
+    !! finds average minimum separation between two planes
     implicit none
     integer :: is_1,ia_1,is_2,ia_2,j
     real(real32) :: avg_min_sep,min_sep,cur_sep
@@ -438,24 +427,23 @@ contains
 
 
   end function find_avg_min_sep
-!!!#############################################################################
+!###############################################################################
 
 
 
-!!!#############################################################################
-!!!#############################################################################
-!!! M E T H O D   2
-!!!#############################################################################
-!!!#############################################################################
+!###############################################################################
+!###############################################################################
+!! M E T H O D   2
+!###############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Finds best c axis separation, then finds the most descriptive set of ...
-!!! ... shifts for that separation (i.e. the ones that fit the best and ...
-!!! ... worst to that of the average bulk bond).
-!!! Outputs best, then worst, then 2nd best, then 2nd worst, etc.
-!!!#############################################################################
+!###############################################################################
   function get_descriptive_shifts(lat,bas,bond,axis,intf_loc,depth,nstore,c_scale,lprint) result(res_shifts)
+    !! Finds best c axis separation, then finds the most descriptive set of ...
+    !! ... shifts for that separation (i.e. the ones that fit the best and ...
+    !! ... worst to that of the average bulk bond).
+    !! Outputs best, then worst, then 2nd best, then 2nd worst, etc.
     implicit none
     integer :: is
     integer :: nstore,axis,num_steps
@@ -471,9 +459,9 @@ contains
 
     num_steps = 50
     allocate(res_shifts(nstore,3))
-!!!-----------------------------------------------------------------------------
-!!! separates basis into atoms above and below interface within a depth window
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! separates basis into atoms above and below interface within a depth window
+!-------------------------------------------------------------------------------
     if(depth.eq.0._real32)then
        call get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc)
     else
@@ -481,9 +469,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! finds the current vacuum separation at the interface
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! finds the current vacuum separation at the interface
+!-------------------------------------------------------------------------------
     allocate(specval_bot(bas%nspec))
     allocate(specval_top(bas%nspec))
     specval_bot=-huge(0._real32)
@@ -499,9 +487,9 @@ contains
     cur_vac=(minval(specval_top)-maxval(specval_bot))*norm2(lat(axis,:))
 
 
-!!!-----------------------------------------------------------------------------
-!!! finds optimal separation for interface (based on average min bulk bond idea)
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! finds optimal separation for interface (based on average min bulk bond idea)
+!-------------------------------------------------------------------------------
     do is=1,bas_top%nspec
        bas_top%spec(is)%atom(:,axis) = &
             bas_top%spec(is)%atom(:,axis) + (bond - cur_vac)/norm2(lat(axis,:))
@@ -512,9 +500,9 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! finds descriptive set of shifts parallel to interface for supplied c shift
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! finds descriptive set of shifts parallel to interface for supplied c shift
+!-------------------------------------------------------------------------------
     !res_shifts(:,3) = c_shift + (bond - cur_vac)/norm2(lat(axis,:))
     res_shifts(:,3) = c_shift + bond/norm2(lat(axis,:))
     res_shifts(:,1:2) = get_descriptive_ab_shifts(lat,bas_top,bas_bot,bond,axis,nstore,num_steps)
@@ -531,21 +519,20 @@ contains
        end if
     end if
 
-!!! 1st, get it to find best c axis shift to find the best shift.
-!!! start off by having the shift reduce the gap to the size of the bond and search from there by step sizes depending on the difference
+!! 1st, get it to find best c axis shift to find the best shift.
+!! start off by having the shift reduce the gap to the size of the bond and search from there by step sizes depending on the difference
 
 
 
   end function get_descriptive_shifts
-!!!#############################################################################
+!###############################################################################
 
 
 
-!!!#############################################################################
-!!! Subroutine that finds the average minimum atomic seperation ...
-!!! ... between any atoms in the top and bottom planes
-!!!#############################################################################
+!###############################################################################
   function get_c_shift(lat,plane_up,plane_dw,bond,axis,num_steps) result(c_shift)
+    !! Subroutine that finds the average minimum atomic seperation ...
+    !! ... between any atoms in the top and bottom planes
     implicit none
     integer :: num_steps,count1
     integer :: ia,ib,is_up,ia_up,axis
@@ -557,16 +544,16 @@ contains
     real(real32), dimension(3,3) :: lat
 
 
-!!!-----------------------------------------------------------------------------
-!!! Clone upper basis for editing
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Clone upper basis for editing
+!-------------------------------------------------------------------------------
     call tplane_up%copy(plane_up)
     allocate(avg_min_sep(num_steps,num_steps))
 
 
-!!!-----------------------------------------------------------------------------
-!!! Initialise variables
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Initialise variables
+!-------------------------------------------------------------------------------
     tol=1.E-2_real32/norm2(lat(axis,:))
     count1=0
     prev_min_bond=0._real32
@@ -575,10 +562,10 @@ contains
     avg_min_sep = huge(0._real32)
 
 
-!!!-----------------------------------------------------------------------------
-!!! Loop to change c_shift in order to find optimal c_shift
-!!!-----------------------------------------------------------------------------
-    LOOP5C: do !!! FIX WHAT avg_min_sep IS ALLOCATED AS
+!-------------------------------------------------------------------------------
+! Loop to change c_shift in order to find optimal c_shift
+!-------------------------------------------------------------------------------
+    LOOP5C: do ! Loop to change c_shift to find optimal c_shift
        count1=count1+1
 
        LOOP5A: do ia=0,num_steps-1 !loop through shifts in a
@@ -643,15 +630,14 @@ contains
 
 
   end function get_c_shift
-!!!#############################################################################
+!###############################################################################
 
 
 
-!!!#############################################################################
-!!! Subroutine that finds the average minimum atomic seperation ...
-!!! ... between any atoms in the top and bottom planes
-!!!#############################################################################
+!###############################################################################
   function get_descriptive_ab_shifts(lat,plane_up,plane_dw,bond,axis,nstore,num_steps) result(ab_shifts)
+    !! Subroutine that finds the average minimum atomic seperation ...
+    !! ... between any atoms in the top and bottom planes
     implicit none
     integer :: nstore,num_steps,count1
     integer :: ia,ib,is_up,ia_up,axis,iden,inum
@@ -728,22 +714,21 @@ contains
 
 
   end function get_descriptive_ab_shifts
-!!!#############################################################################
+!###############################################################################
 
 
 
-!!!#############################################################################
-!!!#############################################################################
-!!! M E T H O D   4
-!!!#############################################################################
-!!!#############################################################################
+!###############################################################################
+!###############################################################################
+!! M E T H O D   4
+!###############################################################################
+!###############################################################################
 
 
 
-!!!#############################################################################
-!!! generate shifts by filling missing neighours for surface atoms
-!!!#############################################################################
+!###############################################################################
   function get_shifts_DON(bas,axis,intf_loc,nstore,tol_sym,c_scale,offset,&
+    !! generate shifts by filling missing neighours for surface atoms
        bulk_DON,bulk_map,verbose,max_bondlength) result(res_shifts)
     use artemis__sym, only: gldfnd,confine_type
     use artemis__geom_utils, only: get_bulk,wyck_spec_type,get_wyckoff
@@ -821,9 +806,9 @@ contains
 
     verbose_ = 0
     if(present(verbose)) verbose_ = verbose
-!!!-----------------------------------------------------------------------------
-!!! check if bulk DONs supplied
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! check if bulk DONs supplied
+!-------------------------------------------------------------------------------
     if(present(bulk_DON).and.present(bulk_map))then
        lbulk=.true.
        allocate(map(1)%spec,source=bulk_map)
@@ -832,16 +817,16 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! sets up step size
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! sets up step size
+!-------------------------------------------------------------------------------
     allocate(res_shifts(nstore,3))
     res_shifts=0._real32
 
 
-!!!-----------------------------------------------------------------------------
-!!! separates basis into atoms above and below interface within a depth window
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! separates basis into atoms above and below interface within a depth window
+!-------------------------------------------------------------------------------
     confine%l=.true.
     confine%axis=axis
     allocate(trans(minval(bas%spec(:)%num,dim=1),3))
@@ -861,9 +846,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! determines repeated translations within the cell (reduces shift by that)
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! determines repeated translations within the cell (reduces shift by that)
+!-------------------------------------------------------------------------------
     min_trans=1._real32
     do i=1,2
        call gldfnd(confine, splitbas(i), splitbas(i), trans, ntrans, tol_sym)
@@ -881,10 +866,10 @@ contains
     if(verbose_.eq.1) write(*,*) "repeated_trans:",min_trans
 
 
-!!!-----------------------------------------------------------------------------
-!!! If given bulk, then use the DOS' given
-!!! Else, work out atom in slab that is the same
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!! If given bulk, then use the DOS' given
+!! Else, work out atom in slab that is the same
+!-------------------------------------------------------------------------------
     if(.not.lbulk)then
        lwyckoff=.true.
        do i=1,2
@@ -901,12 +886,12 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! Evaluates DON for each atom.
-!!! Determines whether it is an atom to consider by calculating its ...
-!!! ... dissimilarity to that of a same-species atom in the centre of the slab.
-!!! For dissimilar atoms, number of nearest "missing" bonds is stored.
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!! Evaluates DON for each atom.
+!! Determines whether it is an atom to consider by calculating its ...
+!! ... dissimilarity to that of a same-species atom in the centre of the slab.
+!! For dissimilar atoms, number of nearest "missing" bonds is stored.
+!-------------------------------------------------------------------------------
     allocate(neighbour(2,bas%natom))
     if(present(max_bondlength))then
        dist_max = max_bondlength
@@ -1058,9 +1043,9 @@ contains
     deallocate(neighbour)
 
 
-!!!-----------------------------------------------------------------------------
-!!! Zeroes interface atoms to the lowest atom on top slab
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Zeroes interface atoms to the lowest atom on top slab
+!-------------------------------------------------------------------------------
     highest_atom(1) = maxval(intf(1)%neigh(:)%pos(3),dim=1)
     lowest_atom(2) = minval(intf(2)%neigh(:)%pos(3),dim=1)
     intf(1)%neigh(:)%pos(3) = intf(1)%neigh(:)%pos(3) - highest_atom(1)
@@ -1073,9 +1058,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! Defines grid size and equivalent step size
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Defines grid size and equivalent step size
+!-------------------------------------------------------------------------------
     lpresent=.false.
     if(present(offset))then
        if(offset(axis).ge.1.E-6_real32)then
@@ -1129,9 +1114,9 @@ contains
     !nthreads=8
     !call OMP_SET_NUM_THREADS(nthreads)
     !CHUNK = 2
-!!!-----------------------------------------------------------------------------
-!!! Determines neighbours for each grid point 
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Determines neighbours for each grid point 
+!-------------------------------------------------------------------------------
     if(abs(verbose_).ge.1)then
        write(*,'(1X,A,3(2X,F8.4))') &
             "lat:",norm2(bas%lat(1,:)),norm2(bas%lat(2,:)),norm2(bas%lat(3,:))
@@ -1196,9 +1181,9 @@ contains
 !$OMP END PARALLEL DO
 
 
-!!!-----------------------------------------------------------------------------
-!!! Shifts lower interface atoms within the grid and evaluates match
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Shifts lower interface atoms within the grid and evaluates match
+!-------------------------------------------------------------------------------
     allocate(fit_store(nstore))
     allocate(shift_store(nstore,3))
     fit_store=huge(0.0)
@@ -1277,18 +1262,18 @@ contains
 ! !$OMP END PARALLEL
 
 
-!!!-----------------------------------------------------------------------------
-!!! Checks whether any shifts have been identified
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Checks whether any shifts have been identified
+!-------------------------------------------------------------------------------
     if(all(shift_store.eq.0))then
        call err_abort("Internal error in get_shifts_DON\n&
                &  No shifts found.",.true.)
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! Sets output of shifts
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Sets output of shifts
+!-------------------------------------------------------------------------------
     if(verbose_.gt.0)then
        write(*,'("Determined shifts (gridsize:",3(2X,F6.4),")")') gridsize
        write(*,'(" num   fit_val   x    y    z")')
@@ -1314,13 +1299,12 @@ contains
        
 
   end function get_shifts_DON
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! sorts shifts by fit values
-!!!#############################################################################
+!###############################################################################
   subroutine sort_shifts(fits,shifts)
+    !! sorts shifts by fit values
     implicit none
     integer :: i,loc,num
     real(real32) :: dbuff
@@ -1343,7 +1327,7 @@ contains
 
 
   end subroutine sort_shifts
-!!!#############################################################################
+!###############################################################################
 
 end module artemis__shifting
 

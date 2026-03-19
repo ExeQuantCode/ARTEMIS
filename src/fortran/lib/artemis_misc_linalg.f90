@@ -175,7 +175,7 @@ contains
 
     return
   end function ivec_dmat_mul
-!---------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
   function dvec_dmat_mul(a,mat) result(vec)
     !! Multiply a real vector with a real matrix.
     implicit none
@@ -338,7 +338,7 @@ contains
          + mat(1,3)*mat(2,1)*mat(3,2)-mat(1,3)*mat(2,2)*mat(3,1)
 
   end function idet
-!---------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
   function ddet(mat) result(output)
     !! Return the determinant of a 3x3 real matrix.
     real(real32) :: output
@@ -576,7 +576,7 @@ contains
     tf=matmul(inverse(mat1),mat2)
 
   end function find_tf
-!---------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
   function find_tf_2x2(mat1,mat2) result(tf)
     !! Find the transformation matrix between two 2x2 matrices.
     implicit none
@@ -923,7 +923,7 @@ contains
 
     return
   end function gcd_num
-!---------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
   function gcd_vec(vec) result(gcd)
     !! Find the greatest common divisor of an integer vector.
     implicit none

@@ -1,10 +1,9 @@
-!!!#############################################################################
-!!! INTERFACES CARD SUBROUTINES
-!!! Code written by Ned Thaddeus Taylor and Isiah Edward Mikel Rudkin
-!!! Code part of the ARTEMIS group (Hepplestone research group).
-!!! Think Hepplestone, think HRG.
-!!!#############################################################################
 module artemis__generator
+  !! Module containing the main ARTEMIS interface generator type and procedures.
+  !!
+  !! Orchestrates lattice matching, slab construction, symmetry analysis,
+  !! surface termination selection, interface shifting, and atomic swapping
+  !! to produce candidate interface structures from two bulk input crystals.
   use artemis__constants,     only: real32, pi
   use coreutils__string,      only: to_lower, to_upper
   use artemis__misc_types,    only: abstract_artemis_generator_type, &
@@ -25,7 +24,7 @@ module artemis__generator
   use artemis__terminations,  only: get_termination_info, term_arr_type, &
        set_layer_tol, build_slab_supercell, cut_slab_to_height
   use artemis__swapping,               only: rand_swapper
-  use artemis__shifting !!! CHANGE TO SHIFTER?
+  use artemis__shifting
   implicit none
 
 
@@ -406,7 +405,7 @@ contains
        if(present(area_weight)) this%tolerance%area_weight = area_weight
     end if
 
-    !!! TOLERANCE EXPECTED IN FRACTIONS OF Å, radians, and Å^2
+    ! TOLERANCE EXPECTED IN FRACTIONS OF Å, radians, and Å^2
 
   end subroutine set_tolerance
 !###############################################################################
@@ -1385,7 +1384,7 @@ contains
     integer, dimension(2) :: surface_lw_, surface_up_
     !! Surface indices for the lower and upper bulk structures
     logical :: ludef_surface_lw, ludef_surface_up
-    !! Boolean whether surfaces are defined 
+    !! Boolean whether surfaces are defined
     logical :: lcycle
     !! Boolean whether to skip the cycle
 
@@ -1806,9 +1805,9 @@ contains
     end if
 
        
-!!!-----------------------------------------------------------------------------
-!!! Saves current directory and moves to new directory
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Saves current directory and moves to new directory
+!-------------------------------------------------------------------------------
     if(interface_idx_.gt.0)then
        intf_start=interface_idx_
        intf_end=interface_idx_
@@ -1818,9 +1817,9 @@ contains
        intf_end=min(this%max_num_matches,SAV%nfit)
     end if
     iunique=0
-!!!-----------------------------------------------------------------------------
-!!! Applies the best match transformations
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Applies the best match transformations
+!-------------------------------------------------------------------------------
     intf_loop: do ifit = intf_start, intf_end
        if(verbose_.gt.0) write(*,'("Fit number: ",I0)') ifit
        call supercell_lw%copy(structure_lw)
@@ -2271,10 +2270,10 @@ contains
 !###############################################################################
 
 
-!!!#############################################################################
-!!! Takes input interface structure and generates a set of shifts and swaps.
-!!!#############################################################################
-!!! ISWAP METHOD NOT YET SET UP
+!###############################################################################
+! Takes input interface structure and generates a set of shifts and swaps.
+!###############################################################################
+! ISWAP METHOD NOT YET SET UP
   subroutine generate_shifts_and_swaps( &
        this, basis, intf_loc, bond, bulk_DON, struc_data, print_shift_info, &
        seed_arr, verbose, exit_code, map &
@@ -2308,16 +2307,16 @@ contains
 
 
 
-!!!-----------------------------------------------------------------------------
-!!! Sets up shift axis
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Sets up shift axis
+!-------------------------------------------------------------------------------
     abc = [ 1, 2, 3 ]
     abc = cshift(abc,this%axis)
 
 
-!!!-----------------------------------------------------------------------------
-!!! Generates sets of shifts based on shift version
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Generates sets of shifts based on shift version
+!-------------------------------------------------------------------------------
     if(this%shift_method.eq.0.or.this%shift_method.eq.1) allocate(output_shifts(this%num_shifts,3))
     select case(this%shift_method)
     case(1)
@@ -2387,15 +2386,15 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! Prints number of shifts to terminal
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Prints number of shifts to terminal
+!-------------------------------------------------------------------------------
     if(verbose.gt.0) write(*,'(3X,"Number of unique shifts structures: ",I0)') size(output_shifts,1)
 
 
-!!!-----------------------------------------------------------------------------
-!!! Determines number of swaps across the interface
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Determines number of swaps across the interface
+!-------------------------------------------------------------------------------
     nswaps_per_cell = nint(this%swap_density*get_area([basis%lat(abc(1),:)],[basis%lat(abc(2),:)]))
     if(this%swap_method.ne.0)then
        if(verbose.gt.0) write(*,&
@@ -2403,9 +2402,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! Prints each unique shift structure
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Prints each unique shift structure
+!-------------------------------------------------------------------------------
     shift_loop: do k = 1, size(output_shifts,1), 1
        call tbas%copy(basis)
        toffset=output_shifts(k,:3)
@@ -2492,7 +2491,7 @@ contains
     end do shift_loop
 
   end subroutine generate_shifts_and_swaps
-!!!#############################################################################
+!###############################################################################
 
 
 !###############################################################################

@@ -1,5 +1,9 @@
 module artemis__help
   !! Help and documentation module for ARTEMIS input tag definitions.
+  !!
+  !! Defines integer indices and metadata (tag_type records) for every
+  !! recognised keyword in the SETTINGS, CELL_EDITS, and INTERFACE input
+  !! cards.  Public routines print context-sensitive help to stdout.
   use artemis__io_utils, only: err_abort, tag_type, io_print_help
   implicit none
 
@@ -11,11 +15,9 @@ module artemis__help
   public :: interface_help
 
 
-  !  logical, save :: ltag_present(ntags)  !!!REPLACE READVAR WITH THIS
-
-  ! Settings number of tags
+  !! Number of SETTINGS input tags.
   integer, parameter :: ntags_settings=11
-  ! Settings tags
+  !! Tag index constants for the SETTINGS card.
   integer, parameter :: itask_tag=1
   integer, parameter :: irestart_tag=2
   integer, parameter :: is1file_tag=3
@@ -29,9 +31,9 @@ module artemis__help
   integer, parameter :: itol_sym_tag=11
 
 
-  ! Cell_edits number of tags
+  !! Number of CELL_EDITS input tags.
   integer, parameter :: ntags_cell_edits=15
-  ! Cell_edits tags
+  !! Tag index constants for the CELL_EDITS card.
   integer, parameter :: iout_file_tag=1
   integer, parameter :: ilsurf_gen_CE_tag=2
   integer, parameter :: imiller_tag=3
@@ -48,14 +50,15 @@ module artemis__help
   integer, parameter :: iuse_pricel_tag=14
   integer, parameter :: irequire_stoich_tag=15
 
+  !! Number of deprecated CELL_EDITS tags.
   integer, parameter :: ntags_depr_cell_edits=1
-  ! Cell_edits deprecated tags
+  !! Tag index constants for deprecated CELL_EDITS keywords.
   integer, parameter :: islab_thick_tag=1
 
 
-  ! Interface number of tags
+  !! Number of INTERFACE input tags.
   integer, parameter :: ntags_interface=59
-  ! Interface tags
+  !! Tag index constants for the INTERFACE card.
   integer, parameter :: inintf_tag=1
   integer, parameter :: iimatch_tag=2
   integer, parameter :: inmatch_tag=3
@@ -1007,7 +1010,7 @@ contains
          'Defines the number of primitive layers to use for the lower crystal'
 
   end function setup_depr_cell_edits_tags
-!---------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
   function setup_depr_interface_tags() result(tag)
     !! Set up deprecated interface tag descriptions.
     implicit none

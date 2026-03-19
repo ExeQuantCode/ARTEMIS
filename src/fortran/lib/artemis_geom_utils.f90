@@ -1,41 +1,10 @@
-!!!#############################################################################
-!!! Code written by Ned Thaddeus Taylor and Francis Huw Davies
-!!! Code part of the ARTEMIS group (Hepplestone research group).
-!!! Think Hepplestone, think HRG.
-!!!#############################################################################
-!!!module contains lattice- and basis-related functions and subroutines.
-!!!module includes the following functions and subroutines:
-!!! MATNORM          (normalises a 3x3 matrix)
-!!! min_dist         (min distance between a point in a cell and nearest atom)
-!!! get_surface_normal (return the vector normal to the surface of the plane ...
-!!!                   ... constructed by the other two vectors)
-!!! get_atom_height  (get the value of the atom along that axis)
-!!! get_min_bulk_bond
-!!! shifter          (shifts the basis along the cell by an amount)
-!!! shift_region     (shifts the basis within a region along the cell by amount)
-!!! vacuumer         (adds a vacuum gap to the location specified)
-!!! set_vacuum
-!!! ortho_axis       (makes specified axis perpendicular to plane of other two)
-!!! transformer      (applies a transformation matrix to a lattice and basis)
-!!! change_basis     (convert basis into direct coords wrt another lattice)
-!!! region_rot       (rotates a region specified along an axis about that axis)
-!!! normalise_basis  (convert basis coordinates to be within val-> val-1)
-!!! centre_of_geom   (prints centre of geom of a molecule
-!!! centre_of_mass   (prints centre of mass of a molecule)
-!!! primitive_lat    (reorientates the lattice to the primitive lattice)
-!!! reducer
-!!! mkNiggli_lat
-!!! reduced_check
-!!! planecutter      (generates transformation mat to obtain miller plane)
-!!! bas_merge        (merges two supplied bases)
-!!! bas_lat_merge    (merges two supplied bases and lattices)
-!!! split_bas
-!!! get_bulk
-!!! get_centre_atom
-!!! get_wyckoff      (returns an array of the similar atoms)
-!!! get_shortest_bond
-!!!#############################################################################
 module artemis__geom_utils
+  !! Module containing geometry manipulation routines for crystal structures.
+  !!
+  !! Provides functions and subroutines for lattice normalisation, distance
+  !! calculations, vacuum insertion, slab construction, basis transformation,
+  !! primitive cell reduction, Niggli reduction, surface plane generation,
+  !! and Wyckoff position identification.
   use artemis__constants, only: real32, pi
   use artemis__geom_rw, only: basis_type,geom_write
   use artemis__sym, only: confine_type, gldfnd, tol_sym_default
@@ -47,14 +16,21 @@ module artemis__geom_utils
   implicit none
 
   type wyck_atom_type
+     !! Atom indices for a single Wyckoff position group.
      integer, allocatable, dimension(:) :: atom
+     !! Indices of atoms in this Wyckoff group.
   end type wyck_atom_type
   type wyck_spec_type
+     !! Wyckoff position data grouped by species.
      type(wyck_atom_type), allocatable, dimension(:) :: spec
+     !! Wyckoff group data for each species.
   end type wyck_spec_type
   type bond_type
+     !! Atom pair and their bond length.
      real(real32) :: length
+     !! Bond length in Ångström.
      integer, dimension(2,2) :: atoms
+     !! Atom indices: atoms(1,:) = (species, atom) for atom 1; atoms(2,:) for atom 2.
   end type bond_type
 
   
@@ -71,7 +47,7 @@ contains
     !! Check if two basis structures have the same stoichiometry ratio
     !!
     !! This function compares the stoichiometry ratios of two basis structures
-    !! It returns true if the relative proportions of all atomic species are 
+    !! It returns true if the relative proportions of all atomic species are
     !! identical and all species names match between both structures
     implicit none
     type(basis_type), intent(in) :: basis1, basis2
@@ -132,14 +108,18 @@ contains
 !###############################################################################
 
 
-!!!#############################################################################
-!!! Normalises a 3x3 matrix to the form:
-!!! a 0 0
-!!! b c 0
-!!! d e f
-!!! NEW NAME: lat_low
-!!!#############################################################################
+!###############################################################################
   function MATNORM(lat) result(nlat)
+    !! Normalise a 3x3 lattice matrix to lower-triangular (lat_low) form.
+    !!
+    !! Output convention:
+    !!   a  0  0
+    !!   b  c  0
+    !!   d  e  f
+    !! where each row gives the Cartesian components of the corresponding
+    !! lattice vector after re-orientation.
+    !!
+    !! @deprecated Routine will be renamed lat_low; new code should use that name.
     implicit none
     real(real32), dimension(3,3) :: lat, nlat
     nlat(1,1)=sqrt(lat(1,1)**2+lat(1,2)**2+lat(1,3)**2)
@@ -163,15 +143,14 @@ contains
          lat(3,1)**2+lat(3,2)**2+&
          lat(3,3)**2-nlat(3,1)**2-nlat(3,2)**2)
   end function MATNORM
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Finds distance between a location in a cell and ...
-!!! ... the nearest atom to that point either above ...
-!!! ... or below
-!!!#############################################################################
+!###############################################################################
   function min_dist(bas,axis,loc,above)
+    !! Finds distance between a location in a cell and ...
+    !! ... the nearest atom to that point either above ...
+    !! ... or below
     implicit none
     integer :: is,axis
     real(real32) :: min_dist,pos
@@ -208,13 +187,12 @@ contains
     end do
 
   end function min_dist
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Get the value of the atom along that axis
-!!!#############################################################################
+!###############################################################################
   function get_atom_height(bas,atom,axis) result(val)
+    !! Get the value of the atom along that axis
     implicit none
     integer :: i,axis,atom,sum_atom
     real(real32) :: val
@@ -232,13 +210,12 @@ contains
 
 
   end function get_atom_height
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! returns minimum bond within bulk
-!!!#############################################################################
+!###############################################################################
   function get_min_bulk_bond(basis) result(min_bond)
+    !! returns minimum bond within bulk
     implicit none
     type(basis_type), intent(in) :: basis
 
@@ -277,13 +254,12 @@ contains
     end do
 
   end function get_min_bulk_bond
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! returns minimum bond for a specified atom
-!!!#############################################################################
+!###############################################################################
   function get_min_bond(basis,is,ia,axis,labove,tol) result(vsave)
+    !! returns minimum bond for a specified atom
     implicit none
     integer :: js,ja
     integer :: iaxis
@@ -344,13 +320,12 @@ contains
 
 
   end function get_min_bond
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! returns minimum bond for a specified atom
-!!!#############################################################################
+!###############################################################################
   function get_min_dist(lat,bas,loc,lignore_close,axis,labove,lreal,tol) &
+    !! returns minimum bond for a specified atom
        result(vsave)
     implicit none
     integer :: js,ja
@@ -425,13 +400,12 @@ contains
 
 
   end function get_min_dist
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Shifts the basis along a, b or c by amount 'shift'
-!!!#############################################################################
+!###############################################################################
   subroutine shifter(basis,axis,shift,renormalise)
+    !! Shifts the basis along a, b or c by amount 'shift'
     implicit none
     type(basis_type), intent(inout) :: basis
     integer, intent(in) :: axis
@@ -452,13 +426,12 @@ contains
     end do
 
   end subroutine shifter
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Shifts basis in a region by an amount
-!!!#############################################################################
+!###############################################################################
   subroutine shift_region(bas,region_axis,region_lw,region_up,shift_axis,shift,renorm)
+    !! Shifts basis in a region by an amount
     implicit none
     integer :: is,ia,shift_axis,region_axis
     real(real32) :: shift,region_lw,region_up
@@ -483,13 +456,12 @@ contains
     end do
 
   end subroutine shift_region
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Return the surface normal vector
-!!!#############################################################################
+!###############################################################################
   function get_surface_normal(lat,axis) result(normal)
+    !! Return the surface normal vector
     implicit none
     real(real32) :: component
     integer, dimension(3) :: order=(/1,2,3/)
@@ -505,14 +477,13 @@ contains
 
     return
   end function get_surface_normal
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Adjusts the amount of vacuum at a location ...
-!!! ... within a cell and adjusts the basis accordingly
-!!!#############################################################################
+!###############################################################################
   subroutine vacuumer(lat,bas,axis,loc,add,tol)
+    !! Adjusts the amount of vacuum at a location ...
+    !! ... within a cell and adjusts the basis accordingly
     implicit none
     integer :: is,ia
     real(real32) :: rtol,rloc,ortho_scale
@@ -561,14 +532,13 @@ contains
 
 
   end subroutine vacuumer
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Adjusts the amount of vacuum at a location ...
-!!! ... within a cell and adjusts the basis accordingly
-!!!#############################################################################
+!###############################################################################
   subroutine set_vacuum(basis,axis,loc,vac,tol)
+    !! Adjusts the amount of vacuum at a location ...
+    !! ... within a cell and adjusts the basis accordingly
     implicit none
     integer :: is,ia
     real(real32) :: rtol,rloc,ortho_scale
@@ -616,14 +586,13 @@ contains
 
 
   end subroutine set_vacuum
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Takes a lattice and makes the defined axis orthogonal to the other two
-!!! WARNING! THIS IS FOR SLAB STRUCTURES! IT REMOVES PERIODICITY ALONG THAT AXIS
-!!!#############################################################################
+!###############################################################################
   subroutine ortho_axis(basis,axis)
+    !! Takes a lattice and makes the defined axis orthogonal to the other two
+    !! WARNING! THIS IS FOR SLAB STRUCTURES! IT REMOVES PERIODICITY ALONG THAT AXIS
     implicit none
     type(basis_type), intent(inout) :: basis
     integer :: axis
@@ -646,14 +615,13 @@ contains
 
     return
   end subroutine ortho_axis
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Applies a transformation matrix to a lattice ...
-!!! ... and extends the basis where needed
-!!!#############################################################################
+!###############################################################################
   subroutine transformer(basis, tfmat, map)
+    !! Applies a transformation matrix to a lattice ...
+    !! ... and extends the basis where needed
     implicit none
     integer :: i,j,k,l,m,n,is,ia
     integer :: satom,dim
@@ -744,8 +712,8 @@ contains
     !!    /   /
     !!  a/   /
     !!  /___/
-    !! o 
-    !!   
+    !! o
+    !!  
     !!    /\
     !!  a/  \b
     !!  /   /
@@ -886,14 +854,13 @@ contains
     end if
 
   end subroutine transformer
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Convert basis from direct coords in one lattice ...
-!!! ... into direct coords wrt another lattice
-!!!#############################################################################
+!###############################################################################
   function change_basis(vec,old_lat,new_lat)
+    !! Convert basis from direct coords in one lattice ...
+    !! ... into direct coords wrt another lattice
     implicit none
     real(real32), dimension(3) :: change_basis,vec
     real(real32), dimension(3,3), intent(in) :: old_lat,new_lat
@@ -901,13 +868,12 @@ contains
     inew_lat=inverse_3x3(new_lat)
     change_basis=matmul(transpose(inew_lat),matmul(old_lat,vec))
   end function change_basis
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! rotates a region along an axis about that axis
-!!!#############################################################################
+!###############################################################################
   subroutine region_rot(bas,lat,angle,axis,bound1,bound2,tvec)
+    !! rotates a region along an axis about that axis
     implicit none
     integer :: axis,i,j
     real(real32) :: angle,bound1,bound2
@@ -923,7 +889,7 @@ contains
        ident(i,i)=1._real32
     end do
 
-!!! DEFINE ROTMAT BEFORE THIS
+!! DEFINE ROTMAT BEFORE THIS
     u=0._real32
     u(axis)=-1._real32
     rotmat=&
@@ -932,13 +898,13 @@ contains
          (1-cos(angle))*outer_product(u,u)
 
 
-!!! Transform the rotation matrix into direct space
+!! Transform the rotation matrix into direct space
     invlat=LUinv(lat)
     rotmat=matmul(lat,rotmat)
     rotmat=matmul(rotmat,invlat)
 
 
-!!! Rotate the basis within the bounds
+!! Rotate the basis within the bounds
     do i=1,bas%nspec
        do j=1,bas%spec(i)%num
           if(bas%spec(i)%atom(j,axis).lt.bound1.or.&
@@ -951,13 +917,12 @@ contains
 
     return
   end subroutine region_rot
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! finds the centre of geometry of the supplied basis
-!!!#############################################################################
+!###############################################################################
   function centre_of_geom(bas) result(centre)
+    !! finds the centre of geometry of the supplied basis
     implicit none
     integer :: is,ia,j
     real(real32), dimension(3) :: centre
@@ -976,13 +941,12 @@ contains
 
     return
   end function centre_of_geom
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! finds the centre of mass of the supplied basis
-!!!#############################################################################
+!###############################################################################
   function centre_of_mass(bas) result(centre)
+    !! finds the centre of mass of the supplied basis
     implicit none
     integer :: is,ia,j
     real(real32) :: tot_mass
@@ -1004,7 +968,7 @@ contains
 
     return
   end function centre_of_mass
-!!!#############################################################################
+!###############################################################################
 
 
 !###############################################################################
@@ -1162,7 +1126,7 @@ contains
        end if
 
 
-       !! A1 & A2 
+       !! A1 & A2
        do i=1,2
           j=i+1
           if(S(i,i)-S(j,j).gt.tiny) then
@@ -1287,12 +1251,12 @@ contains
 !###############################################################################
 
 
-!!!#############################################################################
-!!! Subroutine to set up the required dot products of the lattice
-!!!#############################################################################
-!!! a = lat(:,1),  b=lat(:,2),  c=lat(:,3)
-!!! S(1,1) = a.a,   S(2,2) = b.b,   S(3,3) = c.c
-!!! S(1,2) = a.b,   S(1,3) = a.c,   S(2,3) = b.c
+!###############################################################################
+!! Subroutine to set up the required dot products of the lattice
+!###############################################################################
+!! a = lat(:,1),  b=lat(:,2),  c=lat(:,3)
+!! S(1,1) = a.a,   S(2,2) = b.b,   S(3,3) = c.c
+!! S(1,2) = a.b,   S(1,3) = a.c,   S(2,3) = b.c
   subroutine mkNiggli_lat(lat,newlat,transmat,S)
     implicit none
     real(real32), dimension(3,3) :: lat,newlat,transmat,S
@@ -1311,22 +1275,22 @@ contains
 
     return
   end subroutine mkNiggli_lat
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Function to check whether cell satisfies all the main ...
+!###############################################################################
+!! Function to check whether cell satisfies all the main ...
   ! ... Niggli conditions (1928)
-!!!#############################################################################
-!!! tiny = tolerance to satisfy conditions
-!!! lat = lattice being checked
-!!! a = lat(:,1),  b=lat(:,2),  c=lat(:,3)
-!!! S(1,1) = a.a,   S(2,2) = b.b,   S(3,3) = c.c
-!!! S(1,2) = a.b,   S(1,3) = a.c,   S(2,3) = b.c
-!!! Type I  = Sij (i!=j) are all positive (angles <90)
-!!! Type II = Sij (i!=j) are all negative or any zero (angles >=90)
-!!! Cell is reduced if, and only if, all conditions are ...
-!!! ... satisfied (Niggli 1928)
+!###############################################################################
+!! tiny = tolerance to satisfy conditions
+!! lat = lattice being checked
+!! a = lat(:,1),  b=lat(:,2),  c=lat(:,3)
+!! S(1,1) = a.a,   S(2,2) = b.b,   S(3,3) = c.c
+!! S(1,2) = a.b,   S(1,3) = a.c,   S(2,3) = b.c
+!! Type I  = Sij (i!=j) are all positive (angles <90)
+!! Type II = Sij (i!=j) are all negative or any zero (angles >=90)
+!! Cell is reduced if, and only if, all conditions are ...
+!! ... satisfied (Niggli 1928)
   function reduced_check(lat, cell_type, S, verbose) result(check)
     implicit none
     real(real32), dimension(3,3), intent(in) :: lat
@@ -1387,13 +1351,12 @@ contains
     end if
 
   end function reduced_check
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! planecutter
-!!!#############################################################################
+!###############################################################################
   function planecutter(lat, plane) result(tfmat)
+    !! planecutter
     implicit none
     real(real32), dimension(3,3), intent(in) :: lat
     real(real32), dimension(3), intent(in) :: plane
@@ -1406,9 +1369,9 @@ contains
 
 
 
-!!!-----------------------------------------------------------------------------
-!!! Initialise variables and matrices
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Initialise variables and matrices
+!-------------------------------------------------------------------------------
     tol    = 1.E-4_real32
     plane_ = plane
     lat_   = lat
@@ -1419,9 +1382,9 @@ contains
     order  = [ 1, 2, 3 ]
 
 
-!!!-----------------------------------------------------------------------------
-!!! Align the normal vector such that all non-zero values are left of all zeros
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Align the normal vector such that all non-zero values are left of all zeros
+!-------------------------------------------------------------------------------
     do i=1,2
        if(plane_(i).eq.0)then
           if(all(plane_(i:).eq.0._real32)) exit
@@ -1437,9 +1400,9 @@ contains
     !plane_=matmul(plane_,reclat)
 
 
-!!!-----------------------------------------------------------------------------
-!!! Perform Lenstra-Lenstra-Lovász reduction
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Perform Lenstra-Lenstra-Lovász reduction
+!-------------------------------------------------------------------------------
     b(1,:) = [ -plane_(2),plane_(1),0._real32 ]
     b(2,:) = [ -plane_(3),0._real32,plane_(1) ]
     b(3,:) = plane_
@@ -1447,10 +1410,10 @@ contains
     b(:2,:) = LLL_reduce(b(:2,:))
 
 
-!!!-----------------------------------------------------------------------------
-!!! Checking whether b1 and b2 are still perpendicular to b3 and have size ...
-!!! ... greater than zero
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!! Checking whether b1 and b2 are still perpendicular to b3 and have size ...
+!! ... greater than zero
+!-------------------------------------------------------------------------------
     if(dot_product(b(1,:),b(3,:)).gt.tol)then
        write(0,'("ERROR: Internatl error in planecutter")')
        write(0,'(2X,"Error in planecutter subroutine in mod_geom_utils.f90")')
@@ -1492,9 +1455,9 @@ contains
     !b = matmul(b,lat_)
     
 
-!!!-----------------------------------------------------------------------------
-!!! Fix normal vector and lattice
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Fix normal vector and lattice
+!-------------------------------------------------------------------------------
     do i=1,3
        if(i.eq.order(i)) cycle
        call swap(lat_(i,:),lat_(order(i),:))
@@ -1504,10 +1467,10 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! Convert the new lattice to direct coordinates
-!!! Make it such that it is a fully integerised transformation matrix
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!! Convert the new lattice to direct coordinates
+!! Make it such that it is a fully integerised transformation matrix
+!-------------------------------------------------------------------------------
     !b=matmul(b,invlat)
     where(abs(b(:,:)).lt.tol)
        b(:,:)=0._real32
@@ -1546,7 +1509,7 @@ contains
 
     return
   end function planecutter
-!!!#############################################################################
+!###############################################################################
 
 
 !###############################################################################
@@ -1789,9 +1752,9 @@ contains
     c2_ratio = norm2(basis2_%lat(axis,:)) / norm2(output_lat(axis,:))
 
 
-!!!-----------------------------------------------------------------------------
-!!! merge list of atomic types and respective numbers for both structures
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! merge list of atomic types and respective numbers for both structures
+!-------------------------------------------------------------------------------
     do i=1,basis1_%nspec
        basis1_%spec(i)%atom(:,axis) = basis1_%spec(i)%atom(:,axis) * c1_ratio
     end do
@@ -1814,10 +1777,9 @@ contains
 !###############################################################################
 
 
-!!!#############################################################################
-!!! splits basis into an array of bases
-!!!#############################################################################
+!###############################################################################
   function split_bas(inbas,loc_vec,axis,lall_same_nspec,map1,map2) result(bas_arr)
+    !! splits basis into an array of bases
     implicit none
     integer :: i,is,ia,itmp1,nregions,axis,nspec
     logical :: lsame
@@ -1938,13 +1900,12 @@ contains
     end if
 
   end function split_bas
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! returns the primitive cell from a supercell
-!!!#############################################################################
+!###############################################################################
   subroutine get_primitive_cell(basis, tol_sym)
+    !! returns the primitive cell from a supercell
     implicit none
     type(basis_type), intent(inout) :: basis
     real(real32), intent(in), optional :: tol_sym
@@ -2069,12 +2030,11 @@ contains
 
     
   end subroutine get_primitive_cell
-!!!#############################################################################
+!###############################################################################
 
-!!!#############################################################################
-!!! returns the bulk basis and lattice of 
-!!!#############################################################################
+!###############################################################################
   subroutine get_bulk(lat,bas,axis,bulk_lat,bulk_bas)
+    !! returns the bulk basis and lattice of 
     implicit none
     integer :: is,ia,ja,len,itmp1
     integer :: minspecloc,minatomloc,nxtatomloc
@@ -2176,13 +2136,12 @@ contains
     call bulk_bas%change_lattice(bulk_lat)
 
   end subroutine get_bulk
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! returns the atom closest to the centre of the region for a species
-!!!#############################################################################
+!###############################################################################
   function get_centre_atom(bas,spec,axis,lw,up) result(iatom)
+    !! returns the atom closest to the centre of the region for a species
     implicit none
     integer :: ia
     integer :: iatom
@@ -2214,13 +2173,12 @@ contains
 
 
   end function get_centre_atom
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! returns the atom closest to the location
-!!!#############################################################################
+!###############################################################################
   function get_closest_atom_1D(bas,axis,loc,species,above,below) result(atom)
+    !! returns the atom closest to the location
     implicit none
     integer :: is,ia
     integer :: is_start,is_end
@@ -2269,8 +2227,8 @@ contains
 
 
   end function get_closest_atom_1D
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
+!-------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
   function get_closest_atom_3D(lat,bas,loc,species) result(atom)
     implicit none
     integer :: is,ia
@@ -2310,13 +2268,12 @@ contains
     
 
   end function get_closest_atom_3D
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! returns the wyckoff atom for each
-!!!#############################################################################
+!###############################################################################
   function get_wyckoff(bas,axis) result(wyckoff)
+    !! returns the wyckoff atom for each
     implicit none
     integer :: is,ia,ja,itmp1,itmp2!ref_atom
     integer :: minspecloc,minatomloc,nxtatomloc
@@ -2335,11 +2292,11 @@ contains
 
     
     
-!!!-----------------------------------------------------------------------------
-!!! Finds the species with the minimum number of atoms
-!!! Finds upper and lower locations for "slab" and finds atom nearest to the ...
-!!! ... centre of that region
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!! Finds the species with the minimum number of atoms
+!! Finds upper and lower locations for "slab" and finds atom nearest to the ...
+!! ... centre of that region
+!-------------------------------------------------------------------------------
     tol = 1.E-1_real32
     do ia = 1, 3
        tol(ia) = tol(ia) / norm2(bas%lat(ia,:))
@@ -2358,13 +2315,13 @@ contains
 
 
 
-!!! INSTEAD OF STARTING FROM BOTTOM, START FROM CLOSEST BELOW MIDDLE AND CLOSEST ABOVE MIDDLE
-!!! THEN WORK YOUR WAY OUT FROM THAT GOING 1 BELOW, THEN 1 ABOVE, etc.
+!! INSTEAD OF STARTING FROM BOTTOM, START FROM CLOSEST BELOW MIDDLE AND CLOSEST ABOVE MIDDLE
+!! THEN WORK YOUR WAY OUT FROM THAT GOING 1 BELOW, THEN 1 ABOVE, etc.
 
 
-!!!-----------------------------------------------------------------------------
-!!! Set up lower atom location
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Set up lower atom location
+!-------------------------------------------------------------------------------
     itmp1 = minatomloc
     lw_loc = bas%spec(minspecloc)%atom(minatomloc,axis)
     up_loc = 1._real32
@@ -2375,10 +2332,10 @@ contains
     end do
 
     
-!!!-----------------------------------------------------------------------------
-!!! Loops over atoms in cell until it finds a reproducible set to define ...
-!!! ... as the bulk
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!! Loops over atoms in cell until it finds a reproducible set to define ...
+!! ... as the bulk
+!-------------------------------------------------------------------------------
     region_loop1: do
        !!-----------------------------------------------------------------------
        !! Mask of whether an atom has been checked for bulk limits or not
@@ -2504,11 +2461,11 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! Using the bulk definition, loop runs through checking which atom maps ...
-!!! ... onto which through the bulk translation.
-!!! Defines each atom's cell centre wyckoff atom
-!!!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!! Using the bulk definition, loop runs through checking which atom maps ...
+!! ... onto which through the bulk translation.
+!! Defines each atom's cell centre wyckoff atom
+!-------------------------------------------------------------------------------
     allocate(wyckoff%spec(bas%nspec))
     do is=1,bas%nspec
        allocate(wyckoff%spec(is)%atom(bas%spec(is)%num))
@@ -2564,13 +2521,12 @@ contains
 
 
   end function get_wyckoff
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! identify the shortest bond in the crystal, takes in crystal basis
-!!!#############################################################################
+!###############################################################################
   function get_shortest_bond(basis) result(bond)
+    !! identify the shortest bond in the crystal, takes in crystal basis
     implicit none
     type(basis_type), intent(in) :: basis
 
@@ -2608,7 +2564,7 @@ contains
     bond%atoms = atoms
 
   end function get_shortest_bond
-!!!#############################################################################
+!###############################################################################
 
   
 !###############################################################################

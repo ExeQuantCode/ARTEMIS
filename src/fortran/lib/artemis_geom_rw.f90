@@ -1,16 +1,12 @@
-!!!#############################################################################
-!!! Code written by Ned Thaddeus Taylor and Francis Huw Davies
-!!! Code part of the ARTEMIS group (Hepplestone research group).
-!!! Think Hepplestone, think HRG.
-!!!#############################################################################
-!!! Module made to read and write structure input files
-!!! Currently supports:
-!!!    -VASP
-!!!    -Quantum Espresso
-!!!    -CASTEP
-!!!    -xyz (read only)
-!!!#############################################################################
 module artemis__geom_rw
+  !! Module for reading and writing crystal structure files.
+  !!
+  !! Supports the following file formats for input and output:
+  !! - VASP (POSCAR/CONTCAR)
+  !! - CASTEP (.cell)
+  !! - Quantum Espresso (.in)
+  !! - XYZ (read only)
+  !! - Extended XYZ
   use artemis__constants, only: real32, pi
   use coreutils__string, only: to_upper, to_lower, icount, strip_null
   use coreutils__file, only: jump
