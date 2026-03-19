@@ -44,6 +44,15 @@ option(BUILD_PYTHON "Build the python library" Off)
 option(BUILD_EXECUTABLE "Build the Fortran executable" On)
 option(REMAKE_F90WRAP "Remake the f90wrap signature file" Off)
 
+# Fetch coreutils dependency
+include(FetchContent)
+FetchContent_Declare(
+    coreutils
+    GIT_REPOSITORY https://github.com/nedtaylor/coreutils
+    GIT_TAG v0.1.0
+)
+FetchContent_MakeAvailable(coreutils)
+
 # Define the sources
 set(SRC_DIR src)
 set(FORTRAN_SRC_DIR ${SRC_DIR}/fortran)
@@ -169,7 +178,8 @@ set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${PPFLAGS}")
 # create the library
 add_library(${PROJECT_NAME} STATIC ${PREPENDED_LIB_FILES} ${PREPENDED_SRC_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_DIR})
-target_link_libraries(${PROJECT_NAME} PUBLIC)
+target_link_libraries(${PROJECT_NAME} PUBLIC coreutils)
+target_include_directories(${PROJECT_NAME} PUBLIC $<TARGET_PROPERTY:coreutils,Fortran_MODULE_DIRECTORY>)
 
 # replace ".f90" with ".mod"
 string(REGEX REPLACE "\\.[^.]*$" ".mod" MODULE_FILES "${SRC_FILES}")
@@ -319,7 +329,7 @@ if (BUILD_PYTHON)
     # Create a Python module using f2py
     add_custom_command(
         OUTPUT ${F2PY_OUTPUT_FILE}
-        COMMAND CC="${CMAKE_C_COMPILER}" LDFLAGS="-L${CMAKE_BUILD_DIR}" LIBS="-lartemis" ${F2PY_EXECUTABLE}
+        COMMAND CC="${CMAKE_C_COMPILER}" LDFLAGS="-L${CMAKE_BUILD_DIR} -L$<TARGET_FILE_DIR:coreutils>" LIBS="-lartemis -lcoreutils" ${F2PY_EXECUTABLE}
         -c
         -m _${PROJECT_NAME}
         -I${MODULE_DIR}
@@ -329,8 +339,10 @@ if (BUILD_PYTHON)
         ${F90WRAP_FILE}
         -L${CMAKE_BUILD_DIR}
         -lartemis
+        -L$<TARGET_FILE_DIR:coreutils>
+        -lcoreutils
         # --build-dir ${CMAKE_BUILD_DIR}/Dmeson
-        DEPENDS ${F90WRAP_FILE} ${CMAKE_BUILD_DIR}/artemis/python_copied ${PROJECT_NAME}
+        DEPENDS ${F90WRAP_FILE} ${CMAKE_BUILD_DIR}/artemis/python_copied ${PROJECT_NAME} coreutils
         WORKING_DIRECTORY ${CMAKE_BUILD_DIR}/artemis
         COMMENT "Creating Python module using f2py"
     )

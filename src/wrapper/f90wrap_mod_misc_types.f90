@@ -1,4 +1,4 @@
-! Module artemis__misc_types defined in file ../fortran/lib/mod_misc_types.f90
+! Module artemis__misc_types defined in file ../fortran/lib/artemis_misc_types.f90
 
 subroutine f90wrap_struc_data_type__get__match_idx(this, f90wrap_match_idx)
     use artemis__misc_types, only: struc_data_type
@@ -397,5 +397,5 @@ subroutine f90wrap_misc_types__struc_data_type_finalise(this)
     deallocate(this_ptr%p)
 end subroutine f90wrap_misc_types__struc_data_type_finalise
 
-! End of module artemis__misc_types defined in file ../fortran/lib/mod_misc_types.f90
+! End of module artemis__misc_types defined in file ../fortran/lib/artemis_misc_types.f90
 

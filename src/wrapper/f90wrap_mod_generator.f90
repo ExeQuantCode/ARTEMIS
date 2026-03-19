@@ -1,4 +1,4 @@
-! Module artemis__generator defined in file ../fortran/lib/mod_intf_generator.f90
+! Module artemis__generator defined in file ../fortran/lib/artemis_generator.f90
 
 !###############################################################################
 ! Members of type artemis_generator_type
@@ -1750,5 +1750,5 @@ subroutine f90wrap_artemis_gen_type__array_len__structures( &
 end subroutine f90wrap_artemis_gen_type__array_len__structures
 !###############################################################################
 
-! End of module artemis__generator defined in file ../fortran/lib/mod_intf_generator.f90
+! End of module artemis__generator defined in file ../fortran/lib/artemis_generator.f90
 
