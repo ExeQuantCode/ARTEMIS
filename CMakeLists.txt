@@ -59,8 +59,9 @@ FetchContent_Declare(
     atomstruc
     GIT_REPOSITORY https://github.com/nedtaylor/atomstruc
     GIT_TAG row-major-order
+    #SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/../atomstruc
 )
-FetchContent_MakeAvailable(coreutils)
+FetchContent_MakeAvailable(atomstruc)
 
 # Define the sources
 set(SRC_DIR src)
