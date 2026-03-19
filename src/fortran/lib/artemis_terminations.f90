@@ -2,10 +2,12 @@ module artemis__terminations
   !! Module for handling termination identification and generation
   use artemis__constants, only: real32
   use artemis__geom_rw,   only: basis_type, geom_write
-  use artemis__misc,      only: sort_col, to_lower, to_upper
+  use artemis__misc,      only: sort_col
+  use coreutils__string,  only: to_lower, to_upper
   use artemis__io_utils,  only: err_abort, stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
-  use artemis__misc_linalg,        only: cross, uvec, det
+  use coreutils__linalg,  only: cross
+  use artemis__misc_linalg,        only: uvec, det
   use artemis__sym,       only: sym_type, check_sym
   use artemis__geom_utils,          only: shifter, transformer, ortho_axis, set_vacuum
   implicit none
@@ -21,26 +23,37 @@ module artemis__terminations
 
 
   type term_type
-     !! Structure to hold termination information
+     !! Structure to hold termination information.
      real(real32) :: hmin
+     !! Minimum height of the termination layer.
      real(real32) :: hmax
+     !! Maximum height of the termination layer.
      integer :: natom = 0
+     !! Number of atoms in the termination layer.
      integer :: nstep = 0
+     !! Number of steps in the termination ladder.
      real(real32), allocatable, dimension(:) :: ladder
+     !! Array of ladder step positions.
   end type term_type
 
   type term_arr_type
-     !! Structure to hold arrays of terminations
+     !! Structure to hold arrays of terminations.
      integer :: nterm = 0, axis, nstep
+     !! Number of terminations, axis index, and number of steps.
      real(real32) :: tol
+     !! Tolerance for layer identification.
      logical :: lmirror=.false.
+     !! Whether mirror symmetry is present.
      type(term_type), allocatable, dimension(:) :: arr
+     !! Array of termination types.
   end type term_arr_type
 
   type term_list_type
-     !! Structure to hold termination index and location
+     !! Structure to hold termination index and location.
      integer :: term
+     !! Termination index.
      real(real32) :: loc
+     !! Location of the termination.
   end type term_list_type
 
 
@@ -65,8 +78,9 @@ contains
     real(real32), intent(in) :: tol_sym
     !! Tolerance for symmetry operations
     real(real32), intent(in) :: layer_sep
-    !! Minimum separation between layers
+    !! Minimum separation between layers.
     integer, intent(inout) :: exit_code
+    !! Exit code for error handling.
 
     ! Local variables
     integer :: unit
@@ -904,6 +918,7 @@ contains
     logical :: orthogonalise_
     !! Boolean whether to orthogonalise the slab
     integer, dimension(3) :: abc
+    !! Axis indices.
     real(real32), dimension(3) :: surface_normal_vec
     !! Surface normal vector
     real(real32), dimension(3,3) :: tfmat

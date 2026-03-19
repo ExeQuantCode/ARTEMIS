@@ -1,12 +1,11 @@
-!!!#############################################################################
-!!! Module to define all global variables
-!!! Code written by:
-!!!    Ned Thaddeus Taylor
-!!! Code part of the ARTEMIS group
-!!!#############################################################################
 module artemis__io_utils
+  !! Module for I/O utilities, error handling, and version information.
+  !!
+  !! Provides formatted output, warning/error printing with rich box formatting,
+  !! help system for parameter tags, and the ARTEMIS version string.
   use artemis__constants, only: real32
-  use artemis__misc
+  use coreutils__string, only: to_upper
+  use coreutils__error, only: stop_program
   implicit none
   
 
@@ -20,81 +19,49 @@ module artemis__io_utils
   public :: artemis__version__
 
 
-  logical :: test_error_handling = .false.
   logical :: artemis__suppress_warnings = .false.
+  !! If true, suppress all warning messages.
   character(len=*), parameter :: artemis__version__ = "2.0.0"
-  !character(30), public, parameter :: &
-  !     author(3) = [&
-  !     "N. T. Taylor",&
-  !     "F. H. Davies",&
-  !     "I. E. M. Rudkin",&
-  !     "S. P. Hepplestone"&
-  !     ]
-  !character(30), public, parameter :: &
-  !     contributor(4) = [&
-  !     "C. J. Price",&
-  !     "T. H. Chan"&
-  !     "J. Pitfield",&
-  !     "E. A. D. Baker",&
-  !     "S. G. Davies"&
-  !     ]
+  !! ARTEMIS version string.
 
 
   type, public :: tag_type
+     !! Type for storing parameter tag metadata for the help system.
      character(25) :: name
+     !! Tag name.
      character(1)  :: type
+     !! Tag data type code (I, R, S, L, U, V, B).
      character(50) :: summary
+     !! Short summary of the tag.
      character(60) :: allowed
+     !! Allowed values string.
      character(60) :: default
+     !! Default value string.
      character(1024) :: description
+     !! Full description of the tag.
      logical :: is_deprecated = .false.
+     !! Whether the tag is deprecated.
      logical :: to_be_deprecated = .false.
+     !! Whether the tag will be deprecated in a future version.
      character(25) :: deprecated_name = ''
+     !! New tag name replacing the deprecated one.
      character(20) :: deprecated_version
+     !! Version in which the tag was/will be deprecated.
   end type tag_type
 
 
 
 contains
 
+
 !###############################################################################
-  subroutine stop_program(message, exit_code, block_stop)
-    !! Stop the program and print an error message.
-    implicit none
-    character(len=*), intent(in) :: message
-    integer, intent(in), optional :: exit_code
-    logical, intent(in), optional :: block_stop
-
-    integer :: exit_code_
-    logical :: block_stop_
-
-    if(present(exit_code)) then
-       exit_code_ = exit_code
-    else
-       exit_code_ = 1
-    end if
-    if(present(block_stop)) then
-       block_stop_ = block_stop
-    else
-       block_stop_ = .false.
-    end if
-
-    write(0,*) 'ERROR: ', trim(message)
-    if(.not.block_stop_)then
-       if(.not.test_error_handling) then
-          stop exit_code_
-       end if
-    end if
-  end subroutine stop_program
-!###############################################################################
-
-
-!!!#############################################################################
-!!! prints the ARTEMIS logo and author list
-!!!#############################################################################
   subroutine print_header(unit)
+    !! Print the ARTEMIS logo and author list.
     implicit none
-    integer :: unit
+
+    ! Arguments
+    integer, intent(in) :: unit
+    !! Output unit number.
 
     write(unit,'(A)') repeat("#",50)
     write(unit,'(A)') repeat("#",50)
@@ -136,17 +103,23 @@ contains
  
 
   end subroutine print_header
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! customised print formatting
-!!!#############################################################################
+!###############################################################################
   subroutine write_fmtd(unit,message)
+    !! Write a message with embedded \n newline formatting.
     implicit none
-    integer :: istart,iend,itmp1
+
+    ! Arguments
     integer, intent(in) :: unit
+    !! Output unit number.
     character(len=*), intent(in) :: message
+    !! Message string (may contain \n for newlines).
+
+    ! Local variables
+    integer :: istart, iend, itmp1
+    !! Parsing indices and safety counter.
     
     istart=0
     iend=0
@@ -164,31 +137,44 @@ contains
 
 
   end subroutine write_fmtd
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Prints warning
-!!!#############################################################################
+!###############################################################################
   subroutine print_warning(message,width,fmtd)
+    !! Print a warning message in a formatted box.
     implicit none
-    integer :: unit=0
-    integer :: ipos,iend,inewline
-    integer :: whitespacel,whitespacer,length,nwidth
-    character(len=13) :: warning
-    character(len=200) :: fmt
-    character(len=*) :: message
-    logical :: finished,lpresent
-    character(len=:), allocatable :: line
+
+    ! Arguments
+    character(len=*), intent(in) :: message
+    !! Warning message text.
     integer, optional, intent(in) :: width
+    !! Box width (default: 50).
     logical, optional, intent(in) :: fmtd
+    !! If true, use write_fmtd for the message lines.
+
+    ! Local variables
+    integer :: unit = 0
+    !! Output unit (stderr).
+    integer :: ipos, iend, inewline
+    !! Parsing positions.
+    integer :: whitespacel, whitespacer, length, nwidth
+    !! Formatting widths.
+    character(len=13) :: warning
+    !! Warning header string.
+    character(len=200) :: fmt
+    !! Format string buffer.
+    logical :: finished, lpresent
+    !! Loop control flags.
+    character(len=:), allocatable :: line
+    !! Formatted line buffer.
 
 
     if(artemis__suppress_warnings) return
 
-!!!-----------------------------------------------------------------------------
-!!! Initialise variables and allocate line length
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Initialise variables and allocate line length
+    !---------------------------------------------------------------------------
     ipos=0
     iend=0
     nwidth=50
@@ -197,9 +183,9 @@ contains
     allocate(character(len=nwidth) :: line)
 
 
-!!!-----------------------------------------------------------------------------
-!!! prints warning 
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Print warning header
+    !---------------------------------------------------------------------------
     warning="W A R N I N G"
     length=len(warning)
     whitespacel=(nwidth-length)/2-1
@@ -215,9 +201,9 @@ contains
     write(unit,'("|",A,"|")') repeat(' ',nwidth-2)
 
 
-!!!-----------------------------------------------------------------------------
-!!! prints the message
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Print the message body
+    !---------------------------------------------------------------------------
     newline_loop: do
        ipos=iend+1
        length=len(trim(adjustl(message(ipos:))))
@@ -265,18 +251,25 @@ contains
 
 
   end subroutine print_warning
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Prints to stderr and stops
-!!!#############################################################################
+!###############################################################################
   subroutine err_abort(message,fmtd)
+    !! Print an error message to stderr and stop execution.
     implicit none
-    integer :: unit=0
-    logical :: lpresent
-    character(len=*) :: message
+
+    ! Arguments
+    character(len=*), intent(in) :: message
+    !! Error message to print.
     logical, optional, intent(in) :: fmtd
+    !! If true, use write_fmtd formatting.
+
+    ! Local variables
+    integer :: unit = 0
+    !! Output unit (stderr).
+    logical :: lpresent
+    !! Format flag.
 
     lpresent=.false.
     if(present(fmtd))then
@@ -289,24 +282,35 @@ contains
     stop
 
   end subroutine err_abort
-!!!#############################################################################
+!###############################################################################
 
 
-
-!!!#############################################################################
-!!! help and search
-!!!#############################################################################
+!###############################################################################
   subroutine io_print_help(unit, helpword, tags, search)
+    !! Print help information for parameter tags, with search support.
     implicit none
-    integer :: i,ntags
+
+    ! Arguments
     integer, intent(in) :: unit
-    character(len=15) :: type,fmt
+    !! Output unit number.
     character(len=*), intent(in) :: helpword
-    character(len=:), allocatable :: checkword
-    character(len=200) :: title
-    logical :: found,lpresent
-    logical, optional :: search
+    !! Tag name or search term to look up.
     type(tag_type), dimension(:), intent(in) :: tags
+    !! Array of tag definitions.
+    logical, optional, intent(in) :: search
+    !! If true, perform substring search across all tags.
+
+    ! Local variables
+    integer :: i, ntags
+    !! Loop index and tag count.
+    character(len=15) :: type, fmt
+    !! Type label and format buffer.
+    character(len=:), allocatable :: checkword
+    !! Upper-cased version of helpword.
+    character(len=200) :: title
+    !! Formatted title string.
+    logical :: found, lpresent
+    !! Search result and format flags.
     
 
     ntags=size(tags)
@@ -314,17 +318,17 @@ contains
     checkword = trim(adjustl(to_upper(helpword)))
 
 
-!!!-----------------------------------------------------------------------------
-!!! checks that no tagname is duplicated
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Check that no tagname is duplicated
+    !---------------------------------------------------------------------------
     if(count(tags(:)%name.eq.checkword).gt.1)then
        call err_abort('Error: helper: tagname entry duplicated')
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! search function
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Search function
+    !---------------------------------------------------------------------------
     lpresent=.false.
     if(present(search))then
        if(search)then
@@ -352,9 +356,9 @@ contains
           return
        end if
     end if
-!!!-----------------------------------------------------------------------------
-!!! help all function
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Help all function
+    !---------------------------------------------------------------------------
     if(.not.lpresent.and.checkword.eq.'ALL')then
        tagloop2: do i=1,ntags
           write(unit,'(A,T33,A)') &
@@ -370,9 +374,9 @@ contains
 
     end if
 
-!!!-----------------------------------------------------------------------------
-!!! finds requested tag and prints its help
-!!!-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! Find requested tag and print its help
+    !---------------------------------------------------------------------------
     found=.false.
     tagloop3: do i=1,ntags
        if(trim(tags(i)%name).eq.checkword)then
@@ -427,6 +431,6 @@ contains
 
 
   end subroutine io_print_help
-!!!#############################################################################
+!###############################################################################
 
 end module artemis__io_utils

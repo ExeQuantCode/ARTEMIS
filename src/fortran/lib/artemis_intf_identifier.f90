@@ -1,11 +1,10 @@
-!!!#############################################################################
-!!! Code written by Ned Thaddeus Taylor
-!!! Code part of the ARTEMIS group (Hepplestone research group).
-!!! Think Hepplestone, think HRG.
-!!!#############################################################################
 module artemis__interface_identifier
+  !! Module for identifying interface locations in crystal structures.
+  !!
+  !! Provides methods for interface identification using cumulative atomic
+  !! density (CAD) and density of neighbours (DON) approaches.
   use artemis__constants, only: real32
-  use artemis__misc, only: swap,sort1D
+  use coreutils__array, only: swap, sort1D
   use artemis__misc_linalg, only: simeq,get_area,uvec
   use artemis__misc_maths, only: gauss_array,get_turn_points,overlap_indiv_points,&
        running_avg,mean,median,mode
@@ -15,17 +14,25 @@ module artemis__interface_identifier
   private
 
   integer, parameter :: nstep_default=1000
+  !! Default number of steps for density calculations.
 
   type intf_info_type
+     !! Derived type storing interface information.
      integer :: axis
+     !! Axis perpendicular to the interface.
      real(real32), dimension(2) :: loc
+     !! Locations of the two interfaces along the axis.
   end type intf_info_type
   
   type den_of_neigh_type
+     !! Derived type storing density of neighbours for each atom.
      real(real32), allocatable, dimension(:,:) :: atom
+     !! Density of neighbours array (atom, step).
   end type den_of_neigh_type
   type den_of_spec_type
+     !! Derived type storing species-dependent density of neighbours.
      real(real32), allocatable, dimension(:,:,:) :: atom
+     !! Species density array (atom, species, step).
   end type den_of_spec_type
 
 
@@ -37,22 +44,27 @@ module artemis__interface_identifier
   public :: gen_single_DOS,gen_single_DON
 
 
-!!!updated 2020/02/25
-
-
 contains
-!!!#############################################################################
-!!! gets the interface location using CAD method
-!!!#############################################################################
+!###############################################################################
   function get_interface(basis, axis) result(intf)
+    !! Get the interface location using the cumulative atomic density (CAD) method.
     implicit none
-    type(basis_type), intent(in) :: basis
-    integer :: nstep
-    real(real32) :: dist_max
-    type(intf_info_type) :: intf
-    type(den_of_spec_type), allocatable, dimension(:) :: DOS
 
+    ! Arguments
+    type(basis_type), intent(in) :: basis
+    !! Input basis type containing atomic positions.
     integer, optional, intent(in) :: axis
+    !! Axis perpendicular to the interface. Determined automatically if absent.
+
+    ! Local variables
+    integer :: nstep
+    !! Number of steps for density calculation.
+    real(real32) :: dist_max
+    !! Maximum distance for density calculation.
+    type(intf_info_type) :: intf
+    !! Interface information result.
+    type(den_of_spec_type), allocatable, dimension(:) :: DOS
+    !! Species-dependent density of neighbours.
 
 
     dist_max = 12._real32
@@ -70,31 +82,47 @@ contains
     if(intf%loc(1).gt.intf%loc(2)) call swap(intf%loc(1),intf%loc(2))
 
   end function get_interface
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! generates species-dependent density of neighbours
-!!!#############################################################################
+!###############################################################################
   function gen_DOS(lat,bas,dist_max,scale_dist,norm) result(DOS)
+    !! Generate species-dependent density of neighbours (DOS).
     implicit none
-    integer :: i,j,k,is,ia,js,ja,count1
-    integer :: nstep,nsize
-    real(real32) :: rdist_max,rtmp1,rtmp2
-    logical :: lscale_dist,lnorm
-    real(real32) :: gauss_tol,DON_sigma,dist
-    integer, dimension(3) :: ncell
-    real(real32), dimension(3) :: vrtmp1,vrtmp2
-    real(real32), dimension(3) :: vtmp1,vtmp2,vtmp3
-    real(real32), allocatable, dimension(:) :: distance
-    type(den_of_spec_type), allocatable, dimension(:) :: DOS
 
+    ! Arguments
     real(real32), optional, intent(in) :: dist_max
+    !! Maximum interatomic distance for DOS calculation.
     logical, optional, intent(in) :: scale_dist,norm
+    !! Whether to scale by distance and whether to normalise.
     type(basis_type), intent(in) :: bas
+    !! Input basis type containing atomic positions.
     real(real32), dimension(3,3), intent(in) :: lat
-    
+    !! Lattice vectors.
+
+    ! Local variables
+    integer :: i,j,k,is,ia,js,ja,count1
+    !! Loop indices and counter.
+    integer :: nstep,nsize
+    !! Number of steps and neighbour list size.
+    real(real32) :: rdist_max,rtmp1,rtmp2
+    !! Local maximum distance and temporary reals.
+    logical :: lscale_dist,lnorm
+    !! Local flags for distance scaling and normalisation.
+    real(real32) :: gauss_tol,DON_sigma,dist
+    !! Gaussian tolerance, sigma, and distance value.
+    integer, dimension(3) :: ncell
+    !! Number of periodic cell images in each direction.
+    real(real32), dimension(3) :: vrtmp1,vrtmp2
+    !! Temporary 3-vectors.
+    real(real32), dimension(3) :: vtmp1,vtmp2,vtmp3
+    !! Temporary 3-vectors.
+    real(real32), allocatable, dimension(:) :: distance
+    !! Distance grid array.
+    type(den_of_spec_type), allocatable, dimension(:) :: DOS
+    !! Species-dependent density of neighbours result.
     real(real32), allocatable, dimension(:) :: dist_list
+    !! List of interatomic distances.
 
 
     if(present(scale_dist))then
@@ -249,23 +277,33 @@ contains
 
 
   end function gen_DOS
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! generates density of neighbours
-!!!#############################################################################
+!###############################################################################
   function gen_DON(lat,bas,dist_max,scale_dist,norm) result(DON)
+    !! Generate density of neighbours (DON) by summing DOS over all species.
     implicit none
-    integer :: i,is,ia,nstep
-    logical :: lscale_dist,lnorm
-    type(den_of_spec_type), allocatable, dimension(:) :: DOS
-    type(den_of_neigh_type), allocatable, dimension(:) :: DON
-    
+
+    ! Arguments
     real(real32), optional, intent(in) :: dist_max
+    !! Maximum interatomic distance.
     logical, optional, intent(in) :: scale_dist,norm
+    !! Whether to scale by distance and whether to normalise.
     type(basis_type), intent(in) :: bas
+    !! Input basis type containing atomic positions.
     real(real32), dimension(3,3), intent(in) :: lat
+    !! Lattice vectors.
+
+    ! Local variables
+    integer :: i,is,ia,nstep
+    !! Loop indices and number of steps.
+    logical :: lscale_dist,lnorm
+    !! Local flags for distance scaling and normalisation.
+    type(den_of_spec_type), allocatable, dimension(:) :: DOS
+    !! Species-dependent density of neighbours.
+    type(den_of_neigh_type), allocatable, dimension(:) :: DON
+    !! Density of neighbours result.
 
 
     if(present(scale_dist))then
@@ -299,33 +337,45 @@ contains
     end do
 
   end function gen_DON
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! finds unique atoms by comparing density of neighbours
-!!!#############################################################################
+!###############################################################################
   function gen_DONsim(DON,dist_max,cutoff,avg_mthd) result(intf_atoms)
+    !! Find unique atoms by comparing density of neighbours.
     implicit none
 
+    ! Arguments
     type(den_of_neigh_type), dimension(:), intent(in) :: DON
+    !! Input density of neighbours for each species.
     real(real32), optional, intent(in) :: dist_max,cutoff
+    !! Maximum distance and similarity cutoff distance.
     integer, optional, intent(in) :: avg_mthd
+    !! Averaging method for similarity cutoff (1=midpoint, 2=mean, 3=max jump).
 
+    ! Local variables
     integer :: i,is,ia,ja,cutloc,itmp1,udef_avg_mthd
+    !! Loop indices, cutoff location, temporary integer, and averaging method.
     integer :: nspec,natom,nstep
+    !! Number of species, atoms, and steps.
     real(real32) :: avg,rdist_max,rcutoff,maxjump
+    !! Average similarity, local max distance, cutoff, and maximum jump.
     integer, allocatable, dimension(:) :: intf_list,sumspec
+    !! Interface atom list and cumulative species count.
     real(real32), allocatable, dimension(:) :: newf,simi,distance
+    !! Overlap function, similarity array, and distance grid.
     integer, allocatable, dimension(:,:) :: intf_atoms
+    !! Interface atoms result (atom index, species/atom number).
 
     type(den_of_neigh_type), allocatable, dimension(:) :: sim
+    !! Similarity per atom.
     type(den_of_spec_type), allocatable, dimension(:) :: similarity
+    !! Pairwise similarity between atoms.
 
     
-!!!-----------------------------------------------------------------------------
-!!! Initialises variables based on input values
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Initialise variables based on input values
+!---------------------------------------------------------------------------
     nstep=size(DON(1)%atom(1,:))
     allocate(distance(nstep))
     rdist_max=12._real32
@@ -338,9 +388,9 @@ contains
     cutloc=minloc(abs(distance(:)-rcutoff),dim=1)
 
 
-!!!-----------------------------------------------------------------------------
-!!! Allocates arrays
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Allocate arrays
+!---------------------------------------------------------------------------
     natom=0
     nspec=size(DON)
     allocate(sim(nspec))
@@ -358,9 +408,9 @@ contains
     allocate(simi(natom))
 
 
-!!!-----------------------------------------------------------------------------
-!!! Computes the similarity between the DONs of every atom with each other atom
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Compute the similarity between the DONs of every atom with each other atom
+!---------------------------------------------------------------------------
     natom=0
     specloop1: do is=1,nspec
        atomloop1: do ia=1,size(DON(is)%atom(:,1))
@@ -382,9 +432,9 @@ contains
     end do specloop1
 
 
-!!!-----------------------------------------------------------------------------
-!!! Sets up intf_list values
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Set up intf_list values
+!---------------------------------------------------------------------------
     allocate(sumspec(nspec))
     sumspec(1)=size(DON(1)%atom(:,1))
     do is=2,nspec
@@ -396,9 +446,9 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! Define similarity cutoff using user-defined averaging method
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Define similarity cutoff using user-defined averaging method
+!---------------------------------------------------------------------------
     call sort1D(simi,intf_list)
     udef_avg_mthd=1
     if(present(avg_mthd)) udef_avg_mthd=avg_mthd
@@ -426,9 +476,9 @@ contains
     end select
     
 
-!!!-----------------------------------------------------------------------------
-!!! Saves the species and atom numbers of the interfacial atoms
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Save the species and atom numbers of the interfacial atoms
+!---------------------------------------------------------------------------
     allocate(intf_atoms(itmp1,2))
     intf_atoms=0
     do i=1,itmp1
@@ -442,12 +492,12 @@ contains
 
 
   end function gen_DONsim
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! returns interface ions from two supplied bases
-!!!#############################################################################
+!###############################################################################
+! returns interface ions from two supplied bases
+!###############################################################################
 !  subroutine get_intf_atoms(lat1,bas1,lat2,bas2)
 !    implicit none
 !    real(real32), dimension(3,3) :: lat1,lat2
@@ -459,33 +509,46 @@ contains
 !
 !
 !  end subroutine get_intf_atoms
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! determines axis perpendicular to the interface (DOS method)
-!!!#############################################################################
+!###############################################################################
   function get_intf_axis_DOS(DOS,lat,bas,dist_max,cutoff,lprint) result(axis)
+    !! Determine the axis perpendicular to the interface using the DOS method.
     implicit none
-    integer :: axis
-    integer :: i,is,ia,ja,l,m,n,ks,cutloc,nstep,itmp1
-    real(real32) :: rdist_max,rcutoff,power,rtmp1
+
+    ! Arguments
     real(real32), optional, intent(in) :: dist_max,cutoff
+    !! Maximum distance and similarity cutoff distance.
     logical, optional :: lprint
+    !! Whether to print progress information.
     type(basis_type) :: bas
-    real(real32), dimension(3) :: dir_disim
-    real(real32), dimension(3) :: vtmp1,vtmp2,vtmp3
+    !! Input basis type containing atomic positions.
     real(real32), dimension(3,3) :: lat
-    real(real32), allocatable, dimension(:) :: sim_dist,distance
-    
-
+    !! Lattice vectors.
     type(den_of_spec_type), allocatable, dimension(:) :: DOS
+    !! Species-dependent density of neighbours.
+
+    ! Local variables
+    integer :: axis
+    !! Interface axis result.
+    integer :: i,is,ia,ja,l,m,n,ks,cutloc,nstep,itmp1
+    !! Loop indices, cutoff location, number of steps, and temporary integer.
+    real(real32) :: rdist_max,rcutoff,power,rtmp1
+    !! Local max distance, cutoff, decay power, and temporary real.
+    real(real32), dimension(3) :: dir_disim
+    !! Directional dissimilarity along each axis.
+    real(real32), dimension(3) :: vtmp1,vtmp2,vtmp3
+    !! Temporary 3-vectors.
+    real(real32), allocatable, dimension(:) :: sim_dist,distance
+    !! Similarity-distance array and distance grid.
     type(den_of_neigh_type), allocatable, dimension(:,:) :: intf_func
+    !! Interface function per axis and species.
 
 
-!!!-----------------------------------------------------------------------------
-!!! initialise variables
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Initialise variables
+!---------------------------------------------------------------------------
     if(present(lprint))then
        if(lprint) write(*,'(1X,"Determining axis perpendicular to interface")')
     end if
@@ -509,10 +572,10 @@ contains
     allocate(sim_dist(nstep))
 
 
-!!!-----------------------------------------------------------------------------
-!!! interface axis identifier loop
-!!! Loops over each axis
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Interface axis identifier loop
+! Loops over each axis
+!---------------------------------------------------------------------------
     do i=1,3
        distloop2: do is=1,bas%nspec
           do ia=1,bas%spec(is)%num
@@ -584,9 +647,9 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! defines the interface axis as the one with the greatest difference
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Define the interface axis as the one with the greatest difference
+!---------------------------------------------------------------------------
     axis=minloc(dir_disim,dim=1)
     if(present(lprint))then
        if(lprint) write(*,*) "Interface located along axis",axis
@@ -594,33 +657,47 @@ contains
 
 
   end function get_intf_axis_DOS
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! determines axis perpendicular to the interface (CAD method)
-!!!#############################################################################
+!###############################################################################
   function get_intf_axis_CAD(lat,bas) result(axis)
+    !! Determine the axis perpendicular to the interface using the CAD method.
     implicit none
-    integer :: i,j,is,iaxis
-    integer :: pntl,pntr,nstep
-    real(real32) :: sigma,gauss_tol,area
-    integer, dimension(3) :: abc
-    real(real32), dimension(3) :: vtmp1,vtmp2,axis_vec
-    real(real32), allocatable, dimension(:) :: rangevec
-    real(real32), allocatable, dimension(:) :: dist,multiCADD
-    real(real32), allocatable, dimension(:,:) :: CAD,deriv
-    real(real32), allocatable, dimension(:,:,:) :: CADD
 
-    integer :: axis
+    ! Arguments
     type(basis_type), intent(in) :: bas
+    !! Input basis type containing atomic positions.
     real(real32), dimension(3,3), intent(in) :: lat
+    !! Lattice vectors.
+
+    ! Local variables
+    integer :: i,j,is,iaxis
+    !! Loop indices.
+    integer :: pntl,pntr,nstep
+    !! Left and right point indices and number of steps.
+    real(real32) :: sigma,gauss_tol,area
+    !! Gaussian sigma, tolerance, and cross-sectional area.
+    integer, dimension(3) :: abc
+    !! Axis permutation indices.
+    real(real32), dimension(3) :: vtmp1,vtmp2,axis_vec
+    !! Temporary 3-vectors and per-axis CADD maximum.
+    real(real32), allocatable, dimension(:) :: rangevec
+    !! Range of derivative per species.
+    real(real32), allocatable, dimension(:) :: dist,multiCADD
+    !! Distance grid and combined CADD.
+    real(real32), allocatable, dimension(:,:) :: CAD,deriv
+    !! Cumulative atomic density and its derivative.
+    real(real32), allocatable, dimension(:,:,:) :: CADD
+    !! Cumulative atomic density derivative coefficients.
+    integer :: axis
+    !! Interface axis result.
 
 
 
-!!!-----------------------------------------------------------------------------
-!!! initialise variables
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Initialise variables
+!---------------------------------------------------------------------------
     nstep=nstep_default
     allocate(dist(nstep))
     dist=0._real32
@@ -634,9 +711,9 @@ contains
     allocate(multiCADD(nstep))
     abc = [1,2,3]
 
-!!!-----------------------------------------------------------------------------
-!!! cycle over the 3 axes
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Cycle over the 3 axes
+!---------------------------------------------------------------------------
     do iaxis=1,3
        do i=1,nstep
           dist(i)=(i-1)*norm2(lat(iaxis,:))/nstep
@@ -708,44 +785,63 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! determine the interfacial axis
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Determine the interfacial axis
+!---------------------------------------------------------------------------
     axis = maxloc(axis_vec,dim=1)
 
 
     
 
   end function get_intf_axis_CAD
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Uses cumulative atomic density method to find interface
-!!!#############################################################################
+!###############################################################################
   function get_intf_CAD(lat,bas,axis,num_step,lprint) result(intf_loc)
+    !! Find interface location using the cumulative atomic density (CAD) method.
     implicit none
+
+    ! Arguments
     integer :: axis
-    integer :: i,j,is
-    integer :: pntl,pntr,nstep
+    !! Axis perpendicular to the interface.
     integer, optional, intent(in) :: num_step
+    !! Number of steps for density calculation.
     type(basis_type) :: bas
-    real(real32) :: sigma, gauss_tol
-    real(real32), dimension(2) :: intf_loc
-    real(real32), dimension(3) :: vtmp1,vtmp2
+    !! Input basis type containing atomic positions.
     real(real32), dimension(3,3) :: lat
-    integer, allocatable, dimension(:) :: ivec1
-    real(real32), allocatable, dimension(:) :: rangevec
-    real(real32), allocatable, dimension(:) :: dist,multiCADD
-    real(real32), allocatable, dimension(:,:) :: CAD,deriv
-    real(real32), allocatable, dimension(:,:,:) :: CADD
+    !! Lattice vectors.
     logical, optional :: lprint
+    !! Whether to print debug output.
+
+    ! Local variables
+    integer :: i,j,is
+    !! Loop indices.
+    integer :: pntl,pntr,nstep
+    !! Left and right point indices and number of steps.
+    real(real32) :: sigma, gauss_tol
+    !! Gaussian sigma and tolerance.
+    real(real32), dimension(2) :: intf_loc
+    !! Interface location result.
+    real(real32), dimension(3) :: vtmp1,vtmp2
+    !! Temporary 3-vectors.
+    integer, allocatable, dimension(:) :: ivec1
+    !! Turning point indices.
+    real(real32), allocatable, dimension(:) :: rangevec
+    !! Range of derivative per species.
+    real(real32), allocatable, dimension(:) :: dist,multiCADD
+    !! Distance grid and combined CADD.
+    real(real32), allocatable, dimension(:,:) :: CAD,deriv
+    !! Cumulative atomic density and its derivative.
+    real(real32), allocatable, dimension(:,:,:) :: CADD
+    !! Cumulative atomic density derivative coefficients.
     real(real32) :: diff
+    !! Distance difference between interface candidates.
 
 
-!!!-----------------------------------------------------------------------------
-!!! initialise variables
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Initialise variables
+!---------------------------------------------------------------------------
     nstep=nstep_default
     if(present(num_step)) nstep=num_step
     allocate(dist(nstep))
@@ -764,9 +860,9 @@ contains
     CADD=0._real32
 
    
-!!!-----------------------------------------------------------------------------
-!!! set up CAD and CADD
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Set up CAD and CADD
+!---------------------------------------------------------------------------
     do is=1,bas%nspec
        !!-----------------------------------------------------------------------
        !! extend cell 1 cell above and below the interface
@@ -814,9 +910,9 @@ contains
     end do
     
 
-!!!-----------------------------------------------------------------------------
-!!! multiply the CADDs of each species into an overal CADD (multiCADD)
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Multiply the CADDs of each species into an overall CADD (multiCADD)
+!---------------------------------------------------------------------------
     allocate(multiCADD(nstep))
     multiCADD=1._real32
     do is=1,bas%nspec
@@ -825,9 +921,9 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! identify whether system is likely a planar defect
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Identify whether system is likely a planar defect
+!---------------------------------------------------------------------------
     if(count(abs(multiCADD).lt.1.D-8).gt.0.9*nstep)then
        write(*,'(1X,"System has same species-split density across system")')
        write(*,'(1X,"Likely a planar defect")')
@@ -835,9 +931,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! smooths the multiCADD by applying a running average
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Smooth the multiCADD by applying a running average
+!---------------------------------------------------------------------------
     multiCADD=running_avg(multiCADD,window=9,lperiodic=.true.)
     multiCADD=abs(multiCADD)
     if(present(lprint))then
@@ -849,10 +945,10 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! finds the turning points of the multiCADD and attributes them to ...
-!!! ... the two interfaces
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Find the turning points of the multiCADD and attribute them to
+! the two interfaces
+!---------------------------------------------------------------------------
     ivec1 = get_turn_points([multiCADD(:)],window=8,lperiodic=.true.)
 
     intf_loc(1)=dist(ivec1(size(ivec1)))
@@ -870,30 +966,42 @@ contains
 
 
   end function get_intf_CAD
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! determine whether structure is layered
-!!!#############################################################################
+!###############################################################################
   function get_layered_axis(lat,bas,lprint) result(axis)
+    !! Determine whether a structure is layered and return the layered axis.
     implicit none
+
+    ! Arguments
+    type(basis_type), intent(in) :: bas
+    !! Input basis type containing atomic positions.
+    real(real32), dimension(3,3), intent(in) :: lat
+    !! Lattice vectors.
+    logical, optional, intent(in) :: lprint
+    !! Whether to print progress information.
+
+    ! Local variables
     integer :: i,is,j,nstep,diffcount,axis
+    !! Loop indices, number of steps, diff count, and axis result.
     !integer, dimension(3) :: nturns
     real(real32) :: sigma, gauss_tol
+    !! Gaussian sigma and tolerance.
     logical :: udef_lprint
+    !! Local print flag.
     real(real32), dimension(3) :: diff
+    !! Ratio of max to min atomic density per axis.
     real(real32), dimension(3,2) :: minmax
+    !! Min and max atomic density per axis.
     real(real32), allocatable, dimension(:) :: AD,dist
+    !! Atomic density and distance grid.
     !integer, allocatable, dimension(:) :: ivec1
-    type(basis_type), intent(in) :: bas
-    real(real32), dimension(3,3), intent(in) :: lat
-    logical, optional, intent(in) :: lprint
 
 
-!!!-----------------------------------------------------------------------------
-!!! initialise variables
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Initialise variables
+!---------------------------------------------------------------------------
     sigma=0.5_real32
     gauss_tol=16._real32
     if(present(lprint))then
@@ -903,9 +1011,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! cycles over axes to find atomic density (AD) mapping along each axis
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Cycle over axes to find atomic density (AD) mapping along each axis
+!---------------------------------------------------------------------------
     axis_loop1: do i=1,3
        if(allocated(dist)) deallocate(dist)
        nstep=nint(norm2(lat(i,:))/0.001_real32)
@@ -934,9 +1042,9 @@ contains
     end do axis_loop1
 
 
-!!!-----------------------------------------------------------------------------
-!!! checks each axis 
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Check each axis
+!---------------------------------------------------------------------------
     axis=0
     select case(count(diff.gt.huge(0._real32)))
     case(1)
@@ -951,7 +1059,7 @@ contains
        axis=-2
     case default
        axis_loop2: do i=1,3
-!!! ADD A TOLERANCE FOR 'COULD BE LAYERED'
+! ADD A TOLERANCE FOR 'COULD BE LAYERED'
           diffcount=count(diff(i).gt.5._real32*diff(:))
           if(diffcount.eq.2)then
              axis=i
@@ -969,12 +1077,12 @@ contains
 
 
   end function get_layered_axis
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! 
-!!!#############################################################################
+!###############################################################################
+! Locate two interfaces (currently unused)
+!###############################################################################
 !  function locate_two_intfs(func,ivec1,lmax) result(intf_loc)
 !    implicit none
 !    integer :: loc,i
@@ -1012,30 +1120,45 @@ contains
 !    end do
 !
 !  end function locate_two_intfs
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! generates species-dependent density of neighbours for a single atom
-!!!#############################################################################
+!###############################################################################
   function gen_single_DOS(lat,bas,ispec,iatom,dist_max,weight_dist) result(DOS)
+    !! Generate species-dependent density of neighbours for a single atom.
     implicit none
-    integer :: i,j,k,js,ja,count1
-    integer :: nstep
-    real(real32) :: rdist_max
-    real(real32) :: gauss_tol,DON_sigma,dist,dist_cutoff,rtmp1
-    type(basis_type) :: bas
-    logical :: lweight
-    real(real32), dimension(3) :: vtmp1,vtmp2,vtmp3
-    real(real32), allocatable, dimension(:) :: distance
-    
-    integer, intent(in) :: ispec,iatom
-    real(real32), dimension(3,3), intent(in) :: lat
-    real(real32), optional, intent(in) :: dist_max
-    logical, optional, intent(in) :: weight_dist
-    real(real32), allocatable, dimension(:,:) :: DOS
 
+    ! Arguments
+    integer, intent(in) :: ispec,iatom
+    !! Species and atom indices.
+    real(real32), dimension(3,3), intent(in) :: lat
+    !! Lattice vectors.
+    real(real32), optional, intent(in) :: dist_max
+    !! Maximum interatomic distance.
+    logical, optional, intent(in) :: weight_dist
+    !! Whether to apply distance weighting.
+
+    ! Local variables
+    integer :: i,j,k,js,ja,count1
+    !! Loop indices and counter.
+    integer :: nstep
+    !! Number of steps.
+    real(real32) :: rdist_max
+    !! Local maximum distance.
+    real(real32) :: gauss_tol,DON_sigma,dist,dist_cutoff,rtmp1
+    !! Gaussian tolerance, sigma, distance, cutoff, and temporary real.
+    type(basis_type) :: bas
+    !! Input basis type containing atomic positions.
+    logical :: lweight
+    !! Local distance weighting flag.
+    real(real32), dimension(3) :: vtmp1,vtmp2,vtmp3
+    !! Temporary 3-vectors.
+    real(real32), allocatable, dimension(:) :: distance
+    !! Distance grid array.
+    real(real32), allocatable, dimension(:,:) :: DOS
+    !! Species-dependent density of neighbours result.
     real(real32), allocatable, dimension(:) :: dist_list
+    !! List of interatomic distances.
 
 
     nstep=nstep_default
@@ -1103,21 +1226,31 @@ contains
 
 
   end function gen_single_DOS
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! generates density of neighbours for a single atom
-!!!#############################################################################
+!###############################################################################
   function gen_single_DON(lat,bas,ispec,iatom,dist_max) result(DON)
+    !! Generate density of neighbours for a single atom.
     implicit none
-    integer :: i,nstep
-    type(basis_type) :: bas
-    real(real32), dimension(3,3) :: lat
-    real(real32), allocatable, dimension(:) :: DON
-    real(real32), allocatable, dimension(:,:) :: DOS
+
+    ! Arguments
     integer, intent(in) :: ispec,iatom
+    !! Species and atom indices.
     real(real32), optional, intent(in) :: dist_max
+    !! Maximum interatomic distance.
+
+    ! Local variables
+    integer :: i,nstep
+    !! Loop index and number of steps.
+    type(basis_type) :: bas
+    !! Input basis type containing atomic positions.
+    real(real32), dimension(3,3) :: lat
+    !! Lattice vectors.
+    real(real32), allocatable, dimension(:) :: DON
+    !! Density of neighbours result.
+    real(real32), allocatable, dimension(:,:) :: DOS
+    !! Species-dependent density of neighbours.
 
 
     if(present(dist_max))then
@@ -1134,7 +1267,7 @@ contains
     end do
 
   end function gen_single_DON
-!!!#############################################################################
+!###############################################################################
 
 
 end module artemis__interface_identifier

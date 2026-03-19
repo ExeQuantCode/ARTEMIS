@@ -1,4 +1,5 @@
 module artemis__help
+  !! Help and documentation module for ARTEMIS input tag definitions.
   use artemis__io_utils, only: err_abort, tag_type, io_print_help
   implicit none
 
@@ -124,12 +125,13 @@ module artemis__help
 
 contains
 
-!!!#############################################################################
-!!! setup settings tag descriptions
-!!!#############################################################################
+!###############################################################################
   function setup_settings_tags() result(tag)
+    !! Set up settings tag descriptions.
     implicit none
+
     type(tag_type), dimension(ntags_settings) :: tag
+    !! Array of tag descriptions for the settings card.
 
 
     tag(itask_tag)%name    = 'TASK'
@@ -233,15 +235,16 @@ contains
 
 
   end function setup_settings_tags
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! setup settings tag descriptions
-!!!#############################################################################
+!###############################################################################
   function setup_cell_edits_tags() result(tag)
+    !! Set up cell edits tag descriptions.
     implicit none
+
     type(tag_type), dimension(ntags_cell_edits) :: tag
+    !! Array of tag descriptions for the cell edits card.
 
     
     tag(ishift_tag)%name    = 'SHIFT'
@@ -402,19 +405,20 @@ contains
          &the Buerger reduction is performed to make lattice more manageable'
 
 
-!!! SET UP A CUTTER FUNCTION
+! SET UP A CUTTER FUNCTION
 
 
   end function setup_cell_edits_tags
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! setup interace  tag descriptions
-!!!#############################################################################
+!###############################################################################
   function setup_interface_tags() result(tag)
+    !! Set up interface tag descriptions.
     implicit none
+
     type(tag_type), dimension(ntags_interface) :: tag
+    !! Array of tag descriptions for the interface card.
 
 
     tag(ilprint_matches_tag)%name    = 'LPRINT_MATCHES'
@@ -979,15 +983,16 @@ contains
 
 
   end function setup_interface_tags
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! setup deprecated interface tag descriptions
-!!!#############################################################################
+!###############################################################################
   function setup_depr_cell_edits_tags() result(tag)
+    !! Set up deprecated cell edits tag descriptions.
     implicit none
+
     type(tag_type), dimension(ntags_depr_cell_edits) :: tag
+    !! Array of deprecated tag descriptions for the cell edits card.
 
     tag(islab_thick_tag)%name    = 'SLAB_THICKNESS'
     tag(islab_thick_tag)%type    = 'I'
@@ -1002,10 +1007,13 @@ contains
          'Defines the number of primitive layers to use for the lower crystal'
 
   end function setup_depr_cell_edits_tags
-!-------------------------------------------------------------------------------
+!---------------------------------------------------------------------------
   function setup_depr_interface_tags() result(tag)
+    !! Set up deprecated interface tag descriptions.
     implicit none
+
     type(tag_type), dimension(ntags_depr_interface) :: tag
+    !! Array of deprecated tag descriptions for the interface card.
 
     tag(ilw_slab_thick_tag)%name    = 'LW_SLAB_THICKNESS'
     tag(ilw_slab_thick_tag)%type    = 'I'
@@ -1033,20 +1041,24 @@ contains
          'Defines the number of primitive layers to use for the upper crystal'
 
   end function setup_depr_interface_tags
-!!!#############################################################################
+!###############################################################################
 
 
 
-!!!#############################################################################
-!!! settings card help
-!!!#############################################################################
+!###############################################################################
   subroutine settings_help(unit, helpword, search)
+    !! Print help information for the settings card.
     implicit none
     integer, intent(in) :: unit
+    !! Output unit number.
     character(len=*), intent(in) :: helpword
+    !! Keyword to search for in the tag descriptions.
     type(tag_type), dimension(ntags_settings) :: tag
+    !! Array of tag descriptions for the settings card.
     logical :: lsearch
+    !! Local copy of search flag.
     logical, optional :: search
+    !! Whether to perform a search.
     
     lsearch=.false.
     if(present(search)) lsearch=search
@@ -1059,19 +1071,23 @@ contains
     write(unit,*)
 
   end subroutine settings_help
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! cell_edits card help
-!!!#############################################################################
+!###############################################################################
   subroutine cell_edits_help(unit, helpword, search)
+    !! Print help information for the cell edits card.
     implicit none
     integer, intent(in) :: unit
+    !! Output unit number.
     character(len=*), intent(in) :: helpword
+    !! Keyword to search for in the tag descriptions.
     type(tag_type), dimension(ntags_cell_edits + ntags_depr_cell_edits) :: tag
+    !! Array of tag descriptions for the cell edits card.
     logical :: lsearch
+    !! Local copy of search flag.
     logical, optional :: search
+    !! Whether to perform a search.
     
     lsearch=.false.
     if(present(search)) lsearch=search
@@ -1084,19 +1100,23 @@ contains
     write(unit,*)
 
   end subroutine cell_edits_help
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! interface card help
-!!!#############################################################################
+!###############################################################################
   subroutine interface_help(unit, helpword, search)
+    !! Print help information for the interface card.
     implicit none
     integer, intent(in) :: unit
+    !! Output unit number.
     character(len=*), intent(in) :: helpword
+    !! Keyword to search for in the tag descriptions.
     type(tag_type), dimension(ntags_interface + ntags_depr_interface) :: tag
+    !! Array of tag descriptions for the interface card.
     logical :: lsearch
+    !! Local copy of search flag.
     logical, optional :: search
+    !! Whether to perform a search.
     
     lsearch=.false.
     if(present(search)) lsearch=search
@@ -1109,6 +1129,6 @@ contains
     write(unit,*)
 
   end subroutine interface_help
-!!!#############################################################################
+!###############################################################################
 
 end module artemis__help

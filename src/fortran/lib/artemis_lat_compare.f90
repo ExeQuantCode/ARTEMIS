@@ -1,19 +1,10 @@
-!!!#############################################################################
-!!! Module compare two lattices to find potential matches
-!!! Code written by Ned Thaddeus Taylor and Isiah Edward Mikel Rudkin
-!!! Code part of the ARTEMIS group
-!!!#############################################################################
-!!! module contains various miscellaneous functions and subroutines.
-!!! module includes the following functionsand subroutines:
-!!! get_best_match
-!!! pick_axis         (shifts lattices according to the static planes)
-!!! cyc_lat1          (cycles through lat1 combinations)
-!!! cyc_lat2          (finds best fit of lat2 to the designated lat1)
-!!! tol_check
-!!! lat_check
-!!! convert_n_tf1!!! endcode
-!!!#############################################################################
+!###############################################################################
 module artemis__lat_compare
+  !! Module for comparing two lattices to find potential matches.
+  !!
+  !! Contains procedures for cycling through lattice combinations, finding
+  !! best-fit transformation matrices, checking tolerances, and performing
+  !! lattice matching using both direct and symmetry-based methods.
   use artemis__constants, only: real32, pi, INF
   use artemis__misc_types, only: latmatch_type, tol_type
   use artemis__misc_linalg, only: cross,uvec,get_area,find_tf,det,reduce_vec_gcd,&
@@ -22,52 +13,63 @@ module artemis__lat_compare
   use artemis__geom_utils, only: MATNORM,planecutter
   implicit none
   integer :: ierr_compare = 0
+  !! Error verbosity level for lattice comparison output.
   logical :: lstop=.true.
+  !! Flag to stop cycling after too many failed checks.
   logical :: reduce=.false.
+  !! Flag to enable reduction of transformation matrices.
 
 
-  
-!!!updated  2021/11/19
- 
-  
 contains
 
-!!!#############################################################################
-!!! cycles lattice 1
-!!!#############################################################################
-!!! Conditions used to stop transformation matrix for lattice 1 from ...
-!!! ... cycling over ones already used:
-!!! For n array:
-!!!   - diagonals and lower off-diagonals are, at most, half the n_num
-!!!   - upper off-diagonals are, at most, n_num
-!!!   - after n(1,:) reaches (/ (n_num-1)/2, (n_num-1), (n_num-1) /), cycle ...
-!!!     ... onto n_num = n_num + 1. This stops it from going over all ...
-!!!     ... previously checked n arrays.
-!!!   - if all n(1,:) or n(2,:) = 0, skip this configuration, 
-!!! Means for transformation matrix:
-!!!   - stops diagonal and lower off-diagonal elements from being negative. ...
-!!!     ... These are already covered by the negative of that vector
-!!!   - allows for negative values on the upper off-diagonal elements
-!!!   - stops transformation matrix from checking over previous superlattices
-!!!   - equivalent transformation matrix will have a determinant of zero
+!###############################################################################
   subroutine cyc_lat1(SAV, tol, match_method, verbose)
+    !! Cycle through lattice 1 transformation matrices.
+    !!
+    !! Conditions to stop transformation matrix cycling:
+    !!
+    !! For n array:
+    !!   - diagonals and lower off-diagonals are, at most, half the n_num
+    !!   - upper off-diagonals are, at most, n_num
+    !!   - after n(1,:) reaches (/ (n_num-1)/2, (n_num-1), (n_num-1) /),
+    !!     cycle onto n_num = n_num + 1
+    !!   - if all n(1,:) or n(2,:) = 0, skip this configuration
+    !!
+    !! For transformation matrix:
+    !!   - stops diagonal and lower off-diagonal elements from being negative
+    !!   - allows negative values on upper off-diagonal elements
+    !!   - stops transformation matrix from checking over previous superlattices
+    !!   - equivalent transformation matrix will have a determinant of zero
     implicit none
+    ! Arguments
     type(latmatch_type), intent(inout) :: SAV
+    !! Lattice match data structure.
     integer, intent(in) :: match_method
+    !! Method to use for lattice 2 matching (1 or 2).
     integer, intent(in) :: verbose
+    !! Verbosity level for output.
+    ! Local variables
     integer :: i,j,k
+    !! Loop counters.
     integer :: n_num,count1
+    !! Current n value and failed-check counter.
     logical :: l1change
+    !! Flag indicating change in first row of n array.
     type(tol_type) :: tol
+    !! Tolerance parameters.
     integer, dimension(3,3) :: tf1,tf2
+    !! Transformation matrices for lattice 1 and 2.
     integer, dimension(2,3) :: n
+    !! Array controlling transformation matrix generation.
     real(real32), dimension(3,3) :: tlat1,tlat2
+    !! Superlattices for lattice 1 and 2.
     real(real32), allocatable, dimension(:,:,:) :: match_tfs
+    !! Stored transformation matrices for found matches.
 
     
-!!!-----------------------------------------------------------------------------
-!!! Initialised varaibles and allocates arrays
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Initialised varaibles and allocates arrays
+!---------------------------------------------------------------------------
     allocate(match_tfs(tol%maxfit,3,3))
     match_tfs=0._real32
     SAV%nfit=0
@@ -77,9 +79,9 @@ contains
     l1change=.false.
 
 
-!!!-----------------------------------------------------------------------------
-!!! Sets up the n array for the current value of n_num
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Sets up the n array for the current value of n_num
+!---------------------------------------------------------------------------
 101 n_num=n_num+1
     if(n_num.gt.tol%maxsize) return
     n(:,:)=0
@@ -90,9 +92,9 @@ contains
     end do
     
 
-!!!-----------------------------------------------------------------------------
-!!! Loops over the n array to check whether values are allowed
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Loops over the n array to check whether values are allowed
+!---------------------------------------------------------------------------
 102 nloop: do
        chngloop: do i=2,1,-1
           do j=1,SAV%axes(1)
@@ -135,9 +137,9 @@ contains
        end if
        
 
-!!!-----------------------------------------------------------------------------
-!!! Creates transformation matrix using n array
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Creates transformation matrix using n array
+!---------------------------------------------------------------------------
        tf1=convert_n_tf1(n,SAV%axes(1))
 !       if(abs(nint(get_area(real(tf1(1,:),real32),real(tf1(2,:),real32)))).gt.tol%area)then
 !          n(1,1)=n(1,1)-1
@@ -149,37 +151,37 @@ contains
 !       tf1(1,:)=(/1,0,0/)
 !       tf1(2,:)=(/0,1,0/)
 !       tf1(3,:)=(/0,0,1/)
-!!!-----------------------------------------------------------------------------
-!!! Creates superlattice from transformation matrix and original lattice
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Creates superlattice from transformation matrix and original lattice
+!---------------------------------------------------------------------------
        tlat1=matmul(tf1,SAV%lat1)
        tlat1=MATNORM(tlat1)
 
 
-!!!-----------------------------------------------------------------------------
-!!! Compares superlattice to previously saved superlattices and cycles if same
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Compares superlattice to previously saved superlattices and cycles if same
+!---------------------------------------------------------------------------
        if(lat_check(SAV,tol,tlat1)) goto 103
 
 
-!!!-----------------------------------------------------------------------------
-!!! Generates corresponding superlattice of 2nd lattice that will best ...
-!!! ... fit with current superlattice of 1st lattice.
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Generates corresponding superlattice of 2nd lattice that will best ...
+! ... fit with current superlattice of 1st lattice.
+!---------------------------------------------------------------------------
        tlat2=cyc_lat2(SAV,tol,tlat1,tf1,tf2,match_tfs, match_method)
        count1=count1+1
 
 
-!!!-----------------------------------------------------------------------------
-!!! Compares superlattice to previously saved superlattices and cycles if same
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Compares superlattice to previously saved superlattices and cycles if same
+!---------------------------------------------------------------------------
        if(any(isnan(match_tfs(SAV%nfit+1,:,:)))) goto 103
        if(lat_check(SAV,tol,tlat1)) goto 103
 
 
-!!!-----------------------------------------------------------------------------
-!!! Checks whether similar transformation has already been saved
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Checks whether similar transformation has already been saved
+!---------------------------------------------------------------------------
        do i=1,SAV%nfit
           if(all(abs(&
                match_tfs(SAV%nfit+1,:2,:3)-&
@@ -187,9 +189,9 @@ contains
        end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! Checks whether corresponding superlattices are within tolerance factors
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Checks whether corresponding superlattices are within tolerance factors
+!---------------------------------------------------------------------------
        if(tol_check(SAV,tol,tlat1,tlat2,tf1,tf2,verbose))then
           !!--------------------------------------------------------------------
           !! Handles counters accordingly
@@ -203,9 +205,9 @@ contains
        end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! Checks whether any stop conditions are met
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Checks whether any stop conditions are met
+!---------------------------------------------------------------------------
        if(SAV%nfit.eq.tol%maxfit) then
           if(verbose.gt.0) &
                write(*,'(/,"Number of fits reached maxfits ",I0)') SAV%nfit
@@ -219,9 +221,9 @@ contains
        end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! Cycles n array to new values and cycles loop
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Cycles n array to new values and cycles loop
+!---------------------------------------------------------------------------
 103    n(2,1)=n(2,1)-1
 
 
@@ -230,22 +232,29 @@ contains
 
     return
   end subroutine cyc_lat1
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! cycles lattice 2
-!!!#############################################################################
+!###############################################################################
   function cyc_lat2(SAV,tol,tlat1,tf1,tf2,match_tfs, match_method) result(tlat2)
+    !! Cycle through lattice 2 to find best fit with the given lattice 1 superlattice.
     implicit none
     integer :: i,j
+    !! Loop counters.
     type(tol_type) :: tol
+    !! Tolerance parameters.
     type(latmatch_type) :: SAV
+    !! Lattice match data structure.
     integer, dimension(3,3) :: tf1,tf2
+    !! Transformation matrices for lattice 1 and 2.
     integer, dimension(3,3) :: it1_mat,it2_mat
+    !! Intermediate transformation matrices for reduction.
     real(real32), dimension(3,3) :: t_mat,tlat1,tlat2
+    !! Temporary matrix and input/result superlattices.
     real(real32), dimension(:,:,:) :: match_tfs
+    !! Stored transformation matrices for found matches.
     integer, intent(in) :: match_method
+    !! Method to use for matching (1 or 2).
 
 
     select case(match_method)
@@ -257,12 +266,12 @@ contains
     if(all(tf2.eq.0)) goto 201
 
 
-!!!-----------------------------------------------------------------------------
-!!! Finds the transformation matrix between the two transformation matrices ...
-!!! ... for lat1 and lat2 to their respective supercells.
-!!! This can be used to make the simplest conversion from an identity ...
-!!! ... transformation of lat1 and the corresponding transformation of lat2.
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Finds the transformation matrix between the two transformation matrices ...
+! ... for lat1 and lat2 to their respective supercells.
+! This can be used to make the simplest conversion from an identity ...
+! ... transformation of lat1 and the corresponding transformation of lat2.
+!---------------------------------------------------------------------------
     SAV%reduced=.false.
     match_tfs(SAV%nfit+1,:,:)=find_tf((real(tf1,real32)),(real(tf2,real32)))
     if(any(isnan(match_tfs(SAV%nfit+1,:,:)))) goto 201
@@ -307,39 +316,43 @@ contains
     end if reduce_if
 
 
-!!!-----------------------------------------------------------------------------
-!!! Writes the new superlattice of lat2
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Writes the new superlattice of lat2
+!---------------------------------------------------------------------------
 201 tlat2=matmul(tf2,SAV%lat2)
 
 
     return
   end function cyc_lat2
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! finds lat 2 transformation matrix
-!!!#############################################################################
+!###############################################################################
   function get_lat2(SAV,tlat1) result(tf)
+    !! Find lattice 2 transformation matrix.
     implicit none
     integer :: i,kmax
+    !! Loop counter and maximum axis index.
     real(real32) :: dtmp,t_area,ang1,ang2,t_ang
+    !! Temporary scalar, area, angles, and angle tolerance.
     type(latmatch_type) :: SAV
+    !! Lattice match data structure.
     integer, dimension(3,3) :: tf,it_mat
+    !! Result transformation matrix and intermediate matrix.
     real(real32), dimension(3,3) :: t_mat,t_lat,tlat1,tlat2
+    !! Temporary matrix, shifted lattice, input and output superlattices.
 
 
     tf=0
-!!!-----------------------------------------------------------------------------
-!!! Finds the exact transformation matrix between superlattice of lat1 and ...
-!!! ... basic lattice of lat2.
-!!! Converts each matrix element to nint (to make it still maintain the same ...
-!!! ... basis for lat2).
-!!! Tests this for the three different faces of lat2 and saves smallest ...
-!!! ... difference between superlattices for lat1 and lat2.
-!!! NEED TO FIX THE LAST STATEMENT TO ONLY APPLY IT TO THE FACES UP TO MAXAXIS
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Finds the exact transformation matrix between superlattice of lat1 and ...
+! ... basic lattice of lat2.
+! Converts each matrix element to nint (to make it still maintain the same ...
+! ... basis for lat2).
+! Tests this for the three different faces of lat2 and saves smallest ...
+! ... difference between superlattices for lat1 and lat2.
+! NEED TO FIX THE LAST STATEMENT TO ONLY APPLY IT TO THE FACES UP TO MAXAXIS
+!---------------------------------------------------------------------------
     ang1=acos(dot_product(tlat1(1,:),tlat1(2,:))/&
          (norm2(tlat1(1,:)*norm2(tlat1(2,:)))))
     t_area=1000._real32
@@ -386,28 +399,35 @@ contains
 
 
   end function get_lat2
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! alternative method: finds lat 2 transformation matrix
-!!!#############################################################################
+!###############################################################################
   function get_lat2_alt(SAV,tol,tlat1) result(tf)
+    !! Alternative method to find lattice 2 transformation matrix.
     implicit none
     integer :: i,j,k,m_max,m_num
+    !! Loop counters, maximum m value, and current m value.
     type(tol_type) :: tol
+    !! Tolerance parameters.
     type(latmatch_type) :: SAV
+    !! Lattice match data structure.
     integer, dimension(2,3) :: m
+    !! Array controlling transformation matrix generation.
     integer, dimension(3,3) :: tf
+    !! Result transformation matrix.
     real(real32), dimension(3,3) :: tlat1
+    !! Input superlattice of lattice 1.
     real(real32), dimension(3,3) :: mA,mB,S,newlat
+    !! Metric tensors, tolerance matrix, and new lattice.
     logical :: lchange
+    !! Flag indicating change in first row of m array.
 
     
-!!! GET THE VOLUME OF tlat1, COMPARE TO HOW MUCH LARGER IT IS THAN SAV%lat2
-!!! THAT WILL DEFINE THE MAX VALUE OF m (m_max)
+! GET THE VOLUME OF tlat1, COMPARE TO HOW MUCH LARGER IT IS THAN SAV%lat2
+! THAT WILL DEFINE THE MAX VALUE OF m (m_max)
 
-!!! IF tf RETURNED AS ALL 0, THEN NO MATCH FOUND
+! IF tf RETURNED AS ALL 0, THEN NO MATCH FOUND
 
     lchange = .false.
     m_num=0
@@ -426,9 +446,9 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! Sets up the n array for the current value of n_num
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Sets up the n array for the current value of n_num
+!---------------------------------------------------------------------------
 301 m_num=m_num+1
     if(m_num.gt.m_max)then
        tf=0
@@ -442,9 +462,9 @@ contains
     end do
     
 
-!!!-----------------------------------------------------------------------------
-!!! Loops over the n array to check whether values are allowed
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Loops over the n array to check whether values are allowed
+!---------------------------------------------------------------------------
     mloop: do
        chngloop2: do i=2,1,-1
           do j=1,SAV%axes(2)
@@ -495,8 +515,8 @@ contains
        newlat=matmul(newlat,transpose(tf))
 
 
-!!!using 1 Å as the tolerance
-!!! probably want smaller off, diagonal differences
+! using 1 Å as the tolerance
+! probably want smaller off, diagonal differences
        if(all((abs(newlat(:2,:2)-mA(:2,:2))-S(:2,:2)).lt.0._real32))then
           if(ierr_compare.gt.1)then
              write(0,*) "success"
@@ -515,31 +535,40 @@ contains
 
     
   end function get_lat2_alt
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Checks whether the supplied superlattices fit within the tolerances
-!!!#############################################################################
+!###############################################################################
   function tol_check(SAV,tol,tlat1,tlat2,tf1,tf2,verbose) result(lmatch)
+    !! Check whether the supplied superlattices fit within the tolerances.
     implicit none
     type(latmatch_type), intent(inout) :: SAV
+    !! Lattice match data structure.
     real(real32), dimension(3,3), intent(in) :: tlat1, tlat2
+    !! Superlattices for lattice 1 and 2.
     integer, dimension(3,3), intent(inout) :: tf1, tf2
+    !! Transformation matrices for lattice 1 and 2.
     integer, intent(in) :: verbose
+    !! Verbosity level for output.
 
     integer :: i,j
+    !! Loop counters.
     real(real32) :: ang1,ang2,t_area1,t_area2,diff
+    !! Angles, areas, and mismatch for the two superlattices.
     logical :: la1a2,la1b2,l12,lmatch
+    !! Matching flags and result.
     type(tol_type) :: tol
+    !! Tolerance parameters.
     real(real32), dimension(2) :: mag_mat1,mag_mat2
+    !! Vector magnitudes for both lattices.
     real(real32), dimension(3) :: tvec
+    !! Temporary vector.
 
 
     lmatch=.false.
-!!!-----------------------------------------------------------------------------
-!!! Generates the corresponding areas and vector lengths of both lattices
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Generates the corresponding areas and vector lengths of both lattices
+!---------------------------------------------------------------------------
     t_area1=get_area(tlat1(1,:),tlat1(2,:))
     t_area2=get_area(tlat2(1,:),tlat2(2,:))
     mag_mat1(1)=norm2(tlat1(1,:))
@@ -549,9 +578,9 @@ contains
 
 
     if(ierr_compare.gt.1) write(0,*) "area:",t_area1,t_area2
-!!!-----------------------------------------------------------------------------
-!!! Compares lattices using tolerances to check for a potential match
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Compares lattices using tolerances to check for a potential match
+!---------------------------------------------------------------------------
     if(abs((t_area1-t_area2)/t_area1).gt.tol%area) then
        return
     elseif(abs((t_area1-t_area2)/t_area1).le.tol%area) then
@@ -649,21 +678,25 @@ contains
     
     return
   end function tol_check
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! checks whether, after applying transmat to lat, if it is the same as a ...
-!!! ... previously successful one
-!!!#############################################################################
+!###############################################################################
   function lat_check(SAV,tol,lat) result(lcheck)
+    !! Check whether a superlattice duplicates a previously successful match.
     implicit none
     integer :: i
+    !! Loop counter.
     real(real32) :: ang1,ang2,tiny
+    !! Angles and numerical tolerance.
     logical :: lcheck,lmatch_aa,lmatch_ab
+    !! Result flag and matching flags.
     type(tol_type) :: tol
+    !! Tolerance parameters.
     type(latmatch_type) :: SAV
+    !! Lattice match data structure.
     real(real32), dimension(3,3) :: lat,tlat
+    !! Input lattice and temporary stored lattice.
 
 
     tiny=1.E-6_real32
@@ -699,18 +732,21 @@ contains
 
 
   end function lat_check
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! converts n array to tf1
-!!!#############################################################################
+!###############################################################################
   function convert_n_tf1(n,maxa) result(converted)
+    !! Convert an n array to a transformation matrix.
     implicit none
     integer :: i,j
+    !! Loop counters.
     integer :: maxa
+    !! Maximum number of axes to use.
     integer, dimension(2,3) :: n
+    !! Input n array.
     integer, dimension(3,3) :: converted
+    !! Result transformation matrix.
   
 
     converted=0
@@ -729,15 +765,15 @@ contains
 
     return    
   end function convert_n_tf1
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! ends the code
-!!!#############################################################################
+!###############################################################################
   subroutine endcode(SAV)
+    !! Print final match results and exit.
     implicit none
     type(latmatch_type) :: SAV
+    !! Lattice match data structure.
 
 
     write(*,*)
@@ -765,19 +801,23 @@ contains
 
     return
   end subroutine endcode
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Steve lattice match
-!!!#############################################################################
+!###############################################################################
   function vec_comp(S1,S1p,S2p,delta) result(match)
+    !! Compare vectors for lattice matching (Steve method).
     implicit none
     real(real32) :: ct,cp,cv,th,ph,va
+    !! Cosines and angles between vectors.
     real(real32) :: beta,pm1,alpha,pm2
+    !! Intermediate matching parameters.
     real(real32) :: mS1,mS1p,mS2p,tiny,md
+    !! Vector magnitudes, numerical tolerance, and delta magnitude.
     real(real32), dimension(2) :: match
+    !! Result: best integer match coefficients.
     real(real32), dimension(3) :: S1,S1p,S2p,delta
+    !! Input vectors and delta.
 
 
     match=0._real32
@@ -824,61 +864,97 @@ contains
 
 
   end function vec_comp
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! Isiah lattice match
-!!! Program to match lattices of two position cards.
-!!!#############################################################################
+!###############################################################################
   subroutine lattice_matching( &
        SAV, tol, structure_lw, structure_up, &
        miller_lw, miller_up, max_num_planes, &
        verbose, tol_sym &
   )
+    !! Match lattices of two structures using symmetry-based plane matching.
+    !!
+    !! Generates unique Miller planes for each lattice, applies planecutter
+    !! transformations, and finds the best cell matches within tolerances.
     use artemis__sym
     use artemis__plane_matching
     implicit none
 
+    ! Arguments
     type(latmatch_type), intent(inout) :: SAV
+    !! Lattice match data structure.
     type(basis_type), intent(in) :: structure_lw,structure_up
+    !! Lower and upper crystal structures.
     integer, dimension(3), intent(in) :: miller_lw,miller_up
+    !! Miller indices for lower and upper materials (0 = scan all).
     integer, intent(in) :: max_num_planes
+    !! Maximum number of Miller planes to consider.
     integer, intent(in) :: verbose
+    !! Verbosity level for output.
     real(real32), intent(in) :: tol_sym
+    !! Symmetry tolerance.
     
+    ! Local variables
     type(sym_type) :: grp1,grp2
+    !! Symmetry groups for each lattice.
     type(tol_type) :: tol
+    !! Tolerance parameters.
     type(tol_type) :: pm_tol
+    !! Plane matching tolerance parameters.
     real(real32), dimension(3,3) :: tf
-    real(real32), dimension(3,3) :: lat1,lat2 !original lattices.
-    real(real32), dimension(3,3) :: templat1,templat2 !tmp lattices to feed into plane matching.
+    !! Temporary transformation matrix.
+    real(real32), dimension(3,3) :: lat1,lat2
+    !! Original lattices.
+    real(real32), dimension(3,3) :: templat1,templat2
+    !! Temporary lattices to feed into plane matching.
     integer :: itmp1,nsym1,nsym2
+    !! Temporary integer, symmetry operation counts.
     integer :: m1,m2,m3,i1,i2,i3,loc
-    integer :: loopsize !size of the main loops
-    integer :: i,j,num_of_transforms ! n = number of output transforms
+    !! Miller plane loop indices and location index.
+    integer :: loopsize
+    !! Size of the main Miller plane generation loops.
+    integer :: i,j,num_of_transforms
+    !! Loop counters and number of output transforms.
     real(real32) :: dtmp1
+    !! Temporary real scalar.
     logical, allocatable, dimension(:) :: lvec1
+    !! Logical flags for reduced transforms.
 
     integer, dimension(3,3) :: tmat1,tmat2
-    integer, dimension(3,3) :: transform1,transform2 !The transformations output by planecutter.
+    !! Temporary transformation matrices for reduction.
+    integer, dimension(3,3) :: transform1,transform2
+    !! Transformations output by planecutter.
 
     real(real32), dimension(3) :: rvec1, rvec2
+    !! Temporary vectors for cross product checks.
     real(real32), dimension(3,3) :: rmat1
+    !! Temporary rotation matrix.
     
     real(real32), allocatable, dimension(:,:,:) :: tmpsym1,tmpsym2,tmpsym
-    real(real32), allocatable, dimension(:,:,:) :: transform1_saved,transform2_saved !The transformations output by plane cutter
+    !! Symmetry operation arrays for each lattice.
+    real(real32), allocatable, dimension(:,:,:) :: transform1_saved,transform2_saved
+    !! Saved planecutter transformations for best matches.
 
-    integer, allocatable, dimension(:,:,:) :: Tcellmatch_1,Tcellmatch_2 !The transformation matrices output from the cell_match program for lattices 1 and 2.
+    integer, allocatable, dimension(:,:,:) :: Tcellmatch_1,Tcellmatch_2
+    !! Transformation matrices output from cell_match.
     real(real32), allocatable, dimension(:,:,:) :: Tsaved_1,Tsaved_2
-    real(real32), allocatable, dimension(:,:,:) :: big_T_1,big_T_2 ! 3x3 versions of the matrices output by cell_match
-    real(real32), dimension(3,3) :: dummy_mat1,dummy_mat2 ! temporary matrices used when the info is stored in a tensor.
-    real(real32), dimension(2,2) :: temp_mat1,temp_mat2 ! temporary matrices used when the info is stored in a tensor.
-    real(real32), allocatable, dimension(:,:,:) :: comb_trans_1,comb_trans_2 !The combined transformations (planecutter output)x(cellmatch output).
+    !! Saved 2x2 cell match transformations.
+    real(real32), allocatable, dimension(:,:,:) :: big_T_1,big_T_2
+    !! 3x3 versions of cell_match output matrices.
+    real(real32), dimension(3,3) :: dummy_mat1,dummy_mat2
+    !! Temporary matrices for intermediate calculations.
+    real(real32), dimension(2,2) :: temp_mat1,temp_mat2
+    !! Temporary 2x2 matrices for intermediate calculations.
+    real(real32), allocatable, dimension(:,:,:) :: comb_trans_1,comb_trans_2
+    !! Combined transformations (planecutter x cellmatch).
 
     real(real32), allocatable, dimension(:,:) :: tolerances,saved_tolerances
+    !! Current and saved best tolerance values.
     integer, allocatable, dimension(:,:) :: ivtmp1,miller1,miller2
+    !! Temporary Miller plane storage and unique Miller planes.
     integer, dimension(3) :: ivtmp2
+    !! Temporary Miller index vector.
 
 
 
@@ -1041,8 +1117,8 @@ contains
 
        nsym1=0
        tmpsym1=0._real32
-!!! IS THIS REASONABLE TO DO IT THIS WAY? OR DO WE NEED TO CHANGE sym TO BE IN THE NEW LAT?
-!!! Wait, should it be instead that the cross product of the a-b plane is always consistent?
+! IS THIS REASONABLE TO DO IT THIS WAY? OR DO WE NEED TO CHANGE sym TO BE IN THE NEW LAT?
+! Wait, should it be instead that the cross product of the a-b plane is always consistent?
        rvec1=cross([templat1(1,:)],[templat1(2,:)])
        do i = 1, grp1%nsym, 1
           rmat1=matmul(tmpsym(:3,:3,i),templat1(:,:))
@@ -1152,9 +1228,9 @@ contains
     end do MAINLOOP1
 
 
-!!!-----------------------------------------------------------------------------
-!!! Convert the 2x2 transformations to 3x3 matrices
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Convert the 2x2 transformations to 3x3 matrices
+!---------------------------------------------------------------------------
     allocate(big_T_1(SAV%max_num_matches,3,3))
     allocate(big_T_2(SAV%max_num_matches,3,3))
     big_T_1(:,:,:) = 0
@@ -1169,9 +1245,9 @@ contains
     end do loop103
 
 
-!!!-----------------------------------------------------------------------------
-!!! Combine 3x3 planecutter matrix with 3x3 plane matching matrix 
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Combine 3x3 planecutter matrix with 3x3 plane matching matrix 
+!---------------------------------------------------------------------------
     allocate(comb_trans_1(SAV%max_num_matches,3,3))
     allocate(comb_trans_2(SAV%max_num_matches,3,3))
     loop104: do i=1,SAV%max_num_matches
@@ -1185,9 +1261,9 @@ contains
     end do loop104
 
 
-!!!-----------------------------------------------------------------------------
-!!! Reduce transformation matrices if necessary
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Reduce transformation matrices if necessary
+!---------------------------------------------------------------------------
     write(*,*) "Performing lattice match reduction"
     allocate(lvec1(SAV%max_num_matches))
     lvec1=.false.
@@ -1233,9 +1309,9 @@ contains
     write(*,*) "Total number of matches saved:",SAV%nfit
 
 
-!!!-----------------------------------------------------------------------------
-!!! Print the set of best matches
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Print the set of best matches
+!---------------------------------------------------------------------------
     if(verbose.gt.0)then
        do i=1,SAV%nfit
           write(*,'(/,A,I0,2X,A,I0)') &
@@ -1258,7 +1334,7 @@ contains
 
 
   end subroutine lattice_matching
-!!!#############################################################################
+!###############################################################################
 
   
 !!!!#############################################################################

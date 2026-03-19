@@ -1,19 +1,9 @@
-!!!#############################################################################
-!!! Code written by Ned Thaddeus Taylor and Francis Huw Davies
-!!! Code part of the ARTEMIS group (Hepplestone research group).
-!!! Think Hepplestone, think HRG.
-!!!#############################################################################
-!!!module contains symmetry-related functions and subroutines.
-!!!module includes the following functions and subroutines:
-!!! check_sym         (checks supplied symmetries against supplied basis or ...
-!!!                    ... checks whether the two supplied bases match after ...
-!!!                    ... applying symmetries)
-!!! gldfnd            (output translations that maps two bases)
-!!! mksym             (makes array of symmetries that apply to supplied lattice
-!!! basis_map         (finds symmetry equivalent atoms in two bases based on ...
-!!!                    ... the supplied transformation matrix)
-!!!#############################################################################
 module artemis__sym
+  !! Module containing symmetry-related functions and subroutines.
+  !!
+  !! Includes procedures for checking symmetries against a basis,
+  !! finding glide translations, generating symmetry operations
+  !! for a lattice, and mapping symmetry-equivalent atoms.
   use artemis__constants,   only: real32, pi
   use artemis__misc_linalg,          only: inverse_3x3, det, uvec
   use artemis__geom_rw,     only: basis_type
@@ -34,29 +24,43 @@ module artemis__sym
 
 
   real(real32) :: tol_sym_default = 1.E-6_real32
+  !! Default tolerance for symmetry operations.
   integer, allocatable, dimension(:) :: symops_compare
+  !! Array of symmetry operation counts for comparison.
 
   interface get_wyckoff_atoms
+     !! Generic interface for getting Wyckoff atoms.
      procedure get_wyckoff_atoms_any,get_wyckoff_atoms_loc
   end interface get_wyckoff_atoms
 
 
   type spec_wyck_type
+     !! Wyckoff position data for a single species.
      integer :: num
+     !! Number of Wyckoff positions.
      character(len=5) :: name
+     !! Name of the Wyckoff position.
      integer, allocatable, dimension(:) :: atom
+     !! Atom indices in the Wyckoff position.
   end type spec_wyck_type
   type wyck_type
+     !! Container for Wyckoff position data across all species.
      integer :: nwyck
+     !! Total number of Wyckoff positions.
      type(spec_wyck_type), allocatable, dimension(:) :: spec
+     !! Wyckoff data for each species.
   end type wyck_type
 
 
   type spcmap_type
+     !! Atom mapping for a single species.
      integer, allocatable ,dimension(:) :: atom
+     !! Mapped atom indices.
   end type spcmap_type
   type basis_map_type
+     !! Container mapping symmetry-equivalent atoms across species.
      type(spcmap_type), allocatable, dimension(:) :: spec
+     !! Atom mapping for each species.
   end type basis_map_type
 
   type confine_type
@@ -72,17 +76,29 @@ module artemis__sym
   end type confine_type
 
   type sym_type
+     !! Container for symmetry group data.
      integer :: nsym = 0
+     !! Total number of symmetry operations.
      integer :: nlatsym = 0
+     !! Number of lattice symmetry operations.
      integer :: nsymop = 0
+     !! Number of symmetry operations found.
      integer :: npntop = 0
+     !! Number of point group operations found.
      logical :: lspace = .true.
+     !! Whether to include space group operations.
      logical :: lmolec = .false.
+     !! Whether the system is molecular.
      integer :: start_idx = 1, end_idx  =0
+     !! Start and end indices for symmetry operations.
      integer, allocatable, dimension(:) :: op
+     !! Indices of valid symmetry operations.
      real(real32), allocatable, dimension(:,:,:) :: sym
+     !! Symmetry matrices (4x4xnsym).
      type(confine_type) :: confine
+     !! Confinement/constraint settings for symmetries.
      real(real32), allocatable, dimension(:,:,:) :: sym_save
+     !! Saved symmetry matrices.
    contains
      procedure, pass(this) :: init => initialise_sym_type
      procedure, pass(this) :: copy => copy_sym_type
@@ -100,14 +116,21 @@ contains
 
     ! Arguments
     class(sym_type), intent(inout) :: this
+    !! Instance of the symmetry container.
     real(real32), dimension(3,3), intent(in) :: lat
+    !! Lattice matrix.
     logical, optional, intent(in) :: predefined
+    !! If true, use predefined fundamental matrices.
     logical, optional, intent(in) :: new_start
+    !! If true, deallocate existing symmetries before generating.
     real(real32), optional, intent(in) :: tol_sym
+    !! Tolerance for symmetry operations.
 
-
+    ! Local variables
     real(real32) :: tol_sym_
+    !! Local copy of the symmetry tolerance.
     logical :: predefined_, new_start_
+    !! Local copies of optional flags.
 
 
     tol_sym_ = tol_sym_default
@@ -177,41 +200,66 @@ contains
 !###############################################################################
 
 
-!!!#############################################################################
-!!! builds an array of the symmetries that apply to the supplied lattice
-!!!#############################################################################
-!!! tfbas   : transformed basis
-!!!#############################################################################
+!###############################################################################
   subroutine check_sym( &
        grp, basis, iperm, tmpbas2, wyckoff, lsave, lat, loc, check_all_sym, &
        verbose, tol_sym &
   )
+    !! Check which symmetries from the group apply to the supplied basis.
+    !!
+    !! Optionally checks whether two bases match after applying symmetries.
     implicit none
+
+    ! Arguments
     type(basis_type), intent(in) :: basis
+    !! Input basis to check symmetries against.
     type(sym_type), intent(inout) :: grp
+    !! Symmetry group container.
 
     integer, optional, intent(in) :: iperm
+    !! Permutation index for symmetry comparison storage.
     logical, optional, intent(in) :: lsave,check_all_sym
+    !! Whether to save symmetries; whether to check all symmetries.
     type(basis_type), optional, intent(in) :: tmpbas2
+    !! Second basis for comparison.
     type(wyck_type), optional, intent(inout) :: wyckoff
+    !! Wyckoff position data.
     real(real32), dimension(3), optional, intent(in) :: loc
+    !! Location for Wyckoff atom selection.
     real(real32), dimension(3,3), optional, intent(in) :: lat
+    !! Lattice matrix for Wyckoff atom selection.
     integer, optional, intent(in) :: verbose
+    !! Verbosity level.
     real(real32), optional, intent(in) :: tol_sym
+    !! Tolerance for symmetry operations.
 
+    ! Local variables
     integer :: i,j,k,iatom,jatom,ispec,itmp1
+    !! Loop counters and temporary integer.
     integer :: is,isym,jsym,count,ntrans
+    !! Species, symmetry loop counters, symmetry count, and translation count.
     integer :: samecount,oldnpntop
+    !! Counter for matching atoms and old point operation count.
     logical :: lsave_,lwyckoff,ltransformed, is_a_symmetry
+    !! Local flags.
     integer :: verbose_
+    !! Local verbosity level.
     logical :: check_all_sym_
+    !! Local flag for checking all symmetries.
     real(real32) :: tol_sym_
+    !! Local symmetry tolerance.
     type(basis_type) :: basis2, tfbas
+    !! Comparison basis and transformed basis.
     real(real32), dimension(3) :: diff
+    !! Difference vector.
     real(real32), dimension(3,3) :: ident
+    !! Identity matrix.
     type(wyck_type), allocatable, dimension(:) :: wyck_check
+    !! Wyckoff check array.
     real(real32), allocatable, dimension(:,:) :: trans
+    !! Translation vectors.
     real(real32), allocatable, dimension(:,:,:) :: tmpsav
+    !! Temporary storage for symmetry matrices.
 
 
     verbose_ = 0
@@ -231,9 +279,9 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! allocated grp%op
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! allocated grp%op
+!---------------------------------------------------------------------------
     if(allocated(grp%op)) deallocate(grp%op)
     allocate(grp%op(grp%nsym*minval(basis%spec(:)%num)))
     grp%op = 0
@@ -245,9 +293,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! checks for optional arguments and assigns values if not present
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! checks for optional arguments and assigns values if not present
+!---------------------------------------------------------------------------
     check_all_sym_ = .true.
     if(present(tmpbas2)) then
        call basis2%copy(tmpbas2)
@@ -259,9 +307,9 @@ contains
     itmp1 = maxval(basis%spec(:)%num)
 
 
-!!!-----------------------------------------------------------------------------
-!!! initialises variables
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! initialises variables
+!---------------------------------------------------------------------------
     allocate(trans(minval(basis%spec(:)%num+2),3)); trans = 0._real32
     allocate(tfbas%spec(basis%nspec))
     itmp1 = size(basis%spec(1)%atom(1,:),dim=1)
@@ -272,9 +320,9 @@ contains
     grp%npntop = 0
 
 
-!!!-----------------------------------------------------------------------------
-!!! if present, initialises wyckoff arrays
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! if present, initialises wyckoff arrays
+!---------------------------------------------------------------------------
     allocate(wyck_check(grp%nsym*minval(basis%spec(:)%num)))
     do isym=1,grp%nsym*minval(basis%spec(:)%num)
        allocate(wyck_check(isym)%spec(basis%nspec))
@@ -301,9 +349,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! set up identity matrix as reference
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! set up identity matrix as reference
+!---------------------------------------------------------------------------
     ltransformed = .false.
     ident = 0._real32
     do i=1,3
@@ -311,9 +359,9 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! applying symmetries to basis to see if the basis conforms to any of them
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! applying symmetries to basis to see if the basis conforms to any of them
+!---------------------------------------------------------------------------
     itmp1 = 1
     symloop: do isym = grp%start_idx, grp%end_idx, 1
        if(verbose_.eq.2.or.verbose_.eq.3) write(*,204)  &
@@ -430,9 +478,9 @@ contains
     end do symloop
 
 
-!!!-----------------------------------------------------------------------------
-!!! allocates and saves the array sym_save if the first time submitted
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! allocates and saves the array sym_save if the first time submitted
+!---------------------------------------------------------------------------
     if(lsave_)then
        if(allocated(grp%sym_save)) deallocate(grp%sym_save)
        allocate(grp%sym_save(4,4,grp%nsymop))
@@ -468,9 +516,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! if wyckoff present, set up wyckoff atoms
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! if wyckoff present, set up wyckoff atoms
+!---------------------------------------------------------------------------
     if(lwyckoff)then
        if(present(lat).and.present(loc))then
           wyckoff=get_wyckoff_atoms(wyck_check(:grp%nsymop),lat,basis,loc)
@@ -480,41 +528,54 @@ contains
     end if
 
   end subroutine check_sym
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! supplies the glides (if any) that are required to match the two bases ...
-!!! ... "basis1" and "basis2" onto one another
-!!!#############################################################################
+!###############################################################################
   subroutine gldfnd( &
        confine, basis1, basis2, &
        trans, ntrans, &
        tol_sym, &
        transformed, wyck_check &
   )
+    !! Find glide translations that map two bases onto one another.
     implicit none
+
+    ! Arguments
     type(confine_type), intent(in) :: confine
+    !! Confinement settings for symmetries.
     type(basis_type), intent(in) :: basis1,basis2
+    !! Original and transformed bases to compare.
     real(real32), dimension(:,:), intent(out) :: trans
+    !! Output translation vectors.
     integer, intent(out) :: ntrans
+    !! Number of translations found.
     real(real32), intent(in) :: tol_sym
+    !! Tolerance for symmetry operations.
 
     logical, optional, intent(in) :: transformed
+    !! Whether the basis has been transformed.
 
     type(wyck_type), dimension(:), optional, intent(inout) :: wyck_check
+    !! Wyckoff position check array.
 
+    ! Local variables
     integer :: i,j,ispec,iatom,jatom,katom,itmp1
+    !! Loop counters and temporary integer.
     integer :: minspecloc,samecount
+    !! Location of species with fewest atoms and matching atom count.
     logical :: lwyckoff
+    !! Whether Wyckoff positions are being tracked.
     real(real32), dimension(3) :: ttrans,tmpbas,diff
+    !! Temporary translation, basis position, and difference vectors.
     real(real32), allocatable, dimension(:,:) :: sav_trans
+    !! Saved translation vectors.
 
 
 
-!!!-----------------------------------------------------------------------------
-!!! Allocate arrays and initialise variables
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Allocate arrays and initialise variables
+!---------------------------------------------------------------------------
     ttrans=0._real32
     trans=0._real32
     samecount=0
@@ -531,9 +592,9 @@ contains
     allocate(sav_trans(basis1%natom,3))
 
 
-!!!-----------------------------------------------------------------------------
-!!! if present, initialises tmp_wyckoff arrays
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! if present, initialises tmp_wyckoff arrays
+!---------------------------------------------------------------------------
     if(present(wyck_check))then
        lwyckoff=.true.
     else
@@ -541,13 +602,13 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! Cycles through each atom in transformed basis and finds translation ...
-!!! ... vector that maps it back onto the 1st atom in the original, ...
-!!! ... untransformed, basis.
-!!! Then tests this translation vector on all other atoms to see if it works ...
-!!! ... as a translation vector for the symmetry.
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Cycles through each atom in transformed basis and finds translation
+! vector that maps it back onto the 1st atom in the original,
+! untransformed, basis.
+! Then tests this translation vector on all other atoms to see if it works
+! as a translation vector for the symmetry.
+!---------------------------------------------------------------------------
     trloop: do iatom = 1, basis1%spec(minspecloc)%num
        ttrans(:) = 0._real32
        ttrans(1:3) = basis1%spec(minspecloc)%atom(1,1:3)-&
@@ -598,17 +659,17 @@ contains
           end do atmcyc2
           if (samecount.ne.basis1%spec(ispec)%num) cycle trloop
        end do trcyc
-!!!-----------------------------------------------------------------------------
-!!! Cleans up succeeded translation vector
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Cleans up succeeded translation vector
+!---------------------------------------------------------------------------
        do j = 1, 3
           itmp1 = maxloc(abs(sav_trans(:,j)),dim=1)
           ttrans(j) = sav_trans(itmp1,j)
           ttrans(j) = ttrans(j) - ceiling(ttrans(j)-0.5_real32)
        end do
-!!!-----------------------------------------------------------------------------
-!!! If axis is confined, removes all symmetries not confined to the axis plane
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! If axis is confined, removes all symmetries not confined to the axis plane
+!---------------------------------------------------------------------------
        if(confine%l)then
           if(confine%laxis(confine%axis).and.&
                abs(ttrans(confine%axis)-nint(ttrans(confine%axis)))&
@@ -621,9 +682,9 @@ contains
              end if
           end do
        end if
-!!!-----------------------------------------------------------------------------
-!!! Checks whether this translation has already been saved
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! Checks whether this translation has already been saved
+!---------------------------------------------------------------------------
        do i = 1, ntrans
           if(all(abs(ttrans(:)-trans(i,:)).lt.tol_sym)) cycle trloop
        end do
@@ -635,7 +696,7 @@ contains
 
     return
   end subroutine gldfnd
-!!!#############################################################################
+!###############################################################################
 
 
 !###############################################################################
@@ -870,18 +931,18 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! initialise values and symmetry matrix
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! initialise values and symmetry matrix
+!---------------------------------------------------------------------------
     allocate(tsym1(4,4,50000))
     tsym1 = 0._real32
     tsym1(4,4,:) = 1._real32
     count = 0
 
 
-!!!-----------------------------------------------------------------------------
-!!! rotation plane perp to z (1=E,2=C2,3=C3,4=C4,5=C5,6=C6)
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! rotation plane perp to z (1=E,2=C2,3=C3,4=C4,5=C5,6=C6)
+!---------------------------------------------------------------------------
     if(laxis(3))then
        mksyml: do n=1,10
           count=count+1
@@ -904,9 +965,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! rotation plane perp to x
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! rotation plane perp to x
+!---------------------------------------------------------------------------
     if(laxis(1))then
        philoop: do n=1,10
           if(n.gt.6)then
@@ -927,9 +988,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! rotation plane perp to y
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! rotation plane perp to y
+!---------------------------------------------------------------------------
     if(laxis(2))then
        psiloop: do n=1,10
           if(n.gt.6)then
@@ -953,9 +1014,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! inversion (i), x plane mirror (v), y plane mirror (v), z plane mirror (h)
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! inversion (i), x plane mirror (v), y plane mirror (v), z plane mirror (h)
+!---------------------------------------------------------------------------
     amin=1;bmin=1;cmin=1
     if(grp%confine%lmirror)then
        if(laxis(1)) amin=2
@@ -991,9 +1052,9 @@ contains
     else
        invlat = inverse_3x3(lat)
     end if
-!!!-----------------------------------------------------------------------------
-!!! checks all made symmetries to see if they apply to the supplied lattice
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! checks all made symmetries to see if they apply to the supplied lattice
+!---------------------------------------------------------------------------
     allocate(tmp_store(3,3,grp%nsym))
     count = 0
     do i = 1, grp%nsym, 1
@@ -1287,17 +1348,24 @@ contains
 !###############################################################################
  
 
-!!!#############################################################################
-!!! returns the wyckoff atoms of a basis (closest to a defined location)
-!!!#############################################################################
+!###############################################################################
   function get_wyckoff_atoms_any(wyckoff) result(wyckoff_atoms)
+    !! Return the Wyckoff atoms of a basis.
     implicit none
-    integer :: i,is,ia,isym,imin,itmp1
-    integer :: nsym,nspec
-    type(wyck_type) :: wyckoff_atoms
-    integer, allocatable, dimension(:) :: ivtmp1
 
+    ! Local variables
+    integer :: i,is,ia,isym,imin,itmp1
+    !! Loop counters and temporary integers.
+    integer :: nsym,nspec
+    !! Number of symmetries and species.
+    type(wyck_type) :: wyckoff_atoms
+    !! Result Wyckoff atom data.
+    integer, allocatable, dimension(:) :: ivtmp1
+    !! Temporary atom index array.
+
+    ! Arguments
     type(wyck_type), dimension(:), intent(in) :: wyckoff
+    !! Input Wyckoff position data.
 
 
     nsym = size(wyckoff)
@@ -1344,23 +1412,39 @@ contains
 
     
   end function get_wyckoff_atoms_any
-!!!-----------------------------------------------------------------------------
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+!---------------------------------------------------------------------------
   function get_wyckoff_atoms_loc(wyckoff,lat,bas,loc) result(wyckoff_atoms)
+    !! Return the Wyckoff atoms of a basis, selecting those closest to a location.
     implicit none
-    integer :: is,ia,isym,imin,itmp1
-    integer :: nsym
-    real(real32) :: dist
-    logical :: lfound_closer
-    type(wyck_type) :: wyckoff_atoms
-    real(real32), dimension(3) :: diff
-    real(real32), allocatable, dimension(:) :: dists
-    integer, allocatable, dimension(:) :: ivtmp1
 
+    ! Local variables
+    integer :: is,ia,isym,imin,itmp1
+    !! Loop counters and temporary integers.
+    integer :: nsym
+    !! Number of symmetries.
+    real(real32) :: dist
+    !! Distance to the specified location.
+    logical :: lfound_closer
+    !! Flag indicating if a closer atom was found.
+    type(wyck_type) :: wyckoff_atoms
+    !! Result Wyckoff atom data.
+    real(real32), dimension(3) :: diff
+    !! Difference vector.
+    real(real32), allocatable, dimension(:) :: dists
+    !! Distances from location for each atom.
+    integer, allocatable, dimension(:) :: ivtmp1
+    !! Temporary atom index array.
+
+    ! Arguments
     type(basis_type), intent(in) :: bas
+    !! Input basis.
     real(real32), dimension(3), intent(in) :: loc
+    !! Location for closest Wyckoff atom selection.
     type(wyck_type), dimension(:), intent(in) :: wyckoff
+    !! Input Wyckoff position data.
     real(real32), dimension(3,3), intent(in) :: lat
+    !! Lattice matrix.
 
 
     nsym = size(wyckoff)
@@ -1436,30 +1520,40 @@ contains
 
     
   end function get_wyckoff_atoms_loc
-!!!#############################################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!! find corresponding basis2 atoms that the supplied symmetry operation ...
-!!! ... maps basis1 atoms onto.
-!!! Basis2 is optional. If missing, it uses basis1 for the comparison
-!!!#############################################################################
+!###############################################################################
   function basis_map(sym,bas1,tmpbas2, tol_sym) result(bas_map)
+    !! Find corresponding atoms that the supplied symmetry maps basis1 onto.
+    !!
+    !! Basis2 is optional. If missing, uses basis1 for the comparison.
     implicit none
+
+    ! Arguments
     real(real32), dimension(4,4), intent(in) :: sym
+    !! Symmetry operation matrix.
     type(basis_type), intent(in) :: bas1
+    !! Primary basis.
     type(basis_type), optional, intent(in) :: tmpbas2
+    !! Optional second basis for comparison.
     real(real32), intent(in), optional :: tol_sym
+    !! Tolerance for symmetry operations.
 
+    ! Local variables
     integer :: j,ispec,iatom,jatom,dim
+    !! Loop counters and dimensionality.
     type(basis_map_type) :: bas_map
+    !! Result atom mapping.
     type(basis_type) :: bas2,tfbas
+    !! Comparison basis and transformed basis.
     real(real32), dimension(3) :: diff
+    !! Difference vector.
 
 
-!!!-----------------------------------------------------------------------------
-!!! checks for optional arguments and assigns values if not present
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! checks for optional arguments and assigns values if not present
+!---------------------------------------------------------------------------
     allocate(bas2%spec(bas1%nspec))
     dim=size(bas1%spec(1)%atom(1,:),dim=1)
     do ispec=1,bas1%nspec
@@ -1472,9 +1566,9 @@ contains
     end if
 
 
-!!!-----------------------------------------------------------------------------
-!!! sets up basis map
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! sets up basis map
+!---------------------------------------------------------------------------
     allocate(bas_map%spec(bas1%nspec))
     do ispec=1,bas1%nspec
        allocate(bas_map%spec(ispec)%atom(bas1%spec(ispec)%num))
@@ -1486,9 +1580,9 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! apply symmetry operator to bas1
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! apply symmetry operator to bas1
+!---------------------------------------------------------------------------
     do ispec=1,bas1%nspec
        do iatom=1,bas1%spec(ispec)%num
           tfbas%spec(ispec)%atom(iatom,1:3) = &
@@ -1505,9 +1599,9 @@ contains
     end do
 
 
-!!!-----------------------------------------------------------------------------
-!!! check whether transformed basis matches original basis
-!!!-----------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! check whether transformed basis matches original basis
+!---------------------------------------------------------------------------
     spcheck2: do ispec=1,bas1%nspec
        diff=0._real32
        atmcheck2: do iatom=1,bas1%spec(ispec)%num
@@ -1526,6 +1620,6 @@ contains
 
     return
   end function basis_map
-!!!#############################################################################
+!###############################################################################
 
 end module artemis__sym

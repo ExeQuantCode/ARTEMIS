@@ -1,5 +1,9 @@
 module artemis__io_utils_extd
-  use artemis__misc, only: to_upper
+  !! Module for extended I/O utilities.
+  !!
+  !! Provides helper routines for printing structures on error, and
+  !! configuring input/output file formats.
+  use coreutils__string, only: to_upper
   use artemis__io_utils, only: err_abort
 
   private

@@ -1,45 +1,14 @@
-!!!#############################################################################
-!!! Code written by Ned Thaddeus Taylor and Francis Huw Davies
-!!! Code part of the ARTEMIS group (Hepplestone research group).
-!!! Think Hepplestone, think HRG.
-!!!#############################################################################
-!!! module contains various linear algebra functions and subroutines.
-!!! module includes the following functions and subroutines:
-!!! uvec             (unit vector of vector of any size)
-!!! proj             (projection operator of one vector on another)
-!!! GramSchmidt      (evaluates Gram-Schmidt orthogonal vectors)
-!!! cross            (cross product of two vectors)
-!!! cross_matrix     (generates cross product matrix of a vector)
-!!! outer_product    (performs outer_product of two vectors)
-!!! vec_mat_mul      (multiply a vector with a matrix)
-!!! get_vec_multiple (determines the scaling factor between two vectors)
-!!!##################
-!!! get_angle        (get the angle between two vectors)
-!!! get_area         (get the area made by two vectors)
-!!! get_vol          (get the volume of a matrix)
-!!! trace            (trace of a matrix of any size)
-!!! det              (determinant of a 3x3 matrix)
-!!! inverse          (inverse of a 3x3 matrix)
-!!! rec_det          (determinant of a matrix of any size)
-!!! LUdet            (determinant of a matrix of any size using LUdecomposition)
-!!! LUinv            (inverse of a matrix of any size using LUdecomposition)
-!!! LUdecompose      (decompose a matrix into upper and lower matrices. A=LU)
-!!!##################
-!!! find_tf          (transformation matrix to move between two matrices)
-!!! simeq            (simultaneous equation solver)
-!!! LLL_reduce       (performs LLL reduction on a basis)
-!!! rotvec           (rotate vector in 3D space about x, y, z cartesian axes)
-!!! rot_arb_lat      (rotate vector in 3D space about a, b, c arbitrary axes)
-!!!##################
-!!! gcd              (greatest common denominator (to reduce a fraction))
-!!! lcm              (lowest common multiple)
-!!! get_frac_denom   (convert decimal to fraction and finds lowest denominator)
-!!! reduce_vec_gcd   (reduces the gcd of a vector to 1)
-!!!##################
-!!! gen_group        (generate group from a subset of elements)
-!!!#############################################################################
 module artemis__misc_linalg
+  !! Module containing various linear algebra functions and subroutines.
+  !!
+  !! Includes vector operations (unit vector, projection, Gram-Schmidt,
+  !! cross product matrix, outer product), matrix operations (determinant,
+  !! inverse, trace, LU decomposition), geometric computations (angle, area,
+  !! volume), equation solvers (simultaneous equations, transformation matrix),
+  !! lattice reduction (LLL), vector rotation, and integer arithmetic utilities
+  !! (GCD, LCM, fraction denominator, vector GCD reduction, group generation).
   use artemis__constants, only: real32
+  use coreutils__linalg, only: cross, inverse_3x3, outer_product
   implicit none
   integer, parameter, private :: QuadInt_K = selected_int_kind (16)
 
@@ -56,54 +25,60 @@ module artemis__misc_linalg
   end interface det
 
 
-
-!!!updated 2021/12/09
-
-
 contains
-!!!#####################################################
-!!! finds unit vector of an arbitrary vector
-!!!#####################################################
+!###############################################################################
   function uvec(vec) result(output)
+    !! Return the unit vector of an arbitrary-size vector.
     implicit none
+
+    ! Arguments
     real(real32),dimension(:)::vec
+    !! Input vector.
     real(real32),allocatable,dimension(:) :: output
+    !! Unit vector result.
+
     allocate(output(size(vec)))
     output = vec/norm2(vec)
   end function uvec
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! projection operator
-!!!#####################################################
-!!! projection of v on u
+!###############################################################################
   function proj(u,v) result(output)
+    !! Return the projection of vector v onto vector u.
     implicit none
+
+    ! Arguments
     real(real32), dimension(:) :: u,v
+    !! Input vectors.
     real(real32), allocatable, dimension(:) :: output
+    !! Projected vector result.
 
     allocate(output(size(u,dim=1)))
     output = u*dot_product(v,u)/dot_product(u,u)
 
   end function proj
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! Gram-Schmidt process
-!!!#####################################################
-!!! assumes basis(n,m) is a basis of n vectors, each ...
-!!! ... of m-dimensions
-!!! rmc = row major order
+!###############################################################################
   function GramSchmidt(basis,normalise,cmo) result(u)
+    !! Evaluate the Gram-Schmidt orthogonal basis.
+    !!
+    !! Assumes basis(n,m) is a basis of n vectors, each of m dimensions.
     implicit none
     integer :: num,dim,i,j
+    !! Number of vectors, dimension size, and loop counters.
     real(real32), allocatable, dimension(:) :: vtmp
+    !! Temporary vector for accumulating projections.
     real(real32), dimension(:,:), intent(in) :: basis
+    !! Input basis matrix (n vectors x m dimensions).
     real(real32), allocatable, dimension(:,:) :: u
+    !! Output orthogonal basis.
     logical, optional, intent(in) :: cmo
+    !! If true, use column major order (not yet implemented).
     logical, optional, intent(in) :: normalise
+    !! If true, normalise the output basis.
 
 
     !! sets up array dimensions of Gram-Schmidt basis
@@ -147,38 +122,22 @@ contains
 
 
   end function GramSchmidt
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! cross product
-!!!#####################################################
-  pure function cross(a,b) result(output)
-    implicit none
-    real(real32), dimension(3) :: output
-    real(real32), dimension(3), intent(in) :: a,b
-
-    output(1) = a(2)*b(3) - a(3)*b(2)
-    output(2) = a(3)*b(1) - a(1)*b(3)
-    output(3) = a(1)*b(2) - a(2)*b(1)
-
-  end function cross
-!!!#####################################################
-
-
-!!!#####################################################
-!!! cross product matrix
-!!!#####################################################
-!!! a = (a1,a2,a3)
-!!! 
-!!!         (  0  -a3  a2 )
-!!! [a]_x = (  a3  0  -a1 )
-!!!         ( -a2  a1  0  )
-!!!#####################################################
+!###############################################################################
   function cross_matrix(a)
+    !! Generate the cross product matrix of a 3D vector.
+    !!
+    !! For a = (a1,a2,a3), returns the skew-symmetric matrix [a]_x such that
+    !! [a]_x * b = a x b.
     implicit none
+
+    ! Arguments
     real(real32), dimension(3,3) :: cross_matrix
+    !! The resulting 3x3 cross product matrix.
     real(real32), dimension(3), intent(in) :: a
+    !! Input 3D vector.
 
     cross_matrix=0._real32
 
@@ -192,38 +151,21 @@ contains
 
     return
   end function cross_matrix
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! outer product
-!!!#####################################################
-  function outer_product(a,b)
-    implicit none
-    integer :: j
-    real(real32), dimension(:) :: a,b
-    real(real32),allocatable,dimension(:,:)::outer_product
-   
-    allocate(outer_product(size(a),size(b)))
-
-    do j=1,size(b)
-       outer_product(:,j)=a(:)*b(j)
-    end do
-
-    return
-  end function outer_product
-!!!#####################################################
-
-
-!!!#####################################################
-!!! function to multiply a vector and a matrix
-!!!#####################################################
+!###############################################################################
   function ivec_dmat_mul(a,mat) result(vec)
+    !! Multiply an integer vector with a real matrix.
     implicit none
     integer :: j
+    !! Loop counter.
     integer, dimension(:) :: a
+    !! Input integer vector.
     real(real32), dimension(:,:) :: mat
+    !! Input real matrix.
     real(real32),allocatable,dimension(:) :: vec
+    !! Output real vector.
 
     vec=0._real32
     allocate(vec(size(a)))
@@ -233,14 +175,18 @@ contains
 
     return
   end function ivec_dmat_mul
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
+!---------------------------------------------------------------------------
   function dvec_dmat_mul(a,mat) result(vec)
+    !! Multiply a real vector with a real matrix.
     implicit none
     integer :: j
+    !! Loop counter.
     real(real32), dimension(:) :: a
+    !! Input real vector.
     real(real32), dimension(:,:) :: mat
+    !! Input real matrix.
     real(real32),allocatable,dimension(:) :: vec
+    !! Output real vector.
 
     vec=0._real32
     allocate(vec(size(a)))
@@ -250,17 +196,22 @@ contains
 
     return
   end function dvec_dmat_mul
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! get vec_multiple
-!!!#####################################################
+!###############################################################################
   function get_vec_multiple(a,b) result(multi)
+    !! Determine the scaling factor between two vectors.
+    !!
+    !! Returns the scalar multi such that b = multi * a, or 0 if no
+    !! consistent scalar exists.
     implicit none
     integer :: i
+    !! Loop counter.
     real(real32) :: multi
+    !! Scaling factor result.
     real(real32), dimension(:) :: a,b
+    !! Input vectors.
     
     multi=1._real32
     do i=1,size(a)
@@ -280,23 +231,26 @@ contains
 
     return
   end function get_vec_multiple
-!!!#####################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!!#############################################################################
-!!!  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *
-!!!#############################################################################
-!!!#############################################################################
+!###############################################################################
+!###############################################################################
+!  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *
+!###############################################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! returns angle between two vectors
-!!!#####################################################
+!###############################################################################
   function get_angle(vec1,vec2) result(angle)
+    !! Return the angle between two 3D vectors in radians.
     implicit none
+
+    ! Arguments
     real(real32) :: angle
+    !! Angle result.
     real(real32), dimension(3) :: vec1,vec2
+    !! Input 3D vectors.
 
     angle = acos( dot_product(vec1,vec2)/&
          ( norm2(vec1) * norm2(vec2) ))
@@ -304,34 +258,38 @@ contains
 
     return
   end function get_angle
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! returns area made by two vectors
-!!!#####################################################
+!###############################################################################
   function get_area(a,b) result(area)
+    !! Return the area of the parallelogram formed by two 3D vectors.
     implicit none
     real(real32) :: area
+    !! Area result.
     real(real32), dimension(3) :: vec,a,b
+    !! Cross product vector and input vectors.
 
     vec = cross(a,b)
     area = sqrt(dot_product(vec,vec))
 
     return
   end function get_area
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! returns volume of a lattice
-!!!#####################################################
+!###############################################################################
   function get_vol(lat) result(vol)
+    !! Return the volume of a 3x3 lattice matrix.
     implicit none
     integer :: n,i,j,k,l
+    !! Loop counters and permutation indices.
     real(real32) :: vol,scale
+    !! Volume result and sign scaling factor.
     real(real32), dimension(3,3) :: lat
+    !! Input 3x3 lattice matrix.
     real(real32), dimension(3) :: a,b,c
+    !! Lattice row vectors.
 
     a=lat(1,:)
     b=lat(2,:)
@@ -347,56 +305,62 @@ contains
 
     return
   end function get_vol
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! finds trace of an arbitrary dimension square matrix
-!!!#####################################################
+!###############################################################################
   function trace(mat) result(output)
+    !! Return the trace of an arbitrary-dimension square matrix.
     integer::j
+    !! Loop counter.
     real(real32), dimension(:,:), intent(in) :: mat
+    !! Input square matrix.
     real(real32) :: output
+    !! Trace result.
     output = 0._real32
     do j = 1, size(mat,1)
       output = output + mat(j,j)
     end do
   end function trace
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! returns determinant of 3 x 3 matrix
-!!!#####################################################
+!###############################################################################
   function idet(mat) result(output)
+    !! Return the determinant of a 3x3 integer matrix.
     integer :: output
+    !! Determinant result.
     integer, dimension(3,3), intent(in) :: mat
+    !! Input 3x3 integer matrix.
 
     output = mat(1,1)*mat(2,2)*mat(3,3)-mat(1,1)*mat(2,3)*mat(3,2)&
          - mat(1,2)*mat(2,1)*mat(3,3)+mat(1,2)*mat(2,3)*mat(3,1)&
          + mat(1,3)*mat(2,1)*mat(3,2)-mat(1,3)*mat(2,2)*mat(3,1)
 
   end function idet
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
+!---------------------------------------------------------------------------
   function ddet(mat) result(output)
+    !! Return the determinant of a 3x3 real matrix.
     real(real32) :: output
+    !! Determinant result.
     real(real32), dimension(3,3), intent(in) :: mat
+    !! Input 3x3 real matrix.
 
     output = mat(1,1)*mat(2,2)*mat(3,3)-mat(1,1)*mat(2,3)*mat(3,2)&
          - mat(1,2)*mat(2,1)*mat(3,3)+mat(1,2)*mat(2,3)*mat(3,1)&
          + mat(1,3)*mat(2,1)*mat(3,2)-mat(1,3)*mat(2,2)*mat(3,1)
 
   end function ddet
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! returns inverse of 2x2 or 3x3 matrix
-!!!#####################################################
+!###############################################################################
   pure function inverse(mat)
+    !! Return the inverse of a 2x2 or 3x3 matrix.
     real(real32), dimension(:,:), intent(in) :: mat
+    !! Input square matrix (2x2 or 3x3).
     real(real32), dimension(size(mat,dim=1),size(mat,dim=2)) :: inverse
+    !! Inverse matrix result.
 
     select case(size(mat,dim=2))
     case(2)
@@ -406,17 +370,19 @@ contains
     end select
 
   end function inverse
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! returns inverse of 2 x 2 matrix
-!!!#####################################################
+!###############################################################################
   pure function inverse_2x2(mat) result(output)
+    !! Return the inverse of a 2x2 matrix.
     implicit none
     real(real32), dimension(2,2), intent(in) :: mat
+    !! Input 2x2 matrix.
     real(real32), dimension(2,2) :: output
+    !! Inverse matrix result.
     real(real32) :: inv_det
+    !! Reciprocal of the determinant.
 
     associate(a => mat(1,1), b => mat(1,2), c => mat(2,1), d => mat(2,2))
        inv_det = 1._real32 / (a * d - b * c)
@@ -428,66 +394,22 @@ contains
     end associate
 
   end function inverse_2x2
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! returns inverse of 3 x 3 matrix
-!!!#####################################################
-  pure function inverse_3x3(mat) result(output)
-  implicit none
-  real(real32), dimension(3,3), intent(in) :: mat
-  real(real32), dimension(3,3) :: output
-  real(real32) :: inv_det
-  real(real32) :: c00, c01, c02, c10, c11, c12, c20, c21, c22
-
-  associate( &
-    m11 => mat(1,1), m12 => mat(1,2), m13 => mat(1,3), &
-    m21 => mat(2,1), m22 => mat(2,2), m23 => mat(2,3), &
-    m31 => mat(3,1), m32 => mat(3,2), m33 => mat(3,3))
-
-    ! Cofactors
-    c00 =  m22 * m33 - m23 * m32
-    c01 = -m21 * m33 + m23 * m31
-    c02 =  m21 * m32 - m22 * m31
-
-    c10 = -m12 * m33 + m13 * m32
-    c11 =  m11 * m33 - m13 * m31
-    c12 = -m11 * m32 + m12 * m31
-
-    c20 =  m12 * m23 - m13 * m22
-    c21 = -m11 * m23 + m13 * m21
-    c22 =  m11 * m22 - m12 * m21
-
-    inv_det = 1._real32 / (m11 * c00 + m12 * c01 + m13 * c02)
-
-    ! Transpose cofactors into the inverse
-    output(1,1) = c00 * inv_det
-    output(2,1) = c01 * inv_det
-    output(3,1) = c02 * inv_det
-
-    output(1,2) = c10 * inv_det
-    output(2,2) = c11 * inv_det
-    output(3,2) = c12 * inv_det
-
-    output(1,3) = c20 * inv_det
-    output(2,3) = c21 * inv_det
-    output(3,3) = c22 * inv_det
-
-  end associate
-end function inverse_3x3
-!!!#####################################################
-
-
-!!!#####################################################
-!!! determinant function
-!!!#####################################################
+!###############################################################################
   recursive function rec_det(a,n) result(res)
+    !! Return the determinant of an n x n matrix using cofactor expansion.
     integer :: i, sign
+    !! Cofactor column index and sign toggle.
     real(real32) :: res
+    !! Determinant result.
     integer, intent(in) :: n
+    !! Matrix dimension.
     real(real32), dimension(n,n), intent(in) :: a
+    !! Input n x n matrix.
     real(real32), dimension(n-1, n-1) :: tmp
+    !! Submatrix for cofactor expansion.
 
     if(n.eq.1) then
        res = a(1,1)
@@ -504,23 +426,23 @@ end function inverse_3x3
 
     return
   end function rec_det
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! determinant of input matrix via LU decomposition
-!!!#####################################################
-!!! L = lower
-!!! U = upper
-!!! inmat = input nxn matrix
-!!! LUdet = determinant of inmat
-!!! LUdet = (-1)**N * prod(L(i,i)*U(i,i))
+!###############################################################################
   function LUdet(inmat)
+    !! Return the determinant of an n x n matrix via LU decomposition.
+    !!
+    !! Computes LUdet = (-1)^N * prod(L(i,i)*U(i,i)).
     implicit none
     integer :: i,N
+    !! Loop counter and matrix dimension.
     real(real32) :: LUdet
+    !! Determinant result.
     real(real32), dimension(:,:) :: inmat
+    !! Input n x n matrix.
     real(real32), dimension(size(inmat,1),size(inmat,1)) :: L,U
+    !! Lower and upper triangular matrices.
 
     L=0._real32
     U=0._real32
@@ -534,36 +456,34 @@ end function inverse_3x3
 
     return
   end function LUdet
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! inverse of n x n matrix
-!!!#####################################################
-!!! doesn't work if a diagonal element = 0
-!!! L = lower
-!!! U = upper
-!!! inmat = input nxn matrix
-!!! LUinv = output nxn inverse of matrix
-!!! Lz=b
-!!! Ux=z
-!!! x=column vectors of the inverse matrix
+!###############################################################################
   function LUinv(inmat)
+    !! Return the inverse of an n x n matrix using LU decomposition.
+    !!
+    !! Does not work if a diagonal element is zero.
     implicit none
     integer :: i,m,N
+    !! Loop counters and matrix dimension.
     real(real32), dimension(:,:) :: inmat
+    !! Input n x n matrix.
     real(real32), dimension(size(inmat,1),size(inmat,1)) :: LUinv
+    !! Inverse matrix result.
     real(real32), dimension(size(inmat,1),size(inmat,1)) :: L,U
+    !! Lower and upper triangular matrices.
     real(real32), dimension(size(inmat,1)) :: c,z,x
+    !! Identity column vector, intermediate vector, and solution vector.
 
     L=0._real32
     U=0._real32
     N=size(inmat,1)
     call LUdecompose(inmat,L,U)
 
-!!! Lz=c
-!!! c are column vectors of the identity matrix
-!!! uses forward substitution to solve
+! Lz=c
+! c are column vectors of the identity matrix
+! uses forward substitution to solve
     do m=1,N
        c=0._real32
        c(m)=1._real32
@@ -574,9 +494,9 @@ end function inverse_3x3
        end do
 
 
-!!! Ux=z
-!!! x are the rows of the inversion matrix
-!!! uses backwards substitution to solve
+! Ux=z
+! x are the rows of the inversion matrix
+! uses backwards substitution to solve
        x(N)=z(N)/U(N,N)
        do i=N-1,1,-1
           x(i)=z(i)-dot_product(U(i,i+1:N),x(i+1:N))
@@ -588,22 +508,22 @@ end function inverse_3x3
 
     return
   end function LUinv
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! A=LU matrix decomposer
-!!!#####################################################
-!!! Method: Based on Doolittle LU factorization for Ax=b
-!!! doesn't work if a diagonal element = 0
-!!! L = lower
-!!! U = upper
-!!! inmat = input nxn matrix
+!###############################################################################
   subroutine LUdecompose(inmat,L,U)
+    !! Decompose a matrix into lower and upper triangular matrices (A = LU).
+    !!
+    !! Based on Doolittle LU factorization for Ax=b.
+    !! Does not work if a diagonal element is zero.
     implicit none
     integer :: i,j,N
+    !! Loop counters and matrix dimension.
     real(real32), dimension(:,:) :: inmat,L,U
+    !! Input matrix, lower and upper triangular output matrices.
     real(real32), dimension(size(inmat,1),size(inmat,1)) :: mat
+    !! Working copy of input matrix.
 
     N=size(inmat,1)
     mat=inmat
@@ -613,7 +533,7 @@ end function inverse_3x3
     do j=1,N
        L(j,j)=1._real32
     end do
-!!! Solves the lower matrix
+! Solves the lower matrix
     do j=1,N-1
        do i=j+1,N
           L(i,j)=mat(i,j)/mat(j,j)
@@ -621,7 +541,7 @@ end function inverse_3x3
        end do
     end do
 
-!!! Equates upper half of remaining mat to upper matrix
+! Equates upper half of remaining mat to upper matrix
     do j=1,N
        do i=1,j
           U(i,j)=mat(i,j)
@@ -630,61 +550,65 @@ end function inverse_3x3
 
     return
   end subroutine LUdecompose
-!!!#####################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!!#############################################################################
-!!!  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *
-!!!#############################################################################
-!!!#############################################################################
+!###############################################################################
+!###############################################################################
+!  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *
+!###############################################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! find transformation matrix between two matrices
-!!! A=mat1; B=mat2; T=find_tf
-!!! A T = B
-!!! A^-1 A T = A^-1 B
-!!! T = A^-1 B
-!!!#####################################################
+!###############################################################################
   function find_tf(mat1,mat2) result(tf)
+    !! Find the transformation matrix between two matrices.
+    !!
+    !! Computes T = A^-1 * B where A = mat1 and B = mat2.
     implicit none
+
+    ! Arguments
     real(real32), dimension(:,:) :: mat1,mat2
+    !! Input matrices A and B.
     real(real32), dimension(size(mat1,dim=1),size(mat1,dim=2)) :: tf
+    !! Transformation matrix result.
 
     tf=matmul(inverse(mat1),mat2)
 
   end function find_tf
+!---------------------------------------------------------------------------
   function find_tf_2x2(mat1,mat2) result(tf)
+    !! Find the transformation matrix between two 2x2 matrices.
     implicit none
+
+    ! Arguments
     real(real32), dimension(2,2) :: mat1,mat2
+    !! Input 2x2 matrices.
     real(real32), dimension(2,2) :: tf
+    !! Transformation matrix result.
 
     tf=matmul(inverse_2x2(mat1),mat2)
 
   end function find_tf_2x2
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! simultaneous equation solver for n dimensions
-!!!#####################################################
-!!! P     = power seiers equation in matrix
-!!! invP  = inverse of the power seiers matrix
-!!! qX    = the x values of the power seires with a ...
-!!!         ... size equal to order
-!!! qY    = the Y values for the n simult eqns
-!!! simeq = the coefficients of the powers of ...
-!!!                ... qX with highest power simeq(1)
-!!! f(qX)=qY
-!!! qA P(qX) = qY (in matrix form)
-!!! hence, qA=qY P^-1
+!###############################################################################
   function simeq(qX,qY)
+    !! Solve simultaneous equations for n dimensions.
+    !!
+    !! Given x values qX and y values qY, returns the coefficients of the
+    !! power series f(qX)=qY. Highest power coefficient is simeq(1).
     integer :: i,j,n,loc
+    !! Loop counters, equation order, and pivot location.
     real(real32), dimension(:) :: qX,qY
+    !! Input x values and y values.
     real(real32), dimension(size(qY)) :: funcY
+    !! Working copy of y values.
     real(real32), dimension(size(qY)) :: simeq,tmpqY
+    !! Coefficient result and temporary y values.
     real(real32), dimension(size(qY),size(qY)) :: P,invP,tmpP
+    !! Power series matrix, its inverse, and temporary copy.
 
 
     n=size(qX)
@@ -715,24 +639,28 @@ end function inverse_3x3
     simeq=matmul(invP,funcY)
 
   end function simeq
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! Lenstra-Lenstra-Lovász reduction
-!!!#####################################################
-!!! LLL algorithm based on the one found on Wikipedia, ...
-!!! ... which is based on Hoffstein, Pipher and Silverman 2008
-!!! https://en.wikipedia.org/wiki/Lenstra–Lenstra–Lovász_lattice_basis_reduction_algorithm
+!###############################################################################
   function LLL_reduce(basis,delta) result(obas)
+    !! Perform Lenstra-Lenstra-Lovasz (LLL) lattice basis reduction.
+    !!
+    !! LLL algorithm based on Hoffstein, Pipher and Silverman 2008.
     implicit none
     integer :: num,dim,i,j,k,loc
+    !! Number of vectors, dimension, loop counters, and location index.
     real(real32) :: d,dtmp
+    !! Delta parameter and temporary scalar.
     real(real32), allocatable, dimension(:) :: vtmp,mag_bas
+    !! Temporary vector and basis magnitudes.
     real(real32), allocatable, dimension(:,:) :: mu,GSbas,obas
+    !! Gram-Schmidt coefficients, orthogonal basis, and output basis.
 
     real(real32), dimension(:,:), intent(in) :: basis
+    !! Input basis to reduce.
     real(real32), optional, intent(in) :: delta
+    !! LLL reduction parameter (default 0.75).
 
 
     !! set up the value for delta
@@ -813,10 +741,10 @@ end function inverse_3x3
     end do
 
 
-!!! Separate functions for this to run efficiently
+! Separate functions for this to run efficiently
   contains
-    !!function to get the mu values
     function get_mu(bas1,bas2) result(mu)
+      !! Return the Gram-Schmidt mu coefficient matrix.
       implicit none
       integer :: num1,num2
       real(real32), allocatable, dimension(:,:) :: mu,bas1,bas2
@@ -836,8 +764,8 @@ end function inverse_3x3
     end function get_mu
 
 
-    !!subroutine to update Gram-Schmidt vectors and mu values
     subroutine update_GS_and_mu(GSbas,mu,basis,k)
+      !! Update Gram-Schmidt vectors and mu values from index k onwards.
       implicit none
       integer :: num,dim,i,j
       real(real32), allocatable, dimension(:) :: vtmp
@@ -877,18 +805,21 @@ end function inverse_3x3
 
 
   end function LLL_reduce
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! vector rotation
-!!!#####################################################
+!###############################################################################
   function rotvec(a,theta,phi,psi,new_length)
+    !! Rotate a 3D vector about the x, y, and z Cartesian axes.
     implicit none
     real(real32) :: magold,theta,phi,psi
+    !! Old magnitude, and rotation angles about x, y, z axes.
     real(real32), dimension(3) :: a,rotvec
+    !! Input vector and rotated result.
     real(real32), dimension(3,3) :: rotmat,rotmatx,rotmaty,rotmatz
+    !! Combined and individual rotation matrices.
     real(real32), optional :: new_length
+    !! If present, scale the rotated vector to this length.
 
     !  if(phi.ne.0._real32) phi=-phi
 
@@ -917,17 +848,19 @@ end function inverse_3x3
 
     return
   end function rotvec
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! vector rotation
-!!!#####################################################
+!###############################################################################
   function rot_arb_lat(a,lat,ang) result(vec)
+    !! Rotate a 3D vector about arbitrary lattice axes.
     implicit none
     integer :: i
+    !! Loop counter.
     real(real32), dimension(3) :: a,u,ang,vec
+    !! Input vector, unit axis, rotation angles, and result.
     real(real32), dimension(3,3) :: rotmat,ident,lat
+    !! Rotation matrix, identity matrix, and lattice matrix.
 
 
     ident=0._real32
@@ -948,23 +881,24 @@ end function inverse_3x3
 
     return
   end function rot_arb_lat
-!!!#####################################################
+!###############################################################################
 
 
-!!!#############################################################################
-!!!#############################################################################
-!!!  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *
-!!!#############################################################################
-!!!#############################################################################
+!###############################################################################
+!###############################################################################
+!  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *
+!###############################################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! finds the greatest common denominator
-!!!#####################################################
+!###############################################################################
   function gcd_num(numer,denom) result(gcd)
+    !! Find the greatest common divisor of two integers.
     implicit none
     integer :: numer,denom
+    !! Input numerator and denominator.
     integer :: a,b,c,gcd
+    !! Working variables and GCD result.
 
     a=abs(numer)
     b=abs(denom)
@@ -989,14 +923,18 @@ end function inverse_3x3
 
     return
   end function gcd_num
-!!!-----------------------------------------------------
-!!!-----------------------------------------------------
+!---------------------------------------------------------------------------
   function gcd_vec(vec) result(gcd)
+    !! Find the greatest common divisor of an integer vector.
     implicit none
     integer :: i,a,b,c,dim,itmp1,loc
+    !! Loop counter, working variables, dimension, temp, and location.
     integer :: gcd
+    !! GCD result.
     integer, dimension(:),intent(in) :: vec
+    !! Input integer vector.
     integer, allocatable, dimension(:) :: in_vec
+    !! Working copy of input vector.
 
 
     dim=size(vec,dim=1)
@@ -1024,32 +962,33 @@ end function inverse_3x3
 
     return
   end function gcd_vec
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! finds the lowest common multiple
-!!!#####################################################
+!###############################################################################
   function lcm(a,b)
+    !! Find the lowest common multiple of two integers.
     implicit none
     integer :: a,b,lcm
+    !! Input integers and LCM result.
 
     lcm=abs(a*b)/gcd(a,b)
 
     return
   end function lcm
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! converts decimal into a fraction and finds the ...
-!!! ... lowest denominator for it.
-!!!#####################################################
+!###############################################################################
   integer function get_frac_denom(val)
+    !! Convert a decimal to a fraction and find the lowest denominator.
     implicit none
     integer :: i
+    !! Iteration counter.
     real(real32) :: val
+    !! Input decimal value.
     real(real32) :: a,b,c,tiny
+    !! Working variables and tolerance.
 
     a=mod(val,1._real32)
     b=1._real32
@@ -1072,21 +1011,24 @@ end function inverse_3x3
 
     return
   end function get_frac_denom
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! reduces the gcd of a vector to 1
-!!!#####################################################
+!###############################################################################
   function reduce_vec_gcd(invec) result(vec)
+    !! Reduce a real vector so that its GCD is 1.
     implicit none
     integer :: i,a
+    !! Loop counter and integer GCD.
     real(real32) :: div,old_div,tol
+    !! Divisor, previous divisor, and tolerance.
     real(real32), allocatable, dimension(:) :: vec,tvec
+    !! Output vector and temporary vector.
     real(real32), dimension(:), intent(in) :: invec
+    !! Input vector.
 
 
-!!! MAKE IT DO SOMETHING IF IT CANNOT FULLY INTEGERISE
+! MAKE IT DO SOMETHING IF IT CANNOT FULLY INTEGERISE
 
     tol=1.E-5_real32
     allocate(vec(size(invec)))
@@ -1123,23 +1065,30 @@ end function inverse_3x3
 
 
   end function reduce_vec_gcd
-!!!#####################################################
+!###############################################################################
 
 
-!!!#####################################################
-!!! generate entire group from supplied elements
-!!!#####################################################
+!###############################################################################
   function gen_group(elem,mask,tol) result(group)
+    !! Generate the entire group from a supplied subset of elements.
     implicit none
     integer :: i,j,k,nelem,ntot_elem,dim1,dim2,iter
+    !! Loop counters, number of elements, total elements, dimensions, iteration.
     real(real32) :: tiny
+    !! Tolerance for comparison.
     real(real32), allocatable, dimension(:,:) :: tmp_elem,cur_elem,apply_elem
+    !! Temporary, current, and applied element matrices.
     real(real32), allocatable, dimension(:,:,:) :: tmp_group
+    !! Temporary storage for group elements.
 
     real(real32), dimension(:,:,:), intent(in) :: elem
+    !! Input subset of group elements.
     logical, dimension(:,:), optional, intent(in) :: mask
+    !! Optional mask for wrapping elements.
     real(real32), allocatable, dimension(:,:,:) :: group
+    !! Output full group.
     real(real32), optional, intent(in) :: tol
+    !! Optional tolerance (default 1.E-5).
 
 
     if(present(tol))then
@@ -1150,7 +1099,7 @@ end function inverse_3x3
     nelem = size(elem(:,1,1))
     dim1 = size(elem(1,:,1))
     dim2 = size(elem(1,1,:))
-    !!! HARDCODED LIMIT OF A GROUP SIZE TO 10,000
+    ! HARDCODED LIMIT OF A GROUP SIZE TO 10,000
     allocate(tmp_group(10000,dim1,dim2))
     allocate(tmp_elem(dim1,dim2))
     allocate(cur_elem(dim1,dim2))
@@ -1213,7 +1162,7 @@ end function inverse_3x3
 
 
   end function gen_group
-!!!#####################################################
+!###############################################################################
   
 
 end module artemis__misc_linalg
