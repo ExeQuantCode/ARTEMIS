@@ -5,7 +5,7 @@
 !!! Code part of the ARTEMIS group
 !!!#############################################################################
 module aspect
-  use artemis__io_utils, only: err_abort
+  use coreutils, only: stop_program
   use artemis__geom_rw, only: basis_type
   use artemis__geom_utils
   implicit none
@@ -68,14 +68,14 @@ contains
        case(ishift_index)
           call shifter(edited_bas,edits%axis(i),edits%val(i))
        case(ishift_region_index)
-          call err_abort('ERROR: SHIFT REGION NOT YET SET UP. ISSUE WITH BOUNDS')          
+          call stop_program('SHIFT REGION NOT YET SET UP. ISSUE WITH BOUNDS')          
        case(ivacuum_index)
           call vacuumer(edited_bas%lat,edited_bas,&
                edits%axis(i),edits%bounds(i,1),edits%val(i))
        case(itransform_index)
           call transformer(basis=edited_bas,tfmat=edits%tfmat)
        case(islab_index)
-          call err_abort('ERROR: SLAB PRINTER NOT YET SET UP')
+          call stop_program('SLAB PRINTER NOT YET SET UP')
        end select
 
     end do

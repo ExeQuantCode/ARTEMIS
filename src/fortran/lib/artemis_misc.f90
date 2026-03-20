@@ -1,25 +1,12 @@
 module artemis__misc
   !! Module containing ARTEMIS-specific miscellaneous utilities.
   !!
-  !! Common utilities (sort, swap, set, string ops, file ops) are provided
-  !! by the coreutils library and re-exported here for backward compatibility.
-  !!
   !! ARTEMIS-specific procedures:
   !! - sort2D   : sort a dim×3 array by cycling through columns
   !! - sort_col : sort a 2D array by a specified column
-  !! - loadbar  : write a loading bar to the terminal
   use coreutils__kind, only: real32
-  use coreutils__array, only: swap, sort1D, set
-  use coreutils__string, only: icount, flagmaker, to_upper, to_lower, strip_null
-  use coreutils__file, only: grep, jump, file_check
   implicit none
-
-  !> @deprecated Use coreutils__array directly for swap, sort1D, set
-  public :: swap, sort1D, set
-  !> @deprecated Use coreutils__string directly for icount, flagmaker, to_upper, to_lower, strip_null
-  public :: icount, flagmaker, to_upper, to_lower, strip_null
-  !> @deprecated Use coreutils__file directly for grep, jump, file_check
-  public :: grep, jump, file_check
+  private
   public :: sort2D, sort_col
 
 

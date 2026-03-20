@@ -5,10 +5,11 @@ module artemis__misc_maths
   !! factorial, log summation, safe inverse trigonometry, overlap computation,
   !! convolution, cross-correlation, running averages, statistical measures,
   !! turning point detection, plane identification, and distribution functions.
-  use artemis__constants, only: real32
+  use coreutils__kind, only: real32
   implicit none
-  integer, parameter :: QuadInt_K = selected_int_kind (16)
-  !! Kind parameter for quadruple-precision integers.
+  private
+  public :: gauss, gauss_array, overlap_indiv_points, running_avg
+  public :: mean, median, mode, get_turn_points, get_nth_plane
 
 
 
@@ -50,23 +51,6 @@ contains
     end if
 
   end function gauss
-!###############################################################################
-
-
-!###############################################################################
-  real(real32) function lnsum(n) 
-    !! Return the sum of log(i) for i from 1 to n.
-    implicit none
-    integer :: i,n
-    !! Loop index and upper limit.
-
-    lnsum=0
-    do i=1,n
-       lnsum=lnsum+log(real(i))
-    end do
-
-    return
-  end function lnsum
 !###############################################################################
 
 
@@ -235,43 +219,6 @@ contains
     end do
 
   end function mode
-!###############################################################################
-
-
-!###############################################################################
-  function range(in_array) result(output)
-    !! Return the range of a set of points.
-    implicit none
-    real(real32) :: output
-    !! Range result.
-    real(real32), dimension(:), intent(in) :: in_array
-    !! Input array.
-
-    output=maxval(in_array)-minval(in_array)
-
-  end function range
-!###############################################################################
-
-
-!###############################################################################
-  function normalise(in_array) result(output)
-    !! Return an array normalised to one.
-    implicit none
-    real(real32) :: sumval
-    !! Sum of the input array elements.
-    real(real32), dimension(:), intent(in) :: in_array
-    !! Input array.
-    real(real32), dimension(size(in_array)) :: output
-    !! Normalised output array.
-    
-    sumval=sum(in_array)
-    if(sumval.lt.1.E-8_real32)then
-       output=in_array
-    else
-       output=in_array/sum(in_array)
-    end if
-
-  end function normalise
 !###############################################################################
 
 
@@ -493,26 +440,6 @@ contains
 
 
 !###############################################################################
-  function table_func(x,a) result(res)
-    !! Compute a custom table function for a single point.
-    !!
-    !! Note: breaks when a = 1. Above this, res will always equal 1.
-    !! Parameter a should be between -1 and 1.
-    implicit none
-    real(real32), intent(in) :: x,a
-    !! Input value and shape parameter.
-    real(real32) :: res
-    !! Result of the table function.
-
-    res=( ( cos(x) + a ) + abs( cos(x) - a ) - 2._real32 )/&
-         ( 2._real32*a - 2._real32 )
-
-
-  end function table_func
-!###############################################################################
-
-
-!###############################################################################
   function gauss_array(distance,in_array,sigma,tol,norm,mask) &
        result(gauss_func)
     !! Apply Gaussian distributions to a set of points in an array.
@@ -565,103 +492,6 @@ contains
 
 
   end function gauss_array
-!###############################################################################
-
-
-!###############################################################################
-  function cauchy_array(distance,in_array,gamma,tol,norm) result(c_func)
-    !! Apply Cauchy distributions to a set of points in an array.
-    implicit none
-    integer :: i,n,init_step
-    !! Loop indices and initial step position.
-    real(real32) :: x,gamma,tol_,mult
-    !! Distance value, scale parameter, tolerance, and normalisation multiplier.
-    real(real32), optional :: tol
-    !! Optional tolerance for the Cauchy distribution.
-    logical, optional :: norm
-    !! Optional flag to control normalisation.
-    real(real32), dimension(:), intent(in) :: in_array,distance
-    !! Input array of points and distance array.
-    real(real32), dimension(size(distance)) :: c_func
-    !! Resulting Cauchy function array.
-    real(real32) :: pi = 4._real32*atan(1._real32)
-    !! Value of pi.
-
-
-    tol_ = 1.E16_real32
-    if(present(tol)) tol_=tol
-    mult=(1._real32/(pi*gamma))
-    if(present(norm))then
-       if(.not.norm) mult=1._real32
-    end if
-    
-    c_func=0._real32
-    do n=1,size(in_array)
-       init_step=minloc(abs( distance(:) - in_array(n) ),dim=1)
-       forward: do i=init_step,size(distance),1
-          x = 1._real32 + (( distance(i) - in_array(n) )/gamma)**2._real32
-          if(x.gt.tol_) exit forward
-          c_func(i) = c_func(i) + 1._real32/(x) * mult
-       end do forward
-
-       backward: do i=init_step-1,1,-1
-          x = 1._real32 + (( distance(i) - in_array(n) )/gamma)**2._real32
-          if(x.gt.tol_) exit backward
-          c_func(i) = c_func(i) + 1._real32/x * mult
-       end do backward
-    end do
-
-
-
-  end function cauchy_array
-!###############################################################################
-
-
-!###############################################################################
-  function slater_array(distance,in_array,zeta,tol,norm) result(s_func)
-    !! Apply Slater distributions to a set of points in an array.
-    implicit none
-    integer :: i,n,init_step
-    !! Loop indices and initial step position.
-    real(real32) :: x,zeta,tol_,mult
-    !! Distance value, Slater exponent, tolerance, and normalisation multiplier.
-    real(real32), optional :: tol
-    !! Optional tolerance for the Slater distribution.
-    logical, optional :: norm
-    !! Optional flag to control normalisation.
-    real(real32), dimension(:), intent(in) :: in_array,distance
-    !! Input array of points and distance array.
-    real(real32), dimension(size(distance)) :: s_func
-    !! Resulting Slater function array.
-    real(real32) :: pi = 4._real32*atan(1._real32)
-    !! Value of pi.
-
-
-    tol_ = 38._real32
-    if(present(tol)) tol_=tol
-    mult=((zeta**3._real32)/pi)**(0.5_real32)
-    if(present(norm))then
-       if(.not.norm) mult=1._real32
-    end if
-    
-    s_func=0._real32
-    do n=1,size(in_array)
-       init_step=minloc(abs( distance(:) - in_array(n) ),dim=1)
-       forward: do i=init_step,size(distance),1
-          x = zeta*abs( distance(i) - in_array(n) )
-          if(x.gt.tol_) exit forward
-          s_func(i) = s_func(i) + exp(-x) * mult
-       end do forward
-
-       backward: do i=init_step-1,1,-1
-          x = zeta*abs( distance(i) - in_array(n) )
-          if(x.gt.tol_) exit backward
-          s_func(i) = s_func(i) + exp(-x) * mult
-       end do backward
-    end do
-
-
-  end function slater_array
 !###############################################################################
 
 end module artemis__misc_maths

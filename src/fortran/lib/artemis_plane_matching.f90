@@ -4,8 +4,11 @@ module artemis__plane_matching
   !! Provides sort procedures to rank interface candidates by vector length,
   !! angle, and area mismatches. Both tolerance-weighted and absolute versions
   !! are supplied for the main sort and the combined match-and-tolerance sort.
-  use artemis__constants, only: real32, INF, pi
-  use artemis__misc_linalg, only: cross,get_angle,get_area,find_tf,&
+  use coreutils__kind,    only: real32
+  use coreutils__const,   only: INF, pi
+  use coreutils__linalg,    only: cross
+  use coreutils__geom,     only: get_angle
+  use artemis__misc_linalg, only: get_area,find_tf,&
        reduce_vec_gcd,gcd, inverse_2x2, find_tf_2x2, uvec
   use artemis__misc_types, only: tol_type
   implicit none

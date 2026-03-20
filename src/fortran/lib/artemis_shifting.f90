@@ -4,11 +4,13 @@ module artemis__shifting
   !! Provides routines to identify the interfacial atoms from each slab and
   !! evaluate pairwise atom separations across a grid of in-plane shifts,
   !! returning the highest-quality offsets for use by the generator.
-  use artemis__constants, only: real32, pi, INF
+  use coreutils__kind,  only: real32
+  use coreutils__const, only: pi, INF
   use artemis__misc_maths, only: get_nth_plane
   use atomstruc, only: basis_type,geom_write
   use artemis__geom_utils, only: split_bas,get_centre_atom,set_vacuum,shifter
-  use artemis__io_utils
+  use artemis__io_utils, only: print_warning, write_fmtd
+  use coreutils__error,  only: stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
   use artemis__interface_identifier
   implicit none
@@ -615,9 +617,9 @@ contains
        !! Breaks afer 50 failed steps
        !!-----------------------------------------------------------------------
        if(count1.ge.50)then
-          call err_abort('ERROR: Internal error in get_c_shift\n&
-               &get_c_shift in mod_shifting.f90 hasn'' worked to&
-               &find a good shift.\nSuggest using ISHIFT≠3̄')
+          call stop_program('Internal error in get_c_shift. &
+               &get_c_shift in mod_shifting.f90 has not worked to &
+               &find a good shift. Suggest using ISHIFT /= 3')
        end if
        !write(0,*) c_shift,min_bond
 
@@ -920,15 +922,15 @@ contains
              iatom = get_centre_atom(&
                   splitbas(i),is,axis,lw=regions(i,1),up=regions(i,2))
              if(iatom.eq.0)&
-                  call err_abort("Internal error in get_shifts_DON\n&
-                  &  No centre atom found in get_shifts_DON.",.true.)
+                  call stop_program("Internal error in get_shifts_DON: &
+                  &No centre atom found.")
           end if
           if(lbulk)then
              if(any(map(i)%spec(is,:splitbas(i)%spec(is)%num,:).le.0))then
                 write(0,'("parent  species  atom")')
                 write(0,'(2X,I2,6X,I2,4X,I4)') i,is,ia
-                call err_abort("Internal error in get_shifts_DON\n&
-                     &  Mapping of bulk missing",.true.)
+                call stop_program("Internal error in get_shifts_DON: &
+                     &Mapping of bulk missing")
              end if
           end if
           atom_loop1: do ia=1,splitbas(i)%spec(is)%num
@@ -1021,8 +1023,8 @@ contains
                      "",.false.)
                 call err_abort_print_struc(splitbas(2),"up_term.vasp",&
                      "",.false.)
-                call err_abort("ERROR: Internal error in get_shifts_DON\n&
-                  &  More neighbours found in slab than in bulk.",.true.)
+                call stop_program("Internal error in get_shifts_DON: &
+                  &More neighbours found in slab than in bulk.")
              end if
           end do atom_loop1
        end do spec_loop
@@ -1134,7 +1136,7 @@ contains
             "",.false.)
        call err_abort_print_struc(splitbas(2),"up_term.vasp",&
             "",.false.)
-       call err_abort("ERROR: Internal error in get_shifts_DON",.true.)
+       call stop_program("Internal error in get_shifts_DON")
     end if
 !$OMP PARALLEL DO &
 !$OMP DEFAULT(SHARED) &
@@ -1266,8 +1268,8 @@ contains
 ! Checks whether any shifts have been identified
 !-------------------------------------------------------------------------------
     if(all(shift_store.eq.0))then
-       call err_abort("Internal error in get_shifts_DON\n&
-               &  No shifts found.",.true.)
+       call stop_program("Internal error in get_shifts_DON: &
+               &No shifts found.")
     end if
 
 

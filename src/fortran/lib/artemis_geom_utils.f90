@@ -5,13 +5,15 @@ module artemis__geom_utils
   !! calculations, vacuum insertion, slab construction, basis transformation,
   !! primitive cell reduction, Niggli reduction, surface plane generation,
   !! and Wyckoff position identification.
-  use artemis__constants, only: real32, pi
+  use coreutils__kind,  only: real32
+  use coreutils__const, only: pi
   use atomstruc, only: basis_type, geom_write
   use artemis__sym, only: confine_type, gldfnd, tol_sym_default
-  use coreutils__array, only: swap
+  use coreutils__array,  only: swap
+  use coreutils__linalg, only: cross, inverse_3x3, outer_product
   use artemis__misc, only: sort2D
-  use artemis__misc_linalg, only: cross,outer_product,cross_matrix,uvec,&
-       get_vol,det,inverse,inverse_3x3,LUinv,reduce_vec_gcd,get_vec_multiple,&
+  use artemis__misc_linalg, only: cross_matrix,uvec,&
+       get_vol,det,inverse,LUinv,reduce_vec_gcd,get_vec_multiple,&
        proj,GramSchmidt,LLL_reduce
   implicit none
 

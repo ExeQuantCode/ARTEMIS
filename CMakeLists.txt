@@ -70,7 +70,6 @@ set(LIB_DIR ${FORTRAN_SRC_DIR}/lib)
 
 # Library source files
 set(LIB_FILES
-    artemis_constants.f90
     artemis_misc.f90
     artemis_io_utils.F90
     artemis_help.f90

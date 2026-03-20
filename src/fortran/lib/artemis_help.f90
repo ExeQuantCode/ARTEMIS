@@ -4,7 +4,7 @@ module artemis__help
   !! Defines integer indices and metadata (tag_type records) for every
   !! recognised keyword in the SETTINGS, CELL_EDITS, and INTERFACE input
   !! cards.  Public routines print context-sensitive help to stdout.
-  use artemis__io_utils, only: err_abort, tag_type, io_print_help
+  use artemis__io_utils, only: tag_type, io_print_help
   implicit none
 
 

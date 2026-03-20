@@ -7,10 +7,19 @@ module artemis__misc_linalg
   !! volume), equation solvers (simultaneous equations, transformation matrix),
   !! lattice reduction (LLL), vector rotation, and integer arithmetic utilities
   !! (GCD, LCM, fraction denominator, vector GCD reduction, group generation).
-  use artemis__constants, only: real32
+  use coreutils__kind, only: real32
   use coreutils__linalg, only: cross, inverse_3x3, outer_product
   implicit none
   integer, parameter, private :: QuadInt_K = selected_int_kind (16)
+
+  private
+  public :: uvec, proj, GramSchmidt, cross_matrix
+  public :: vec_mat_mul, get_vec_multiple
+  public :: get_area, get_vol
+  public :: trace, det, inverse, inverse_2x2, LUdet, LUinv, LUdecompose
+  public :: find_tf, find_tf_2x2, simeq
+  public :: LLL_reduce, rotvec, rot_arb_lat
+  public :: gcd, lcm, get_frac_denom, reduce_vec_gcd, gen_group
 
   interface gcd
      procedure gcd_vec,gcd_num
@@ -241,23 +250,6 @@ contains
 !###############################################################################
 
 
-!###############################################################################
-  function get_angle(vec1,vec2) result(angle)
-    !! Return the angle between two 3D vectors in radians.
-    implicit none
-
-    ! Arguments
-    real(real32) :: angle
-    !! Angle result.
-    real(real32), dimension(3) :: vec1,vec2
-    !! Input 3D vectors.
-
-    angle = acos( dot_product(vec1,vec2)/&
-         ( norm2(vec1) * norm2(vec2) ))
-    if (isnan(angle)) angle = 0._real32
-
-    return
-  end function get_angle
 !###############################################################################
 
 

@@ -5,11 +5,11 @@ module artemis__terminations
   !! plane by analysing atomic layer positions. Also provides routines to
   !! build slab supercells with a chosen termination and to trim a slab to
   !! a target thickness.
-  use artemis__constants, only: real32
+  use coreutils__kind, only: real32
   use atomstruc, only: basis_type, geom_write
   use artemis__misc,      only: sort_col
   use coreutils__string,  only: to_lower, to_upper
-  use artemis__io_utils,  only: err_abort, stop_program
+  use coreutils__error, only: stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
   use coreutils__linalg,  only: cross
   use artemis__misc_linalg,        only: uvec, det
@@ -687,12 +687,13 @@ contains
     term_end = term%nterm
     if(all(surf.ne.0))then
        if(any(surf.gt.term%nterm))then
-          write(msg, '("INVALID SURFACE VALUES!\nOne or more value &
+          write(msg, '(A,I0,1X,I0,A,I0)') &
+               "INVALID SURFACE VALUES! One or more value &
                &exceeds the maximum number of terminations in the &
-               &structure.\n&
-               &  Supplied values: ",I0,1X,I0,"\n&
-               &  Maximum allowed: ",I0)') surf, term%nterm
-          call err_abort(trim(msg),fmtd=.true.)
+               &structure." // achar(13) // achar(10) // "&
+               &  Supplied values: ", surf, achar(13) // achar(10) // "&
+               &  Maximum allowed: ", term%nterm
+          call stop_program(trim(msg))
        end if
        ludef_surf = .true.
        list = get_term_list(term)

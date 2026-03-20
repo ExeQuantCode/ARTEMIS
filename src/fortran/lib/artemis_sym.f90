@@ -4,8 +4,10 @@ module artemis__sym
   !! Includes procedures for checking symmetries against a basis,
   !! finding glide translations, generating symmetry operations
   !! for a lattice, and mapping symmetry-equivalent atoms.
-  use artemis__constants,   only: real32, pi
-  use artemis__misc_linalg,          only: inverse_3x3, det, uvec
+  use coreutils__kind,    only: real32
+  use coreutils__const,   only: pi
+  use coreutils__linalg,             only: inverse_3x3
+  use artemis__misc_linalg,          only: det, uvec
   use atomstruc, only: basis_type
   implicit none
 

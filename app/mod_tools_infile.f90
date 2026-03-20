@@ -19,7 +19,7 @@
 !!! cat              (cat lines until user-defined end string is encountered)
 !!!#############################################################################
 module infile_tools
-  use artemis__constants, only: real32
+  use coreutils__kind, only: real32
   use coreutils__string, only: icount
   use coreutils__file, only: grep
   implicit none

@@ -1,6 +1,7 @@
 module artemis__misc_types
   !! Module containing custom derived types for ARTEMIS
-  use artemis__constants, only: real32, pi
+  use coreutils__kind,  only: real32
+  use coreutils__const, only: pi
   use coreutils__string, only: to_lower
   use atomstruc, only: basis_type, geom_write
   use artemis__geom_utils, only: MATNORM

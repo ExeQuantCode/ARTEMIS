@@ -4,12 +4,12 @@ module artemis__swapping
   !! Generates randomised swap configurations for atoms close to an interface
   !! region. Swaps respect symmetry constraints and are weighted by proximity
   !! to the interface plane using a Gaussian distribution.
-  use artemis__constants, only: real32
+  use coreutils__kind, only: real32
   use coreutils__array, only: sort1D
   use artemis__misc_maths, only: gauss
   use atomstruc, only: basis_type
   use artemis__sym, only: check_sym,sym_type,basis_map_type,basis_map
-  use artemis__io_utils, only: err_abort
+  use coreutils, only: stop_program
   implicit none
   real(real32) :: tiny=5.E-5_real32
   !! Minimum fractional distance used as a floor when evaluating swap viability.
@@ -158,11 +158,8 @@ contains
     if(lmirror)then
        do i=1,bas%nspec
           if(any(bas_map%spec(i)%atom.eq.0))then
-             call err_abort("&
-                  &ERROR: Internal error in rand_swapper\n&
-                  & Error in rand_swapper subroutine in mod_swapper.f90\n&
-                  & atom missing a mapping even though mirror symmetry was found\n&
-                  &Exiting...",fmtd=.true.)
+             call stop_program("Internal error in rand_swapper: &
+                  &atom missing a mapping even though mirror symmetry was found")
           end if
        end do
        if(verbose.ge.1)then
@@ -356,11 +353,8 @@ end function rand_swapper
        end if
 
        if(itmp2.ge.nfail)then
-          call err_abort("&
-               &ERROR: Internal error in rand_swap\n&
-               & Error in rand_swap subroutine in mod_swapper.f90\n&
-               & all atoms either side of the interface appear to be the same species\n&
-               &Exiting...",fmtd=.true.)
+          call stop_program("Internal error in rand_swap: &
+               &all atoms either side of the interface appear to be the same species")
        end if
        !r_rand=rand(0)
        lw_loop: do

@@ -4,15 +4,18 @@ module artemis__generator
   !! Orchestrates lattice matching, slab construction, symmetry analysis,
   !! surface termination selection, interface shifting, and atomic swapping
   !! to produce candidate interface structures from two bulk input crystals.
-  use artemis__constants,     only: real32, pi
+  use coreutils__kind,          only: real32
+  use coreutils__const,         only: pi
   use coreutils__string,      only: to_lower, to_upper
   use artemis__misc_types,    only: abstract_artemis_generator_type, &
        latmatch_type, tol_type, struc_data_type
   use atomstruc,              only: basis_type
   use artemis__lat_compare,            only: lattice_matching, cyc_lat1
-  use artemis__io_utils,      only: err_abort, print_warning, stop_program
+  use artemis__io_utils,      only: print_warning
+  use coreutils__error,        only: stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
-  use artemis__misc_linalg,            only: uvec,get_area,inverse,cross
+  use coreutils__linalg,               only: cross
+  use artemis__misc_linalg,            only: uvec,get_area,inverse
   use artemis__interface_identifier,   only: intf_info_type,&
        get_interface,get_layered_axis,gen_DON
   use artemis__geom_utils,    only: planecutter, primitive_lat, ortho_axis,&
@@ -1917,12 +1920,13 @@ contains
           cycle intf_loop
        end if
        if(any(surface_lw_.gt.lw_term%nterm))then
-          write(err_msg, '("surface_lw_ACE VALUES INVALID!\nOne or more value &
-               &exceeds the maximum number of terminations in the &
-               &structure.\n&
-               &  Supplied values: ",I0,1X,I0,"\n&
-               &  Maximum allowed: ",I0)') surface_lw_, lw_term%nterm
-          call err_abort(trim(err_msg),fmtd=.true.)
+          write(err_msg, '(A,I0,1X,I0,A,I0)') &
+               "surface_lw_ACE VALUES INVALID! " // achar(13) // achar(10) // "&
+               &  One or more value exceeds the maximum number of terminations in the &
+               &structure." // achar(13) // achar(10) // "&
+               &  Supplied values: ", surface_lw_, achar(13) // achar(10) // "&
+               &  Maximum allowed: ", lw_term%nterm
+          call stop_program(trim(err_msg))
           return
        end if
 
@@ -1934,7 +1938,7 @@ contains
        if(sum(lw_term%arr(:)%natom)*lw_term%nstep.ne.supercell_lw%natom)then
           write(err_msg, '("Number of atoms in lower layers not correct: "&
                &I0,2X,I0)') sum(lw_term%arr(:)%natom)*lw_term%nstep,supercell_lw%natom
-          call err_abort(trim(err_msg),fmtd=.true.)
+          call stop_program(trim(err_msg))
           return
        end if
        call set_layer_tol(lw_term)
@@ -2012,12 +2016,13 @@ contains
           cycle intf_loop
        end if
        if(any(surface_up_.gt.up_term%nterm))then
-          write(err_msg, '("surface_up_ACE VALUES INVALID!\nOne or more value &
-               &exceeds the maximum number of terminations in the &
-               &structure.\n&
-               &  Supplied values: ",I0,1X,I0,"\n&
-               &  Maximum allowed: ",I0)') surface_up_, up_term%nterm
-          call err_abort(trim(err_msg),fmtd=.true.)
+          write(err_msg, '(A,I0,1X,I0,A,I0)') &
+               "surface_up_ACE VALUES INVALID! " // achar(13) // achar(10) // "&
+               &  One or more value exceeds the maximum number of terminations in the &
+               &structure." // achar(13) // achar(10) // "&
+               &  Supplied values: ", surface_up_, achar(13) // achar(10) // "&
+               &  Maximum allowed: ", up_term%nterm
+          call stop_program(trim(err_msg))
           return
        end if
 

@@ -3,7 +3,7 @@ module artemis__io_utils
   !!
   !! Provides formatted output, warning/error printing with rich box formatting,
   !! help system for parameter tags, and the ARTEMIS version string.
-  use artemis__constants, only: real32
+  use coreutils__kind, only: real32
   use coreutils__string, only: to_upper
   use coreutils__error, only: stop_program
   implicit none
@@ -12,7 +12,7 @@ module artemis__io_utils
   private
 
   public :: write_fmtd
-  public :: err_abort, print_warning, stop_program
+  public :: print_warning
   public :: artemis__suppress_warnings
   public :: io_print_help
   public :: print_header
@@ -126,7 +126,7 @@ contains
     itmp1=0
     newline_loop: do
        itmp1=itmp1+1
-       if(itmp1.gt.30) call err_abort("ERROR: Internal error in write_fmtd. Too many newlines")
+       if(itmp1.gt.30) call stop_program("Internal error in write_fmtd. Too many newlines")
        istart=iend+1
        iend=index(message(istart:),'\n')+istart-2
        if(iend.lt.istart) exit newline_loop
@@ -255,37 +255,6 @@ contains
 
 
 !###############################################################################
-  subroutine err_abort(message,fmtd)
-    !! Print an error message to stderr and stop execution.
-    implicit none
-
-    ! Arguments
-    character(len=*), intent(in) :: message
-    !! Error message to print.
-    logical, optional, intent(in) :: fmtd
-    !! If true, use write_fmtd formatting.
-
-    ! Local variables
-    integer :: unit = 0
-    !! Output unit (stderr).
-    logical :: lpresent
-    !! Format flag.
-
-    lpresent=.false.
-    if(present(fmtd))then
-       if(fmtd)then
-          call write_fmtd(unit,"ERROR: "//trim(message))
-          lpresent=.true.
-       end if
-    end if
-    if(.not.lpresent) write(unit,'(A)') trim(message)
-    stop
-
-  end subroutine err_abort
-!###############################################################################
-
-
-!###############################################################################
   subroutine io_print_help(unit, helpword, tags, search)
     !! Print help information for parameter tags, with search support.
     implicit none
@@ -322,7 +291,7 @@ contains
     ! Check that no tagname is duplicated
     !---------------------------------------------------------------------------
     if(count(tags(:)%name.eq.checkword).gt.1)then
-       call err_abort('Error: helper: tagname entry duplicated')
+       call stop_program('helper: tagname entry duplicated')
     end if
 
 

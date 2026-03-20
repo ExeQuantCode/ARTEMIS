@@ -7,14 +7,15 @@
 !!! Code part of the ARTEMIS group
 !!!#############################################################################
 module inputs
-  use artemis__constants, only: real32, pi
+  use coreutils__kind,  only: real32
+  use coreutils__const, only: pi
   use coreutils__string, only: flagmaker
   use coreutils__file, only: file_check
   use artemis__geom_rw, only: basis_type,geom_read
   use artemis__io_utils, only: &
        artemis__version__, &
-       print_warning, print_header, &
-       err_abort
+       print_warning, print_header
+  use coreutils, only: stop_program
   use artemis__io_utils_extd, only: setup_input_fmt, setup_output_fmt
   use aspect, only: aspect_type, edit_structure
   use artemis__lat_compare, only: tol_type
@@ -225,7 +226,7 @@ contains
                    write(*,'(1X,"Not a valid filename")')
                 end if
                 if(j.eq.3)then
-                   call err_abort('ERROR: No valid input filename supplied\nExiting...',.true.)
+                   call stop_program('No valid input filename supplied')
                 end if
              end do infilename_do
           end if
@@ -391,9 +392,8 @@ contains
        write(*,'("2nd structure file not supplied")')
        write(*,'(2X,"As is not necessary for this run, skipping...")')
     elseif(struc2_file.eq.'')then
-       call err_abort('ERROR: 2nd structure file not supplied\n&
-            &  Supply a filename to the tag STRUC2_FILE in the SETTINGS card\n&
-            &Exiting...',.true.)
+       call stop_program('2nd structure file not supplied. &
+            &Supply a filename to the tag STRUC2_FILE in the SETTINGS card')
     else
        !!-----------------------------------------------------------------------
        !! uses module to read vasp POSCAR 2 structure file
@@ -805,8 +805,8 @@ contains
                 read(store,*) shifts(1,:)
                 if(all(shifts.ge.0._real32)) iudef_nshift=1
              case default
-                call err_abort('ERROR: Invalid number of arguments provided to SHIFT&
-                     &\nValid number of arguments is 1 or 3.&')
+                call stop_program('Invalid number of arguments provided to SHIFT. &
+                     &Valid number of arguments is 1 or 3.')
              end select
           end if
        case("NSHIFT")
@@ -932,12 +932,10 @@ contains
        if(readvar(22).eq.1.and.shift_method.ne.0.and.all(shifts.ge.0._real32))then
           write(0,*) "ISHIFT = ",shift_method
           write(0,*) "SHIFT = ",shifts
-          call err_abort('ERROR: Contradictory tags used (ISHIFT and SHIFT) &
-               &\nNo free shifting directions available&
-               &\nExiting...',.true.)
+          call stop_program('Contradictory tags used (ISHIFT and SHIFT). &
+               &No free shifting directions available')
        elseif(readvar(22).eq.1.and.shift_method.ne.0.and.size(shifts(:,1),dim=1).gt.1)then
-          call err_abort('ERROR: Contradictory tags used (ISHIFT and SHIFT) &
-               &\nExiting...',.true.)
+          call stop_program('Contradictory tags used (ISHIFT and SHIFT)')
        elseif(all(shifts.ge.0._real32))then
           shift_method=0
           num_shifts=iudef_nshift

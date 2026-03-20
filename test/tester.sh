@@ -2,7 +2,7 @@
 #executing this tests the current build of ARTEMIS by running the examples and comparing to expected results
 
 test_dir=$(pwd)
-home_dir=$(pwd|sed 's_[/]tests[/]*$__')
+home_dir=$(pwd|sed 's_[/]test[/]*$__')
 ARTEMIS=$home_dir/bin/artemis
 echo $home_dir
 echo $ARTEMIS

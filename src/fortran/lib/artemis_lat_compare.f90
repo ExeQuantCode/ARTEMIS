@@ -4,10 +4,12 @@ module artemis__lat_compare
   !! Contains procedures for cycling through lattice combinations, finding
   !! best-fit transformation matrices, checking tolerances, and performing
   !! lattice matching using both direct and symmetry-based methods.
-  use artemis__constants, only: real32, pi, INF
+  use coreutils__kind,  only: real32
+  use coreutils__const, only: pi, INF
   use artemis__misc_types, only: latmatch_type, tol_type
-  use artemis__misc_linalg, only: cross,uvec,get_area,find_tf,det,reduce_vec_gcd,&
-       inverse_3x3,get_vec_multiple,get_frac_denom
+  use coreutils__linalg,    only: cross, inverse_3x3
+  use artemis__misc_linalg, only: uvec,get_area,find_tf,det,reduce_vec_gcd,&
+       get_vec_multiple,get_frac_denom
   use atomstruc, only: basis_type
   use artemis__geom_utils, only: MATNORM,planecutter
   implicit none
