@@ -76,6 +76,7 @@ The library bas been developed and tested using the following Fortran compilers:
 - gfortran -- gcc 13.2.0
 - gfortran -- gcc 14.1.0
 - gfortran -- gcc 14.2.0
+- gfortran -- gcc 15.2.0
 
 The library is known to not currently work with the intel Fortran compilers.
 
@@ -160,7 +161,7 @@ How-to
 ------
 Until recently, ARTEMIS has existed solely as a Fortran executable.
 This version of the code is currently best documented, but this will change in the near future as the Python library is tested more.
-To get an example input file, run the following command:  
+To get an example input file, run the following command:
 ```
 artemis -d example.in
 ```
@@ -171,7 +172,7 @@ ARTEMIS input file.
 To get descriptions of the tags within the input file, run either command:
 
 ```
-artemis --help [all|<TAGNAME>]  
+artemis --help [all|<TAGNAME>]
 artemis --search <STRING>
 ```
 
@@ -219,18 +220,18 @@ This work is licensed under a [GPL v3 license]([https://opensource.org/license/m
 
 Developers
 ------------
-- Ned Thaddues Taylor  
-- Francis Huw Davies  
-- Isiah Edward Mikel Rudkin  
-- Steven Paul Hepplestone  
+- Ned Thaddues Taylor
+- Francis Huw Davies
+- Isiah Edward Mikel Rudkin
+- Steven Paul Hepplestone
 
 Contributers
 ------------
-- Conor Jason Price  
-- Tsz Hin Chan  
-- Joe Pitfield  
-- Edward Allery Baker  
-- Shane Graham Davies  
+- Conor Jason Price
+- Tsz Hin Chan
+- Joe Pitfield
+- Edward Allery Baker
+- Shane Graham Davies
 
 Advisors
 ------------
