@@ -16,30 +16,6 @@ module artemis__misc_maths
 contains
 
 !###############################################################################
-  function times(input)
-    !! Multiply an array by a scalar value
-    implicit none
-
-    ! Arguments
-    real(real32), dimension(:),intent(in) :: input
-    !! Array to be multiplied
-
-    ! Local variables
-    integer :: i
-    !! Loop index
-    real(real32) :: times
-    !! Result of multiplication
-
-    times = 1._real32
-    do i = 1, size( input, dim = 1 )
-       times=times*input(i)
-    end do
-
-  end function times
-!###############################################################################
-
-
-!###############################################################################
   function gauss(pos,centre,sigma,tol) result(output)
     !! Evaluate a Gaussian at a point
     implicit none
@@ -78,23 +54,6 @@ contains
 
 
 !###############################################################################
-  integer(kind=QuadInt_K) function fact(n)
-    !! Compute the factorial of n.
-    implicit none
-    integer :: i,n
-    !! Loop index and input number.
-
-    fact=1
-    do i=1,n
-       fact=fact*i
-    end do
-
-    return
-  end function fact
-!###############################################################################
-
-
-!###############################################################################
   real(real32) function lnsum(n) 
     !! Return the sum of log(i) for i from 1 to n.
     implicit none
@@ -108,27 +67,6 @@ contains
 
     return
   end function lnsum
-!###############################################################################
-
-
-!###############################################################################
-  pure elemental function safe_acos(inval) result(val)
-    !! Compute acos safely, clamping values with magnitude >= 1.
-
-    ! Arguments
-    real(real32), intent(in) :: inval
-    !! Input value.
-    real(real32) :: val
-    !! Result of the safe acos computation.
-
-    if(abs(inval).ge.1._real32)then
-       val=acos(sign(1._real32,inval))
-    else
-       val=acos(inval)
-    end if
-   
-
-  end function safe_acos
 !###############################################################################
 
 
@@ -167,124 +105,6 @@ contains
 
     
   end function overlap_indiv_points
-!###############################################################################
-
-
-!###############################################################################
-  function overlap(f,g)
-    !! Compute the scalar overlap of two functions.
-    implicit none
-    integer :: n
-    !! Loop index.
-    integer :: datsize_f, datsize_g
-    !! Sizes of input arrays.
-    real(real32) :: overlap
-    !! Scalar overlap result.
-    real(real32), dimension(:) :: f, g
-    !! Input function arrays.
-    real(real32), dimension(:), allocatable :: y
-    !! Temporary work array.
-    
-    datsize_f = size(f)
-    datsize_g = size(g)
-
-    allocate(y(datsize_f))
-
-    do n=1,datsize_f
-       y(n) = min(f(n),g(n))
-    end do
-
-    overlap = sum(y)
-
-    
-  end function overlap
-!###############################################################################
-
-
-!###############################################################################
-  function convolve(f,g)
-    !! Compute the convolution of two functions.
-    implicit none
-
-    !f is the signal array
-    !g is the noise/impulse array
-    real(real32), dimension(:), allocatable :: convolve, y
-    !! Convolution result array and temporary work array.
-    real(real32), dimension(:) :: f, g
-    !! Signal array and impulse/noise array.
-    integer :: datsize_f, datsize_g
-    !! Sizes of input arrays.
-    integer :: i,j,k
-    !! Loop indices.
-
-    datsize_f = size(f)
-    datsize_g = size(g)
-
-    allocate(y(datsize_f))
-    allocate(convolve(datsize_f))
-
-    !last part
-    do i=datsize_g,datsize_f
-       y(i) = 0.0
-       j=i
-       do k=1,datsize_g
-          y(i) = y(i) + f(j)*g(k)
-          j = j-1
-       end do
-    end do
-
-    !first part
-    do i=1,datsize_g
-       y(i) = 0.0
-       j=i
-       k=1
-       do while (j > 0)
-          y(i) = y(i) + f(j)*g(k)
-          j = j-1
-          k = k+1
-       end do
-    end do
-
-    convolve = y
-
-  end function convolve
-!###############################################################################
-
-
-!###############################################################################
-  function cross_correl(f,g)
-    !! Compute the cross-correlation of two functions.
-    implicit none
-
-    !f is the signal array
-    !g is the noise/impulse array
-    real(real32), dimension(:), allocatable :: cross_correl, y
-    !! Cross-correlation result array and temporary work array.
-    real(real32), dimension(:) :: f, g
-    !! Signal array and impulse/noise array.
-    integer :: datsize_f, datsize_g
-    !! Sizes of input arrays.
-    integer :: m,n
-    !! Loop indices.
-
-    datsize_f = size(f)
-    datsize_g = size(g)
-
-    allocate(y(datsize_f))
-    allocate(cross_correl(datsize_f))
-
-    nloop: do n=1,datsize_f
-       y(n) = 0.0
-       mloop: do m=1,datsize_g
-          if(m+n.gt.datsize_g) cycle nloop
-          y(n) = y(n) + f(m) * g(m + n)
-       end do mloop
-    end do nloop
-
-    cross_correl = y
-
-
-  end function cross_correl
 !###############################################################################
 
 

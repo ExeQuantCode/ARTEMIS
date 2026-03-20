@@ -20,7 +20,7 @@ module artemis__misc
   public :: icount, flagmaker, to_upper, to_lower, strip_null
   !> @deprecated Use coreutils__file directly for grep, jump, file_check
   public :: grep, jump, file_check
-  public :: sort2D, sort_col, loadbar
+  public :: sort2D, sort_col
 
 
 contains
@@ -119,49 +119,6 @@ contains
 
     return
   end subroutine sort_col
-!###############################################################################
-
-
-!###############################################################################
-  subroutine loadbar(count,div,loaded)
-    !! Write a loading bar to the terminal.
-    implicit none
-
-    ! Arguments
-    integer, intent(in) :: count
-    !! Current iteration count.
-    integer, intent(in) :: div
-    !! Division interval for dot printing.
-    character(1), optional, intent(in) :: loaded
-    !! If 'l' or 'y', clear the loading bar.
-
-    ! Local variables
-    real(real32) :: tiny = 1.E-5_real32
-    !! Small threshold for mod comparison.
-    character(1) :: yn
-    !! Local copy of loaded flag.
-    character(1) :: creturn = achar(13)
-    !! Carriage return character.
-
-    if(.not.present(loaded)) then
-       yn='n'
-    else
-       yn=loaded
-    end if
-
-    if(yn.eq.'l'.or.yn.eq.'y') then
-       write(*,'(A,20X,A)',advance='no') achar(13),achar(13)
-       return
-    end if
-
-    if((real(count)/real(4*div)-floor(real(count)/real(4*div))).lt.tiny) then
-       write(*,'(A,20X,A,"CALCULATING")',advance='no') creturn,creturn
-    else if((real(count)/real(div)-floor(real(count)/real(div))).lt.tiny) then
-       write(*,'(".")',advance='no')
-    end if
-
-    return
-  end subroutine loadbar
 !###############################################################################
 
 end module artemis__misc
