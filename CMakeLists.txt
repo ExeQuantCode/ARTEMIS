@@ -54,7 +54,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(coreutils)
 
 # Fetch atomstruc dependency
-include(FetchContent)
 FetchContent_Declare(
     atomstruc
     GIT_REPOSITORY https://github.com/nedtaylor/atomstruc
