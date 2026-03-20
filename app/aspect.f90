@@ -6,7 +6,7 @@
 !!!#############################################################################
 module aspect
   use coreutils, only: stop_program
-  use artemis__geom_rw, only: basis_type
+  use atomstruc, only: basis_type
   use artemis__geom_utils
   implicit none
 

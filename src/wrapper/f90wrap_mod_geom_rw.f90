@@ -1,7 +1,7 @@
-! Module artemis__geom_rw defined in file ../fortran/lib/artemis_geom_rw.f90
+! Module artemis__geom_rw (now atomstruc) wrapper
 
 subroutine f90wrap_species_type__array__atom(this, nd, dtype, dshape, dloc)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     use, intrinsic :: iso_c_binding, only : c_int
     implicit none
     type species_type_ptr_type
@@ -26,7 +26,7 @@ subroutine f90wrap_species_type__array__atom(this, nd, dtype, dshape, dloc)
 end subroutine f90wrap_species_type__array__atom
 
 subroutine f90wrap_species_type__get__mass(this, f90wrap_mass)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     implicit none
     type species_type_ptr_type
         type(species_type), pointer :: p => NULL()
@@ -40,7 +40,7 @@ subroutine f90wrap_species_type__get__mass(this, f90wrap_mass)
 end subroutine f90wrap_species_type__get__mass
 
 subroutine f90wrap_species_type__set__mass(this, f90wrap_mass)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     implicit none
     type species_type_ptr_type
         type(species_type), pointer :: p => NULL()
@@ -54,7 +54,7 @@ subroutine f90wrap_species_type__set__mass(this, f90wrap_mass)
 end subroutine f90wrap_species_type__set__mass
 
 subroutine f90wrap_species_type__get__charge(this, f90wrap_charge)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     implicit none
     type species_type_ptr_type
         type(species_type), pointer :: p => NULL()
@@ -68,7 +68,7 @@ subroutine f90wrap_species_type__get__charge(this, f90wrap_charge)
 end subroutine f90wrap_species_type__get__charge
 
 subroutine f90wrap_species_type__set__charge(this, f90wrap_charge)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     implicit none
     type species_type_ptr_type
         type(species_type), pointer :: p => NULL()
@@ -82,7 +82,7 @@ subroutine f90wrap_species_type__set__charge(this, f90wrap_charge)
 end subroutine f90wrap_species_type__set__charge
 
 subroutine f90wrap_species_type__get__radius(this, f90wrap_radius)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     implicit none
     type species_type_ptr_type
         type(species_type), pointer :: p => NULL()
@@ -96,7 +96,7 @@ subroutine f90wrap_species_type__get__radius(this, f90wrap_radius)
 end subroutine f90wrap_species_type__get__radius
 
 subroutine f90wrap_species_type__set__radius(this, f90wrap_radius)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     implicit none
     type species_type_ptr_type
         type(species_type), pointer :: p => NULL()
@@ -110,7 +110,7 @@ subroutine f90wrap_species_type__set__radius(this, f90wrap_radius)
 end subroutine f90wrap_species_type__set__radius
 
 subroutine f90wrap_species_type__get__name(this, f90wrap_name)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     implicit none
     type species_type_ptr_type
         type(species_type), pointer :: p => NULL()
@@ -124,7 +124,7 @@ subroutine f90wrap_species_type__get__name(this, f90wrap_name)
 end subroutine f90wrap_species_type__get__name
 
 subroutine f90wrap_species_type__set__name(this, f90wrap_name)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     implicit none
     type species_type_ptr_type
         type(species_type), pointer :: p => NULL()
@@ -138,7 +138,7 @@ subroutine f90wrap_species_type__set__name(this, f90wrap_name)
 end subroutine f90wrap_species_type__set__name
 
 subroutine f90wrap_species_type__get__num(this, f90wrap_num)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     implicit none
     type species_type_ptr_type
         type(species_type), pointer :: p => NULL()
@@ -152,7 +152,7 @@ subroutine f90wrap_species_type__get__num(this, f90wrap_num)
 end subroutine f90wrap_species_type__get__num
 
 subroutine f90wrap_species_type__set__num(this, f90wrap_num)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     implicit none
     type species_type_ptr_type
         type(species_type), pointer :: p => NULL()
@@ -166,7 +166,7 @@ subroutine f90wrap_species_type__set__num(this, f90wrap_num)
 end subroutine f90wrap_species_type__set__num
 
 subroutine f90wrap_geom_rw__species_type_initialise(this)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     implicit none
     
     type species_type_ptr_type
@@ -179,7 +179,7 @@ subroutine f90wrap_geom_rw__species_type_initialise(this)
 end subroutine f90wrap_geom_rw__species_type_initialise
 
 subroutine f90wrap_geom_rw__species_type_finalise(this)
-    use artemis__geom_rw, only: species_type
+    use atomstruc, only: species_type
     implicit none
     
     type species_type_ptr_type
@@ -193,7 +193,7 @@ end subroutine f90wrap_geom_rw__species_type_finalise
 
 subroutine f90wrap_basis_type__array_getitem__spec(f90wrap_this, f90wrap_i, specitem)
     
-    use artemis__geom_rw, only: basis_type, species_type
+    use atomstruc, only: basis_type, species_type
     implicit none
     
     type basis_type_ptr_type
@@ -223,7 +223,7 @@ end subroutine f90wrap_basis_type__array_getitem__spec
 
 subroutine f90wrap_basis_type__array_setitem__spec(f90wrap_this, f90wrap_i, specitem)
     
-    use artemis__geom_rw, only: basis_type, species_type
+    use atomstruc, only: basis_type, species_type
     implicit none
     
     type basis_type_ptr_type
@@ -253,7 +253,7 @@ end subroutine f90wrap_basis_type__array_setitem__spec
 
 subroutine f90wrap_basis_type__array_len__spec(f90wrap_this, f90wrap_n)
     
-    use artemis__geom_rw, only: basis_type, species_type
+    use atomstruc, only: basis_type, species_type
     implicit none
     
     type basis_type_ptr_type
@@ -275,7 +275,7 @@ subroutine f90wrap_basis_type__array_len__spec(f90wrap_this, f90wrap_n)
 end subroutine f90wrap_basis_type__array_len__spec
 
 subroutine f90wrap_basis_type__get__nspec(this, f90wrap_nspec)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type basis_type_ptr_type
         type(basis_type), pointer :: p => NULL()
@@ -289,7 +289,7 @@ subroutine f90wrap_basis_type__get__nspec(this, f90wrap_nspec)
 end subroutine f90wrap_basis_type__get__nspec
 
 subroutine f90wrap_basis_type__set__nspec(this, f90wrap_nspec)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type basis_type_ptr_type
         type(basis_type), pointer :: p => NULL()
@@ -303,7 +303,7 @@ subroutine f90wrap_basis_type__set__nspec(this, f90wrap_nspec)
 end subroutine f90wrap_basis_type__set__nspec
 
 subroutine f90wrap_basis_type__get__natom(this, f90wrap_natom)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type basis_type_ptr_type
         type(basis_type), pointer :: p => NULL()
@@ -317,7 +317,7 @@ subroutine f90wrap_basis_type__get__natom(this, f90wrap_natom)
 end subroutine f90wrap_basis_type__get__natom
 
 subroutine f90wrap_basis_type__set__natom(this, f90wrap_natom)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type basis_type_ptr_type
         type(basis_type), pointer :: p => NULL()
@@ -331,7 +331,7 @@ subroutine f90wrap_basis_type__set__natom(this, f90wrap_natom)
 end subroutine f90wrap_basis_type__set__natom
 
 subroutine f90wrap_basis_type__get__energy(this, f90wrap_energy)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type basis_type_ptr_type
         type(basis_type), pointer :: p => NULL()
@@ -345,7 +345,7 @@ subroutine f90wrap_basis_type__get__energy(this, f90wrap_energy)
 end subroutine f90wrap_basis_type__get__energy
 
 subroutine f90wrap_basis_type__set__energy(this, f90wrap_energy)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type basis_type_ptr_type
         type(basis_type), pointer :: p => NULL()
@@ -359,7 +359,7 @@ subroutine f90wrap_basis_type__set__energy(this, f90wrap_energy)
 end subroutine f90wrap_basis_type__set__energy
 
 subroutine f90wrap_basis_type__array__lat(this, nd, dtype, dshape, dloc)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     use, intrinsic :: iso_c_binding, only : c_int
     implicit none
     type basis_type_ptr_type
@@ -380,7 +380,7 @@ subroutine f90wrap_basis_type__array__lat(this, nd, dtype, dshape, dloc)
 end subroutine f90wrap_basis_type__array__lat
 
 subroutine f90wrap_basis_type__get__lcart(this, f90wrap_lcart)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type basis_type_ptr_type
         type(basis_type), pointer :: p => NULL()
@@ -394,7 +394,7 @@ subroutine f90wrap_basis_type__get__lcart(this, f90wrap_lcart)
 end subroutine f90wrap_basis_type__get__lcart
 
 subroutine f90wrap_basis_type__set__lcart(this, f90wrap_lcart)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type basis_type_ptr_type
         type(basis_type), pointer :: p => NULL()
@@ -408,7 +408,7 @@ subroutine f90wrap_basis_type__set__lcart(this, f90wrap_lcart)
 end subroutine f90wrap_basis_type__set__lcart
 
 subroutine f90wrap_basis_type__array__pbc(this, nd, dtype, dshape, dloc)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     use, intrinsic :: iso_c_binding, only : c_int
     implicit none
     type basis_type_ptr_type
@@ -429,7 +429,7 @@ subroutine f90wrap_basis_type__array__pbc(this, nd, dtype, dshape, dloc)
 end subroutine f90wrap_basis_type__array__pbc
 
 subroutine f90wrap_basis_type__get__sysname(this, f90wrap_sysname)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type basis_type_ptr_type
         type(basis_type), pointer :: p => NULL()
@@ -443,7 +443,7 @@ subroutine f90wrap_basis_type__get__sysname(this, f90wrap_sysname)
 end subroutine f90wrap_basis_type__get__sysname
 
 subroutine f90wrap_basis_type__set__sysname(this, f90wrap_sysname)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type basis_type_ptr_type
         type(basis_type), pointer :: p => NULL()
@@ -457,7 +457,7 @@ subroutine f90wrap_basis_type__set__sysname(this, f90wrap_sysname)
 end subroutine f90wrap_basis_type__set__sysname
 
 subroutine f90wrap_geom_rw__basis_type_initialise(this)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -470,7 +470,7 @@ subroutine f90wrap_geom_rw__basis_type_initialise(this)
 end subroutine f90wrap_geom_rw__basis_type_initialise
 
 subroutine f90wrap_geom_rw__basis_type_finalise(this)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -488,7 +488,7 @@ end subroutine f90wrap_geom_rw__basis_type_finalise
 
 subroutine f90wrap_basis_type_xnum_array__array_getitem__items( &
     this, f90wrap_i, itemsitem)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
 
     type basis_type_xnum_array
@@ -517,7 +517,7 @@ subroutine f90wrap_basis_type_xnum_array__array_getitem__items( &
 end subroutine f90wrap_basis_type_xnum_array__array_getitem__items
 
 subroutine f90wrap_basis_type_xnum_array__array_setitem__items(this, f90wrap_i, itemsitem)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
 
     type basis_type_xnum_array
@@ -546,7 +546,7 @@ subroutine f90wrap_basis_type_xnum_array__array_setitem__items(this, f90wrap_i, 
 end subroutine f90wrap_basis_type_xnum_array__array_setitem__items
 
 subroutine f90wrap_basis_type_xnum_array__array_len__items(this, f90wrap_n)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
 
     type basis_type_xnum_array
@@ -564,7 +564,7 @@ subroutine f90wrap_basis_type_xnum_array__array_len__items(this, f90wrap_n)
 end subroutine f90wrap_basis_type_xnum_array__array_len__items
 
 subroutine f90wrap_basis_type_xnum_array__array_alloc__items(this, num)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
 
     type basis_type_xnum_array
@@ -584,7 +584,7 @@ subroutine f90wrap_basis_type_xnum_array__array_alloc__items(this, num)
 end subroutine f90wrap_basis_type_xnum_array__array_alloc__items
 
 subroutine f90wrap_basis_type_xnum_array__array_dealloc__items(this)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
 
     type basis_type_xnum_array
@@ -603,7 +603,7 @@ subroutine f90wrap_basis_type_xnum_array__array_dealloc__items(this)
 end subroutine f90wrap_basis_type_xnum_array__array_dealloc__items
 
 subroutine f90wrap_geom_rw__basis_type_xnum_array_initialise(this)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
 
     type basis_type_xnum_array
@@ -620,7 +620,7 @@ subroutine f90wrap_geom_rw__basis_type_xnum_array_initialise(this)
 end subroutine f90wrap_geom_rw__basis_type_xnum_array_initialise
 
 subroutine f90wrap_geom_rw__basis_type_xnum_array_finalise(this)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
 
     type basis_type_xnum_array
@@ -642,7 +642,7 @@ end subroutine f90wrap_geom_rw__basis_type_xnum_array_finalise
 subroutine f90wrap_geom_rw__allocate_species__binding__basis_type( &
        this, num_species, species_symbols, species_count, atoms, n0, &
        n1, n2, n3)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -672,7 +672,7 @@ subroutine f90wrap_geom_rw__allocate_species__binding__basis_type( &
 end subroutine f90wrap_geom_rw__allocate_species__binding__basis_type
 
 subroutine f90wrap_geom_rw__convert__binding__basis_type(this)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -685,7 +685,7 @@ subroutine f90wrap_geom_rw__convert__binding__basis_type(this)
 end subroutine f90wrap_geom_rw__convert__binding__basis_type
 
 subroutine f90wrap_geom_rw__change_lattice__binding__basis_type(this, lattice)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -700,7 +700,7 @@ end subroutine f90wrap_geom_rw__change_lattice__binding__basis_type
 
 subroutine f90wrap_geom_rw__normalise__binding__basis_type(this, ceil_val, floor_coords, round_coords, &
     zero_round)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -718,7 +718,7 @@ subroutine f90wrap_geom_rw__normalise__binding__basis_type(this, ceil_val, floor
 end subroutine f90wrap_geom_rw__normalise__binding__basis_type
 
 subroutine f90wrap_geom_rw__copy__binding__basis_type(this, basis, length)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -735,7 +735,7 @@ subroutine f90wrap_geom_rw__copy__binding__basis_type(this, basis, length)
 end subroutine f90wrap_geom_rw__copy__binding__basis_type
 
 subroutine f90wrap_geom_rw__get_lattice_constants__binding__basis_type(this, ret_output, radians)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -750,7 +750,7 @@ subroutine f90wrap_geom_rw__get_lattice_constants__binding__basis_type(this, ret
 end subroutine f90wrap_geom_rw__get_lattice_constants__binding__basis_type
 
 subroutine f90wrap_geom_rw__remove_atom__binding__basis_type(this, ispec, iatom)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -765,7 +765,7 @@ subroutine f90wrap_geom_rw__remove_atom__binding__basis_type(this, ispec, iatom)
 end subroutine f90wrap_geom_rw__remove_atom__binding__basis_type
 
 subroutine f90wrap_geom_rw__remove_atoms__binding__basis_type(this, atoms, n0, n1)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -783,7 +783,7 @@ subroutine f90wrap_geom_rw__remove_atoms__binding__basis_type(this, atoms, n0, n
 end subroutine f90wrap_geom_rw__remove_atoms__binding__basis_type
 
 subroutine f90wrap_geom_rw__geom_read(unit, basis, length, iostat)
-    use artemis__geom_rw, only: geom_read, basis_type
+    use atomstruc, only: geom_read, basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -800,7 +800,7 @@ subroutine f90wrap_geom_rw__geom_read(unit, basis, length, iostat)
 end subroutine f90wrap_geom_rw__geom_read
 
 subroutine f90wrap_geom_rw__geom_write(unit, basis)
-    use artemis__geom_rw, only: geom_write, basis_type
+    use atomstruc, only: geom_write, basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -814,7 +814,7 @@ subroutine f90wrap_geom_rw__geom_write(unit, basis)
 end subroutine f90wrap_geom_rw__geom_write
 
 subroutine f90wrap_geom_rw__get_element_properties(element, charge, mass, radius)
-    use artemis__geom_rw, only: get_element_properties
+    use atomstruc, only: get_element_properties
     implicit none
     
     character(3), intent(in) :: element
@@ -830,7 +830,7 @@ subroutine f90wrap_geom_rw__get_element_properties(element, charge, mass, radius
 end subroutine f90wrap_geom_rw__get_element_properties
 
 subroutine f90wrap_geom_rw__get__igeom_input(f90wrap_igeom_input)
-    use artemis__geom_rw, only: artemis__geom_rw_igeom_input => igeom_input
+    use atomstruc, only: artemis__geom_rw_igeom_input => igeom_input
     implicit none
     integer, intent(out) :: f90wrap_igeom_input
     
@@ -838,7 +838,7 @@ subroutine f90wrap_geom_rw__get__igeom_input(f90wrap_igeom_input)
 end subroutine f90wrap_geom_rw__get__igeom_input
 
 subroutine f90wrap_geom_rw__set__igeom_input(f90wrap_igeom_input)
-    use artemis__geom_rw, only: artemis__geom_rw_igeom_input => igeom_input
+    use atomstruc, only: artemis__geom_rw_igeom_input => igeom_input
     implicit none
     integer, intent(in) :: f90wrap_igeom_input
     
@@ -846,7 +846,7 @@ subroutine f90wrap_geom_rw__set__igeom_input(f90wrap_igeom_input)
 end subroutine f90wrap_geom_rw__set__igeom_input
 
 subroutine f90wrap_geom_rw__get__igeom_output(f90wrap_igeom_output)
-    use artemis__geom_rw, only: artemis__geom_rw_igeom_output => igeom_output
+    use atomstruc, only: artemis__geom_rw_igeom_output => igeom_output
     implicit none
     integer, intent(out) :: f90wrap_igeom_output
     
@@ -854,12 +854,12 @@ subroutine f90wrap_geom_rw__get__igeom_output(f90wrap_igeom_output)
 end subroutine f90wrap_geom_rw__get__igeom_output
 
 subroutine f90wrap_geom_rw__set__igeom_output(f90wrap_igeom_output)
-    use artemis__geom_rw, only: artemis__geom_rw_igeom_output => igeom_output
+    use atomstruc, only: artemis__geom_rw_igeom_output => igeom_output
     implicit none
     integer, intent(in) :: f90wrap_igeom_output
     
     artemis__geom_rw_igeom_output = f90wrap_igeom_output
 end subroutine f90wrap_geom_rw__set__igeom_output
 
-! End of module artemis__geom_rw defined in file ../fortran/lib/artemis_geom_rw.f90
+! End of module artemis__geom_rw (now atomstruc) wrapper
 

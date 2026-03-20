@@ -90,7 +90,6 @@ set(LIB_FILES
 # Main source files
 set(SPECIAL_LIB_FILES
     artemis_misc_types.f90
-    artemis_geom_rw.f90
     artemis_generator.f90
 )
 
@@ -342,6 +341,7 @@ if (BUILD_PYTHON)
         -c
         -m _${PROJECT_NAME}
         -I${MODULE_DIR}
+        -I$<TARGET_PROPERTY:atomstruc,Fortran_MODULE_DIRECTORY>
         --f90flags="${PPFLAGS}"
         ${GOMPFLAGS}
         --backend meson

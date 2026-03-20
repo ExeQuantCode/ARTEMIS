@@ -90,7 +90,7 @@ end subroutine f90wrap_artemis_gen_type__set__warning_min_bond
 
 subroutine f90wrap_artemis_gen_type__get__structure_lw(this, f90wrap_structure_lw)
     use artemis__generator, only: artemis_generator_type
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type artemis_generator_type_ptr_type
         type(artemis_generator_type), pointer :: p => NULL()
@@ -110,7 +110,7 @@ end subroutine f90wrap_artemis_gen_type__get__structure_lw
 
 subroutine f90wrap_artemis_gen_type__set__structure_lw(this, f90wrap_structure_lw)
     use artemis__generator, only: artemis_generator_type
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type artemis_generator_type_ptr_type
         type(artemis_generator_type), pointer :: p => NULL()
@@ -130,7 +130,7 @@ end subroutine f90wrap_artemis_gen_type__set__structure_lw
 
 subroutine f90wrap_artemis_gen_type__get__structure_up(this, f90wrap_structure_up)
     use artemis__generator, only: artemis_generator_type
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type artemis_generator_type_ptr_type
         type(artemis_generator_type), pointer :: p => NULL()
@@ -150,7 +150,7 @@ end subroutine f90wrap_artemis_gen_type__get__structure_up
 
 subroutine f90wrap_artemis_gen_type__set__structure_up(this, f90wrap_structure_up)
     use artemis__generator, only: artemis_generator_type
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     type artemis_generator_type_ptr_type
         type(artemis_generator_type), pointer :: p => NULL()
@@ -1316,7 +1316,7 @@ end subroutine f90wrap_intf_gen__set_match_method__binding__agt
 subroutine f90wrap_intf_gen__set_materials__binding__agt(this, structure_lw, structure_up, &
     elastic_lw, elastic_up, use_pricel_lw, use_pricel_up, n0, n1, n2, n3)
     use artemis__generator, only: artemis_generator_type
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -1428,7 +1428,7 @@ subroutine f90wrap_intf_gen__get_terminations__binding__agt( &
     orthogonalise, normalise, break_on_fail, &
     verbose, exit_code, &
     n_ret_structures, n0)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     use artemis__generator, only: artemis_generator_type
     use artemis__structure_cache, only: store_last_generated_structures
     implicit none
@@ -1477,7 +1477,7 @@ end subroutine f90wrap_intf_gen__get_terminations__binding__agt
 subroutine f90wrap_intf_gen__get_interface_location__binding__agt( &
     this, structure, axis, return_fractional, &
     ret_location, ret_axis)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     use artemis__generator, only: artemis_generator_type
     use artemis__interface_identifier, only: intf_info_type
     implicit none
@@ -1567,7 +1567,7 @@ end subroutine f90wrap_intf_gen__generate__binding__agt
 subroutine f90wrap_intf_gen__regenerate__binding__agt(this, structure, interface_location, &
     print_shift_info, seed, verbose, exit_code)
     use artemis__generator, only: artemis_generator_type
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type basis_type_ptr_type
@@ -1598,7 +1598,7 @@ end subroutine f90wrap_intf_gen__regenerate__binding__agt
 !###############################################################################
 subroutine f90wrap_intf_gen__get_structures__binding__agt(this, ret_structures)
     use artemis__generator, only: artemis_generator_type
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
 
     type artemis_generator_type_ptr_type
@@ -1636,7 +1636,7 @@ subroutine f90wrap_intf_gen__clear_structures__binding__agt(this)
 end subroutine f90wrap_intf_gen__clear_structures__binding__agt
 
 subroutine f90wrap_retrieve_last_generated_structures(structures)
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     use artemis__structure_cache, only: retrieve_last_generated_structures
     implicit none
 
@@ -1665,7 +1665,7 @@ subroutine f90wrap_artemis_gen_type__array_getitem__structures( &
 )
     
     use artemis__generator, only: artemis_generator_type
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type artemis_generator_type_ptr_type
@@ -1698,7 +1698,7 @@ subroutine f90wrap_artemis_gen_type__array_setitem__structures( &
 )
     
     use artemis__generator, only: artemis_generator_type
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type artemis_generator_type_ptr_type
@@ -1731,7 +1731,7 @@ subroutine f90wrap_artemis_gen_type__array_len__structures( &
 )
     
     use artemis__generator, only: artemis_generator_type
-    use artemis__geom_rw, only: basis_type
+    use atomstruc, only: basis_type
     implicit none
     
     type artemis_generator_type_ptr_type

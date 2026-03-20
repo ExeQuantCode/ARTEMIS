@@ -11,7 +11,7 @@ module inputs
   use coreutils__const, only: pi
   use coreutils__string, only: flagmaker
   use coreutils__file, only: file_check
-  use artemis__geom_rw, only: basis_type,geom_read
+  use atomstruc, only: basis_type,geom_read
   use artemis__io_utils, only: &
        artemis__version__, &
        print_warning, print_header
