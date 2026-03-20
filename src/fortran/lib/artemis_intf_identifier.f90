@@ -7,7 +7,7 @@ module artemis__interface_identifier
   use coreutils__array, only: swap, sort1D
   use artemis__misc_linalg, only: simeq,get_area,uvec
   use artemis__misc_maths, only: gauss_array,get_turn_points,overlap_indiv_points,&
-       running_avg,mean,median,mode
+       running_avg,mean
   use atomstruc, only: basis_type, species_type
   implicit none
 
