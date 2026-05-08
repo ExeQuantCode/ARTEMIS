@@ -1,11 +1,12 @@
 module artemis__interface_translations
   !! Module for detecting primitive relative shift vectors in interface cells.
   use coreutils__kind, only: real32
-  use coreutils__linalg, only: inverse_3x3
+  use coreutils__linalg, only: inverse_3x3, cross
   use atomstruc, only: basis_type
   use artemis__geom_utils, only: split_bas
-  use artemis__generator, only: artemis_generator_type
-  use artemis__interface_identifier, only: intf_info_type
+  use artemis__interface_identifier, only: intf_info_type, get_interface
+  use artemis__misc_linalg, only: get_frac_denom, lcm
+  use artemis__sym, only: confine_type, gldfnd
   implicit none
 
   private
@@ -22,10 +23,12 @@ contains
     type(basis_type), intent(in) :: basis
     real(real32), dimension(3), intent(out) :: t1, t2
 
+    integer :: analytical_capacity
     integer :: lower_candidate_capacity, upper_candidate_capacity
     integer :: lower_valid_capacity, upper_valid_capacity
     integer :: lower_group_capacity, upper_group_capacity
     integer :: relative_capacity, valid_capacity
+    integer :: n_lower_basis, n_upper_basis
     integer :: n_lower_candidates, n_upper_candidates
     integer :: n_lower_valid, n_upper_valid
     integer :: n_lower_group, n_upper_group
@@ -35,6 +38,7 @@ contains
     real(real32) :: frac_tol
     real(real32), allocatable, dimension(:,:) :: regions
     real(real32), allocatable, dimension(:,:,:) :: frac_lower, frac_upper
+    real(real32), allocatable, dimension(:,:) :: lower_basis, upper_basis
     real(real32), allocatable, dimension(:,:) :: lower_candidates, upper_candidates
     real(real32), allocatable, dimension(:,:) :: lower_valid, upper_valid
     real(real32), allocatable, dimension(:,:) :: lower_group, upper_group
@@ -42,15 +46,15 @@ contains
     real(real32), dimension(3,3) :: lat_work
     real(real32), dimension(3) :: candidate, work_t1, work_t2
     integer, allocatable, dimension(:) :: lower_spec_num, upper_spec_num
+    logical :: lower_exact, upper_exact
     type(basis_type) :: basis_frac
     type(basis_type), allocatable, dimension(:) :: split_basis
-    type(artemis_generator_type) :: generator
     type(intf_info_type) :: interface_info
 
 
     call copy_basis_fractional(basis, basis_frac)
-    interface_info = generator%get_interface_location(structure=basis, &
-         return_fractional=.true.)
+    interface_info = get_interface(basis)
+    interface_info%loc = interface_info%loc / norm2(basis%lat(interface_info%axis, :))
     call get_plane_axes(interface_info%axis, plane_axes)
     work_axes = [ plane_axes(1), plane_axes(2), interface_info%axis ]
     lat_work(1, :) = basis%lat(work_axes(1), :)
@@ -63,11 +67,35 @@ contains
     regions(2, 2) = interface_info%loc(1)
     split_basis = split_bas(basis_frac, regions, interface_info%axis)
 
+    frac_tol = get_fractional_tolerance(lat_work, interface_translation_cart_tol)
+
+    analytical_capacity = max(1, split_basis(2)%natom)
+    call infer_inplane_translations_gldfnd(split_basis(2), interface_info%axis, &
+         work_axes, frac_tol, analytical_capacity, lower_basis, n_lower_basis, &
+         lower_exact)
+    analytical_capacity = max(1, split_basis(1)%natom)
+    call infer_inplane_translations_gldfnd(split_basis(1), interface_info%axis, &
+         work_axes, frac_tol, analytical_capacity, upper_basis, n_upper_basis, &
+         upper_exact)
+
+    if (lower_exact .and. upper_exact) then
+       call build_relative_candidates_from_bases(&
+            lower_basis, n_lower_basis, upper_basis, n_upper_basis, &
+            frac_tol, relative_candidates, n_relative &
+       )
+       if (n_relative.ge.2) then
+          call select_translation_pair_from_group(lat_work, relative_candidates, &
+               n_relative, frac_tol, work_t1, work_t2)
+          call unpack_translation(work_t1, work_axes, t1)
+          call unpack_translation(work_t2, work_axes, t2)
+          return
+       end if
+    end if
+
     call cache_fractional_positions(split_basis(2), work_axes, frac_lower, &
          lower_spec_num)
     call cache_fractional_positions(split_basis(1), work_axes, frac_upper, &
          upper_spec_num)
-    frac_tol = get_fractional_tolerance(lat_work, interface_translation_cart_tol)
 
     lower_candidate_capacity = get_candidate_capacity(lower_spec_num)
     upper_candidate_capacity = get_candidate_capacity(upper_spec_num)
@@ -137,6 +165,18 @@ contains
          frac_tol, interface_translation_cart_tol &
     )
 
+    if (allocated(relative_candidates)) deallocate(relative_candidates)
+    call build_relative_candidates_from_bases(&
+         lower_valid, n_lower_valid, upper_valid, n_upper_valid, frac_tol, &
+         relative_candidates, n_relative)
+    if (n_relative.ge.2) then
+       call select_translation_pair_from_group(lat_work, relative_candidates, &
+            n_relative, frac_tol, work_t1, work_t2)
+       call unpack_translation(work_t1, work_axes, t1)
+       call unpack_translation(work_t2, work_axes, t2)
+       return
+    end if
+
     lower_group_capacity = max(64, lower_candidate_capacity)
     upper_group_capacity = max(64, upper_candidate_capacity)
     allocate(lower_group(lower_group_capacity, 3))
@@ -148,6 +188,20 @@ contains
     call build_translation_group(upper_valid, n_upper_valid, upper_group, &
          n_upper_group, frac_tol)
 
+    if (allocated(relative_candidates)) deallocate(relative_candidates)
+    if (allocated(relative_candidates)) deallocate(relative_candidates)
+    call build_relative_candidates_from_bases(&
+         lower_group, n_lower_group, upper_group, n_upper_group, frac_tol, &
+         relative_candidates, n_relative)
+    if (n_relative.ge.2) then
+       call select_translation_pair_from_group(lat_work, relative_candidates, &
+            n_relative, frac_tol, work_t1, work_t2)
+       call unpack_translation(work_t1, work_axes, t1)
+       call unpack_translation(work_t2, work_axes, t2)
+       return
+    end if
+
+    if (allocated(relative_candidates)) deallocate(relative_candidates)
     relative_capacity = max(8, n_lower_group * n_upper_group)
     valid_capacity = max(8, 8 * relative_capacity + 8)
     allocate(relative_candidates(relative_capacity, 3))
@@ -298,6 +352,231 @@ contains
 
 
 !###############################################################################
+  subroutine infer_inplane_translations_gldfnd(basis, axis, work_axes, frac_tol, &
+       capacity, translations, n_translations, success)
+    !! Infer in-plane slab translations directly from the slab symmetry.
+    implicit none
+
+    type(basis_type), intent(in) :: basis
+    integer, intent(in) :: axis, capacity
+    integer, dimension(3), intent(in) :: work_axes
+    real(real32), intent(in) :: frac_tol
+    real(real32), allocatable, dimension(:,:), intent(out) :: translations
+    integer, intent(out) :: n_translations
+    logical, intent(out) :: success
+
+    integer :: i, n_raw
+    real(real32), allocatable, dimension(:,:) :: raw_translations
+    real(real32), dimension(3) :: candidate
+    type(confine_type) :: confine
+
+
+    allocate(raw_translations(max(1, capacity), 3))
+    raw_translations = 0._real32
+    allocate(translations(max(1, capacity), 3))
+    translations = 0._real32
+
+    confine%l = .true.
+    confine%axis = axis
+    confine%laxis = .false.
+    confine%laxis(axis) = .true.
+
+    n_translations = 0
+    call gldfnd(confine, basis, basis, raw_translations, n_raw, frac_tol)
+
+    do i = 1, n_raw
+       candidate = 0._real32
+       candidate(1) = raw_translations(i, work_axes(1))
+       candidate(2) = raw_translations(i, work_axes(2))
+       call append_unique_translation(translations, n_translations, candidate, &
+            frac_tol)
+    end do
+
+    success = n_translations.ge.2
+
+  end subroutine infer_inplane_translations_gldfnd
+!###############################################################################
+
+
+!###############################################################################
+  subroutine build_relative_candidates_from_bases(&
+       lower_basis, n_lower_basis, upper_basis, n_upper_basis, frac_tol, &
+       candidates, n_candidates)
+    !! Build the exact relative subgroup directly from the slab generators.
+    implicit none
+
+    real(real32), dimension(:,:), intent(in) :: lower_basis, upper_basis
+    integer, intent(in) :: n_lower_basis, n_upper_basis
+    real(real32), intent(in) :: frac_tol
+    real(real32), allocatable, dimension(:,:), intent(out) :: candidates
+    integer, intent(out) :: n_candidates
+
+    integer :: i, j, queue_head, queue_tail
+    integer :: modulus, n_generators, next_x, next_y
+    integer, allocatable, dimension(:,:) :: generators, queue
+    logical :: success
+    logical, allocatable, dimension(:,:) :: seen
+    real(real32), dimension(3) :: candidate
+
+
+    call integerise_translation_generators(&
+         lower_basis, n_lower_basis, upper_basis, n_upper_basis, frac_tol, &
+         modulus, generators, n_generators, success)
+    allocate(candidates(max(1, modulus * modulus - 1), 3))
+    candidates = 0._real32
+    n_candidates = 0
+    if (.not.success) return
+
+    allocate(seen(0:modulus - 1, 0:modulus - 1))
+    allocate(queue(max(1, modulus * modulus), 2))
+    seen = .false.
+    queue = 0
+    queue_head = 1
+    queue_tail = 1
+    queue(1, :) = 0
+    seen(0, 0) = .true.
+
+    do while (queue_head.le.queue_tail)
+       do i = 1, n_generators
+          do j = -1, 1, 2
+             next_x = modulo(queue(queue_head, 1) + j * generators(i, 1), modulus)
+             next_y = modulo(queue(queue_head, 2) + j * generators(i, 2), modulus)
+             if (seen(next_x, next_y)) cycle
+             seen(next_x, next_y) = .true.
+             queue_tail = queue_tail + 1
+             queue(queue_tail, 1) = next_x
+             queue(queue_tail, 2) = next_y
+             candidate = 0._real32
+             candidate(1) = real(next_x, real32) / real(modulus, real32)
+             candidate(2) = real(next_y, real32) / real(modulus, real32)
+             call append_unique_translation(candidates, n_candidates, candidate, &
+                  frac_tol)
+          end do
+       end do
+       queue_head = queue_head + 1
+    end do
+
+  end subroutine build_relative_candidates_from_bases
+!###############################################################################
+
+
+!###############################################################################
+  subroutine integerise_translation_generators(&
+       lower_basis, n_lower_basis, upper_basis, n_upper_basis, frac_tol, &
+       modulus, generators, n_generators, success)
+    !! Convert analytical fractional generators to an exact integer subgroup.
+    implicit none
+
+    real(real32), dimension(:,:), intent(in) :: lower_basis, upper_basis
+    integer, intent(in) :: n_lower_basis, n_upper_basis
+    real(real32), intent(in) :: frac_tol
+    integer, intent(out) :: modulus, n_generators
+    integer, allocatable, dimension(:,:), intent(out) :: generators
+    logical, intent(out) :: success
+
+    integer :: i, denominator
+
+
+    modulus = 1
+    success = .false.
+    n_generators = 0
+    allocate(generators(max(1, n_lower_basis + n_upper_basis), 2))
+    generators = 0
+
+    do i = 1, n_lower_basis
+       call update_integer_modulus(lower_basis(i, :), frac_tol, modulus, success)
+       if (.not.success) return
+    end do
+    do i = 1, n_upper_basis
+       call update_integer_modulus(upper_basis(i, :), frac_tol, modulus, success)
+       if (.not.success) return
+    end do
+
+    do i = 1, n_lower_basis
+       call append_integer_generator(generators, n_generators, lower_basis(i, :), &
+            modulus)
+    end do
+    do i = 1, n_upper_basis
+       call append_integer_generator(generators, n_generators, upper_basis(i, :), &
+            modulus)
+    end do
+
+    if (n_generators.eq.0) then
+       success = .false.
+       return
+    end if
+
+    denominator = modulus
+    if (denominator.le.0) then
+       success = .false.
+       return
+    end if
+    success = .true.
+
+  end subroutine integerise_translation_generators
+!###############################################################################
+
+
+!###############################################################################
+  subroutine update_integer_modulus(translation, frac_tol, modulus, success)
+    !! Update the common integer denominator for one analytical generator.
+    implicit none
+
+    real(real32), dimension(3), intent(in) :: translation
+    real(real32), intent(in) :: frac_tol
+    integer, intent(inout) :: modulus
+    logical, intent(out) :: success
+
+    integer :: axis, denominator
+    real(real32) :: value
+
+
+    success = .true.
+    do axis = 1, 2
+       value = abs(translation(axis))
+       if (value.le.frac_tol) cycle
+       denominator = get_frac_denom(value)
+       if (denominator.le.0) then
+          success = .false.
+          return
+       end if
+       modulus = lcm(modulus, denominator)
+    end do
+
+  end subroutine update_integer_modulus
+!###############################################################################
+
+
+!###############################################################################
+  subroutine append_integer_generator(generators, n_generators, translation, modulus)
+    !! Add one integerised generator if it is non-zero and unique.
+    implicit none
+
+    integer, dimension(:,:), intent(inout) :: generators
+    integer, intent(inout) :: n_generators
+    real(real32), dimension(3), intent(in) :: translation
+    integer, intent(in) :: modulus
+
+    integer :: i, gx, gy
+
+
+    gx = modulo(nint(translation(1) * real(modulus, real32)), modulus)
+    gy = modulo(nint(translation(2) * real(modulus, real32)), modulus)
+    if (gx.eq.0 .and. gy.eq.0) return
+
+    do i = 1, n_generators
+       if (generators(i, 1).eq.gx .and. generators(i, 2).eq.gy) return
+    end do
+
+    n_generators = n_generators + 1
+    generators(n_generators, 1) = gx
+    generators(n_generators, 2) = gy
+
+  end subroutine append_integer_generator
+!###############################################################################
+
+
+!###############################################################################
   subroutine collect_pair_candidates(frac_atoms, spec_num, candidates, n_candidates, &
        frac_tol)
     !! Collect projected in-plane candidates from same-species atom pairs.
@@ -437,83 +716,6 @@ contains
     end do
 
   end subroutine collect_relative_candidates
-!###############################################################################
-
-
-!###############################################################################
-  subroutine collect_valid_relative_translations(&
-       frac_lower, lower_spec_num, frac_upper, upper_spec_num, lat, &
-       candidates, n_candidates, lower_group, n_lower_group, &
-       valid_vectors, n_valid, frac_tol, cart_tol &
-  )
-    !! Validate relative shift candidates while holding the lower slab fixed.
-    implicit none
-
-    real(real32), dimension(:,:,:), intent(in) :: frac_lower, frac_upper
-    integer, dimension(:), intent(in) :: lower_spec_num, upper_spec_num
-    real(real32), dimension(3,3), intent(in) :: lat
-    real(real32), dimension(:,:), intent(in) :: candidates
-    integer, intent(in) :: n_candidates, n_lower_group
-    real(real32), dimension(:,:), intent(in) :: lower_group
-    real(real32), dimension(:,:), intent(inout) :: valid_vectors
-    integer, intent(inout) :: n_valid
-    real(real32), intent(in) :: frac_tol, cart_tol
-
-    integer :: i
-
-
-    do i = 1, n_candidates
-       if (.not. is_valid_relative_translation(&
-            frac_lower, lower_spec_num, frac_upper, upper_spec_num, lat, &
-            candidates(i, :), lower_group, n_lower_group, frac_tol, cart_tol &
-       )) cycle
-       call append_unique_translation(valid_vectors, n_valid, candidates(i, :), &
-            frac_tol)
-    end do
-
-  end subroutine collect_valid_relative_translations
-!###############################################################################
-
-
-!###############################################################################
-  logical function is_valid_relative_translation(&
-       frac_lower, lower_spec_num, frac_upper, upper_spec_num, lat, translation, &
-       lower_group, n_lower_group, frac_tol, cart_tol &
-  )
-    !! Check whether a relative shift is equivalent up to a lower-slab translation.
-    implicit none
-
-    real(real32), dimension(:,:,:), intent(in) :: frac_lower, frac_upper
-    integer, dimension(:), intent(in) :: lower_spec_num, upper_spec_num
-    real(real32), dimension(3,3), intent(in) :: lat
-    real(real32), dimension(3), intent(in) :: translation
-    real(real32), dimension(:,:), intent(in) :: lower_group
-    integer, intent(in) :: n_lower_group
-    real(real32), intent(in) :: frac_tol, cart_tol
-
-    integer :: i
-    real(real32), dimension(3) :: candidate, upper_shift
-
-
-    candidate(:) = translation(:)
-    call canonicalise_translation(candidate, frac_tol, candidate)
-    if (norm2(candidate(1:2)).le.frac_tol) then
-       is_valid_relative_translation = .false.
-       return
-    end if
-
-    is_valid_relative_translation = .false.
-    do i = 1, n_lower_group
-       upper_shift(:) = candidate(:) + lower_group(i, :)
-       if (.not. is_valid_translation(frac_lower, lower_spec_num, lat, &
-            lower_group(i, :), cart_tol)) cycle
-       if (.not. is_valid_translation(frac_upper, upper_spec_num, lat, &
-            upper_shift, cart_tol)) cycle
-       is_valid_relative_translation = .true.
-       return
-    end do
-
-  end function is_valid_relative_translation
 !###############################################################################
 
 
@@ -704,84 +906,98 @@ contains
 
 
 !###############################################################################
-  subroutine expand_valid_relative_translations(&
-       frac_lower, lower_spec_num, frac_upper, upper_spec_num, lat, &
-       valid_vectors, n_valid, lower_group, n_lower_group, frac_tol, cart_tol &
-  )
-    !! Add equivalent short relative shifts from sums and differences of valid shifts.
+  subroutine select_translation_pair_from_group(lat, valid_vectors, n_valid, &
+       frac_tol, t1, t2)
+    !! Select the primitive in-plane basis directly from a full relative group.
     implicit none
 
-    real(real32), dimension(:,:,:), intent(in) :: frac_lower, frac_upper
-    integer, dimension(:), intent(in) :: lower_spec_num, upper_spec_num
     real(real32), dimension(3,3), intent(in) :: lat
-    real(real32), dimension(:,:), intent(inout) :: valid_vectors
-    integer, intent(inout) :: n_valid
-    real(real32), dimension(:,:), intent(in) :: lower_group
-    integer, intent(in) :: n_lower_group
-    real(real32), intent(in) :: frac_tol, cart_tol
+    real(real32), dimension(:,:), intent(in) :: valid_vectors
+    integer, intent(in) :: n_valid
+    real(real32), intent(in) :: frac_tol
+    real(real32), dimension(3), intent(out) :: t1, t2
 
-    integer :: i, j, n_seed, n_expanded, expanded_size
-    real(real32), allocatable, dimension(:,:) :: seeds, expanded
-    real(real32), dimension(3) :: candidate
+    integer :: i, j
+    integer :: area_rank, best_area_rank
+    integer :: support, best_support
+    integer, dimension(2) :: key_left, key_right, best_key_left, best_key_right
+    logical :: found
+    real(real32) :: area, cell_area, area_resolution
+    real(real32) :: len_left, len_right, sum_sq, best_sum_sq
+    real(real32) :: frac_size, best_frac_size
+    real(real32) :: orthogonality, best_orthogonality
+    real(real32) :: big_len, best_big_len, best_area
+    real(real32), dimension(3) :: left, right, cart_left, cart_right, tmp
 
 
-    n_seed = n_valid + 2
-    expanded_size = max(1, 3 * n_seed * max(1, n_seed - 1) / 2)
-    allocate(seeds(n_seed, 3))
-    allocate(expanded(expanded_size, 3))
-    seeds = 0._real32
-    expanded = 0._real32
-    n_expanded = 0
+    found = .false.
+    cell_area = norm2(cross(lat(1, :), lat(2, :)))
+    area_resolution = max(cell_area * frac_tol, 1.0e-8_real32)
+    best_area_rank = huge(0)
+    best_support = huge(0)
+    best_frac_size = huge(0._real32)
+    best_sum_sq = huge(0._real32)
+    best_orthogonality = huge(0._real32)
+    best_big_len = huge(0._real32)
+    best_area = huge(0._real32)
+    best_key_left = 0
+    best_key_right = 0
+    t1 = [ 1.0_real32, 0.0_real32, 0.0_real32 ]
+    t2 = [ 0.0_real32, 1.0_real32, 0.0_real32 ]
 
-    if (n_valid.gt.0) seeds(1:n_valid, :) = valid_vectors(1:n_valid, :)
-    seeds(n_valid + 1, :) = [ 1.0_real32, 0.0_real32, 0.0_real32 ]
-    seeds(n_valid + 2, :) = [ 0.0_real32, 1.0_real32, 0.0_real32 ]
-
-    do i = 1, n_seed - 1
-       do j = i + 1, n_seed
-          candidate(:) = seeds(i, :) + seeds(j, :)
-          call canonicalise_translation(candidate, frac_tol, candidate)
-          if (is_valid_relative_translation(&
-               frac_lower, lower_spec_num, frac_upper, upper_spec_num, lat, &
-               candidate, &
-               lower_group, n_lower_group, frac_tol, cart_tol &
-          )) then
-             call append_unique_translation(expanded, n_expanded, candidate, &
-                  frac_tol)
+    do i = 1, n_valid - 1
+       do j = i + 1, n_valid
+          left(:) = valid_vectors(i, :)
+          right(:) = valid_vectors(j, :)
+          if (translation_sort_less(lat, right, left)) then
+             tmp(:) = left(:)
+             left(:) = right(:)
+             right(:) = tmp(:)
           end if
 
-          candidate(:) = seeds(i, :) - seeds(j, :)
-          call canonicalise_translation(candidate, frac_tol, candidate)
-          if (is_valid_relative_translation(&
-               frac_lower, lower_spec_num, frac_upper, upper_spec_num, lat, &
-               candidate, &
-               lower_group, n_lower_group, frac_tol, cart_tol &
+          cart_left(:) = matmul(left, lat)
+          cart_right(:) = matmul(right, lat)
+          len_left = norm2(cart_left)
+          len_right = norm2(cart_right)
+          area = norm2(cross(cart_left, cart_right))
+          if (area.le.frac_tol) cycle
+
+          area_rank = nint(area / area_resolution)
+          support = pair_support(left, right, frac_tol)
+          frac_size = pair_fractional_size(left, right)
+          sum_sq = len_left**2 + len_right**2
+          orthogonality = pair_cosine(cart_left, cart_right)
+          big_len = len_right
+          call translation_key(left, frac_tol, key_left)
+          call translation_key(right, frac_tol, key_right)
+
+          if (.not.found) then
+             found = .true.
+          elseif (.not. better_pair(&
+               area_rank, support, frac_size, sum_sq, orthogonality, big_len, area, &
+               key_left, key_right, &
+               best_area_rank, best_support, best_frac_size, best_sum_sq, &
+               best_orthogonality, best_big_len, best_area, best_key_left, &
+               best_key_right &
           )) then
-             call append_unique_translation(expanded, n_expanded, candidate, &
-                  frac_tol)
+             cycle
           end if
 
-          candidate(:) = seeds(j, :) - seeds(i, :)
-          call canonicalise_translation(candidate, frac_tol, candidate)
-          if (is_valid_relative_translation(&
-               frac_lower, lower_spec_num, frac_upper, upper_spec_num, lat, &
-               candidate, &
-               lower_group, n_lower_group, frac_tol, cart_tol &
-          )) then
-             call append_unique_translation(expanded, n_expanded, candidate, &
-                  frac_tol)
-          end if
+          best_area_rank = area_rank
+          best_support = support
+          best_frac_size = frac_size
+          best_sum_sq = sum_sq
+          best_orthogonality = orthogonality
+          best_big_len = big_len
+          best_area = area
+          best_key_left = key_left
+          best_key_right = key_right
+          t1(:) = left(:)
+          t2(:) = right(:)
        end do
     end do
 
-    do i = 1, n_expanded
-       call append_unique_translation(valid_vectors, n_valid, expanded(i, :), &
-            frac_tol)
-    end do
-
-    deallocate(seeds, expanded)
-
-  end subroutine expand_valid_relative_translations
+  end subroutine select_translation_pair_from_group
 !###############################################################################
 
 
@@ -824,7 +1040,7 @@ contains
        span_vectors(2, :) = [ 0.0_real32, 1.0_real32, 0.0_real32 ]
     end if
 
-    cell_area = norm2(cross3(lat(1, :), lat(2, :)))
+    cell_area = norm2(cross(lat(1, :), lat(2, :)))
     area_resolution = max(cell_area * frac_tol, 1.0e-8_real32)
     found = .false.
     best_area_rank = huge(0)
@@ -849,7 +1065,7 @@ contains
           len_left = norm2(cart_left)
           len_right = norm2(cart_right)
 
-          area = norm2(cross3(cart_left, cart_right))
+          area = norm2(cross(cart_left, cart_right))
           if (area.le.frac_tol) cycle
           area_rank = nint(area / area_resolution)
           support = pair_support(left, right, frac_tol)
@@ -1019,7 +1235,7 @@ contains
 
     cand_cart_left(:) = matmul(cand_left, lat)
     cand_cart_right(:) = matmul(cand_right, lat)
-    if (norm2(cross3(cand_cart_left, cand_cart_right)).le.frac_tol) return
+    if (norm2(cross(cand_cart_left, cand_cart_right)).le.frac_tol) return
 
     cand_support = pair_support(cand_left, cand_right, frac_tol)
     cand_frac_size = pair_fractional_size(cand_left, cand_right)
@@ -1384,23 +1600,6 @@ contains
     end do
 
   end subroutine wrap_half
-!###############################################################################
-
-
-!###############################################################################
-  pure function cross3(lhs, rhs) result(output)
-    !! Compute the 3D cross product of two vectors.
-    implicit none
-
-    real(real32), dimension(3), intent(in) :: lhs, rhs
-    real(real32), dimension(3) :: output
-
-
-    output(1) = lhs(2) * rhs(3) - lhs(3) * rhs(2)
-    output(2) = lhs(3) * rhs(1) - lhs(1) * rhs(3)
-    output(3) = lhs(1) * rhs(2) - lhs(2) * rhs(1)
-
-  end function cross3
 !###############################################################################
 
 

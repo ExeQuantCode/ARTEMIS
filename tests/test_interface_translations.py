@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 
 import numpy as np
+import pytest
 from ase.io import read
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULE_PATH = ROOT / "src" / "artemis" / "interface_translations.py"
-SPEC = importlib.util.spec_from_file_location("artemis_interface_translations", MODULE_PATH)
-MODULE = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
-SPEC.loader.exec_module(MODULE)
+artemis = pytest.importorskip("artemis")
 
 
 REAL_INTERFACE = ROOT / "example" / "python_pkg" / "MoS2-Ag_0.xyz"
@@ -20,6 +16,10 @@ REAL_INTERFACE = ROOT / "example" / "python_pkg" / "MoS2-Ag_0.xyz"
 
 def load_real_interface():
     return read(REAL_INTERFACE)
+
+
+def make_generator():
+    return artemis.generator.artemis_generator()
 
 
 def canonical_pair(v1: np.ndarray, v2: np.ndarray) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
@@ -58,20 +58,22 @@ def assert_pair_close(
 
 def test_real_interface_returns_expected_relative_shifts() -> None:
     atoms = load_real_interface()
-    t1, t2 = MODULE.get_interface_translations(atoms)
+    generator = make_generator()
+    t1, t2 = generator.get_interface_translations(atoms)
 
     assert_pair_close(
         (t1, t2),
         (np.array([1.0 / 12.0, 0.0, 0.0]), np.array([0.0, 1.0 / 12.0, 0.0])),
     )
-    assert not MODULE.is_valid_interface_translation(atoms, t1)
-    assert not MODULE.is_valid_interface_translation(atoms, t2)
+    assert not generator.is_valid_interface_translation(atoms, t1)
+    assert not generator.is_valid_interface_translation(atoms, t2)
 
 
 def test_rotated_real_interface_keeps_fractional_shifts() -> None:
     atoms = load_real_interface()
     atoms.rotate(27.0, "z", rotate_cell=True)
-    t1, t2 = MODULE.get_interface_translations(atoms)
+    generator = make_generator()
+    t1, t2 = generator.get_interface_translations(atoms)
 
     assert_pair_close(
         (t1, t2),
@@ -81,7 +83,8 @@ def test_rotated_real_interface_keeps_fractional_shifts() -> None:
 
 def test_single_axis_supercell_reduces_relative_shifts() -> None:
     atoms = load_real_interface().repeat((2, 1, 1))
-    t1, t2 = MODULE.get_interface_translations(atoms)
+    generator = make_generator()
+    t1, t2 = generator.get_interface_translations(atoms)
 
     assert_pair_close(
         (t1, t2),
@@ -91,7 +94,19 @@ def test_single_axis_supercell_reduces_relative_shifts() -> None:
 
 def test_real_interface_is_deterministic() -> None:
     atoms = load_real_interface()
-    first = MODULE.get_interface_translations(atoms)
-    second = MODULE.get_interface_translations(atoms)
+    generator = make_generator()
+    first = generator.get_interface_translations(atoms)
+    second = generator.get_interface_translations(atoms)
 
     assert canonical_pair(*first) == canonical_pair(*second)
+
+
+def test_interface_definition_arguments_remain_compatible() -> None:
+    atoms = load_real_interface()
+    generator = make_generator()
+    bounds, axis = generator.get_interface_definition(atoms)
+
+    without_hints = generator.get_interface_translations(atoms)
+    with_hints = generator.get_interface_translations(atoms, axis=axis, bounds=bounds)
+
+    assert_pair_close(with_hints, without_hints)

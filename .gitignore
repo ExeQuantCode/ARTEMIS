@@ -17,3 +17,4 @@ wheelhouse/
 __pycache__/
 .ipynb_checkpoints/
 .vscode/
+.local-pre-commit-config.yaml

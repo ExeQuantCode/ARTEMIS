@@ -1,29 +1,14 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 from pathlib import Path
 
 import numpy as np
 from ase import Atoms
 from ase.io import read
-from ase.visualize import view
-
 from artemis import generator as artemis_generator_module
 
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_FILE = Path(__file__).with_name("MoS2-Ag_0.xyz")
-PYTHON_REFERENCE = REPO_ROOT / "src" / "artemis" / "interface_translations.py"
-
-
-def load_python_reference_module():
-	spec = importlib.util.spec_from_file_location("artemis_interface_translations", PYTHON_REFERENCE)
-	if spec is None or spec.loader is None:
-		raise RuntimeError(f"Unable to load Python reference module from {PYTHON_REFERENCE}")
-	module = importlib.util.module_from_spec(spec)
-	spec.loader.exec_module(module)
-	return module
 
 
 def array_to_string(values: np.ndarray) -> str:
@@ -45,14 +30,11 @@ def canonicalise_display_vector(vector: np.ndarray, axis: int) -> np.ndarray:
 	return output
 
 
-def get_interface_plane(atoms: Atoms) -> tuple[int, np.ndarray, float]:
-	generator = artemis_generator_module.artemis_generator()
-	bounds, axis_1based = generator.get_interface_location(atoms, return_fractional=True)
-	axis = axis_1based - 1
+def get_interface_plane(bounds: np.ndarray) -> tuple[np.ndarray, float]:
 	bounds = np.asarray(bounds, dtype=float)
 	upper_bound = bounds[1] if bounds[1] >= bounds[0] else bounds[1] + 1.0
 	midpoint = float(0.5 * (bounds[0] + upper_bound)) % 1.0
-	return axis, bounds, midpoint
+	return bounds, midpoint
 
 
 def build_vector_overlay(
@@ -116,9 +98,13 @@ def main() -> None:
 
 	structure_path = args.path.expanduser().resolve()
 	atoms = read(structure_path)
-	python_reference = load_python_reference_module()
-	t1, t2 = python_reference.get_interface_translations(atoms)
-	axis, bounds_frac, midpoint_frac = get_interface_plane(atoms)
+	generator = artemis_generator_module.artemis_generator()
+	bounds_frac, axis = generator.get_interface_definition(atoms)
+	t1, t2 = generator.get_interface_translations(atoms)
+	t1_cart = fractional_to_cartesian(atoms, t1)
+	t2_cart = fractional_to_cartesian(atoms, t2)
+	translation_area = float(np.linalg.norm(np.cross(t1_cart, t2_cart)))
+	bounds_frac, midpoint_frac = get_interface_plane(bounds_frac)
 	bounds_cart = bounds_frac * np.linalg.norm(np.asarray(atoms.cell.array, dtype=float)[axis])
 
 	print(f"Loaded structure: {structure_path}")
@@ -128,12 +114,15 @@ def main() -> None:
 	print(f"Interface bounds (angstrom):   {array_to_string(bounds_cart)}")
 	print(f"Interface midpoint (fractional): {midpoint_frac:.6f}")
 	print(f"t1 fractional: {array_to_string(t1)}")
-	print(f"t1 cartesian:  {array_to_string(fractional_to_cartesian(atoms, t1))} A")
+	print(f"t1 cartesian:  {array_to_string(t1_cart)} A")
 	print(f"t2 fractional: {array_to_string(t2)}")
-	print(f"t2 cartesian:  {array_to_string(fractional_to_cartesian(atoms, t2))} A")
+	print(f"t2 cartesian:  {array_to_string(t2_cart)} A")
+	print(f"Translation area: {translation_area:.6f} A^2")
 
 	if args.no_view:
 		return
+
+	from ase.visualize import view
 
 	annotated = build_vector_overlay(atoms, t1, t2, axis, bounds_frac)
 	print("Opening ASE viewer with vector markers on the interface plane.")

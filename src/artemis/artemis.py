@@ -3,7 +3,7 @@ import artemis._artemis as _artemis
 import f90wrap.runtime
 import logging
 import numpy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
     from ase import Atoms
@@ -12,6 +12,125 @@ try:
     from ase import Atoms as _Atoms
 except ImportError:
     _Atoms = None
+
+
+INTERFACE_TRANSLATION_CART_TOL = 7.5e-2
+
+
+def _sanitise_atoms(atoms):
+    if _Atoms is None or not isinstance(atoms, _Atoms):
+        return atoms
+    clean_atoms = atoms.copy()
+    clean_atoms.calc = None
+    return clean_atoms
+
+
+def _coerce_basis(structure):
+    if _Atoms is not None and isinstance(structure, _Atoms):
+        return geom_rw.basis(atoms=_sanitise_atoms(structure))
+
+    if isinstance(structure, Geom_Rw.basis):
+        if structure.lcart:
+            return geom_rw.basis(atoms=_sanitise_atoms(structure.toase()))
+        return structure
+
+    if hasattr(structure, "toase"):
+        atoms = structure.toase()
+        if _Atoms is not None and isinstance(atoms, _Atoms):
+            return geom_rw.basis(atoms=_sanitise_atoms(atoms))
+
+    raise TypeError("structure must be an ASE Atoms or ARTEMIS basis-like object")
+
+
+def _plane_axes(axis):
+    if axis == 0:
+        return (1, 2)
+    if axis == 1:
+        return (0, 2)
+    return (0, 1)
+
+
+def _normalise_interface_translation(translation, axis):
+    shift = numpy.asarray(list(translation), dtype=numpy.float64)
+    if shift.shape == (2,):
+        output = numpy.zeros(3, dtype=numpy.float64)
+        plane_axes = _plane_axes(axis)
+        output[plane_axes[0]] = shift[0]
+        output[plane_axes[1]] = shift[1]
+        return output
+
+    if shift.shape != (3,):
+        raise ValueError("translation must have either two or three components")
+
+    output = shift.copy()
+    output[axis] = 0.0
+    return output
+
+
+def _validate_interface_cell(basis, axis):
+    if axis not in (0, 1, 2):
+        raise ValueError("axis must be 0, 1, or 2")
+
+    if not bool(basis.pbc[axis]):
+        raise ValueError("interface normal axis must be periodic")
+
+    plane_axes = _plane_axes(axis)
+    if not bool(basis.pbc[plane_axes[0]]) or not bool(basis.pbc[plane_axes[1]]):
+        raise ValueError("in-plane lattice directions must be periodic")
+
+
+def _shifted_basis(basis, translation):
+    atoms = basis.toase()
+    scaled_positions = numpy.asarray(atoms.get_scaled_positions(wrap=True), dtype=numpy.float64)
+    scaled_positions += translation
+    scaled_positions -= numpy.floor(scaled_positions)
+    atoms.set_scaled_positions(scaled_positions)
+    return geom_rw.basis(atoms=_sanitise_atoms(atoms))
+
+
+def _finalise_basis_array(basis_array):
+    if basis_array is None or not getattr(basis_array, "_alloc", False):
+        return
+
+    if hasattr(basis_array, "items"):
+        basis_array.items = None
+
+    try:
+        basis_array.deallocate()
+    except Exception:
+        pass
+
+    _artemis.f90wrap_geom_rw__basis_type_xnum_array_finalise(this=basis_array._handle)
+    basis_array._alloc = False
+
+
+def _materialise_cached_structures(n_structures, calculator=None):
+    if n_structures == 0:
+        return []
+
+    basis_array = geom_rw.basis_array()
+    try:
+        basis_array.allocate(n_structures)
+        _artemis.f90wrap_retrieve_last_generated_structures(basis_array._handle)
+        return basis_array.toase(calculator=calculator)
+    finally:
+        _finalise_basis_array(basis_array)
+
+
+def _resolve_interface_definition(generator, structure, axis=None):
+    basis = _coerce_basis(structure)
+    axis_hint = None if axis is None else axis + 1
+    bounds, detected_axis = _artemis.f90wrap_intf_gen__get_interface_location__binding__agt(
+        this=generator._handle,
+        structure=basis._handle,
+        axis=axis_hint,
+        return_fractional=True,
+    )
+    resolved_axis = int(detected_axis) - 1
+    if axis is not None and resolved_axis != axis:
+        raise RuntimeError(f"Interface location generation failed (axis {resolved_axis} != {axis})")
+    _validate_interface_cell(basis, resolved_axis)
+    return basis, numpy.asarray(bounds, dtype=numpy.float64), resolved_axis
 
 class Geom_Rw(f90wrap.runtime.FortranModule):
     """
@@ -237,13 +356,19 @@ class Geom_Rw(f90wrap.runtime.FortranModule):
             for i in range(self.nspec):
                 for j in range(self.spec[i].num):
                     species_string += str(self.spec[i].name.decode()).strip()
-                    positions.append(self.spec[i].atom[j][:3])
+                    positions.append(
+                        numpy.asarray(self.spec[i].atom[j][:3], dtype=numpy.float64).copy()
+                    )
+
+            positions = numpy.asarray(positions, dtype=numpy.float64)
+            cell = numpy.asarray(self.lat, dtype=numpy.float64).copy()
+            pbc = numpy.asarray(self.pbc, dtype=bool).copy()
 
             # Set the atoms
             if(self.lcart):
-                atoms = Atoms(species_string, positions=positions, cell=self.lat, pbc=self.pbc)
+                atoms = Atoms(species_string, positions=positions, cell=cell, pbc=pbc)
             else:
-                atoms = Atoms(species_string, scaled_positions=positions, cell=self.lat, pbc=self.pbc)
+                atoms = Atoms(species_string, scaled_positions=positions, cell=cell, pbc=pbc)
 
             if calculator is not None:
                 atoms.calc = calculator
@@ -298,6 +423,36 @@ class Geom_Rw(f90wrap.runtime.FortranModule):
             # Allocate memory for the atom list
             self.lcart = False
             self.allocate_species(species_symbols=species_symbols_unique, species_count=species_count, positions=atom_positions)
+
+        def crystals_equivalent(
+                self,
+                other,
+                tol,
+                exact=False,
+                allow_translation=False,
+                plane_normal=None,
+        ):
+            """Compare this basis with another basis-like structure."""
+            other_basis = _coerce_basis(other)
+
+            if plane_normal is None:
+                has_plane = False
+                plane_normal_array = numpy.zeros(3, dtype=numpy.float32)
+            else:
+                has_plane = True
+                plane_normal_array = numpy.asarray(plane_normal, dtype=numpy.float32)
+                if plane_normal_array.shape != (3,):
+                    raise ValueError("plane_normal must have shape (3,)")
+
+            return bool(_artemis.f90wrap_basis_type__crystals_equivalent__binding__basis_type(
+                this=self._handle,
+                other=other_basis._handle,
+                tol=float(tol),
+                exact=bool(exact),
+                allow_translation=bool(allow_translation),
+                has_plane=has_plane,
+                plane_normal=plane_normal_array,
+            ))
 
         @property
         def nspec(self):
@@ -1405,10 +1560,7 @@ class Generator(f90wrap.runtime.FortranModule):
                 raise RuntimeError(f"Termination generation failed (exit code {exit_code})")
 
             # allocate the structures
-            structures = geom_rw.basis_array() #.allocate(n_structs)
-            structures.allocate(n_structs)
-            _artemis.f90wrap_retrieve_last_generated_structures(structures._handle)
-            structures = structures.toase(calculator=calc)
+            structures = _materialise_cached_structures(n_structs, calculator=calc)
 
             if return_exit_code:
                 return structures, exit_code
@@ -1449,10 +1601,7 @@ class Generator(f90wrap.runtime.FortranModule):
                 raise RuntimeError(f"Termination generation failed (exit code {exit_code})")
 
             # allocate the structures
-            structures = geom_rw.basis_array() #.allocate(n_structs)
-            structures.allocate(n_structs)
-            _artemis.f90wrap_retrieve_last_generated_structures(structures._handle)
-            structures = structures.toase(calculator=calc)
+            structures = _materialise_cached_structures(n_structs, calculator=calc)
 
             if return_exit_code:
                 return structures, exit_code
@@ -1482,20 +1631,79 @@ class Generator(f90wrap.runtime.FortranModule):
                 axis : int
                     The axis of the interface.
             """
-            if _Atoms is not None and isinstance(structure, _Atoms):
-                structure = geom_rw.basis(atoms=structure)
+            zero_based_axis = None if axis is None else axis - 1
+            basis, bounds_frac, resolved_axis = _resolve_interface_definition(
+                self,
+                structure,
+                axis=zero_based_axis,
+            )
 
-            ret_location, ret_axis = _artemis.f90wrap_intf_gen__get_interface_location__binding__agt(this=self._handle, \
-                structure=structure._handle, axis=axis, return_fractional=return_fractional)
+            if return_fractional:
+                location = bounds_frac
+            else:
+                location = bounds_frac * numpy.linalg.norm(
+                    numpy.asarray(basis.lat[resolved_axis], dtype=numpy.float64)
+                )
 
-            if ret_axis != axis and axis is not None:
-                raise RuntimeError(f"Interface location generation failed (axis {ret_axis} != {axis})")
+            return location.tolist(), resolved_axis + 1
 
-            # convert the location from numpy array to list
-            if isinstance(ret_location, numpy.ndarray):
-                ret_location = ret_location.tolist()
+        def get_interface_definition(
+                self,
+                structure: Atoms | Geom_Rw.basis,
+                axis: int = None,
+        ):
+            """Return fractional interface bounds and a zero-based interface axis."""
+            _, bounds, resolved_axis = _resolve_interface_definition(self, structure, axis=axis)
+            return bounds, resolved_axis
 
-            return ret_location, ret_axis
+        def get_interface_translations(
+                self,
+                structure: Atoms | Geom_Rw.basis,
+                axis: int = None,
+                bounds=None,
+        ):
+            """Return the primitive in-plane interface shifts for a structure."""
+            basis, auto_bounds, auto_axis = _resolve_interface_definition(self, structure, axis=axis)
+
+            if axis is not None and axis != auto_axis:
+                raise ValueError(
+                    "compiled interface translation backend does not support overriding the interface axis"
+                )
+
+            if bounds is not None:
+                bounds = numpy.asarray(bounds, dtype=numpy.float64)
+                if bounds.shape != (2,):
+                    raise ValueError("bounds must contain exactly two fractional positions")
+                if axis is None:
+                    raise ValueError("axis must be provided when bounds are supplied")
+                if not numpy.allclose(bounds, auto_bounds, atol=1.0e-6):
+                    raise ValueError(
+                        "compiled interface translation backend does not support overriding the interface bounds"
+                    )
+
+            t1, t2 = _artemis.f90wrap_get_interface_translations(structure=basis._handle)
+            return numpy.asarray(t1, dtype=numpy.float64), numpy.asarray(t2, dtype=numpy.float64)
+
+        def is_valid_interface_translation(
+                self,
+                structure: Atoms | Geom_Rw.basis,
+                translation,
+                axis: int = None,
+                cart_tol: float = INTERFACE_TRANSLATION_CART_TOL,
+        ):
+            """Return whether an in-plane translation maps a structure onto itself."""
+            basis, _, resolved_axis = _resolve_interface_definition(self, structure, axis=axis)
+
+            shifted_basis = _shifted_basis(
+                basis,
+                _normalise_interface_translation(translation, resolved_axis),
+            )
+            return basis.crystals_equivalent(
+                shifted_basis,
+                cart_tol,
+                exact=False,
+                allow_translation=False,
+            )
 
 
         def generate(
@@ -1633,10 +1841,10 @@ class Generator(f90wrap.runtime.FortranModule):
                 calculator (ASE calculator):
                     The calculator to use for the generated structures.
             """
-            atoms = []
-            for structure in self.structures:
-                atoms.append(structure.toase(calculator))
-            return atoms
+            n_structures = _artemis.f90wrap_intf_gen__get_structures__binding__agt(
+                this=self._handle,
+            )
+            return _materialise_cached_structures(n_structures, calculator=calculator)
 
         @property
         def num_structures(self):
@@ -2317,20 +2525,6 @@ class Artemis(f90wrap.runtime.FortranModule):
         suppress_warnings : bool
         """
         _artemis.f90wrap_set_suppress_warnings(suppress_warnings)
-
-    @staticmethod
-    def get_interface_translations(structure):
-        """
-        get_interface_translations(structure) -> tuple[numpy.ndarray, numpy.ndarray]
-
-        Parameters
-        ----------
-        structure : ase.Atoms or basis
-        """
-        if _Atoms is not None and isinstance(structure, _Atoms):
-            structure = geom_rw.basis(atoms=structure)
-
-        return _artemis.f90wrap_get_interface_translations(structure=structure._handle)
 
     _dt_array_initialisers = []
 

@@ -7,7 +7,8 @@ module artemis__structure_cache
   implicit none
 
   private
-  public :: store_last_generated_structures, retrieve_last_generated_structures
+  public :: store_last_generated_structures, retrieve_last_generated_structures, &
+       clear_last_generated_structures
 
   type(basis_type), allocatable, dimension(:), save :: cached_structures
   !! Array of cached structures from the last generation run.
@@ -40,12 +41,22 @@ contains
     !! Returned array of cached structures.
 
     if (.not.allocated(cached_structures)) then
-        allocate(structures(0))
+       allocate(structures(0))
     else
-        allocate(structures(size(cached_structures)))
-        structures = cached_structures
+       allocate(structures(size(cached_structures)))
+       structures = cached_structures
     end if
   end function retrieve_last_generated_structures
+!###############################################################################
+
+
+!###############################################################################
+  subroutine clear_last_generated_structures()
+    !! Clear the cached structures once Python has copied them out.
+    implicit none
+
+    if (allocated(cached_structures)) deallocate(cached_structures)
+  end subroutine clear_last_generated_structures
 !###############################################################################
 
 end module artemis__structure_cache

@@ -23,22 +23,22 @@ module artemis__shifting
   private
 
   type bulk_DON_type
-     !! Container for per-species density-of-neighbours data for a bulk region.
-     type(den_of_neigh_type), allocatable, dimension(:) :: spec
-     !! DON data for each species.
+  !! Container for per-species density-of-neighbours data for a bulk region.
+  type(den_of_neigh_type), allocatable, dimension(:) :: spec
+  !! DON data for each species.
   end type bulk_DON_type
 
   type map_type
-     !! Integer map of atoms distributed across a 3-D grid of shift steps.
-     integer, allocatable, dimension(:,:,:) :: spec
-     !! Species assignment at each grid point.
+  !! Integer map of atoms distributed across a 3-D grid of shift steps.
+  integer, allocatable, dimension(:,:,:) :: spec
+  !! Species assignment at each grid point.
   end type map_type
 
 
   public :: get_fit_shifts,get_descriptive_shifts,get_shifts_DON,bulk_DON_type
 
-  
-contains 
+
+contains
 !###############################################################################
   subroutine get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc,depth)
     !! generates the top and bot bases near the interface
@@ -76,11 +76,15 @@ contains
        LOOP101: do is=1,bas%nspec ! Looping over the species
           LOOP102: do ia=1,bas%spec(is)%num ! Looping over the atom
              IF101: if ( ( bas%spec(is)%atom(ia,axis).gt.centre ) .and. &
-                  ( bas%spec(is)%atom(ia,axis).le.(centre+dist) ) ) then ! checking if atom in the top plane.
-                bas_top%spec(is)%num=bas_top%spec(is)%num+1 !update the number of the given species in the top plane.
+                  ( bas%spec(is)%atom(ia,axis).le.(centre+dist) ) ) then
+                ! checking if atom in the top plane.
+                bas_top%spec(is)%num=bas_top%spec(is)%num+1
+                !update the number of the given species in the top plane.
              else if ( ( bas%spec(is)%atom(ia,axis).lt.centre ).and. &
-                  ( bas%spec(is)%atom(ia,axis).ge.(centre-dist) ) ) then ! checking if atom in the bottom plane.
-                bas_bot%spec(is)%num=bas_bot%spec(is)%num+1 !update the number of the given species in the bottom plane.
+                  ( bas%spec(is)%atom(ia,axis).ge.(centre-dist) ) ) then
+                ! checking if atom in the bottom plane.
+                bas_bot%spec(is)%num=bas_bot%spec(is)%num+1
+                !update the number of the given species in the bottom plane.
              end if IF101
           end do LOOP102
        end do LOOP101
@@ -107,11 +111,13 @@ contains
           ibot = 0
           LOOP104: do ia=1,bas%spec(is)%num ! Looping over the atom
              IF102: if ( ( bas%spec(is)%atom(ia,axis).gt.centre ).and. &
-                  ( bas%spec(is)%atom(ia,axis).le.(centre+dist) ) ) then ! checking if atom in the top plane.
+                  ( bas%spec(is)%atom(ia,axis).le.(centre+dist) ) ) then
+                ! checking if atom in the top plane.
                 itop = itop + 1
                 bas_top%spec(is)%atom(itop,:) = bas%spec(is)%atom(ia,:)
              else if ( ( bas%spec(is)%atom(ia,axis).lt.centre ).and. &
-                  ( bas%spec(is)%atom(ia,axis).ge.(centre-dist) ) ) then ! checking if atom in the bottom plane.
+                  ( bas%spec(is)%atom(ia,axis).ge.(centre-dist) ) ) then
+                ! checking if atom in the bottom plane.
                 ibot = ibot + 1
                 bas_bot%spec(is)%atom(ibot,:) = bas%spec(is)%atom(ia,:)
              end if IF102
@@ -130,7 +136,7 @@ contains
        !! Finds lower interfacial atoms near interface defined by intf_loc(1)
        !!-----------------------------------------------------------------------
        intf_list=gen_DONsim(gen_DON(lat,splitbas(1)),cutoff=4._real32)
-101    do is=1,bas%nspec
+       do is=1,bas%nspec
           bas_bot%sysname=splitbas(1)%sysname
           bas_bot%spec(is)%name=splitbas(1)%spec(is)%name
           bas_bot%spec(is)%num = 0
@@ -171,7 +177,7 @@ contains
        !! Finds upper interfacial atoms near interface defined by intf_loc(1)
        !!-----------------------------------------------------------------------
        intf_list=gen_DONsim(gen_DON(lat,splitbas(2)),cutoff=4._real32)
-102    do is=1,bas%nspec
+       do is=1,bas%nspec
           bas_top%sysname=splitbas(2)%sysname
           bas_top%spec(is)%name=splitbas(2)%spec(is)%name
           bas_top%spec(is)%num = 0
@@ -215,10 +221,12 @@ contains
 
 
 !###############################################################################
-  function get_fit_shifts(lat,bas,bond,axis,intf_loc,depth,nstore,itmp1,itmp2) result(best_shifts)
+  function get_fit_shifts(lat,bas,bond,axis,intf_loc,depth,nstore,itmp1,itmp2) &
+       result(best_shifts)
     !! Function that figures out the best shift for the planes given the ...
-    !! ... required minimum bulk bond length.            
-    real(real32) :: depth,bond ! the depth into the material we are interested (physical size in the c direction).
+    !! ... required minimum bulk bond length.
+    real(real32) :: depth,bond
+    ! the depth into the material we are interested (physical size in the c direction).
     integer :: i
     type(basis_type) :: bas_bot,bas_top
 
@@ -228,7 +236,8 @@ contains
     real(real32), allocatable, dimension(:,:,:) :: avg_min_atom_sep
 
     integer :: axis
-    integer :: num_steps,num_c_shifts !number of pieces to divide the unit cell into in a and b direction.
+    integer :: num_steps,num_c_shifts
+    !number of pieces to divide the unit cell into in a and b direction.
     real(real32), allocatable, dimension(:,:) :: best_shifts
     integer :: nstore ! The required output number of the best shifts.
 
@@ -255,12 +264,16 @@ contains
     ! Loop through in-plane shift grid and evaluate average min separation
     !---------------------------------------------------------------------------
     allocate(avg_min_atom_sep(num_steps,num_steps,num_c_shifts))
-    avg_min_atom_sep = avgminsep(lat,bas_top,bas_bot,num_steps,num_c_shifts,depth_bascoord)
+    avg_min_atom_sep = avgminsep( &
+         lat,bas_top,bas_bot,num_steps,num_c_shifts,depth_bascoord &
+    )
 
     !---------------------------------------------------------------------------
     ! Find the highest-scoring shifts from the grid
     !---------------------------------------------------------------------------
-    best_shifts = findbestfits(bond,avg_min_atom_sep,num_steps,num_c_shifts,nstore,depth_bascoord)
+    best_shifts = findbestfits( &
+         bond,avg_min_atom_sep,num_steps,num_c_shifts,nstore,depth_bascoord &
+    )
     best_shifts(:,axis)=best_shifts(:,axis)
 
 
@@ -278,13 +291,16 @@ contains
 
 
 !###############################################################################
-  function findbestfits(bulkbond,avg_min_sep,num_steps,num_c_shifts,num_best_shifts,depth) result(best_shifts)
+  function findbestfits( &
+       bulkbond,avg_min_sep,num_steps,num_c_shifts,num_best_shifts,depth &
+  ) result(best_shifts)
     !! Function that finds the best match between the average interface ...
-    !! ... minimum bond length and the bulk minimum bond length            
+    !! ... minimum bond length and the bulk minimum bond length
     implicit none
     real(real32), dimension(:,:,:) :: avg_min_sep
     real(real32) :: bulkbond,current_difference,min_difference,depth
-    integer :: i,ia,ib,ic,num_steps,num_c_shifts,num_best_shifts,c_shift_low,c_shift_high
+    integer :: i,ia,ib,ic,num_steps,num_c_shifts,num_best_shifts, &
+         c_shift_low,c_shift_high
     real(real32), allocatable, dimension(:,:) :: best_shifts
     integer, dimension(3) :: placeholder
 
@@ -293,23 +309,26 @@ contains
     if (mod(num_c_shifts,2) .eq. 0) then
        c_shift_low = -nint(real(num_c_shifts)/2.0)+1
        c_shift_high = nint(real(num_c_shifts)/2.0)
-    else 
+    else
        c_shift_low = -(floor(real(num_c_shifts)/2.0))
        c_shift_high = (floor(real(num_c_shifts)/2.0))
     end if
-    shiftloop: do i=1,num_best_shifts 
+    shiftloop: do i=1,num_best_shifts
 
        placeholder = -1
        min_difference = huge(0._real32)
-       LOOP5A: do ia=0,num_steps-1 !loop through shifts in a
-          LOOP5B: do ib=0,num_steps-1 !loop through shifts in b
-             LOOP5C: do ic=c_shift_low,c_shift_high,1 !Loop through shifts of the top plane in c
-                current_difference = abs(avg_min_sep(ia+1,ib+1,ic-c_shift_low+1) - bulkbond)
+       LOOP5A: do ia=0,num_steps-1 ! loop through shifts in a
+          LOOP5B: do ib=0,num_steps-1 ! loop through shifts in b
+             LOOP5C: do ic=c_shift_low,c_shift_high,1
+                ! Loop through shifts of the top plane in c
+                current_difference = &
+                     abs(avg_min_sep(ia+1,ib+1,ic-c_shift_low+1) - bulkbond)
                 if (current_difference.lt.min_difference) then
                    min_difference = current_difference
                    best_shifts(i,1) = real(ia,real32)/real(num_steps,real32)
                    best_shifts(i,2) = real(ib,real32)/real(num_steps,real32)
-                   best_shifts(i,3) = real(ic,real32)*depth*2._real32/real(num_c_shifts,real32)
+                   best_shifts(i,3) = &
+                        real(ic,real32)*depth*2._real32/real(num_c_shifts,real32)
                    best_shifts(i,4) = min_difference
                    placeholder(1) = ia
                    placeholder(2) = ib
@@ -322,7 +341,11 @@ contains
           write(0,*) "ERROR: No shifts found for the given interface"
           stop
        end if
-       avg_min_sep(placeholder(1)+1,placeholder(2)+1,placeholder(3)-c_shift_low+1) = huge(0._real32)
+       avg_min_sep( &
+            placeholder(1) + 1, &
+            placeholder(2) + 1, &
+            placeholder(3) - c_shift_low + 1 &
+       ) = huge(0._real32)
     end do shiftloop
 
   end function findbestfits
@@ -330,13 +353,15 @@ contains
 
 
 !###############################################################################
-  function avgminsep(lat,plane_up,plane_dw,num_steps,num_c_shifts,depth) result(avg_min_sep)
+  function avgminsep(lat,plane_up,plane_dw,num_steps,num_c_shifts,depth) &
+       result(avg_min_sep)
     !! Subroutine that finds the average minimum atomic seperation ...
     !! ... between any atoms in the top and bottom planes
     implicit none
     type(basis_type) :: plane_up,plane_dw,tplane_up,tplane_dw
     real(real32) :: avg_sep_up,avg_sep_dw,depth
-    integer :: num_steps,num_c_shifts !number of pieces to divide the unit cell into in a and b direction.
+    integer :: num_steps,num_c_shifts
+    ! number of pieces to divide the unit cell into in a and b direction.
     real(real32), allocatable, dimension(:,:,:) :: avg_min_sep
     integer :: ia,ib,ic,is_up,ia_up,c_shift_low,c_shift_high
     real(real32), dimension(3,3) :: lat
@@ -348,7 +373,7 @@ contains
     if (mod(num_c_shifts,2) .eq. 0) then
        c_shift_low = -nint(real(num_c_shifts)/2.0)+1
        c_shift_high = nint(real(num_c_shifts)/2.0)
-    else 
+    else
        c_shift_low = -(floor(real(num_c_shifts)/2.0))
        c_shift_high = (floor(real(num_c_shifts)/2.0))
     end if
@@ -364,9 +389,10 @@ contains
                    plane_up%spec(is_up)%atom(ia_up,:) = &
                         plane_up%spec(is_up)%atom(ia_up,:) + &
                         (/&
-                        (real(ia,real32)/real(num_steps,real32)),&
-                        (real(ib,real32)/real(num_steps,real32)),&
-                        (real(ic,real32)*depth*2._real32/real(num_c_shifts,real32)) /)
+                             (real(ia,real32)/real(num_steps,real32)),&
+                             (real(ib,real32)/real(num_steps,real32)),&
+                             (real(ic,real32) * depth * 2._real32 / &
+                                  real(num_c_shifts,real32)) /)
                 end do
              end do
 
@@ -441,7 +467,9 @@ contains
 
 
 !###############################################################################
-  function get_descriptive_shifts(lat,bas,bond,axis,intf_loc,depth,nstore,c_scale,lprint) result(res_shifts)
+  function get_descriptive_shifts( &
+       lat,bas,bond,axis,intf_loc,depth,nstore,c_scale,lprint &
+  ) result(res_shifts)
     !! Finds best c axis separation, then finds the most descriptive set of ...
     !! ... shifts for that separation (i.e. the ones that fit the best and ...
     !! ... worst to that of the average bulk bond).
@@ -507,7 +535,8 @@ contains
 !-------------------------------------------------------------------------------
     !res_shifts(:,3) = c_shift + (bond - cur_vac)/norm2(lat(axis,:))
     res_shifts(:,3) = c_shift + bond/norm2(lat(axis,:))
-    res_shifts(:,1:2) = get_descriptive_ab_shifts(lat,bas_top,bas_bot,bond,axis,nstore,num_steps)
+    res_shifts(:,1:2) = &
+         get_descriptive_ab_shifts(lat,bas_top,bas_bot,bond,axis,nstore,num_steps)
     if(present(c_scale)) res_shifts(:,3) = res_shifts(:,3) * c_scale
 
 
@@ -575,11 +604,12 @@ contains
 
              do is_up=1,plane_up%nspec
                 do ia_up=1,plane_up%spec(is_up)%num
-                   tplane_up%spec(is_up)%atom(ia_up,:) = plane_up%spec(is_up)%atom(ia_up,:) + &
-                        (/&
-                        (real(ia,real32)/real(num_steps,real32)),&
-                        (real(ib,real32)/real(num_steps,real32)),&
-                        c_shift /)
+                   tplane_up%spec(is_up)%atom(ia_up,:) = &
+                        plane_up%spec(is_up)%atom(ia_up,:) + (/&
+                             (real(ia,real32)/real(num_steps,real32)),&
+                             (real(ib,real32)/real(num_steps,real32)),&
+                             c_shift &
+                        /)
                 end do
              end do
 
@@ -608,7 +638,8 @@ contains
              exit
           else
              new_c_shift = prev_c_shift - &
-                  (prev_c_shift - c_shift)*( prev_min_bond - bond )/( prev_min_bond - min_bond )
+                  (prev_c_shift - c_shift) * ( prev_min_bond - bond ) / &
+                  ( prev_min_bond - min_bond )
           end if
        else
           new_c_shift = 0.5_real32/norm2(lat(axis,:))
@@ -637,7 +668,9 @@ contains
 
 
 !###############################################################################
-  function get_descriptive_ab_shifts(lat,plane_up,plane_dw,bond,axis,nstore,num_steps) result(ab_shifts)
+  function get_descriptive_ab_shifts( &
+       lat,plane_up,plane_dw,bond,axis,nstore,num_steps &
+  ) result(ab_shifts)
     !! Subroutine that finds the average minimum atomic seperation ...
     !! ... between any atoms in the top and bottom planes
     implicit none
@@ -663,11 +696,12 @@ contains
 
           do is_up=1,plane_up%nspec
              do ia_up=1,plane_up%spec(is_up)%num
-                tplane_up%spec(is_up)%atom(ia_up,:) = plane_up%spec(is_up)%atom(ia_up,:) + &
-                     (/&
-                     (real(ia,real32)/real(num_steps,real32)),&
-                     (real(ib,real32)/real(num_steps,real32)),&
-                     0._real32 /)
+                tplane_up%spec(is_up)%atom(ia_up,:) = &
+                     plane_up%spec(is_up)%atom(ia_up,:) + (/ &
+                          (real(ia,real32)/real(num_steps,real32)),&
+                          (real(ib,real32)/real(num_steps,real32)),&
+                          0._real32 &
+                     /)
              end do
           end do
 
@@ -698,7 +732,10 @@ contains
           if(count1.gt.nstore) exit denom_loop
           ab_shifts(count1,:) = real((/ &
                minloc( &
-               abs( avg_min_sep - ( min_sep + (max_sep-min_sep)*real(inum,real32)/real(iden,real32) ) ) )&
+                    abs( avg_min_sep - ( &
+                         min_sep + &
+                         (max_sep-min_sep)*real(inum,real32)/real(iden,real32) &
+                    ) ) )&
                /),real32)/real(num_steps,real32)
 
        end do
@@ -730,11 +767,12 @@ contains
 
 !###############################################################################
   function get_shifts_DON(bas,axis,intf_loc,nstore,tol_sym,c_scale,offset,&
-    !! generate shifts by filling missing neighours for surface atoms
+       !! generate shifts by filling missing neighours for surface atoms
        bulk_DON,bulk_map,verbose,max_bondlength) result(res_shifts)
-    use artemis__sym, only: gldfnd,confine_type
     use artemis__geom_utils, only: get_bulk,wyck_spec_type,get_wyckoff
-    use artemis__interface_identifier, only: gen_single_DON,nstep_default,den_of_neigh_type
+    use artemis__interface_translations, only: get_interface_translations
+    use artemis__interface_identifier, only: gen_single_DON,nstep_default, &
+         den_of_neigh_type
     implicit none
     type(basis_type), intent(in) :: bas
     !! Interface structure
@@ -761,25 +799,26 @@ contains
 
 
     integer :: i,j,k,l,is,ia,ja,jb,jc,count1,itmp1
-    integer :: ntrans,iatom,nneigh,ncheck
+    integer :: iab,iatom,nneigh,ncheck,nsearch_ab
     integer :: verbose_
     real(real32) :: stepsize,max_sep,dist_max
     real(real32) :: rtmp1,rtmp2,rtmp3
     real(real32) :: val,dtmp1,dtmp2
-    logical :: lbulk, lpresent
-    type(confine_type) :: confine
+    logical :: lbulk, lpresent, lfixed_ab, lduplicate
     integer, dimension(2) :: plane_loc
     integer, dimension(3) :: ngrid,nstep,ivtmp1
-    real(real32), dimension(2) :: min_trans,lowest_atom,highest_atom
+    real(real32), dimension(2) :: lowest_atom,highest_atom
     real(real32), dimension(3) :: pos,vtmp1,vtmp2,vtmp3,gridsize,add
+    real(real32), dimension(3) :: primitive_t1,primitive_t2,primitive_shift
     logical, dimension(2) :: lwyckoff
     type(map_type), dimension(2) :: map
     type(wyck_spec_type), dimension(2) :: wyckoff
     real(real32), allocatable, dimension(:) :: fit_store,tmp_neigh
     type(basis_type), allocatable, dimension(:) :: splitbas
     type(den_of_neigh_type), allocatable, dimension(:,:) :: DON_missing
+    integer, allocatable, dimension(:,:) :: ab_search
     integer, allocatable, dimension(:,:) :: shift_store
-    real(real32), allocatable, dimension(:,:) :: res_shifts,trans,regions
+    real(real32), allocatable, dimension(:,:) :: res_shifts,regions
 
 
 
@@ -788,19 +827,19 @@ contains
 
 
     type neighbour_type
-       integer :: num
-       real(real32) :: bond
-       real(real32), dimension(3) :: pos
+    integer :: num
+    real(real32) :: bond
+    real(real32), dimension(3) :: pos
     end type neighbour_type
     type(neighbour_type), allocatable, dimension(:,:) :: neighbour
     type intf_type
-       type(neighbour_type), allocatable, dimension(:) :: neigh
+    type(neighbour_type), allocatable, dimension(:) :: neigh
     end type intf_type
     type(intf_type), dimension(2) :: intf
 
 
     type grid_type
-       real(real32), allocatable, dimension(:) :: neigh
+    real(real32), allocatable, dimension(:) :: neigh
     end type grid_type
     type(grid_type), allocatable, dimension(:,:,:,:) :: course_grid
 
@@ -829,9 +868,6 @@ contains
 !-------------------------------------------------------------------------------
 ! separates basis into atoms above and below interface within a depth window
 !-------------------------------------------------------------------------------
-    confine%l=.true.
-    confine%axis=axis
-    allocate(trans(minval(bas%spec(:)%num,dim=1),3))
     allocate(regions(size(intf_loc,dim=1),2))
     if(intf_loc(1).lt.intf_loc(2))then
        regions(2,1:2)=intf_loc(1:2)
@@ -849,23 +885,15 @@ contains
 
 
 !-------------------------------------------------------------------------------
-! determines repeated translations within the cell (reduces shift by that)
+! determines the primitive interface-translation basis for in-plane searching
 !-------------------------------------------------------------------------------
-    min_trans=1._real32
-    do i=1,2
-       call gldfnd(confine, splitbas(i), splitbas(i), trans, ntrans, tol_sym)
-       if(ntrans.eq.0) cycle
-       do j=1,ntrans
-          do k=1,2
-             if(abs(trans(j,k)).lt.abs(min_trans(k))) min_trans(k)=trans(j,k)
-          end do
-       end do
-    end do
-    min_trans=abs(min_trans)
-    where(abs(min_trans).lt.1.E-5_real32)
-       min_trans=1._real32
-    end where
-    if(verbose_.eq.1) write(*,*) "repeated_trans:",min_trans
+    call get_interface_translations(bas,primitive_t1,primitive_t2)
+    primitive_t1(axis) = 0._real32
+    primitive_t2(axis) = 0._real32
+    if(verbose_.eq.1)then
+       write(*,'(1X,"primitive_t1:",3(2X,F8.4))') primitive_t1
+       write(*,'(1X,"primitive_t2:",3(2X,F8.4))') primitive_t2
+    end if
 
 
 !-------------------------------------------------------------------------------
@@ -877,10 +905,12 @@ contains
        do i=1,2
           wyckoff(i)=get_wyckoff(splitbas(i),axis)
           if(.not.allocated(wyckoff(i)%spec))then
-             write(*,'(1X,"Using centre atoms as bulk representation for parent slab", I0)') i
+             write(*,'(1X,"Using centre atoms as bulk representation for parent &
+                  &slab", I0)') i
              lwyckoff(i)=.false.
           else
-             write(*,'(1X,"Using Wyckoff atoms as bulk representation for parent slab", I0)') i
+             write(*,'(1X,"Using Wyckoff atoms as bulk representation for parent &
+                  &slab", I0)') i
           end if
        end do
     else
@@ -923,7 +953,7 @@ contains
                   splitbas(i),is,axis,lw=regions(i,1),up=regions(i,2))
              if(iatom.eq.0)&
                   call stop_program("Internal error in get_shifts_DON: &
-                  &No centre atom found.")
+                       &No centre atom found.")
           end if
           if(lbulk)then
              if(any(map(i)%spec(is,:splitbas(i)%spec(is)%num,:).le.0))then
@@ -950,7 +980,8 @@ contains
              !!-----------------------------------------------------------------
              if(lbulk)then
                 DON_missing(i,is)%atom(ia,:) = &
-                     bulk_DON(i)%spec(map(i)%spec(is,ia,1))%atom(map(i)%spec(is,ia,2),:) - &
+                     bulk_DON(i)%spec(map(i)%spec(is,ia,1))%atom( &
+                          map(i)%spec(is,ia,2),:) - &
                      DON_missing(i,is)%atom(ia,:)
              elseif(lwyckoff(i))then
                 DON_missing(i,is)%atom(ia,:) = &
@@ -973,7 +1004,7 @@ contains
              !!-----------------------------------------------------------------
              plane_loc(:)=&
                   get_nth_plane(invec=real(DON_missing(i,is)%atom(ia,:),real32),&
-                  nth=2,window=20,is_periodic=.false.) !! WINDOW WAS 10, NOW 20
+                       nth=2,window=20,is_periodic=.false.) !! WINDOW WAS 10, NOW 20
              itmp1=nint( &
                   sum(DON_missing(i,is)%atom(ia,:plane_loc(1)))*&
                   (dist_max/nstep_default) )
@@ -984,7 +1015,7 @@ contains
                 !     ceiling(neighbour(i,count1)%pos - 1._real32)
                 neighbour(i,count1)%bond = &
                      ( maxloc(DON_missing(i,is)%atom(ia,:plane_loc(1)),dim=1) &
-                     - 1 ) * dist_max/nstep_default
+                          - 1 ) * dist_max/nstep_default
                 neighbour(i,count1)%num = itmp1
                 if(verbose_.ge.1)&
                      write(*,'(2X,I2,3X,I3,7X,I2,9X,F0.3,8X,3(1X,F5.2))') &
@@ -1005,7 +1036,8 @@ contains
                    write(13,*) &
                         (j-1)*dist_max/nstep_default,&
                         DON_missing(i,is)%atom(ia,j),&
-                        bulk_DON(i)%spec(map(i)%spec(is,ia,1))%atom(map(i)%spec(is,ia,2),j)
+                        bulk_DON(i)%spec(map(i)%spec(is,ia,1))%atom( &
+                             map(i)%spec(is,ia,2),j)
                 end do
                 close(13)
                 write(0,*) "Writing failed DON to output file &
@@ -1016,7 +1048,8 @@ contains
                    write(14,*) &
                         (j-1)*dist_max/nstep_default,&
                         DON_missing(i,is)%atom(ia,j),&
-                        bulk_DON(i)%spec(map(i)%spec(is,ia,1))%atom(map(i)%spec(is,ia,2),j)
+                        bulk_DON(i)%spec(map(i)%spec(is,ia,1))%atom( &
+                             map(i)%spec(is,ia,2),j)
                 end do
                 close(14)
                 call err_abort_print_struc(splitbas(1),"lw_term.vasp",&
@@ -1024,7 +1057,7 @@ contains
                 call err_abort_print_struc(splitbas(2),"up_term.vasp",&
                      "",.false.)
                 call stop_program("Internal error in get_shifts_DON: &
-                  &More neighbours found in slab than in bulk.")
+                     &More neighbours found in slab than in bulk.")
              end if
           end do atom_loop1
        end do spec_loop
@@ -1071,7 +1104,8 @@ contains
        end if
     end if
     if(.not.lpresent)then
-       max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1)))*norm2(bas%lat(axis,:)) + 6._real32
+       max_sep = max(abs(highest_atom(2)),abs(lowest_atom(1))) * &
+            norm2(bas%lat(axis,:)) + 6._real32
        add = 0._real32
     end if
 
@@ -1085,7 +1119,8 @@ contains
     gridsize(2) = stepsize/norm2(bas%lat(2,:))
     gridsize(3) = stepsize/norm2(bas%lat(3,:))
 
-    nstep(:2) = nint( min_trans(:2) * ngrid(:2) )
+    nstep(1) = max(2, ceiling(norm2(matmul(primitive_t1,bas%lat))/stepsize))
+    nstep(2) = max(2, ceiling(norm2(matmul(primitive_t2,bas%lat))/stepsize))
     nstep(3) = 0
     do jc=1,ngrid(3)
        pos(3) = real(jc-1,real32)*gridsize(3)
@@ -1093,16 +1128,17 @@ contains
        if(pos(3)-lowest_atom(1).gt.(ngrid(3)-1)*gridsize(3)) exit
        nstep(3) = nstep(3) + 1
     end do
+    lfixed_ab = .false.
     if(present(offset))then
        if(offset(axis).ge.1.E-6_real32)then
           if(verbose_.ge.1) write(*,'(1X,"user-defined offset:",3(3X,F7.3))') offset
           add = -1.0
           do i=1,3
              if(offset(i).ge.0._real32)then
-                nstep(i) = 1
                 add(i) = offset(i)
              end if
           end do
+          lfixed_ab = any(offset(:2).ge.0._real32)
 
           do i=1,3
              if(add(i).lt.0.0)then
@@ -1110,14 +1146,42 @@ contains
              end if
           end do
           add(axis) = add(axis)/norm2(bas%lat(axis,:))
+          if(offset(axis).ge.0._real32) nstep(3) = 1
+          if(lfixed_ab) nstep(:2) = 1
        end if
+    else
+       lfixed_ab = .false.
     end if
+
+    allocate(ab_search(max(1,nstep(1)*nstep(2)),2))
+    nsearch_ab = 0
+    do ja=1,nstep(1)
+       do jb=1,nstep(2)
+          primitive_shift = add
+          primitive_shift(:2) = add(:2) + &
+               real(ja-1,real32)*primitive_t1(:2)/real(nstep(1),real32) + &
+               real(jb-1,real32)*primitive_t2(:2)/real(nstep(2),real32)
+          primitive_shift(:2) = primitive_shift(:2) - floor(primitive_shift(:2))
+          ivtmp1(1) = modulo(nint(primitive_shift(1)/gridsize(1)),ngrid(1)) + 1
+          ivtmp1(2) = modulo(nint(primitive_shift(2)/gridsize(2)),ngrid(2)) + 1
+          lduplicate = .false.
+          do iab=1,nsearch_ab
+             if(all(ab_search(iab,:).eq.ivtmp1(:2)))then
+                lduplicate = .true.
+                exit
+             end if
+          end do
+          if(lduplicate) cycle
+          nsearch_ab = nsearch_ab + 1
+          ab_search(nsearch_ab,:) = ivtmp1(:2)
+       end do
+    end do
 
     !nthreads=8
     !call OMP_SET_NUM_THREADS(nthreads)
     !CHUNK = 2
 !-------------------------------------------------------------------------------
-! Determines neighbours for each grid point 
+! Determines neighbours for each grid point
 !-------------------------------------------------------------------------------
     if(abs(verbose_).ge.1)then
        write(*,'(1X,A,3(2X,F8.4))') &
@@ -1125,6 +1189,7 @@ contains
        write(*,'(1X,A,3(2X,F8.4))') "gridsize:",gridsize
        write(*,*) "add:",add
        write(*,*) "nstep:",nstep
+       write(*,*) "nsearch_ab:",nsearch_ab
        write(*,*) "ngrid:",ngrid
        write(*,*) "max_sep:",max_sep
     end if
@@ -1190,75 +1255,79 @@ contains
     allocate(shift_store(nstore,3))
     fit_store=huge(0.0)
     shift_store=0._real32
-! !$OMP PARALLEL DEFAULT(SHARED) NUM_NHREADS(nthreads) 
+! !$OMP PARALLEL DEFAULT(SHARED) NUM_NHREADS(nthreads)
 ! !$OMP DO PRIVATE(ja,jb,jc,pos,val,l,is,nneigh,vtmp1,ivtmp1,ncheck,rtmp1,rtmp2,val) SCHEDULE(DYNAMIC,CHUNK)
-    do ja=1,nstep(1)
+    do iab=1,nsearch_ab
+       ja = ab_search(iab,1)
+       jb = ab_search(iab,2)
        pos(1) = real(ja-1,real32)*gridsize(1)
-       b_loop1: do jb=1,nstep(2)
-          pos(2) = real(jb-1,real32)*gridsize(2)
-          c_loop1: do jc=1,nstep(3)
-             pos(3) = real(jc-1,real32)*gridsize(3)
+       pos(2) = real(jb-1,real32)*gridsize(2)
+       c_loop1: do jc=1,nstep(3)
+          pos(3) = real(jc-1,real32)*gridsize(3)
 
-             val = 0._real32
-             do k=1,2
-                l=minval([1,2],mask=[1,2].ne.k)
-                nneigh = size(intf(l)%neigh,dim=1)
-                do is=1,nneigh
-                   vtmp1 = ( &
-                        pos*(-1)**real(l,real32) + &
-                        intf(l)%neigh(is)%pos  )*(-1)**real(l,real32)
-                   vtmp1(:2) = vtmp1(:2) - floor( vtmp1(:2) )
-                   ivtmp1 = nint(vtmp1/gridsize)
-                   ivtmp1 = ivtmp1 + 1
-                   !if(any(ivtmp1.gt.ngrid)) write(0,*) l,is,ivtmp1
-                   where(ivtmp1(:2).gt.ngrid(:2))
-                      ivtmp1(:2) = ivtmp1(:2) - ngrid(:2)
-                   end where
-                   ncheck = size(course_grid(k,ivtmp1(1),ivtmp1(2),ivtmp1(3))%neigh(:),dim=1)
-                   !!-----------------------------------------------------------
-                   !! Checks for bonds that match the missing bond set
-                   !!-----------------------------------------------------------
-                   rtmp2 = 0.0
-                   grid_bond_loop: do i=1,ncheck
-                      rtmp1 = abs( intf(l)%neigh(is)%bond - &
-                           course_grid(k,ivtmp1(1),ivtmp1(2),ivtmp1(3))%neigh(i) )
-                      if(rtmp1.gt.0.5) cycle grid_bond_loop
-                      rtmp1 = ( 1.0 - tanh( 9.0*(rtmp1-0.25) ) )
-                      rtmp2 = rtmp2 + rtmp1
-                   end do grid_bond_loop
-                   !val = val + abs(intf(l)%neigh(is)%num - rtmp2)!*(intf(l)%neigh(is)%bond)**2.5
-                   !!-----------------------------------------------------------
-                   !! Checks for atoms that are too close to the surface atoms
-                   !!-----------------------------------------------------------
-                   rtmp3 = 0.0
-                   under_bond_loop: do i=1,ncheck
-                      rtmp1 = course_grid(k,ivtmp1(1),ivtmp1(2),ivtmp1(3))%neigh(i) - &
-                           intf(l)%neigh(is)%bond
-                      if(rtmp1.ge.0.0) cycle under_bond_loop
-                      !rtmp1 = rtmp1/course_grid(k,ivtmp1(1),ivtmp1(2),ivtmp1(3))%neigh(i)
-                      rtmp1 = rtmp1/intf(l)%neigh(is)%bond
-                      rtmp1 = abs(tan(pi*rtmp1/2.0))
-                      rtmp3 = rtmp3 + rtmp1
-                   end do under_bond_loop
-                   
-                   !val = val + abs(&
-                   !     intf(l)%neigh(is)%num - rtmp2*f_scale - rtmp3*g_scale )
-                   val = val + abs(intf(l)%neigh(is)%num - rtmp2*f_scale) + rtmp3*g_scale
+          val = 0._real32
+          do k=1,2
+             l=minval([1,2],mask=[1,2].ne.k)
+             nneigh = size(intf(l)%neigh,dim=1)
+             do is=1,nneigh
+                vtmp1 = ( &
+                     pos*(-1)**real(l,real32) + &
+                     intf(l)%neigh(is)%pos  )*(-1)**real(l,real32)
+                vtmp1(:2) = vtmp1(:2) - floor( vtmp1(:2) )
+                ivtmp1 = nint(vtmp1/gridsize)
+                ivtmp1 = ivtmp1 + 1
+                !if(any(ivtmp1.gt.ngrid)) write(0,*) l,is,ivtmp1
+                where(ivtmp1(:2).gt.ngrid(:2))
+                   ivtmp1(:2) = ivtmp1(:2) - ngrid(:2)
+                end where
+                ncheck = &
+                     size( &
+                          course_grid(k,ivtmp1(1),ivtmp1(2),ivtmp1(3))%neigh(:), &
+                          dim=1 &
+                     )
+                !!-----------------------------------------------------------
+                !! Checks for bonds that match the missing bond set
+                !!-----------------------------------------------------------
+                rtmp2 = 0.0
+                grid_bond_loop: do i=1,ncheck
+                   rtmp1 = abs( intf(l)%neigh(is)%bond - &
+                        course_grid(k,ivtmp1(1),ivtmp1(2),ivtmp1(3))%neigh(i) )
+                   if(rtmp1.gt.0.5) cycle grid_bond_loop
+                   rtmp1 = ( 1.0 - tanh( 9.0*(rtmp1-0.25) ) )
+                   rtmp2 = rtmp2 + rtmp1
+                end do grid_bond_loop
+                !val = val + abs(intf(l)%neigh(is)%num - rtmp2)!*(intf(l)%neigh(is)%bond)**2.5
+                !!-----------------------------------------------------------
+                !! Checks for atoms that are too close to the surface atoms
+                !!-----------------------------------------------------------
+                rtmp3 = 0.0
+                under_bond_loop: do i=1,ncheck
+                   rtmp1 = course_grid(k,ivtmp1(1),ivtmp1(2),ivtmp1(3))%neigh(i) - &
+                        intf(l)%neigh(is)%bond
+                   if(rtmp1.ge.0.0) cycle under_bond_loop
+                   !rtmp1 = rtmp1/course_grid(k,ivtmp1(1),ivtmp1(2),ivtmp1(3))%neigh(i)
+                   rtmp1 = rtmp1/intf(l)%neigh(is)%bond
+                   rtmp1 = abs(tan(pi*rtmp1/2.0))
+                   rtmp3 = rtmp3 + rtmp1
+                end do under_bond_loop
 
+                !val = val + abs(&
+                !     intf(l)%neigh(is)%num - rtmp2*f_scale - rtmp3*g_scale )
+                val = val + abs(intf(l)%neigh(is)%num - rtmp2*f_scale) + rtmp3*g_scale
 
-                end do
-                
 
              end do
 
-             if(val.lt.fit_store(nstore))then
-                fit_store(nstore) = val
-                shift_store(nstore,:) = [ ja-1, jb-1, jc-1 ]
-                call sort_shifts(fit_store,shift_store)
-             end if
 
-          end do c_loop1
-       end do b_loop1
+          end do
+
+          if(val.lt.fit_store(nstore))then
+             fit_store(nstore) = val
+             shift_store(nstore,:) = [ ja-1, jb-1, jc-1 ]
+             call sort_shifts(fit_store,shift_store)
+          end if
+
+       end do c_loop1
     end do
 ! !$OMP END DO
 ! !$OMP END PARALLEL
@@ -1269,7 +1338,7 @@ contains
 !-------------------------------------------------------------------------------
     if(all(shift_store.eq.0))then
        call stop_program("Internal error in get_shifts_DON: &
-               &No shifts found.")
+            &No shifts found.")
     end if
 
 
@@ -1298,7 +1367,7 @@ contains
                i,res_shifts(i,:2),res_shifts(i,3)*norm2(bas%lat(axis,:))
        end do
     end if
-       
+
 
   end function get_shifts_DON
 !###############################################################################
@@ -1332,4 +1401,3 @@ contains
 !###############################################################################
 
 end module artemis__shifting
-

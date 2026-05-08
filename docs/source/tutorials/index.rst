@@ -23,4 +23,4 @@ They cover the parameters and options available in ARTEMIS, as well as the basic
    :caption: Post-processing:
 
    identify_interface_tutorial
-
+   identify_translations

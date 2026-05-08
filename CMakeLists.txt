@@ -74,6 +74,7 @@ set(LIB_FILES
     artemis_help.f90
     artemis_misc_maths.f90
     artemis_misc_linalg.f90
+    artemis_crystal_compare.f90
     artemis_geom_utils.f90
     artemis_interface_translations.f90
     artemis_io_utils_extd.F90
@@ -368,6 +369,8 @@ if (BUILD_PYTHON)
 
     # Installation instructions
     install(FILES ${PY_MODULE} DESTINATION ${SKBUILD_PROJECT_NAME})
+    install(DIRECTORY ${CMAKE_BUILD_DIR}/artemis/ DESTINATION ${SKBUILD_PROJECT_NAME}
+        FILES_MATCHING PATTERN "*.py")
     install(FILES ${F2PY_OUTPUT_FILE} DESTINATION ${SKBUILD_PROJECT_NAME})
 
 endif()

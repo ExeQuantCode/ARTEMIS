@@ -17,22 +17,22 @@ module artemis__interface_identifier
   !! Default number of steps for density calculations.
 
   type intf_info_type
-     !! Derived type storing interface information.
-     integer :: axis
-     !! Axis perpendicular to the interface.
-     real(real32), dimension(2) :: loc
-     !! Locations of the two interfaces along the axis.
+  !! Derived type storing interface information.
+  integer :: axis
+  !! Axis perpendicular to the interface.
+  real(real32), dimension(2) :: loc
+  !! Locations of the two interfaces along the axis.
   end type intf_info_type
-  
+
   type den_of_neigh_type
-     !! Derived type storing density of neighbours for each atom.
-     real(real32), allocatable, dimension(:,:) :: atom
-     !! Density of neighbours array (atom, step).
+  !! Derived type storing density of neighbours for each atom.
+  real(real32), allocatable, dimension(:,:) :: atom
+  !! Density of neighbours array (atom, step).
   end type den_of_neigh_type
   type den_of_spec_type
-     !! Derived type storing species-dependent density of neighbours.
-     real(real32), allocatable, dimension(:,:,:) :: atom
-     !! Species density array (atom, species, step).
+  !! Derived type storing species-dependent density of neighbours.
+  real(real32), allocatable, dimension(:,:,:) :: atom
+  !! Species density array (atom, species, step).
   end type den_of_spec_type
 
 
@@ -68,13 +68,15 @@ contains
 
 
     dist_max = 12._real32
-    DOS = gen_DOS(basis%lat,basis,dist_max)
-    nstep = size(DOS(1)%atom(1,1,:))
 
     intf%axis = 0
     if(present(axis)) intf%axis = axis
     if(intf%axis.eq.0)then
+       DOS = gen_DOS(basis%lat, basis, dist_max)
+       nstep = size(DOS(1)%atom(1,1,:))
        intf%axis = get_intf_axis_DOS(DOS, basis%lat, basis, dist_max)
+    else
+       nstep = nstep_default
     end if
 
     intf%loc=get_intf_CAD(basis%lat, basis, intf%axis, nstep)
@@ -182,14 +184,19 @@ contains
     ncell = 0
     ncell_loop1: do i=1,3
        rtmp1 = norm2(lat(i,:))
-       ncell(i) = max(ncell(i),ceiling(rdist_max/norm2(lat(i,:))))!maxval(ceiling( rdist_max/abs(lat(i,:)) ))
+       ncell(i) = max(ncell(i),ceiling(rdist_max/norm2(lat(i,:))))
+       !maxval(ceiling( rdist_max/abs(lat(i,:)) ))
        do j=1,3
           if(i.eq.j) cycle
           rtmp2 = dot_product(lat(i,:),lat(j,:))
           if(sign(1._real32,rtmp1).eq.sign(1._real32,rtmp2)) cycle
           !vrtmp1 = uvec(lat(i,:)) * dot_product(uvec(lat(i,:)),lat(j,:))
           !vrtmp1 = uvec(lat(i,:)) * lat(j,:)
-          vrtmp1 = merge(lat(j,:), (/0._real32, 0._real32, 0._real32/), mask = abs(lat(i,:)).gt.1.E-5_real32)
+          vrtmp1 = &
+               merge( &
+                    lat(j,:), (/0._real32, 0._real32, 0._real32/), &
+                    mask = abs(lat(i,:)).gt.1.E-5_real32 &
+               )
           rtmp1 = norm2(vrtmp1)
           if(abs(rtmp1).lt.1.E-5_real32) cycle
           k = 0
@@ -256,12 +263,12 @@ contains
                    end do
                 end do
              end do atomloop2
-             
+
              DOS(is)%atom(ia,js,:) = &
                   gauss_array(distance,&
-                  dist_list(:count1),DON_sigma,gauss_tol,lnorm)
+                       dist_list(:count1),DON_sigma,gauss_tol,lnorm)
 
-             
+
           end do specloop2
 
           if(lscale_dist)then
@@ -327,7 +334,7 @@ contains
     do is=1,bas%nspec
        allocate(DON(is)%atom(bas%spec(is)%num,nstep))
     end do
-       
+
     do is=1,bas%nspec
        do ia=1,bas%spec(is)%num
           do i=1,nstep
@@ -372,7 +379,7 @@ contains
     type(den_of_spec_type), allocatable, dimension(:) :: similarity
     !! Pairwise similarity between atoms.
 
-    
+
 !-------------------------------------------------------------------------------
 ! Initialise variables based on input values
 !-------------------------------------------------------------------------------
@@ -396,7 +403,7 @@ contains
     allocate(sim(nspec))
     allocate(similarity(nspec))
     do is=1,nspec
-       natom=natom+size(DON(is)%atom(:,1))       
+       natom=natom+size(DON(is)%atom(:,1))
        allocate(sim(is)%atom(&
             size(DON(is)%atom(:,1)),&
             nstep))
@@ -418,8 +425,8 @@ contains
           atomloop2: do ja=1,size(DON(is)%atom(:,1))
              newf = &
                   overlap_indiv_points(&
-                  [DON(is)%atom(ia,:)],&
-                  [DON(is)%atom(ja,:)])
+                       [DON(is)%atom(ia,:)],&
+                       [DON(is)%atom(ja,:)])
              similarity(is)%atom(ia,ja,:)=real(newf,real32)
              deallocate(newf)
           end do atomloop2
@@ -474,7 +481,7 @@ contains
           end if
        end do
     end select
-    
+
 
 !-------------------------------------------------------------------------------
 ! Save the species and atom numbers of the interfacial atoms
@@ -605,8 +612,8 @@ contains
                          do ks=1,bas%nspec
                             sim_dist = sim_dist + &
                                  sqrt(overlap_indiv_points(&
-                                 [DOS(is)%atom(ia,ks,:)],&
-                                 [DOS(is)%atom(ja,ks,:)]))*rtmp1
+                                      [DOS(is)%atom(ia,ks,:)],&
+                                      [DOS(is)%atom(ja,ks,:)]))*rtmp1
                          end do
                       end do nloop3
                    end do
@@ -636,7 +643,7 @@ contains
                         intf_func(i,is)%atom(ja,2)).gt.dir_disim(i) )then
                       dir_disim(i) = &
                            abs(intf_func(i,is)%atom(ia,2) - &
-                           intf_func(i,is)%atom(ja,2))
+                                intf_func(i,is)%atom(ja,2))
                    end if
                 end if
 
@@ -791,7 +798,7 @@ contains
     axis = maxloc(axis_vec,dim=1)
 
 
-    
+
 
   end function get_intf_axis_CAD
 !###############################################################################
@@ -859,7 +866,7 @@ contains
     CAD=0._real32
     CADD=0._real32
 
-   
+
 !-------------------------------------------------------------------------------
 ! Set up CAD and CADD
 !-------------------------------------------------------------------------------
@@ -908,7 +915,7 @@ contains
        end do
        rangevec(is)=range(deriv(is,:))
     end do
-    
+
 
 !-------------------------------------------------------------------------------
 ! Multiply the CADDs of each species into an overall CADD (multiCADD)
@@ -1022,9 +1029,9 @@ contains
        do j=1,nstep
           dist(j)=(j-1)*norm2(lat(i,:))/nstep
        end do
-       
-       if(allocated(AD)) deallocate(AD)       
-       allocate(AD(nstep))       
+
+       if(allocated(AD)) deallocate(AD)
+       allocate(AD(nstep))
        AD=0._real32
        do is=1,bas%nspec
           do j=-1,1,1
@@ -1206,7 +1213,7 @@ contains
 
        DOS(js,:) = &
             gauss_array(distance,&
-            dist_list(:count1),DON_sigma,gauss_tol,.false.)
+                 dist_list(:count1),DON_sigma,gauss_tol,.false.)
 
     end do specloop1
 
@@ -1261,7 +1268,7 @@ contains
 
     nstep=size(DOS(1,:))
     allocate(DON(nstep))
-       
+
     do i=1,nstep
        DON(i) = sum(DOS(:,i))
     end do
