@@ -75,6 +75,7 @@ set(LIB_FILES
     artemis_misc_maths.f90
     artemis_misc_linalg.f90
     artemis_geom_utils.f90
+    artemis_interface_translations.f90
     artemis_io_utils_extd.F90
     artemis_sym.f90
     artemis_terminations.f90

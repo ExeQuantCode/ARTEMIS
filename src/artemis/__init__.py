@@ -52,10 +52,16 @@ def set_suppress_warnings(value):
     _artemis_module.artemis.set_suppress_warnings(value)
 
 
+def get_interface_translations(structure):
+    """Return the two primitive in-plane translations for an interface structure."""
+    return _artemis_module.artemis.get_interface_translations(structure)
+
+
 __all__ = [
     "__version__",
     "generator",
     "geom",
+    "get_interface_translations",
     "get_suppress_warnings",
     "set_suppress_warnings",
     "suppress_warnings",

@@ -9,6 +9,7 @@ module artemis
        store_last_generated_structures, &
        retrieve_last_generated_structures
   use artemis__interface_identifier, only: intf_info_type
+  use artemis__interface_translations, only: get_interface_translations
   use artemis__generator, only: artemis_generator_type
   use artemis__io_utils, only: artemis__suppress_warnings
   implicit none
