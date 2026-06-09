@@ -103,30 +103,40 @@ foreach(src ${SRC_FILES})
     list(APPEND PREPENDED_SRC_FILES ${FORTRAN_SRC_DIR}/${src})
 endforeach()
 
-
 # Force HTTPS for GitHub
-set(CPM_USE_NAMED_GITHUB_REPOSITORY_HTTPS ON)  # Some CPM versions support this
-
-# Or override the default
+set(CPM_USE_NAMED_GITHUB_REPOSITORY_HTTPS ON)
 set(CPM_GITHUB_REPOSITORY_HTTPS ON)
-CPMAddPackage(
-    NAME coreutils
-    VERSION 0.1.0
-    GITHUB_REPOSITORY nedtaylor/coreutils
-    DOWNLOAD_ONLY YES
-)
-CPMAddPackage(
-    NAME atomstruc
-    GIT_TAG row-major-order
-    GITHUB_REPOSITORY nedtaylor/atomstruc
-    DOWNLOAD_ONLY YES
-)
-# Manually add the downloaded package
-if(coreutils_SOURCE_DIR)
-    add_subdirectory(${coreutils_SOURCE_DIR} ${coreutils_BINARY_DIR})
+
+# Only add coreutils if it doesn't exist as a target
+if(NOT TARGET coreutils)
+    CPMAddPackage(
+        NAME coreutils
+        VERSION 0.1.0
+        GITHUB_REPOSITORY nedtaylor/coreutils
+        DOWNLOAD_ONLY YES
+    )
+
+    if(coreutils_SOURCE_DIR AND NOT TARGET coreutils)
+        add_subdirectory(${coreutils_SOURCE_DIR} ${coreutils_BINARY_DIR})
+    endif()
+else()
+    message(STATUS "coreutils target already exists, skipping")
 endif()
-if(atomstruc_SOURCE_DIR)
-    add_subdirectory(${atomstruc_SOURCE_DIR} ${atomstruc_BINARY_DIR})
+
+# Only add atomstruc if it doesn't exist as a target
+if(NOT TARGET atomstruc)
+    CPMAddPackage(
+        NAME atomstruc
+        GIT_TAG row-major-order
+        GITHUB_REPOSITORY nedtaylor/atomstruc
+        DOWNLOAD_ONLY YES
+    )
+
+    if(atomstruc_SOURCE_DIR AND NOT TARGET atomstruc)
+        add_subdirectory(${atomstruc_SOURCE_DIR} ${atomstruc_BINARY_DIR})
+    endif()
+else()
+    message(STATUS "atomstruc target already exists, skipping")
 endif()
 
 set(EXECUTABLE_FILES
