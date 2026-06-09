@@ -103,6 +103,12 @@ foreach(src ${SRC_FILES})
     list(APPEND PREPENDED_SRC_FILES ${FORTRAN_SRC_DIR}/${src})
 endforeach()
 
+
+# Force HTTPS for GitHub
+set(CPM_USE_NAMED_GITHUB_REPOSITORY_HTTPS ON)  # Some CPM versions support this
+
+# Or override the default
+set(CPM_GITHUB_REPOSITORY_HTTPS ON)
 CPMAddPackage(
     NAME coreutils
     VERSION 0.1.0
