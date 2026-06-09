@@ -4,7 +4,7 @@ module artemis__io_utils_extd
   !! Provides helper routines for printing structures on error, and
   !! configuring input/output file formats.
   use coreutils__string, only: to_upper
-  use coreutils, only: stop_program
+  use coreutils, only: stop_program, test_error_handling
 
   private
 
@@ -16,7 +16,7 @@ module artemis__io_utils_extd
 contains
 
 !###############################################################################
-  subroutine err_abort_print_struc(basis,filename,msg,lstop)
+  subroutine err_abort_print_struc(basis, filename, message, exit_code, block_stop)
     !! Print structure to file and stops
     use atomstruc, only: basis_type, geom_write
     implicit none
@@ -26,24 +26,41 @@ contains
     !! Structure to print
     character(len=*), intent(in) :: filename
     !! File name to print to
-    character(len=*), intent(in) :: msg
+    character(len=*), intent(in) :: message
     !! Message to print
-    logical, intent(in), optional :: lstop
-    !! Boolean whether to stop or not
+    integer, intent(in), optional :: exit_code
+    !! Exit code for the program
+    logical, intent(in), optional :: block_stop
+    !! Boolean whether to block stop or not
 
     ! Local variables
     integer :: unit
     !! File unit
+    integer :: exit_code_
+    !! Local variable for exit code
+    logical :: block_stop_
+    !! Local variable for block stop
+
+    if(present(exit_code)) then
+       exit_code_ = exit_code
+    else
+       exit_code_ = 1
+    end if
+    if(present(block_stop)) then
+       block_stop_ = block_stop
+    else
+       block_stop_ = .false.
+    end if
 
     
     open(newunit=unit,file=filename)
     call geom_write(unit, basis)
     close(unit)
-    if(msg.ne.'') write(0,'(A)') trim(msg)
-    if(present(lstop))then
-       if(lstop) stop
-    else
-       stop
+    if(message.ne.'') write(0,'("ERROR: ",A)') trim(message)
+    if(.not.block_stop_)then
+       if(.not.test_error_handling)then
+          stop exit_code_
+       end if
     end if
 
   end subroutine err_abort_print_struc

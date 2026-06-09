@@ -865,6 +865,7 @@ contains
     real(real32), allocatable, dimension(:,:) :: res_shifts
 
     ! Local variables
+    integer :: exit_code
     integer :: i,j,k,l,is,ia,ja,jb,jc,count1,itmp1
     integer :: iab,iatom,nneigh,ncheck,nsearch_ab
     integer :: verbose_
@@ -1119,10 +1120,11 @@ contains
                              map(i)%spec(is,ia,2),j)
                 end do
                 close(14)
+                exit_code = 1
                 call err_abort_print_struc(splitbas(1),"lw_term.vasp",&
-                     "",.false.)
+                     "",exit_code,.true.)
                 call err_abort_print_struc(splitbas(2),"up_term.vasp",&
-                     "",.false.)
+                     "",exit_code,.true.)
                 call stop_program("Internal error in get_shifts_DON: &
                      &More neighbours found in slab than in bulk.")
              end if
@@ -1264,10 +1266,11 @@ contains
     if(any(nstep(:).le.0))then
        write(0,*) "nstep:",nstep
        write(0,*) "ngrid:",ngrid
+       exit_code = 2
        call err_abort_print_struc(splitbas(1),"lw_term.vasp",&
-            "",.false.)
+            "",exit_code,.true.)
        call err_abort_print_struc(splitbas(2),"up_term.vasp",&
-            "",.false.)
+            "",exit_code,.true.)
        call stop_program("Internal error in get_shifts_DON")
     end if
 !$OMP PARALLEL DO &

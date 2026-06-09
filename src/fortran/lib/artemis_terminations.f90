@@ -862,7 +862,7 @@ contains
   subroutine cut_slab_to_height( &
        basis, map, term, surf, thickness, num_cells, num_layers, &
        height, prefix, lcycle, &
-       orthogonalise, vacuum &
+       orthogonalise, vacuum, exit_code &
   )
     !! Build a slab of the specified terminations
     !!
@@ -899,6 +899,8 @@ contains
     !! Boolean whether to orthogonalise the slab (default: .true.)
     real(real32), intent(in) :: vacuum
     !! Vacuum thickness to add to the slab
+    integer, intent(out) :: exit_code
+    !! Exit code for the program (0 if successful, 1 if error)
 
     ! Local variables
     integer :: term_btm_idx, term_top_idx
@@ -936,6 +938,7 @@ contains
     !---------------------------------------------------------------------------
     ! Initialise variables
     !---------------------------------------------------------------------------
+    exit_code = 0
     abc = [ 1, 2, 3 ]
     prefix_=to_lower(prefix)
     if(prefix_.eq."lw") slab_name="LOWER"
@@ -1090,8 +1093,9 @@ contains
           write(0,'("THE TRANSFORMATION IS GREATER THAN ONE ",F0.9)') &
                tfmat(term%axis,term%axis)
        end if
+       exit_code = 1
        call err_abort_print_struc(basis,prefix_//"_term.vasp",&
-            trim(msg),.true.)
+            trim(msg),exit_code,.true.)
        lcycle = .true.
     end if
 

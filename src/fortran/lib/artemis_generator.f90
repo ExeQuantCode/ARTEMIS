@@ -1090,7 +1090,7 @@ contains
        allocate(t1bas_map,source=bas_map)
        call cut_slab_to_height(output(i),bas_map,term,[iterm,surface_(2)],&
             thickness_, num_cells, num_layers_, height,&
-            prefix, lcycle, orthogonalise_, this%vacuum_gap &
+            prefix, lcycle, orthogonalise_, this%vacuum_gap, exit_code_ &
        )
        ! Normalise lattice
        !------------------------------------------------------------------------
@@ -1938,7 +1938,11 @@ contains
        if(sum(lw_term%arr(:)%natom)*lw_term%nstep.ne.supercell_lw%natom)then
           write(err_msg, '("Number of atoms in lower layers not correct: ",&
                &I0,2X,I0)') sum(lw_term%arr(:)%natom)*lw_term%nstep,supercell_lw%natom
-          call stop_program(trim(err_msg))
+          call stop_program( &
+                trim(err_msg), &
+                exit_code=exit_code_, &
+                block_stop = present(exit_code) &
+          )
           return
        end if
        call set_layer_tol(lw_term)
@@ -2070,8 +2074,21 @@ contains
           call cut_slab_to_height(slab_lw,t2lw_map,lw_term,[iterm_lw,surface_lw_(2)],&
                thickness_lw_, num_cells_lw, num_layers_lw_, height_lw,&
                "lw",lcycle, &
-               vacuum = this%vacuum_gap &
+               vacuum = this%vacuum_gap, &
+               exit_code = exit_code_ &
           )
+          if(exit_code_.ne.0)then
+               write(err_msg,'(A,I0,A)') &
+                     "The lower slab generator failed with exit code ", exit_code_
+               if(break_on_fail_)then
+                  call stop_program( &
+                      trim(err_msg), &
+                      exit_code=exit_code_, &
+                      block_stop = present(exit_code) &
+                   )
+                  return
+               end if
+          end if
           if(lcycle) cycle lw_term_loop
 
           
@@ -2085,8 +2102,21 @@ contains
              call cut_slab_to_height(slab_up,t2up_map,up_term,[iterm_up,surface_up_(2)],&
                   thickness_up_, num_cells_up, num_layers_up_, height_up,&
                   "up",lcycle, &
-                  vacuum = this%vacuum_gap &
+                  vacuum = this%vacuum_gap, &
+                  exit_code = exit_code_ &
              )
+             if(exit_code_.ne.0)then
+                  write(err_msg,'(A,I0,A)') &
+                        "The upper slab generator failed with exit code ", exit_code_
+                  if(break_on_fail_)then
+                     call stop_program( &
+                         trim(err_msg), &
+                         exit_code=exit_code_, &
+                         block_stop = present(exit_code) &
+                      )
+                     return
+                  end if
+             end if
              if(lcycle) cycle up_term_loop
 
              
@@ -2189,15 +2219,17 @@ contains
                 if(verbose_.eq.1.and.iunique.eq.icheck_term_pair_-1)then
                   !  call chdir(intf_dir)
                    call err_abort_print_struc(slab_lw,"lw_term.vasp",&
-                        "",.false.)
+                        "",exit_code_,.true.)
                    call err_abort_print_struc(slab_up,"up_term.vasp",&
                         "As IPRINT = 1 and ICHECK has been set, &
-                        &code is now exiting...")
+                        &code is now exiting...",exit_code_,present(exit_code))
+                   return
                 elseif(verbose_.eq.2.and.iunique.eq.icheck_term_pair_-1)then
                   !  call chdir(intf_dir)
                    call err_abort_print_struc(intf_basis,"test_intf.vasp",&
                         "As IPRINT = 2 and ICHECK has been set, &
-                        &code is now exiting...")
+                        &code is now exiting...",exit_code_,present(exit_code))
+                   return
                 end if
              end if
 
