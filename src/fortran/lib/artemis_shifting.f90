@@ -7,8 +7,8 @@ module artemis__shifting
   use coreutils__kind,  only: real32
   use coreutils__const, only: pi, INF
   use artemis__misc_maths, only: get_nth_plane
-  use atomstruc, only: basis_type,geom_write
-  use artemis__geom_utils, only: split_bas,get_centre_atom,set_vacuum,shifter
+  use atomstruc, only: basis_type
+  use artemis__geom_utils, only: split_bas, get_centre_atom
   use artemis__io_utils, only: print_warning, write_fmtd
   use coreutils__error,  only: stop_program
   use artemis__io_utils_extd, only: err_abort_print_struc
@@ -40,15 +40,19 @@ module artemis__shifting
 
 contains
 !###############################################################################
-  subroutine get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc,depth)
+  subroutine get_lw_up_basis(bas, bas_lw, bas_up, axis, intf_loc, depth)
     !! generates the top and bot bases near the interface
     implicit none
-    integer :: i,is,ia,itop,ibot,axis,count1
+    
+    ! Arguments
+    type(basis_type), intent(in) :: bas
+    type(basis_type), intent(out) :: bas_up,bas_lw
+    real(real32), dimension(:), intent(in) :: intf_loc
+    real(real32), optional, intent(in) :: depth
+    
+    ! Local variables
+    integer :: i, m, is, ia, itop, ibot, axis, count1
     real(real32) :: centre,dist,dist_max
-    real(real32), optional :: depth
-    type(basis_type) :: bas,bas_top,bas_bot
-    real(real32), dimension(:) :: intf_loc
-    real(real32), dimension(3,3) :: lat
     integer, allocatable, dimension(:) :: vtmp1
     integer, allocatable, dimension(:,:) :: intf_list
     real(real32), allocatable, dimension(:,:) :: regions
@@ -58,18 +62,18 @@ contains
 !-------------------------------------------------------------------------------
 ! allocating basis top and bottom
 !-------------------------------------------------------------------------------
-    allocate(bas_top%spec(bas%nspec))
-    allocate(bas_bot%spec(bas%nspec))
-    bas_top%nspec = bas%nspec
-    bas_bot%nspec = bas%nspec
+    allocate(bas_up%spec(bas%nspec))
+    allocate(bas_lw%spec(bas%nspec))
+    bas_up%nspec = bas%nspec
+    bas_lw%nspec = bas%nspec
 
-    bas_top%spec(:)%num = 0 !setting the number of atoms in each species to 0.
-    bas_bot%spec(:)%num = 0 ! ""
+    bas_up%spec(:)%num = 0 !setting the number of atoms in each species to 0.
+    bas_lw%spec(:)%num = 0 ! ""
 
 
     if(present(depth))then
        centre=intf_loc(1)
-       dist=depth/norm2(lat(axis,:))
+       dist=depth/norm2(bas%lat(axis,:))
 !-------------------------------------------------------------------------------
 ! Loop to find the number of each species in each plane
 !-------------------------------------------------------------------------------
@@ -78,33 +82,33 @@ contains
              IF101: if ( ( bas%spec(is)%atom(ia,axis).gt.centre ) .and. &
                   ( bas%spec(is)%atom(ia,axis).le.(centre+dist) ) ) then
                 ! checking if atom in the top plane.
-                bas_top%spec(is)%num=bas_top%spec(is)%num+1
+                bas_up%spec(is)%num=bas_up%spec(is)%num+1
                 !update the number of the given species in the top plane.
              else if ( ( bas%spec(is)%atom(ia,axis).lt.centre ).and. &
                   ( bas%spec(is)%atom(ia,axis).ge.(centre-dist) ) ) then
                 ! checking if atom in the bottom plane.
-                bas_bot%spec(is)%num=bas_bot%spec(is)%num+1
+                bas_lw%spec(is)%num=bas_lw%spec(is)%num+1
                 !update the number of the given species in the bottom plane.
              end if IF101
           end do LOOP102
        end do LOOP101
-       bas_top%natom = sum(bas_top%spec(:)%num)
-       bas_bot%natom = sum(bas_bot%spec(:)%num)
+       bas_up%natom = sum(bas_up%spec(:)%num)
+       bas_lw%natom = sum(bas_lw%spec(:)%num)
 
 
 !-------------------------------------------------------------------------------
 ! Allocate the required space in each bas and species.
 !-------------------------------------------------------------------------------
        LOOP105: do is=1,bas%nspec
-          allocate(bas_top%spec(is)%atom(bas_top%spec(is)%num,3))
-          allocate(bas_bot%spec(is)%atom(bas_bot%spec(is)%num,3))
-          bas_top%spec(is)%atom(:,:)=0._real32
-          bas_bot%spec(is)%atom(:,:)=0._real32
+          allocate(bas_up%spec(is)%atom(bas_up%spec(is)%num,3))
+          allocate(bas_lw%spec(is)%atom(bas_lw%spec(is)%num,3))
+          bas_up%spec(is)%atom(:,:)=0._real32
+          bas_lw%spec(is)%atom(:,:)=0._real32
        end do LOOP105
 
 
 !-------------------------------------------------------------------------------
-! Loop to add all the info from bas into bas_top and bas_bot
+! Loop to add all the info from bas into bas_up and bas_lw
 !-------------------------------------------------------------------------------
        LOOP103: do is=1,bas%nspec ! Looping over the species
           itop = 0
@@ -114,17 +118,17 @@ contains
                   ( bas%spec(is)%atom(ia,axis).le.(centre+dist) ) ) then
                 ! checking if atom in the top plane.
                 itop = itop + 1
-                bas_top%spec(is)%atom(itop,:) = bas%spec(is)%atom(ia,:)
+                bas_up%spec(is)%atom(itop,:) = bas%spec(is)%atom(ia,:)
              else if ( ( bas%spec(is)%atom(ia,axis).lt.centre ).and. &
                   ( bas%spec(is)%atom(ia,axis).ge.(centre-dist) ) ) then
                 ! checking if atom in the bottom plane.
                 ibot = ibot + 1
-                bas_bot%spec(is)%atom(ibot,:) = bas%spec(is)%atom(ia,:)
+                bas_lw%spec(is)%atom(ibot,:) = bas%spec(is)%atom(ia,:)
              end if IF102
           end do LOOP104
        end do LOOP103
     else
-       dist_max=4._real32/norm2(lat(axis,:))
+       dist_max=4._real32/norm2(bas%lat(axis,:))
        allocate(vtmp1(bas%nspec))
        allocate(regions(size(intf_loc,dim=1),2))
        regions(1,1:2)=intf_loc(1:2)
@@ -135,152 +139,169 @@ contains
        !!-----------------------------------------------------------------------
        !! Finds lower interfacial atoms near interface defined by intf_loc(1)
        !!-----------------------------------------------------------------------
-       intf_list=gen_DONsim(gen_DON(lat,splitbas(1)),cutoff=4._real32)
-       do is=1,bas%nspec
-          bas_bot%sysname=splitbas(1)%sysname
-          bas_bot%spec(is)%name=splitbas(1)%spec(is)%name
-          bas_bot%spec(is)%num = 0
-          countloop1: do i=1,size(intf_list(:,1))
-             if(intf_list(i,1).ne.is) cycle countloop1
-             if(abs(splitbas(1)%spec(is)%atom(intf_list(i,2),axis)-&
-                  intf_loc(1)).le.dist_max)then
-                bas_bot%spec(is)%num = bas_bot%spec(is)%num + 1
-             end if
-          end do countloop1
-          allocate(bas_bot%spec(is)%atom(bas_bot%spec(is)%num,3))
-          count1=0
-          atomloop1: do i=1,size(intf_list(:,1))
-             if(intf_list(i,1).ne.is) cycle atomloop1
-             if(abs(splitbas(1)%spec(is)%atom(intf_list(i,2),axis)-&
-                  intf_loc(1)).le.dist_max)then
-                count1=count1+1
-                bas_bot%spec(is)%atom(count1,:3) = &
-                     splitbas(1)%spec(is)%atom(intf_list(i,2),:3)
-             end if
-          end do atomloop1
-       end do
-       bas_bot%natom=sum(bas_bot%spec(:)%num)
-       !!-----------------------------------------------------------------------
-       !! If no lw_interfacial atoms found, redoes DONsim using averaging ...
-       !! ... method 2
-       !!-----------------------------------------------------------------------
-       if(bas_bot%natom.eq.0)then
-          intf_list=gen_DONsim(gen_DON(lat,splitbas(1)),cutoff=4._real32,avg_mthd=2)
+       intf_list=gen_DONsim(gen_DON(splitbas(1)),cutoff=4._real32)
+       method_loop_bot: do m = 1, 2
           do is=1,bas%nspec
-             deallocate(bas_bot%spec(is)%atom)
+             bas_lw%sysname=splitbas(1)%sysname
+             bas_lw%spec(is)%name=splitbas(1)%spec(is)%name
+             bas_lw%spec(is)%num = 0
+             countloop1: do i=1,size(intf_list(:,1))
+                if(intf_list(i,1).ne.is) cycle countloop1
+                if(abs(splitbas(1)%spec(is)%atom(intf_list(i,2),axis)-&
+                      intf_loc(1)).le.dist_max)then
+                   bas_lw%spec(is)%num = bas_lw%spec(is)%num + 1
+                end if
+             end do countloop1
+             allocate(bas_lw%spec(is)%atom(bas_lw%spec(is)%num,3))
+             count1=0
+             atomloop1: do i=1,size(intf_list(:,1))
+                if(intf_list(i,1).ne.is) cycle atomloop1
+                if(abs(splitbas(1)%spec(is)%atom(intf_list(i,2),axis)-&
+                      intf_loc(1)).le.dist_max)then
+                   count1=count1+1
+                   bas_lw%spec(is)%atom(count1,:3) = &
+                         splitbas(1)%spec(is)%atom(intf_list(i,2),:3)
+                end if
+             end do atomloop1
           end do
-          goto 101
-       end if
+          bas_lw%natom=sum(bas_lw%spec(:)%num)
+          !!--------------------------------------------------------------------
+          !! If no lw_interfacial atoms found, redoes DONsim using averaging ...
+          !! ... method 2
+          !!--------------------------------------------------------------------
+          if(bas_lw%natom.eq.0)then
+             intf_list = gen_DONsim( &
+                  gen_DON(splitbas(1)), &
+                  cutoff = 4._real32, &
+                  avg_mthd = 2 &
+             )
+             do is=1,bas%nspec
+                deallocate(bas_lw%spec(is)%atom)
+             end do
+          else
+             exit method_loop_bot
+          end if
+       end do method_loop_bot
 
 
        !!-----------------------------------------------------------------------
        !! Finds upper interfacial atoms near interface defined by intf_loc(1)
        !!-----------------------------------------------------------------------
-       intf_list=gen_DONsim(gen_DON(lat,splitbas(2)),cutoff=4._real32)
-       do is=1,bas%nspec
-          bas_top%sysname=splitbas(2)%sysname
-          bas_top%spec(is)%name=splitbas(2)%spec(is)%name
-          bas_top%spec(is)%num = 0
-          countloop2: do i=1,size(intf_list(:,1))
-             if(intf_list(i,1).ne.is) cycle countloop2
-             if(abs(splitbas(2)%spec(is)%atom(intf_list(i,2),axis)-&
-                  intf_loc(1)).le.dist_max)then
-                bas_top%spec(is)%num = bas_top%spec(is)%num + 1
-             end if
-          end do countloop2
-          allocate(bas_top%spec(is)%atom(bas_top%spec(is)%num,3))
-          count1=0
-          atomloop2: do i=1,size(intf_list(:,1))
-             if(intf_list(i,1).ne.is) cycle atomloop2
-             if(abs(splitbas(2)%spec(is)%atom(intf_list(i,2),axis)-&
-                  intf_loc(1)).le.dist_max)then
-                count1=count1+1
-                bas_top%spec(is)%atom(count1,:3) = &
-                     splitbas(2)%spec(is)%atom(intf_list(i,2),:3)
-             end if
-          end do atomloop2
-       end do
-       bas_top%natom=sum(bas_top%spec(:)%num)
-       !!-----------------------------------------------------------------------
-       !! If no up_interfacial atoms found, redoes DONsim using averaging ...
-       !! ... method 2
-       !!-----------------------------------------------------------------------
-       if(bas_top%natom.eq.0)then
-          intf_list=gen_DONsim(gen_DON(lat,splitbas(2)),cutoff=4._real32,avg_mthd=2)
+       intf_list=gen_DONsim(gen_DON(splitbas(2)),cutoff=4._real32)
+       method_loop_top: do m = 1, 2
           do is=1,bas%nspec
-             deallocate(bas_top%spec(is)%atom)
+             bas_up%sysname=splitbas(2)%sysname
+             bas_up%spec(is)%name=splitbas(2)%spec(is)%name
+             bas_up%spec(is)%num = 0
+             countloop2: do i=1,size(intf_list(:,1))
+                if(intf_list(i,1).ne.is) cycle countloop2
+                if(abs(splitbas(2)%spec(is)%atom(intf_list(i,2),axis)-&
+                     intf_loc(1)).le.dist_max)then
+                   bas_up%spec(is)%num = bas_up%spec(is)%num + 1
+                end if
+             end do countloop2
+             allocate(bas_up%spec(is)%atom(bas_up%spec(is)%num,3))
+             count1=0
+             atomloop2: do i=1,size(intf_list(:,1))
+                if(intf_list(i,1).ne.is) cycle atomloop2
+                if(abs(splitbas(2)%spec(is)%atom(intf_list(i,2),axis)-&
+                     intf_loc(1)).le.dist_max)then
+                   count1=count1+1
+                   bas_up%spec(is)%atom(count1,:3) = &
+                        splitbas(2)%spec(is)%atom(intf_list(i,2),:3)
+                end if
+             end do atomloop2
           end do
-          goto 102
-       end if
+          bas_up%natom=sum(bas_up%spec(:)%num)
+          !!--------------------------------------------------------------------
+          !! If no up_interfacial atoms found, redoes DONsim using averaging ...
+          !! ... method 2
+          !!--------------------------------------------------------------------
+          if(bas_up%natom.eq.0)then
+             intf_list = gen_DONsim( &
+                  gen_DON(splitbas(2)), &
+                  cutoff = 4._real32, &
+                  avg_mthd = 2 &
+             )
+             do is=1,bas%nspec
+                deallocate(bas_up%spec(is)%atom)
+             end do
+          else
+             exit method_loop_top
+          end if
+       end do method_loop_top
     end if
 
-
     return
-  end subroutine get_top_bot_basis
+  end subroutine get_lw_up_basis
 !###############################################################################
 
 
 !###############################################################################
-  function get_fit_shifts(lat,bas,bond,axis,intf_loc,depth,nstore,itmp1,itmp2) &
-       result(best_shifts)
+  function get_fit_shifts( &
+       bas, bond, axis, intf_loc, depth, nstore, num_steps, num_c_shifts &
+  ) result(best_shifts)
     !! Function that figures out the best shift for the planes given the ...
     !! ... required minimum bulk bond length.
-    real(real32) :: depth,bond
-    ! the depth into the material we are interested (physical size in the c direction).
-    integer :: i
-    type(basis_type) :: bas_bot,bas_top
+    implicit none
 
+    ! Arguments
+    type(basis_type), intent(in) :: bas
+    !! The full basis of the system.
+    real(real32), intent(in) :: bond, depth
+    !! Minimum bulk bond length and depth into the material
+    integer, intent(in) :: axis, nstore
+    !! The axis normal to the interface and the number of best shifts to return.
+    real(real32), dimension(:), intent(in) :: intf_loc
+    !! The location of the interface in fractional coordinates along the axis normal to the interface
+    integer, optional :: num_steps, num_c_shifts
+    !! Optional integers to specify the number of steps to use in the in-plane shift grid and the number of c-axis shifts to use in the search.
+
+    ! Local variables
+    integer :: i
+    integer :: num_steps_,num_c_shifts_
+    type(basis_type) :: bas_lw, bas_up
     real(real32) :: depth_bascoord
-    real(real32), dimension(:) :: intf_loc
+    real(real32), allocatable, dimension(:,:) :: best_shifts
     real(real32), allocatable, dimension(:,:) :: min_atom_sep
     real(real32), allocatable, dimension(:,:,:) :: avg_min_atom_sep
 
-    integer :: axis
-    integer :: num_steps,num_c_shifts
-    !number of pieces to divide the unit cell into in a and b direction.
-    real(real32), allocatable, dimension(:,:) :: best_shifts
-    integer :: nstore ! The required output number of the best shifts.
 
-    integer, optional :: itmp1,itmp2
-    type(basis_type) :: bas !The basis input by interfaces.f90
-    real(real32), dimension(3,3) :: lat !The lattice input by interfaces.f90
-
-
-    num_steps = 100
-    num_c_shifts = 10
-    if(present(itmp1)) num_steps=itmp1
-    if(present(itmp2)) num_c_shifts=itmp1
-    allocate(min_atom_sep(num_steps,num_steps))
+    num_steps_ = 100
+    num_c_shifts_ = 10
+    if(present(num_steps)) num_steps_=num_steps
+    if(present(num_c_shifts)) num_c_shifts_=num_c_shifts
+    allocate(min_atom_sep(num_steps_,num_steps_))
     allocate(best_shifts(nstore,4))
 
 
     if(depth.eq.0._real32)then
-       call get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc)
+       call get_lw_up_basis(bas,bas_lw,bas_up,axis,intf_loc)
     else
-       call get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc,depth)
+       call get_lw_up_basis(bas,bas_lw,bas_up,axis,intf_loc,depth)
     end if
 
     !---------------------------------------------------------------------------
     ! Loop through in-plane shift grid and evaluate average min separation
     !---------------------------------------------------------------------------
-    allocate(avg_min_atom_sep(num_steps,num_steps,num_c_shifts))
+    allocate(avg_min_atom_sep(num_steps_,num_steps_,num_c_shifts_))
     avg_min_atom_sep = avgminsep( &
-         lat,bas_top,bas_bot,num_steps,num_c_shifts,depth_bascoord &
+         bas_up,bas_lw,num_steps_,num_c_shifts_,depth_bascoord &
     )
 
     !---------------------------------------------------------------------------
     ! Find the highest-scoring shifts from the grid
     !---------------------------------------------------------------------------
     best_shifts = findbestfits( &
-         bond,avg_min_atom_sep,num_steps,num_c_shifts,nstore,depth_bascoord &
+         bond,avg_min_atom_sep,num_steps_,num_c_shifts_,nstore,depth_bascoord &
     )
     best_shifts(:,axis)=best_shifts(:,axis)
 
 
-    ! do j=1,num_c_shifts !output to text files
+    ! do j=1,num_c_shifts_ !output to text files
     !    unit=100+j
     !    open(unit=unit,file="output1.txt")
-    !    write(unit,'(100(F0.8,2X))') (avg_min_atom_sep(:,i,j),i=1,num_steps)
+    !    write(unit,'(100(F0.8,2X))') (avg_min_atom_sep(:,i,j),i=1,num_steps_)
     !    close(unit)
     ! end do
 
@@ -292,16 +313,23 @@ contains
 
 !###############################################################################
   function findbestfits( &
-       bulkbond,avg_min_sep,num_steps,num_c_shifts,num_best_shifts,depth &
+       bulkbond, avg_min_sep, num_steps, num_c_shifts, num_best_shifts, depth &
   ) result(best_shifts)
     !! Function that finds the best match between the average interface ...
     !! ... minimum bond length and the bulk minimum bond length
     implicit none
-    real(real32), dimension(:,:,:) :: avg_min_sep
-    real(real32) :: bulkbond,current_difference,min_difference,depth
-    integer :: i,ia,ib,ic,num_steps,num_c_shifts,num_best_shifts, &
-         c_shift_low,c_shift_high
+
+    ! Arguments
+    real(real32), intent(in) :: bulkbond, depth
+    real(real32), dimension(:,:,:), intent(inout) :: avg_min_sep
+    integer, intent(in) :: num_steps, num_c_shifts, num_best_shifts
+
+
     real(real32), allocatable, dimension(:,:) :: best_shifts
+
+    ! Local variables
+    real(real32) :: current_difference, min_difference
+    integer :: i, ia, ib, ic, c_shift_low, c_shift_high
     integer, dimension(3) :: placeholder
 
     allocate(best_shifts(num_best_shifts,4))
@@ -353,23 +381,28 @@ contains
 
 
 !###############################################################################
-  function avgminsep(lat,plane_up,plane_dw,num_steps,num_c_shifts,depth) &
+  function avgminsep(plane_up, plane_lw, num_steps, num_c_shifts, depth) &
        result(avg_min_sep)
     !! Subroutine that finds the average minimum atomic seperation ...
     !! ... between any atoms in the top and bottom planes
     implicit none
-    type(basis_type) :: plane_up,plane_dw,tplane_up,tplane_dw
-    real(real32) :: avg_sep_up,avg_sep_dw,depth
-    integer :: num_steps,num_c_shifts
+
+    ! Arguments
+    type(basis_type), intent(in) :: plane_up,plane_lw
+    integer, intent(in) :: num_steps,num_c_shifts
+    real(real32), intent(in) :: depth
+    
+    ! Local variables
+    type(basis_type) :: plane_up_,plane_lw_
+    real(real32) :: avg_sep_up,avg_sep_dw
     ! number of pieces to divide the unit cell into in a and b direction.
     real(real32), allocatable, dimension(:,:,:) :: avg_min_sep
     integer :: ia,ib,ic,is_up,ia_up,c_shift_low,c_shift_high
-    real(real32), dimension(3,3) :: lat
 
 
     allocate(avg_min_sep(num_steps,num_steps,num_c_shifts))
-    call tplane_up%copy(plane_up)
-    call tplane_dw%copy(plane_dw)
+    call plane_up_%copy(plane_up)
+    call plane_lw_%copy(plane_lw)
     if (mod(num_c_shifts,2) .eq. 0) then
        c_shift_low = -nint(real(num_c_shifts)/2.0)+1
        c_shift_high = nint(real(num_c_shifts)/2.0)
@@ -380,14 +413,14 @@ contains
 
 
     avg_min_sep = huge(0._real32)
-    LOOP4C: do ic=c_shift_low,c_shift_high,1 !Loop through shifts of the top plane in c
-       LOOP4A: do ia=0,num_steps-1 !loop through shifts in a
-          LOOP4B: do ib=0,num_steps-1 !loop through shifts in b
+    LOOP4C: do ic = c_shift_low, c_shift_high, 1 !Loop through shifts of the top plane in c
+       LOOP4A: do ia = 0, num_steps - 1 !loop through shifts in a
+          LOOP4B: do ib = 0, num_steps - 1 !loop through shifts in b
 
-             do is_up=1,plane_up%nspec
-                do ia_up=1,plane_up%spec(is_up)%num
-                   plane_up%spec(is_up)%atom(ia_up,:) = &
-                        plane_up%spec(is_up)%atom(ia_up,:) + &
+             do is_up = 1, plane_up_%nspec
+                do ia_up = 1, plane_up_%spec(is_up)%num
+                   plane_up_%spec(is_up)%atom(ia_up,:) = &
+                        plane_up_%spec(is_up)%atom(ia_up,:) + &
                         (/&
                              (real(ia,real32)/real(num_steps,real32)),&
                              (real(ib,real32)/real(num_steps,real32)),&
@@ -396,8 +429,8 @@ contains
                 end do
              end do
 
-             avg_sep_up = find_avg_min_sep(lat,tplane_up, plane_dw)
-             avg_sep_dw = find_avg_min_sep(lat, plane_dw,tplane_up)
+             avg_sep_up = find_avg_min_sep(plane_up_, plane_lw_)
+             avg_sep_dw = find_avg_min_sep(plane_lw_, plane_up_)
 
              avg_min_sep(ia+1,ib+1,ic-c_shift_low+1) = &
                   (avg_sep_up + avg_sep_dw)/2._real32
@@ -412,14 +445,19 @@ contains
 
 
 !###############################################################################
-  function find_avg_min_sep(lat,plane_1,plane_2) result(avg_min_sep)
+  function find_avg_min_sep(plane_1, plane_2) result(avg_min_sep)
     !! finds average minimum separation between two planes
     implicit none
+
+    ! Arguments
+    type(basis_type), intent(in) :: plane_1,plane_2
+
+    real(real32) :: avg_min_sep
+
+    ! Local variables
     integer :: is_1,ia_1,is_2,ia_2,j
-    real(real32) :: avg_min_sep,min_sep,cur_sep
-    type(basis_type) :: plane_1,plane_2
+    real(real32) :: min_sep,cur_sep
     real(real32), dimension(3) :: dvtmp1
-    real(real32), dimension(3,3) :: lat
 
 
     avg_min_sep=0._real32
@@ -437,9 +475,9 @@ contains
                 do j=1,3
                    dvtmp1(j) = dvtmp1(j) - ceiling( dvtmp1(j) - 0.5_real32 )
                 end do
-                dvtmp1 = dvtmp1(1) * lat(1,:) &
-                     + dvtmp1(2) * lat(2,:) &
-                     + dvtmp1(3) * lat(3,:)
+                dvtmp1 = dvtmp1(1) * plane_1%lat(1,:) &
+                     + dvtmp1(2) * plane_1%lat(2,:) &
+                     + dvtmp1(3) * plane_1%lat(3,:)
 
                 cur_sep = norm2( dvtmp1 )
 
@@ -468,23 +506,30 @@ contains
 
 !###############################################################################
   function get_descriptive_shifts( &
-       lat,bas,bond,axis,intf_loc,depth,nstore,c_scale,lprint &
+       bas, bond, axis, intf_loc, depth, nstore, c_scale, lprint &
   ) result(res_shifts)
     !! Finds best c axis separation, then finds the most descriptive set of ...
     !! ... shifts for that separation (i.e. the ones that fit the best and ...
     !! ... worst to that of the average bulk bond).
     !! Outputs best, then worst, then 2nd best, then 2nd worst, etc.
     implicit none
-    integer :: is
-    integer :: nstore,axis,num_steps
-    real(real32) :: bond,depth,cur_vac,c_shift
-    type(basis_type) :: bas,bas_bot,bas_top
-    real(real32), dimension(3,3) :: lat
-    real(real32), dimension(:) :: intf_loc
-    real(real32), allocatable, dimension(:) :: specval_bot,specval_top
+
+    ! Arguments
+    type(basis_type), intent(in) :: bas
+    real(real32), intent(in) :: bond, depth
+    integer, intent(in) :: axis, nstore
+    real(real32), dimension(:), intent(in) :: intf_loc
+    real(real32), optional, intent(in) :: c_scale
+    logical, optional, intent(in) :: lprint
+
     real(real32), allocatable, dimension(:,:) :: res_shifts
-    real(real32), optional :: c_scale
-    logical, optional :: lprint
+
+    ! Local variables
+    integer :: is
+    integer :: num_steps
+    real(real32) :: cur_vac, c_shift
+    type(basis_type) :: bas_lw, bas_up
+    real(real32), allocatable, dimension(:) :: specval_bot, specval_top
 
 
     num_steps = 50
@@ -493,9 +538,9 @@ contains
 ! separates basis into atoms above and below interface within a depth window
 !-------------------------------------------------------------------------------
     if(depth.eq.0._real32)then
-       call get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc)
+       call get_lw_up_basis(bas,bas_lw,bas_up,axis,intf_loc)
     else
-       call get_top_bot_basis(lat,bas,bas_top,bas_bot,axis,intf_loc,depth=depth)
+       call get_lw_up_basis(bas,bas_lw,bas_up,axis,intf_loc,depth=depth)
     end if
 
 
@@ -507,26 +552,26 @@ contains
     specval_bot=-huge(0._real32)
     specval_top=huge(0._real32)
     do is=1,bas%nspec
-       if(bas_bot%spec(is)%num.ne.0)then
-          specval_bot(is)=maxval(bas_bot%spec(is)%atom(:,axis))
+       if(bas_lw%spec(is)%num.ne.0)then
+          specval_bot(is)=maxval(bas_lw%spec(is)%atom(:,axis))
        end if
-       if(bas_top%spec(is)%num.ne.0)then
-          specval_top(is)=minval(bas_top%spec(is)%atom(:,axis))
+       if(bas_up%spec(is)%num.ne.0)then
+          specval_top(is)=minval(bas_up%spec(is)%atom(:,axis))
        end if
     end do
-    cur_vac=(minval(specval_top)-maxval(specval_bot))*norm2(lat(axis,:))
+    cur_vac=(minval(specval_top)-maxval(specval_bot))*norm2(bas%lat(axis,:))
 
 
 !-------------------------------------------------------------------------------
 ! finds optimal separation for interface (based on average min bulk bond idea)
 !-------------------------------------------------------------------------------
-    do is=1,bas_top%nspec
-       bas_top%spec(is)%atom(:,axis) = &
-            bas_top%spec(is)%atom(:,axis) + (bond - cur_vac)/norm2(lat(axis,:))
+    do is=1,bas_up%nspec
+       bas_up%spec(is)%atom(:,axis) = &
+            bas_up%spec(is)%atom(:,axis) + (bond - cur_vac)/norm2(bas%lat(axis,:))
     end do
-    c_shift = get_c_shift(lat,bas_top,bas_bot,bond,axis,num_steps)
-    do is=1,bas_top%nspec
-       bas_top%spec(is)%atom(:,axis) = bas_top%spec(is)%atom(:,axis) + c_shift
+    c_shift = get_c_shift(bas_up,bas_lw,bond,axis,num_steps)
+    do is=1,bas_up%nspec
+       bas_up%spec(is)%atom(:,axis) = bas_up%spec(is)%atom(:,axis) + c_shift
     end do
 
 
@@ -534,18 +579,18 @@ contains
 ! finds descriptive set of shifts parallel to interface for supplied c shift
 !-------------------------------------------------------------------------------
     !res_shifts(:,3) = c_shift + (bond - cur_vac)/norm2(lat(axis,:))
-    res_shifts(:,3) = c_shift + bond/norm2(lat(axis,:))
+    res_shifts(:,3) = c_shift + bond/norm2(bas%lat(axis,:))
     res_shifts(:,1:2) = &
-         get_descriptive_ab_shifts(lat,bas_top,bas_bot,bond,axis,nstore,num_steps)
+         get_descriptive_ab_shifts(bas_up,bas_lw,bond,axis,nstore,num_steps)
     if(present(c_scale)) res_shifts(:,3) = res_shifts(:,3) * c_scale
 
 
     if(present(lprint))then
        if(lprint)then
-          write(*,'(1X,"Shifts to be applied (Å)")')
+          write(*,'(1X,"Shifts to be applied (Å)")')
           do is=1,nstore
              write(*,*) res_shifts(is,1),res_shifts(is,2), &
-                  res_shifts(is,3)*norm2(lat(axis,:))
+                  res_shifts(is,3)*norm2(bas%lat(axis,:))
           end do
        end if
     end if
@@ -561,16 +606,25 @@ contains
 
 
 !###############################################################################
-  function get_c_shift(lat,plane_up,plane_dw,bond,axis,num_steps) result(c_shift)
+  function get_c_shift(plane_up, plane_lw, bond, axis, num_steps) result(c_shift)
     !! Subroutine that finds the average minimum atomic seperation ...
     !! ... between any atoms in the top and bottom planes
     implicit none
-    integer :: num_steps,count1
-    integer :: ia,ib,is_up,ia_up,axis
-    real(real32) :: avg_sep_up,avg_sep_dw,bond,tol
-    real(real32) :: c_shift,prev_c_shift,new_c_shift
-    real(real32) :: prev_min_bond,min_bond
-    type(basis_type) :: plane_up,plane_dw,tplane_up
+
+    ! Arguments
+    type(basis_type), intent(in) :: plane_up, plane_lw
+    real(real32), intent(in) :: bond
+    integer, intent(in) :: axis, num_steps
+
+    real(real32) :: c_shift
+
+    ! Local variables
+    integer :: count1
+    integer :: ia, ib, is_up, ia_up
+    real(real32) :: avg_sep_up, avg_sep_dw,tol
+    real(real32) :: prev_c_shift, new_c_shift
+    real(real32) :: prev_min_bond, min_bond
+    type(basis_type) :: plane_up_
     real(real32), allocatable, dimension(:,:) :: avg_min_sep
     real(real32), dimension(3,3) :: lat
 
@@ -578,8 +632,9 @@ contains
 !-------------------------------------------------------------------------------
 ! Clone upper basis for editing
 !-------------------------------------------------------------------------------
-    call tplane_up%copy(plane_up)
+    call plane_up_%copy(plane_up)
     allocate(avg_min_sep(num_steps,num_steps))
+    lat = plane_up%lat
 
 
 !-------------------------------------------------------------------------------
@@ -604,7 +659,7 @@ contains
 
              do is_up=1,plane_up%nspec
                 do ia_up=1,plane_up%spec(is_up)%num
-                   tplane_up%spec(is_up)%atom(ia_up,:) = &
+                   plane_up_%spec(is_up)%atom(ia_up,:) = &
                         plane_up%spec(is_up)%atom(ia_up,:) + (/&
                              (real(ia,real32)/real(num_steps,real32)),&
                              (real(ib,real32)/real(num_steps,real32)),&
@@ -613,8 +668,8 @@ contains
                 end do
              end do
 
-             avg_sep_up = find_avg_min_sep(lat,tplane_up, plane_dw)
-             avg_sep_dw = find_avg_min_sep(lat, plane_dw,tplane_up)
+             avg_sep_up = find_avg_min_sep(plane_up_, plane_lw)
+             avg_sep_dw = find_avg_min_sep(plane_lw, plane_up_)
              avg_min_sep(ia+1,ib+1) = (avg_sep_up + avg_sep_dw)/2._real32
 
           end do LOOP5B
@@ -642,7 +697,7 @@ contains
                   ( prev_min_bond - min_bond )
           end if
        else
-          new_c_shift = 0.5_real32/norm2(lat(axis,:))
+          new_c_shift = 0.5_real32/norm2(plane_up%lat(axis,:))
        end if
        !!-----------------------------------------------------------------------
        !! Breaks afer 50 failed steps
@@ -669,22 +724,30 @@ contains
 
 !###############################################################################
   function get_descriptive_ab_shifts( &
-       lat,plane_up,plane_dw,bond,axis,nstore,num_steps &
+       plane_up, plane_lw, bond, axis, nstore, num_steps &
   ) result(ab_shifts)
     !! Subroutine that finds the average minimum atomic seperation ...
     !! ... between any atoms in the top and bottom planes
     implicit none
-    integer :: nstore,num_steps,count1
-    integer :: ia,ib,is_up,ia_up,axis,iden,inum
-    real(real32) :: avg_sep_up,avg_sep_dw,bond
-    real(real32) :: min_sep,max_sep
-    type(basis_type) :: plane_up,plane_dw,tplane_up,tplane_dw
-    real(real32), allocatable, dimension(:,:) :: ab_shifts,avg_min_sep
-    real(real32), dimension(3,3) :: lat
+
+    ! Arguments
+    type(basis_type), intent(in) :: plane_up, plane_lw
+    real(real32), intent(in) :: bond
+    integer, intent(in) :: axis, nstore, num_steps
+
+    real(real32), allocatable, dimension(:,:) :: ab_shifts
+
+    ! Local variables
+    integer :: count1
+    integer :: ia, ib, is_up, ia_up, iden, inum
+    real(real32) :: avg_sep_up, avg_sep_dw
+    real(real32) :: min_sep, max_sep
+    type(basis_type) :: plane_up_, plane_lw_
+    real(real32), allocatable, dimension(:,:) :: avg_min_sep
 
 
-    call tplane_up%copy(plane_up)
-    call tplane_dw%copy(plane_dw)
+    call plane_up_%copy(plane_up)
+    call plane_lw_%copy(plane_lw)
     allocate(avg_min_sep(num_steps,num_steps))
     allocate(ab_shifts(nstore,2))
 
@@ -696,7 +759,7 @@ contains
 
           do is_up=1,plane_up%nspec
              do ia_up=1,plane_up%spec(is_up)%num
-                tplane_up%spec(is_up)%atom(ia_up,:) = &
+                plane_up_%spec(is_up)%atom(ia_up,:) = &
                      plane_up%spec(is_up)%atom(ia_up,:) + (/ &
                           (real(ia,real32)/real(num_steps,real32)),&
                           (real(ib,real32)/real(num_steps,real32)),&
@@ -705,8 +768,8 @@ contains
              end do
           end do
 
-          avg_sep_up = find_avg_min_sep(lat,tplane_up, plane_dw)
-          avg_sep_dw = find_avg_min_sep(lat, plane_dw,tplane_up)
+          avg_sep_up = find_avg_min_sep(plane_up_, plane_lw)
+          avg_sep_dw = find_avg_min_sep(plane_lw, plane_up_)
 
 
           avg_min_sep(ia+1,ib+1) = (avg_sep_up + avg_sep_dw)/2._real32
@@ -774,6 +837,8 @@ contains
     use artemis__interface_identifier, only: gen_single_DON,nstep_default, &
          den_of_neigh_type
     implicit none
+
+    ! Arguments
     type(basis_type), intent(in) :: bas
     !! Interface structure
     integer, intent(in) :: axis
@@ -797,7 +862,9 @@ contains
     real(real32), intent(in), optional :: max_bondlength
     !! Cutoff bondlength to consider first neighbours
 
+    real(real32), allocatable, dimension(:,:) :: res_shifts
 
+    ! Local variables
     integer :: i,j,k,l,is,ia,ja,jb,jc,count1,itmp1
     integer :: iab,iatom,nneigh,ncheck,nsearch_ab
     integer :: verbose_
@@ -818,7 +885,7 @@ contains
     type(den_of_neigh_type), allocatable, dimension(:,:) :: DON_missing
     integer, allocatable, dimension(:,:) :: ab_search
     integer, allocatable, dimension(:,:) :: shift_store
-    real(real32), allocatable, dimension(:,:) :: res_shifts,regions
+    real(real32), allocatable, dimension(:,:) :: regions
 
 
 
@@ -938,7 +1005,7 @@ contains
 
        count1 = 0
        DON_missing(i,:) = &
-            gen_DON(bas%lat,splitbas(i),dist_max,scale_dist=.false.,norm=.true.)
+            gen_DON(splitbas(i),dist_max,scale_dist=.false.,norm=.true.)
        !!-----------------------------------------------------------------------
        !! Loops through the basis and finds the missing bonds of surface atoms.
        !! Does this by minusing the DON of the wyckoff atom of the surface ...
@@ -1374,14 +1441,18 @@ contains
 
 
 !###############################################################################
-  subroutine sort_shifts(fits,shifts)
+  subroutine sort_shifts(fits, shifts)
     !! sorts shifts by fit values
     implicit none
-    integer :: i,loc,num
+
+    ! Arguments
+    real(real32), dimension(:), intent(inout) :: fits
+    integer, dimension(:,:), intent(inout) :: shifts
+
+    ! Local variables
+    integer :: i, loc, num
     real(real32) :: dbuff
     integer, dimension(3) :: ivtmp1
-    integer, dimension(:,:), intent(inout) :: shifts
-    real(real32), dimension(:), intent(inout) :: fits
 
 
     num = size(fits,dim=1)

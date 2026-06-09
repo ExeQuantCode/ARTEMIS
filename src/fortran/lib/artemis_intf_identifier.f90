@@ -72,14 +72,14 @@ contains
     intf%axis = 0
     if(present(axis)) intf%axis = axis
     if(intf%axis.eq.0)then
-       DOS = gen_DOS(basis%lat, basis, dist_max)
+       DOS = gen_DOS(basis, dist_max)
        nstep = size(DOS(1)%atom(1,1,:))
-       intf%axis = get_intf_axis_DOS(DOS, basis%lat, basis, dist_max)
+       intf%axis = get_intf_axis_DOS(DOS, basis, dist_max)
     else
        nstep = nstep_default
     end if
 
-    intf%loc=get_intf_CAD(basis%lat, basis, intf%axis, nstep)
+    intf%loc=get_intf_CAD(basis, intf%axis, nstep)
 
     if(intf%loc(1).gt.intf%loc(2)) call swap(intf%loc(1),intf%loc(2))
 
@@ -88,7 +88,7 @@ contains
 
 
 !###############################################################################
-  function gen_DOS(lat,bas,dist_max,scale_dist,norm) result(DOS)
+  function gen_DOS(bas,dist_max,scale_dist,norm) result(DOS)
     !! Generate species-dependent density of neighbours (DOS).
     implicit none
 
@@ -99,8 +99,6 @@ contains
     !! Whether to scale by distance and whether to normalise.
     type(basis_type), intent(in) :: bas
     !! Input basis type containing atomic positions.
-    real(real32), dimension(3,3), intent(in) :: lat
-    !! Lattice vectors.
 
     ! Local variables
     integer :: i,j,k,is,ia,js,ja,count1
@@ -183,29 +181,29 @@ contains
 
     ncell = 0
     ncell_loop1: do i=1,3
-       rtmp1 = norm2(lat(i,:))
-       ncell(i) = max(ncell(i),ceiling(rdist_max/norm2(lat(i,:))))
-       !maxval(ceiling( rdist_max/abs(lat(i,:)) ))
+       rtmp1 = norm2(bas%lat(i,:))
+       ncell(i) = max(ncell(i),ceiling(rdist_max/norm2(bas%lat(i,:))))
+       !maxval(ceiling( rdist_max/abs(bas%lat(i,:)) ))
        do j=1,3
           if(i.eq.j) cycle
-          rtmp2 = dot_product(lat(i,:),lat(j,:))
+          rtmp2 = dot_product(bas%lat(i,:),bas%lat(j,:))
           if(sign(1._real32,rtmp1).eq.sign(1._real32,rtmp2)) cycle
-          !vrtmp1 = uvec(lat(i,:)) * dot_product(uvec(lat(i,:)),lat(j,:))
-          !vrtmp1 = uvec(lat(i,:)) * lat(j,:)
+          !vrtmp1 = uvec(bas%lat(i,:)) * dot_product(uvec(bas%lat(i,:)),bas%lat(j,:))
+          !vrtmp1 = uvec(bas%lat(i,:)) * bas%lat(j,:)
           vrtmp1 = &
                merge( &
-                    lat(j,:), (/0._real32, 0._real32, 0._real32/), &
-                    mask = abs(lat(i,:)).gt.1.E-5_real32 &
+                    bas%lat(j,:), (/0._real32, 0._real32, 0._real32/), &
+                    mask = abs(bas%lat(i,:)).gt.1.E-5_real32 &
                )
           rtmp1 = norm2(vrtmp1)
           if(abs(rtmp1).lt.1.E-5_real32) cycle
           k = 0
-          vrtmp2 = lat(i,:)
+          vrtmp2 = bas%lat(i,:)
           rtmp2 = norm2(vrtmp2)
           do while ( rtmp2 .le. rtmp1)
              k = k + 1
              rtmp1 = rtmp2
-             vrtmp2 = lat(i,:) + real(k,real32)*vrtmp1
+             vrtmp2 = bas%lat(i,:) + real(k,real32)*vrtmp1
              rtmp2 = norm2(vrtmp2)
           end do
           if(abs(rtmp1).lt.1.E-5_real32) cycle
@@ -214,10 +212,10 @@ contains
        end do
     end do ncell_loop1
     !iloop1: do i=1,3
-    !   ncell(i) = ceiling( rdist_max/norm2(lat(i,:)) )
+    !   ncell(i) = ceiling( rdist_max/norm2(bas%lat(i,:)) )
     !   jloop1: do j=i+1,3
     !      if(i.eq.j) cycle
-    !      itmp1 = ceiling(rdist_max/dot_product(lat(i,:),lat(j,:)))
+    !      itmp1 = ceiling(rdist_max/dot_product(bas%lat(i,:),bas%lat(j,:)))
     !      if(ncell(i).lt.itmp1) ncell(i) = itmp1
     !      if(ncell(j).lt.itmp1) ncell(j) = itmp1
     !   end do jloop1
@@ -255,7 +253,7 @@ contains
                          !   stop
                          !end if
                          vtmp2(3) = vtmp1(3) + real(k,real32)
-                         vtmp3 = matmul(vtmp2,lat)
+                         vtmp3 = matmul(vtmp2,bas%lat)
                          dist_list(count1) = norm2(vtmp3)
 
 
@@ -288,7 +286,7 @@ contains
 
 
 !###############################################################################
-  function gen_DON(lat,bas,dist_max,scale_dist,norm) result(DON)
+  function gen_DON(bas,dist_max,scale_dist,norm) result(DON)
     !! Generate density of neighbours (DON) by summing DOS over all species.
     implicit none
 
@@ -299,8 +297,6 @@ contains
     !! Whether to scale by distance and whether to normalise.
     type(basis_type), intent(in) :: bas
     !! Input basis type containing atomic positions.
-    real(real32), dimension(3,3), intent(in) :: lat
-    !! Lattice vectors.
 
     ! Local variables
     integer :: i,is,ia,nstep
@@ -325,9 +321,9 @@ contains
     end if
 
     if(present(dist_max))then
-       DOS=gen_DOS(lat,bas,dist_max,scale_dist=lscale_dist,norm=lnorm)
+       DOS=gen_DOS(bas,dist_max,scale_dist=lscale_dist,norm=lnorm)
     else
-       DOS=gen_DOS(lat,bas,scale_dist=lscale_dist,norm=lnorm)
+       DOS=gen_DOS(bas,scale_dist=lscale_dist,norm=lnorm)
     end if
     nstep=size(DOS(1)%atom(1,1,:))
     allocate(DON(bas%nspec))
@@ -520,7 +516,7 @@ contains
 
 
 !###############################################################################
-  function get_intf_axis_DOS(DOS,lat,bas,dist_max,cutoff,lprint) result(axis)
+  function get_intf_axis_DOS(DOS,bas,dist_max,cutoff,lprint) result(axis)
     !! Determine the axis perpendicular to the interface using the DOS method.
     implicit none
 
@@ -531,8 +527,6 @@ contains
     !! Whether to print progress information.
     type(basis_type) :: bas
     !! Input basis type containing atomic positions.
-    real(real32), dimension(3,3) :: lat
-    !! Lattice vectors.
     type(den_of_spec_type), allocatable, dimension(:) :: DOS
     !! Species-dependent density of neighbours.
 
@@ -602,7 +596,7 @@ contains
                       vtmp2(2) = vtmp1(2) + real(m,real32)
                       nloop3: do n=-1,1,1
                          vtmp2(3) = vtmp1(3) + real(n,real32)
-                         vtmp3 = matmul(vtmp2,lat)
+                         vtmp3 = matmul(vtmp2,bas%lat)
                          !rtmp1=table_func(vtmp3(i),0.8_real32)
                          !rtmp1=exp(-abs(vtmp3(i))*power)
                          rtmp1=exp(-norm2(vtmp3)*power)
@@ -622,7 +616,7 @@ contains
              !!-----------------------------------------------------------------
              !! saves similarity up to the cutoff for each atom and its location
              !!-----------------------------------------------------------------
-             intf_func(i,is)%atom(ia,1)=bas%spec(is)%atom(ia,i)*norm2(lat(i,:))
+             intf_func(i,is)%atom(ia,1)=bas%spec(is)%atom(ia,i)*norm2(bas%lat(i,:))
              intf_func(i,is)%atom(ia,2)=sum(sim_dist(:cutloc))!/bas%spec(is)%num!/itmp1
 
 
@@ -668,15 +662,13 @@ contains
 
 
 !###############################################################################
-  function get_intf_axis_CAD(lat,bas) result(axis)
+  function get_intf_axis_CAD(bas) result(axis)
     !! Determine the axis perpendicular to the interface using the CAD method.
     implicit none
 
     ! Arguments
     type(basis_type), intent(in) :: bas
     !! Input basis type containing atomic positions.
-    real(real32), dimension(3,3), intent(in) :: lat
-    !! Lattice vectors.
 
     ! Local variables
     integer :: i,j,is,iaxis
@@ -723,10 +715,10 @@ contains
 !-------------------------------------------------------------------------------
     do iaxis=1,3
        do i=1,nstep
-          dist(i)=(i-1)*norm2(lat(iaxis,:))/nstep
+          dist(i)=(i-1)*norm2(bas%lat(iaxis,:))/nstep
        end do
        abc = cshift(abc,1,1)
-       area = get_area(lat(abc(1),:),lat(abc(2),:))
+       area = get_area(bas%lat(abc(1),:),bas%lat(abc(2),:))
        CAD=0._real32
        CADD=0._real32
        !!--------------------------------------------------------------------------
@@ -739,7 +731,7 @@ contains
           do j=-1,1,1
              CAD(is,:) = CAD(is,:) + gauss_array(&
                   dist(:),&
-                  (bas%spec(is)%atom(:,iaxis)+real(j,real32))*norm2(lat(iaxis,:)),&
+                  (bas%spec(is)%atom(:,iaxis)+real(j,real32))*norm2(bas%lat(iaxis,:)),&
                   sigma,gauss_tol,.false.)
           end do
           !!-----------------------------------------------------------------------
@@ -755,7 +747,7 @@ contains
              pntl=i-1
              pntr=i+1
              do j=-1,1,1
-                vtmp1(j+2)=real(i+j-1,real32)*norm2(lat(iaxis,:))/nstep
+                vtmp1(j+2)=real(i+j-1,real32)*norm2(bas%lat(iaxis,:))/nstep
              end do
              vtmp2=0._real32
              vtmp2(2)=CAD(is,i)
@@ -805,7 +797,7 @@ contains
 
 
 !###############################################################################
-  function get_intf_CAD(lat,bas,axis,num_step,lprint) result(intf_loc)
+  function get_intf_CAD(bas,axis,num_step,lprint) result(intf_loc)
     !! Find interface location using the cumulative atomic density (CAD) method.
     implicit none
 
@@ -816,8 +808,6 @@ contains
     !! Number of steps for density calculation.
     type(basis_type) :: bas
     !! Input basis type containing atomic positions.
-    real(real32), dimension(3,3) :: lat
-    !! Lattice vectors.
     logical, optional :: lprint
     !! Whether to print debug output.
 
@@ -854,7 +844,7 @@ contains
     allocate(dist(nstep))
     dist=0._real32
     do i=1,nstep
-       dist(i)=(i-1)*norm2(lat(axis,:))/nstep
+       dist(i)=(i-1)*norm2(bas%lat(axis,:))/nstep
     end do
 
     sigma=2._real32
@@ -877,7 +867,7 @@ contains
        do j=-1,1,1
           CAD(is,:) = CAD(is,:) + gauss_array(&
                dist(:),&
-               (bas%spec(is)%atom(:,axis)+real(j,real32))*norm2(lat(axis,:)),&
+               (bas%spec(is)%atom(:,axis)+real(j,real32))*norm2(bas%lat(axis,:)),&
                sigma,gauss_tol,.false.)
        end do
        !!-----------------------------------------------------------------------
@@ -893,7 +883,7 @@ contains
           pntl=i-1
           pntr=i+1
           do j=-1,1,1
-             vtmp1(j+2)=real(i+j-1,real32)*norm2(lat(axis,:))/nstep
+             vtmp1(j+2)=real(i+j-1,real32)*norm2(bas%lat(axis,:))/nstep
           end do
           vtmp2=0._real32
           vtmp2(2)=CAD(is,i)
@@ -962,8 +952,8 @@ contains
     do i = size(ivec1) - 1, 1, -1
        diff = abs(intf_loc(1)-dist(ivec1(i)))
        ! map back into the original space if greater than the size of the cell
-       if(abs(diff).gt.0.5*norm2(lat(axis,:)))then
-          diff = diff - sign(1._real32,diff) * norm2(lat(axis,:))
+       if(abs(diff).gt.0.5*norm2(bas%lat(axis,:)))then
+          diff = diff - sign(1._real32,diff) * norm2(bas%lat(axis,:))
        end if
        if(abs(diff).gt.2._real32)then
           intf_loc(2)=dist(ivec1(i))
@@ -977,15 +967,13 @@ contains
 
 
 !###############################################################################
-  function get_layered_axis(lat,bas,lprint) result(axis)
+  function get_layered_axis(bas,lprint) result(axis)
     !! Determine whether a structure is layered and return the layered axis.
     implicit none
 
     ! Arguments
     type(basis_type), intent(in) :: bas
     !! Input basis type containing atomic positions.
-    real(real32), dimension(3,3), intent(in) :: lat
-    !! Lattice vectors.
     logical, optional, intent(in) :: lprint
     !! Whether to print progress information.
 
@@ -1023,11 +1011,11 @@ contains
 !-------------------------------------------------------------------------------
     axis_loop1: do i=1,3
        if(allocated(dist)) deallocate(dist)
-       nstep=nint(norm2(lat(i,:))/0.001_real32)
+       nstep=nint(norm2(bas%lat(i,:))/0.001_real32)
        allocate(dist(nstep))
        dist=0._real32
        do j=1,nstep
-          dist(j)=(j-1)*norm2(lat(i,:))/nstep
+          dist(j)=(j-1)*norm2(bas%lat(i,:))/nstep
        end do
 
        if(allocated(AD)) deallocate(AD)
@@ -1037,7 +1025,7 @@ contains
           do j=-1,1,1
              AD(:) = AD(:) + gauss_array(&
                   dist(:),&
-                  (bas%spec(is)%atom(:,i)+real(j,real32))*norm2(lat(i,:)),&
+                  (bas%spec(is)%atom(:,i)+real(j,real32))*norm2(bas%lat(i,:)),&
                   sigma,gauss_tol,.false.)
           end do
        end do
@@ -1131,15 +1119,13 @@ contains
 
 
 !###############################################################################
-  function gen_single_DOS(lat,bas,ispec,iatom,dist_max,weight_dist) result(DOS)
+  function gen_single_DOS(bas,ispec,iatom,dist_max,weight_dist) result(DOS)
     !! Generate species-dependent density of neighbours for a single atom.
     implicit none
 
     ! Arguments
     integer, intent(in) :: ispec,iatom
     !! Species and atom indices.
-    real(real32), dimension(3,3), intent(in) :: lat
-    !! Lattice vectors.
     real(real32), optional, intent(in) :: dist_max
     !! Maximum interatomic distance.
     logical, optional, intent(in) :: weight_dist
@@ -1200,7 +1186,7 @@ contains
                       end if
                    end if
                    vtmp2(3) = vtmp1(3) + real(k,real32)
-                   vtmp3 = matmul(vtmp2,lat)
+                   vtmp3 = matmul(vtmp2,bas%lat)
                    rtmp1=norm2(vtmp3)
                    if(rtmp1.gt.dist_cutoff) cycle kloop1
                    count1=count1+1
@@ -1237,7 +1223,7 @@ contains
 
 
 !###############################################################################
-  function gen_single_DON(lat,bas,ispec,iatom,dist_max) result(DON)
+  function gen_single_DON(bas,ispec,iatom,dist_max) result(DON)
     !! Generate density of neighbours for a single atom.
     implicit none
 
@@ -1252,8 +1238,6 @@ contains
     !! Loop index and number of steps.
     type(basis_type) :: bas
     !! Input basis type containing atomic positions.
-    real(real32), dimension(3,3) :: lat
-    !! Lattice vectors.
     real(real32), allocatable, dimension(:) :: DON
     !! Density of neighbours result.
     real(real32), allocatable, dimension(:,:) :: DOS
@@ -1261,9 +1245,9 @@ contains
 
 
     if(present(dist_max))then
-       DOS=gen_single_DOS(lat,bas,ispec,iatom,dist_max)
+       DOS=gen_single_DOS(bas,ispec,iatom,dist_max)
     else
-       DOS=gen_single_DOS(lat,bas,ispec,iatom)
+       DOS=gen_single_DOS(bas,ispec,iatom)
     end if
 
     nstep=size(DOS(1,:))

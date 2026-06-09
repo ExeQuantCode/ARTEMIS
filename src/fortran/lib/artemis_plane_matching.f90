@@ -289,7 +289,7 @@ contains
 
 !###############################################################################
 ! Checks whether vec1 is a unique vector after symmetry transformation
-! This is used to check that the following match is caught if lat2's a=b
+! This is used to check that the following match is caught if a=b for lat2
 ! lat1:
 !   1 0
 !   0 1

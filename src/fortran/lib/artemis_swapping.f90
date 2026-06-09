@@ -25,7 +25,7 @@ module artemis__swapping
 
 contains
 !###############################################################################
-  function rand_swapper(lat,bas,axis,width,nswaps_per_cell,nswap,intf_loc,&
+  function rand_swapper(bas,axis,width,nswaps_per_cell,nswap,intf_loc,&
     !! Main function to be called from ARTEMIS
        iswap,seed_arr,tol_sym, verbose, sigma,require_mirror) result(bas_arr)
     implicit none
@@ -54,7 +54,6 @@ contains
     integer, dimension(:), intent(in) :: seed_arr
     real(real32), dimension(2), intent(in) :: intf_loc !USE 1
     type(basis_type), allocatable, dimension(:) :: bas_arr
-    real(real32), dimension(3,3), intent(in) :: lat
     real(real32), intent(in) :: tol_sym
     integer, intent(in) :: verbose
 
@@ -73,8 +72,8 @@ contains
     else
        udef_sigma = 0.05
     end if
-    udef_sigma = udef_sigma/norm2(lat(axis,:))
-    small_sigma = 0.01/norm2(lat(axis,:))
+    udef_sigma = udef_sigma/norm2(bas%lat(axis,:))
+    small_sigma = 0.01/norm2(bas%lat(axis,:))
     call random_seed(put=seed_arr)
 
 
@@ -98,7 +97,7 @@ contains
 !-------------------------------------------------------------------------------
 ! find number of atoms within range of interface
 !-------------------------------------------------------------------------------
-    dist=width/norm2(lat(axis,:))
+    dist=width/norm2(bas%lat(axis,:))
 
 
 !-------------------------------------------------------------------------------
@@ -120,7 +119,7 @@ contains
 !-------------------------------------------------------------------------------
 ! set up symmetries
 !-------------------------------------------------------------------------------
-    call grp%init(lat, tol_sym = tol_sym)
+    call grp%init(bas%lat, tol_sym = tol_sym)
     call tmpbas%copy(bas, length = 4)
     call store_bas%copy(tmpbas, length = 4)
 
@@ -181,7 +180,7 @@ contains
     end if
 
 10  deallocate(grp%sym)
-    call grp%init(lat,new_start=.true., tol_sym = tol_sym)
+    call grp%init(bas%lat,new_start=.true., tol_sym = tol_sym)
     call check_sym(grp,tmpbas, tol_sym=tol_sym)!,lsave=.true.)
     
     
@@ -191,9 +190,9 @@ contains
 !-------------------------------------------------------------------------------
     select case(iswap)
     case(1)
-       call check_intf(lat,bas,dintf,dist,lw_list,up_list,nbelow,nabove,bas_list,pos_list,axis) 
+       call check_intf(bas,dintf,dist,lw_list,up_list,nbelow,nabove,bas_list,pos_list,axis) 
     case(2)
-       call check_intf_depth(lat,bas,axis,intf_loc,udef_sigma,&
+       call check_intf_depth(bas,axis,intf_loc,udef_sigma,&
             spec_list,&
             lw_list,up_list,&
             lw_dist_list,up_dist_list,&
@@ -280,14 +279,13 @@ end function rand_swapper
 
 
 !###############################################################################
-  subroutine check_intf(lat,bas,dintf,width,lw_list,up_list,nbelow,nabove,bas_list,pos_list,axis)
+  subroutine check_intf(bas,dintf,width,lw_list,up_list,nbelow,nabove,bas_list,pos_list,axis)
     !! finds number of atoms below and above the interface and records them
     implicit none
     integer :: i,itmp1,itmp2
     integer :: nbelow,nabove,axis
     real(real32) :: dintf,width
     type(basis_type) :: bas
-    real(real32), dimension(3,3) :: lat
     real(real32), dimension(:,:) :: bas_list
     integer, allocatable, dimension(:,:) :: lw_list,up_list,pos_list
 
@@ -295,7 +293,7 @@ end function rand_swapper
     nbelow=count(dintf-bas_list(:,axis).le.width.and.dintf-bas_list(:,axis).ge.0)
     nabove=count(bas_list(:,axis)-dintf.le.width.and.bas_list(:,axis)-dintf.gt.0)
     if(min(nabove,nbelow).eq.0)then
-       write(*,'(1X,"No atoms found within ",F0.2," Å of the interface.")') width*norm2(lat(axis,:))
+       write(*,'(1X,"No atoms found within ",F0.2," Å of the interface.")') width*norm2(bas%lat(axis,:))
        write(*,'(1X,"Exiting code...")')
        call exit()
     end if
@@ -417,7 +415,7 @@ end function rand_swapper
 
 
 !###############################################################################
-  subroutine check_intf_depth(lat,bas,axis,intf_loc,sigma,&
+  subroutine check_intf_depth(bas,axis,intf_loc,sigma,&
     !! 
        spec_list,&
        lw_list,up_list,&
@@ -436,7 +434,6 @@ end function rand_swapper
     real(real32), intent(in) :: sigma
     type(basis_type), intent(in) :: bas
     real(real32), dimension(2), intent(in) :: intf_loc
-    real(real32), dimension(3,3), intent(in) :: lat
 
     integer, allocatable, dimension(:), intent(out) :: spec_list
     integer, allocatable, dimension(:), intent(out) :: lw_close_list,up_close_list
@@ -448,7 +445,7 @@ end function rand_swapper
 !-------------------------------------------------------------------------------
 ! Initialise tolerances and set up midpoints
 !-------------------------------------------------------------------------------
-    rtol = 0.1/norm2(lat(axis,:))
+    rtol = 0.1/norm2(bas%lat(axis,:))
 
     midpoint(1) = (intf_loc(1) + intf_loc(2))/2
     midpoint(2) = (1._real32 + intf_loc(1) + intf_loc(2))/2

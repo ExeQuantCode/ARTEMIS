@@ -1631,7 +1631,7 @@ contains
     allocate(up_map(structure_up%nspec,maxval(structure_up%spec(:)%num,dim=1),2))    
     if(this%shift_method.eq.4.or.this%shift_method.eq.0)then
        lw_map=0
-       bulk_DON(1)%spec=gen_DON(structure_lw%lat,structure_lw,&
+       bulk_DON(1)%spec=gen_DON(structure_lw,&
             dist_max=this%bondlength_cutoff,&
             scale_dist=.false.,&
             norm=.true. &
@@ -1666,7 +1666,7 @@ contains
           end if
        end do
        up_map=0
-       bulk_DON(2)%spec=gen_DON(structure_up%lat,structure_up,&
+       bulk_DON(2)%spec=gen_DON(structure_up,&
             dist_max=this%bondlength_cutoff,&
             scale_dist=.false.,&
             norm=.true.)
@@ -1708,7 +1708,7 @@ contains
     !---------------------------------------------------------------------------
     ! Check whether system appears layered
     !---------------------------------------------------------------------------
-    layered_axis_lw = get_layered_axis( structure_lw%lat, structure_lw )
+    layered_axis_lw = get_layered_axis( structure_lw )
     if(.not.this%is_layered_lw.and.layered_axis_lw.gt.0)then
        ivtmp1 = 0
        ivtmp1(layered_axis_lw)=1
@@ -1730,7 +1730,7 @@ contains
        miller_lw(layered_axis_lw)=1
     end if
 
-    layered_axis_up = get_layered_axis( structure_up%lat, structure_up )
+    layered_axis_up = get_layered_axis( structure_up )
     if(.not.this%is_layered_up.and.layered_axis_up.gt.0)then
        ivtmp1=0
        ivtmp1(layered_axis_up)=1
@@ -1847,7 +1847,7 @@ contains
           t1up_map=0 !TEMPORARY TO USE SUPERCELL DONS.
           !DONsupercell_up%lat = matmul(mtmp1,inverse(real(SAV%tf2(ifit,:,:),real32)))
           deallocate(bulk_DON(2)%spec)
-          bulk_DON(2)%spec=gen_DON(supercell_up%lat,supercell_up,&
+          bulk_DON(2)%spec=gen_DON(supercell_up,&
                dist_max=this%bondlength_cutoff,&
                scale_dist=.false.,&
                norm=.true.)
@@ -1936,7 +1936,7 @@ contains
        !!-----------------------------------------------------------------------
        !call setup_ladder(supercell_lw%lat,supercell_lw,this%axis,lw_term)
        if(sum(lw_term%arr(:)%natom)*lw_term%nstep.ne.supercell_lw%natom)then
-          write(err_msg, '("Number of atoms in lower layers not correct: "&
+          write(err_msg, '("Number of atoms in lower layers not correct: ",&
                &I0,2X,I0)') sum(lw_term%arr(:)%natom)*lw_term%nstep,supercell_lw%natom
           call stop_program(trim(err_msg))
           return
@@ -2032,7 +2032,7 @@ contains
        !!-----------------------------------------------------------------------
        !call setup_ladder(supercell_up%lat,supercell_up,this%axis,up_term)
        if(sum(up_term%arr(:)%natom)*up_term%nstep.ne.supercell_up%natom)then
-          write(err_msg, '("Number of atoms in upper layers not correct: "&
+          write(err_msg, '("Number of atoms in upper layers not correct: ",&
                &I0,2X,I0)') sum(up_term%arr(:)%natom)*up_term%nstep,supercell_up%natom
           call stop_program(trim(err_msg))
           return
@@ -2333,7 +2333,7 @@ contains
        end do
     case(2)
        output_shifts = get_fit_shifts(&
-            lat=basis%lat,bas=basis,&
+            bas=basis,&
             bond=bond,&
             axis=this%axis,&
             intf_loc=intf_loc,&
@@ -2341,7 +2341,7 @@ contains
             nstore=this%num_shifts)
     case(3)
        output_shifts = get_descriptive_shifts(&
-            lat=basis%lat,bas=basis,&
+            bas=basis,&
             bond=bond,&
             axis=this%axis,&
             intf_loc=intf_loc,&
@@ -2461,7 +2461,7 @@ contains
        !! Performs swaps within the shifted structures if requested
        !!-----------------------------------------------------------------------
        if_swap: if(this%swap_method.ne.0)then
-          basis_arr = rand_swapper(tbas%lat,tbas,this%axis,this%swap_depth,&
+          basis_arr = rand_swapper(tbas,this%axis,this%swap_depth,&
                nswaps_per_cell,this%num_swaps,intf_loc,this%swap_method,&
                seed_arr, &
                tol_sym = this%tol_sym, &
