@@ -27,7 +27,7 @@ module artemis__terminations
   public :: cut_slab_to_height
 
 
-  type term_type
+  type :: term_type
      !! Structure to hold termination information.
      real(real32) :: hmin
      !! Minimum height of the termination layer.
@@ -36,15 +36,17 @@ module artemis__terminations
      integer :: natom = 0
      !! Number of atoms in the termination layer.
      integer :: nstep = 0
-     !! Number of steps in the termination ladder.
+     !! Number of symmetry-equivalent repetitions of this termination (ladder rungs).
      real(real32), allocatable, dimension(:) :: ladder
      !! Array of ladder step positions.
   end type term_type
 
-  type term_arr_type
+  type :: term_arr_type
      !! Structure to hold arrays of terminations.
-     integer :: nterm = 0, axis, nstep
-     !! Number of terminations, axis index, and number of steps.
+     integer :: nterm = 0, axis
+     !! Number of terminations and axis index.
+     integer :: nstep
+     !! Number of symmetry-equivalent repetitions of the terminations (ladder rungs).
      real(real32) :: tol
      !! Tolerance for layer identification.
      logical :: lmirror=.false.
@@ -53,7 +55,7 @@ module artemis__terminations
      !! Array of termination types.
   end type term_arr_type
 
-  type term_list_type
+  type :: term_list_type
      !! Structure to hold termination index and location.
      integer :: term
      !! Termination index.
@@ -224,7 +226,7 @@ contains
           term_arr(nterm)%hmin = basis_list(itmp1,axis)
           term_arr(nterm)%hmax = basis_list(itmp1,axis)
        end if
-       
+
     end do term_loop1
     term_arr(:nterm)%hmin = term_arr(:nterm)%hmin + height
     term_arr(:nterm)%hmax = term_arr(:nterm)%hmax + height
@@ -310,9 +312,12 @@ contains
        call shifter(basis_arr(mterm),axis,1._real32 - centre,.true.)
        sym_if: if(i.ne.1)then
           sym_loop1: do j = 1, mterm - 1, 1
-             if(abs(abs(term_arr(i)%hmax-term_arr(i)%hmin) - &
-                  abs(term_arr_uniq(j)%hmax-term_arr_uniq(j)%hmin)).gt.tol_sym) &
-                  cycle sym_loop1
+             if( &
+                  abs( &
+                       abs( term_arr(i)%hmax-term_arr(i)%hmin ) - &
+                       abs(term_arr_uniq(j)%hmax-term_arr_uniq(j)%hmin) &
+                  ) .gt. tol_sym &
+             ) cycle sym_loop1
              call grp1%copy(grp_store)
              call check_sym(grp1,basis=basis_arr(mterm),&
                   iperm=-1,tmpbas2=basis_arr(j),lsave=.true.,tol_sym=tol_sym)
@@ -444,7 +449,8 @@ contains
              !! ... through lattice matches.
              !! Solely inversions are unique and must be captured.
              do j = 1, grp1%nsymop, 1
-                if(abs(det(grp1%sym_save(:3,:3,j))-1._real32).le.tol_sym) lunique=.false.
+                if(abs(det(grp1%sym_save(:3,:3,j))-1._real32).le.tol_sym) &
+                     lunique=.false.
              end do
              if(grp1%sym_save(4,axis,1).eq.&
                   2._real32 * min( &
@@ -518,7 +524,7 @@ contains
     ! Not yet certain whether each termination should have same number ...
     ! ... of ladder rungs. That's why this check is here.
     if(all(term%arr(:)%nstep.ne.term%nstep))then
-       write(0,'("ERROR: Number of rungs in terminations no equivalent for &
+       write(0,'("ERROR: Number of rungs in terminations not equivalent for &
             &every termination! Please report this to developers.\n&
             &Exiting...")')
        call exit()
@@ -603,7 +609,7 @@ contains
        if(i.eq.1)then
           rtmp1 = abs(term%arr(i)%hmin - &
                (term%arr(term%nterm)%hmax+term%arr(i)%ladder(term%nstep)-1._real32)&
-               )/4._real32
+          )/4._real32
        else
           rtmp1 = abs(term%arr(i)%hmin-term%arr(i-1)%hmax)/4._real32
        end if
@@ -671,7 +677,7 @@ contains
     !! Success flag for finding the required thickness
     logical :: ludef_surf
     !! Boolean whether surface terminations are user-defined
-    
+
 
     !---------------------------------------------------------------------------
     ! Initialise variables
@@ -712,8 +718,8 @@ contains
           vtmp1 = vtmp1 - ceiling( vtmp1 - 1._real32 )
           itmp1 = minloc( vtmp1(:), dim=1,&
                mask=&
-               vtmp1(:).gt.0.and.&
-               list(:)%term.eq.surf(1))
+                    vtmp1(:).gt.0.and.&
+                    list(:)%term.eq.surf(1))
           height = height + vtmp1(itmp1)
        end do
        vtmp1 = list(:)%loc - height
@@ -722,8 +728,8 @@ contains
        end where
        itmp1 = minloc( vtmp1(:), dim=1,&
             mask=&
-            vtmp1(:).ge.-1.E-5_real32.and.&
-            list(:)%term.eq.surf(2))
+                 vtmp1(:).ge.-1.E-5_real32.and.&
+                 list(:)%term.eq.surf(2))
        height = height + vtmp1(itmp1) - term%arr(term_start)%hmin
 
        ! get thickness of top/surface layer
@@ -735,7 +741,7 @@ contains
        height = height/real(num_cells,real32)
     end if
 
-    
+
     !---------------------------------------------------------------------------
     ! Define termination iteration counter
     !---------------------------------------------------------------------------
@@ -745,7 +751,7 @@ contains
        term_step = 1
     end if
 
-    
+
     !---------------------------------------------------------------------------
     ! Extend slab to user-defined thickness
     !---------------------------------------------------------------------------
@@ -754,11 +760,20 @@ contains
     if(thickness.gt.0._real32)then
        select case(term%axis)
        case(1)
-          slab_thickness = abs( dot_product(uvec(cross([ basis%lat(2,:) ], [ basis%lat(3,:) ])), [ basis%lat(1,:) ]) )
+          slab_thickness = abs( dot_product( &
+               uvec(cross([ basis%lat(2,:) ], [ basis%lat(3,:) ])), &
+               [ basis%lat(1,:) ] &
+          ) )
        case(2)
-          slab_thickness = abs( dot_product(uvec(cross([ basis%lat(1,:) ], [ basis%lat(3,:) ])), [ basis%lat(2,:) ]) )
+          slab_thickness = abs( dot_product( &
+               uvec(cross([ basis%lat(1,:) ], [ basis%lat(3,:) ])), &
+               [ basis%lat(2,:) ] &
+          ) )
        case(3)
-          slab_thickness = abs( dot_product(uvec(cross([ basis%lat(1,:) ], [ basis%lat(2,:) ])), [ basis%lat(3,:) ]) )
+          slab_thickness = abs( dot_product( &
+               uvec(cross([ basis%lat(1,:) ], [ basis%lat(2,:) ])), &
+               [ basis%lat(3,:) ] &
+          ) )
        case default
           write(msg, '("INVALID SURFACE AXIS!")')
           call stop_program(trim(msg))
@@ -774,7 +789,8 @@ contains
           if(largest_sep.lt.0._real32) largest_sep = 1._real32 + largest_sep
           ! check for all terminations that a certain step is sufficiently large to reproduce thickness
           cell_loop1: do icell = 0, ceiling(thickness/slab_thickness), 1
-             layer_thickness = term%arr(surf(2))%hmax - term%arr(surf(1))%hmin - 2.E0 * term%tol
+             layer_thickness = term%arr(surf(2))%hmax - &
+                  term%arr(surf(1))%hmin - 2.E0 * term%tol
              success = .false.
              step_loop1: do istep = 1, term%nstep, 1
                 if(surf(2).lt.surf(1))then
@@ -810,7 +826,7 @@ contains
              num_cells = icell + 1
              exit cell_loop1
           end do cell_loop1
-          
+
        else
           largest_sep = abs( term%arr(1)%hmin - &
                term%arr(1)%ladder(term%nstep) - &
@@ -819,10 +835,14 @@ contains
           ! check for all terminations that a certain step is sufficiently large to reproduce thickness
           cell_loop2: do icell = 0, ceiling(thickness/slab_thickness), 1
              term_loop: do iterm = 1, term%nterm, 1
-                layer_thickness = term%arr(iterm)%hmax - term%arr(iterm)%hmin - 2.E0 * term%tol
+                layer_thickness = term%arr(iterm)%hmax - &
+                     term%arr(iterm)%hmin - 2.E0 * term%tol
                 success = .false.
                 step_loop: do istep = 1, term%nstep, 1
-                   rtmp1 = ( icell + layer_thickness + term%arr(iterm)%ladder(istep) ) * slab_thickness
+                   rtmp1 = ( &
+                        icell + layer_thickness + &
+                        term%arr(iterm)%ladder(istep) &
+                   ) * slab_thickness
                    if(rtmp1.ge.thickness)then
                       success = .true.
                       exit step_loop
@@ -843,7 +863,7 @@ contains
     tfmat(3,3) = num_cells
     call transformer(basis,tfmat,map)
 
-    
+
     !---------------------------------------------------------------------------
     ! Readjust termination plane locations
     ! ... i.e. divide all termination values by the number of cells
@@ -851,7 +871,7 @@ contains
     term%arr(:)%hmin = term%arr(:)%hmin/real(num_cells,real32)
     term%arr(:)%hmax = term%arr(:)%hmax/real(num_cells,real32)
     term%tol = term%tol/real(num_cells,real32)
-    
+
 
   end subroutine build_slab_supercell
 !###############################################################################
@@ -907,7 +927,7 @@ contains
     !! Indices of the bottom and top terminations
     logical :: equivalent_surfaces
     !! Boolean whether the two surfaces are equivalent
-    integer :: j, j_start, istep, icell
+    integer :: i, j, j_start, istep, icell
     !! Loop index and termination step
     integer :: natom_check
     !! Check for number of atoms
@@ -974,16 +994,21 @@ contains
        istep = term%nstep
        num_cells_minus1 = num_cells - 1
        cell_loop: do icell = 0, num_cells, 1
-          layer_thickness = term%arr(term_top_idx)%hmax - term%arr(term_btm_idx)%hmin - 2.E0 * term%tol
+          layer_thickness = term%arr(term_top_idx)%hmax - &
+               term%arr(term_btm_idx)%hmin - 2.E0 * term%tol
           ladder_adjust = 0._real32
-          step_loop: do j = 1, term%nstep
+          step_loop: do j = 1, term%arr(term_top_idx)%nstep
              if(term_top_idx.lt.term_btm_idx)then
                 if(j.eq.term%nstep)then
-                   layer_thickness = term%arr(term_top_idx)%hmax - term%arr(term_btm_idx)%hmin - 2.E0 * term%tol
-                   ladder_adjust = 1.E0 + term%arr(term_top_idx)%ladder(1) - term%arr(term_btm_idx)%ladder(term%nstep)
+                   layer_thickness = term%arr(term_top_idx)%hmax - &
+                        term%arr(term_btm_idx)%hmin - 2.E0 * term%tol
+                   ladder_adjust = 1.E0 + term%arr(term_top_idx)%ladder(1) - &
+                        term%arr(term_btm_idx)%ladder(term%nstep)
                 else
-                   layer_thickness = term%arr(term_top_idx)%hmax - term%arr(term_btm_idx)%hmin - 2.E0 * term%tol
-                   ladder_adjust = term%arr(term_top_idx)%ladder(j+1) - term%arr(term_btm_idx)%ladder(j)
+                   layer_thickness = &term%arr(term_top_idx)%hmax - &
+                        term%arr(term_btm_idx)%hmin - 2.E0 * term%tol
+                   ladder_adjust = &term%arr(term_top_idx)%ladder(j+1) - &
+                        term%arr(term_btm_idx)%ladder(j)
                 end if
              end if
              rtmp1 = &
@@ -1078,9 +1103,21 @@ contains
     ! Check number of atoms is expected
     !---------------------------------------------------------------------------
     if(term%nterm.gt.1.or.term%nstep.gt.1)then
-       do j = 1, max(0,term%nstep-istep), 1
-          natom_check = natom_check - sum(term%arr(:)%natom)
+       ! Remove whole repeating units (rungs) from the top termination only
+       ! Each rung contains ALL terminations because symmetry relates them vertically
+       if(j_start.eq.1)then
+          rtmp1 = term%arr(term%nterm)%ladder(istep)
+       else
+          rtmp1 = term%arr(j_start - 1)%ladder(istep)
+       end if
+       do j = 1, term%nterm, 1
+          ! identify the number of steps to remove for this termination
+          i = count( term%arr(iterm_list(j))%ladder(:) .gt. rtmp1 )
+          natom_check = natom_check - i * term%arr(iterm_list(j))%natom
        end do
+       ! Remove entire terminations that lie beyond the slab's top surface
+       ! For equivalent surfaces: keep only termination 1 (bottom=top), remove terminations 2..nterm
+       ! For non-equivalent surfaces: keep terminations 1 through j_start-1, remove j_start..nterm
        do j = j_start, term%nterm, 1
           natom_check = natom_check - term%arr(iterm_list(j))%natom
        end do
@@ -1088,7 +1125,7 @@ contains
     if(basis%natom.ne.natom_check)then
        write(msg, '("NUMBER OF ATOMS IN '//to_upper(slab_name)//' SLAB! &
             &Expected ",I0," but generated ",I0," instead")') &
-            natom_check,basis%natom
+       natom_check,basis%natom
        if(tfmat(term%axis,term%axis).gt.1._real32)then
           write(0,'("THE TRANSFORMATION IS GREATER THAN ONE ",F0.9)') &
                tfmat(term%axis,term%axis)
@@ -1103,18 +1140,34 @@ contains
     !---------------------------------------------------------------------------
     ! Apply slab_cuber to orthogonalise lower material
     !---------------------------------------------------------------------------
-    call basis%normalise(ceil_val=0.9999_real32,floor_coords=.true.,zero_round=0._real32)
-    call set_vacuum(basis,term%axis,1._real32-term%tol/tfmat(term%axis,term%axis),vacuum)
+    call basis%normalise( &
+         ceil_val=0.9999_real32, &
+         floor_coords=.true., &
+         zero_round=0._real32 &
+    )
+    call set_vacuum( &
+         basis, &
+         term%axis, &
+         1._real32-term%tol/tfmat(term%axis,term%axis), &
+         vacuum &
+    )
     abc=cshift(abc,3-term%axis)
     if(orthogonalise_)then
        ortho_check: do j=1,2
-          if(abs(dot_product(basis%lat(abc(j),:),basis%lat(term%axis,:))).gt.1.E-5_real32)then
+          if( &
+               abs( dot_product( basis%lat(abc(j),:),basis%lat(term%axis,:) ) ) .gt. &
+               1.E-5_real32 &
+          )then
              call ortho_axis(basis,term%axis)
              exit ortho_check
           end if
        end do ortho_check
     end if
-    call basis%normalise(ceil_val=0.9999_real32,floor_coords=.true.,zero_round=0._real32)
+    call basis%normalise( &
+         ceil_val=0.9999_real32, &
+         floor_coords=.true., &
+         zero_round=0._real32 &
+    )
 
 
   end subroutine cut_slab_to_height
