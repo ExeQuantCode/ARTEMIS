@@ -1005,9 +1005,9 @@ contains
                    ladder_adjust = 1.E0 + term%arr(term_top_idx)%ladder(1) - &
                         term%arr(term_btm_idx)%ladder(term%nstep)
                 else
-                   layer_thickness = &term%arr(term_top_idx)%hmax - &
+                   layer_thickness = term%arr(term_top_idx)%hmax - &
                         term%arr(term_btm_idx)%hmin - 2.E0 * term%tol
-                   ladder_adjust = &term%arr(term_top_idx)%ladder(j+1) - &
+                   ladder_adjust = term%arr(term_top_idx)%ladder(j+1) - &
                         term%arr(term_btm_idx)%ladder(j)
                 end if
              end if
