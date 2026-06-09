@@ -44,23 +44,6 @@ option(BUILD_PYTHON "Build the python library" Off)
 option(BUILD_EXECUTABLE "Build the Fortran executable" On)
 option(REMAKE_F90WRAP "Remake the f90wrap signature file" Off)
 
-# Fetch coreutils dependency
-include(FetchContent)
-FetchContent_Declare(
-    coreutils
-    GIT_REPOSITORY https://github.com/nedtaylor/coreutils
-    GIT_TAG v0.1.0
-)
-FetchContent_MakeAvailable(coreutils)
-
-# Fetch atomstruc dependency
-FetchContent_Declare(
-    atomstruc
-    GIT_REPOSITORY https://github.com/nedtaylor/atomstruc
-    GIT_TAG row-major-order
-    #SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/../atomstruc
-)
-FetchContent_MakeAvailable(atomstruc)
 
 # Define the sources
 set(SRC_DIR src)
@@ -94,6 +77,10 @@ set(SPECIAL_LIB_FILES
     artemis_generator.f90
 )
 
+find_package(Git REQUIRED)
+set(GIT_EXECUTABLE "${GIT_EXECUTABLE}" CACHE FILEPATH "Path to git executable" FORCE)
+include(cmake/CPM.cmake)
+
 
 foreach(lib ${LIB_FILES})
     list(APPEND PREPENDED_LIB_FILES ${LIB_DIR}/${lib})
@@ -116,6 +103,25 @@ foreach(src ${SRC_FILES})
     list(APPEND PREPENDED_SRC_FILES ${FORTRAN_SRC_DIR}/${src})
 endforeach()
 
+CPMAddPackage(
+    NAME coreutils
+    VERSION 0.1.0
+    GITHUB_REPOSITORY nedtaylor/coreutils
+    DOWNLOAD_ONLY YES
+)
+CPMAddPackage(
+    NAME atomstruc
+    GIT_TAG row-major-order
+    GITHUB_REPOSITORY nedtaylor/atomstruc
+    DOWNLOAD_ONLY YES
+)
+# Manually add the downloaded package
+if(coreutils_SOURCE_DIR)
+    add_subdirectory(${coreutils_SOURCE_DIR} ${coreutils_BINARY_DIR})
+endif()
+if(atomstruc_SOURCE_DIR)
+    add_subdirectory(${atomstruc_SOURCE_DIR} ${atomstruc_BINARY_DIR})
+endif()
 
 set(EXECUTABLE_FILES
     mod_tools_infile.f90
