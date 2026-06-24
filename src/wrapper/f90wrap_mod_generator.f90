@@ -1549,7 +1549,7 @@ subroutine f90wrap_intf_gen__generate__binding__agt( &
   logical, intent(in), optional :: generate_structures
   integer, intent(in), optional :: seed
   integer, intent(in), optional :: verbose
-  integer, optional, intent(inout) :: exit_code
+  integer, intent(out), optional :: exit_code
   integer :: n0
   !f2py intent(hide), depend(surface_lw) :: n0 = shape(surface_lw,0)
   integer :: n1
