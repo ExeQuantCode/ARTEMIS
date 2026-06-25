@@ -2108,7 +2108,7 @@ contains
                 return
              end if
           end if
-          if(lcycle) cycle lw_term_loop
+          if(lcycle.and.break_on_fail_) cycle lw_term_loop
 
 
           !!--------------------------------------------------------------------
@@ -2137,7 +2137,7 @@ contains
                    return
                 end if
              end if
-             if(lcycle) cycle up_term_loop
+             if(lcycle.and.break_on_fail_) cycle up_term_loop
 
 
              !!-----------------------------------------------------------------
@@ -2383,8 +2383,7 @@ contains
 !-------------------------------------------------------------------------------
 ! Generates sets of shifts based on shift version
 !-------------------------------------------------------------------------------
-    if(this%shift_method.eq.0.or.this%shift_method.eq.1) &
-         allocate(output_shifts(this%num_shifts,3))
+    if(this%shift_method.eq.1) allocate(output_shifts(this%num_shifts,3))
     select case(this%shift_method)
     case(1)
        output_shifts(1,:3)=0._real32
@@ -2443,7 +2442,8 @@ contains
           return
        end if
     case default
-       if(.not.allocated(output_shifts)) allocate(output_shifts(1,3))
+       if(.not.allocated(output_shifts)) &
+            allocate(output_shifts(size(this%shifts,dim=1),3))
        output_shifts(:,:) = this%shifts
        do iaxis = 1, 2
           output_shifts(1,iaxis) = output_shifts(1,iaxis)!/norm2(lat(iaxis,:))
